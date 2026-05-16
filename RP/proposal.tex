@@ -43,7 +43,7 @@ headsepline, % Uncomment to get a line under the header
 \usepackage{booktabs}
 
 \usepackage{pifont}
-
+\usepackage{pdfpages}
 
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -209,21 +209,29 @@ The acknowledgments and the people to thank go here \ldots
 % --- Organize the contents in proper sections/subsections where necessary ---
 % --- General problem area introduction to establish the main reseach field ---
 % --- Motivation to show the research problem is important ---
-The characterization of biological tissues has historically relied on classical histological staining and light microscopy, requiring anatomical pathologists to diagnose diseases based on structural and morphological cellular alterations. However, the paradigm of modern precision medicine necessitates a significantly deeper understanding of the molecular pathogenesis underlying these morphological changes. To bridge the gap between traditional histology and high-throughput molecular profiling, Mass Spectrometry Imaging (MSI), particularly Matrix-Assisted Laser Desorption/Ionization (MALDI), has emerged as a revolutionary molecular microscopy technique over the past three decades.~\citep{schwamborn2010molecular} By mapping the spatial distribution of thousands of distinct biomolecules ranging from small metabolites, lipids, and exogenous drugs to large intact proteins directly within an intact tissue section, MSI provides a label-free, highly multiplexed view of the cellular microenvironment.~\citep{ye2013msi}
+The characterization of biological tissues has historically relied upon classical histological staining techniques and light microscopy. However, modern precision medicine might necessitate a significantly deeper understanding of the intricate molecular pathogenesis that underlies morphological changes. To gently bridge this gap, Mass Spectrometry Imaging (MSI), particularly Matrix-Assisted Laser Desorption/Ionization (MALDI), has tentatively emerged as a revolutionary molecular microscopy technique.~\citep{schwamborn2010molecular} By attempting to map the spatial distribution of thousands of distinct biomolecules directly within an intact tissue section, MSI seems to provide a highly multiplexed view of the cellular microenvironment, which cautiously facilitates critical advancements in biomarker discovery and clinical diagnostics.~\citep{ye2013msi}
 
-The ability to simultaneously capture spatial relationships and complex spectral data without prior knowledge of the target molecules has propelled MSI to the forefront of contemporary biomedical research, facilitating advancements in biomarker discovery, pharmaceutical drug mapping, and clinical diagnostics~\citep{abdelmoula2021peak}. In complex localized pathologies such as glioblastoma, colorectal carcinoma, and infectious diseases, MSI enables the direct visualization of tumor heterogeneity, xenobiotic toxins, and localized immune responses that are otherwise entirely invisible to standard hematoxylin and eosin (H\&E) staining. Despite these profound advantages and the rapid maturation of the hardware, the clinical translation of MSI into routine diagnostic pipelines is heavily impeded by massive computational bottlenecks. A single high-resolution MSI experiment can generate three-dimensional data hypercubes ranging from tens of gigabytes to several terabytes per tissue slice~\citep{korber2025mass}. Each individual pixel within this spatial grid contains a high-dimensional mass spectrum, often consisting of tens to hundreds of thousands of discrete mass-to-charge ($m/z$) bins~\citep{abdelmoula2021peak}. Extracting biologically meaningful, statistically robust signals from this immense, noisy, and highly sparse data structure represents one of the most significant challenges in modern computational biology and medical image analysis~\citep{zhang2025msi_infectious}.
+The theoretical ability to simultaneously capture spatial relationships and complex spectral data without prior knowledge of the target molecules has propelled MSI to the forefront of contemporary biomedical research, facilitating advancements in biomarker discovery, pharmaceutical drug mapping, and clinical diagnostics~\citep{abdelmoula2021peak}. In complex localized pathologies such as glioblastoma, colorectal carcinoma, and infectious diseases, MSI enables the direct visualization of tumor heterogeneity, xenobiotic toxins, and localized immune responses that are otherwise entirely invisible to standard hematoxylin and eosin (H\&E) staining. Despite these profound advantages and the rapid maturation of the hardware, the clinical translation of MSI into routine diagnostic pipelines is heavily impeded by massive computational bottlenecks. A single high-resolution MSI experiment can generate three-dimensional data hypercubes ranging from tens of gigabytes to several terabytes per tissue slice~\citep{korber2025mass}. Each individual pixel within this spatial grid contains a high-dimensional mass spectrum, often consisting of tens to hundreds of thousands of discrete mass-to-charge ($m/z$) bins~\citep{abdelmoula2021peak}. Extracting biologically meaningful, statistically robust signals from this immense, noisy, and highly sparse data structure represents one of the most significant challenges in modern computational biology and medical image analysis~\citep{zhang2025msi_infectious}.
 
 \section{Problem Statement}
 
-Ideally, the computational analysis of clinical Mass Spectrometry Imaging datasets would be entirely automated, preserving the full spectrum of molecular information while seamlessly translating high-dimensional raw physical data into robust, clinically actionable diagnostic signatures. In such an ideal computational environment, machine learning models would accurately capture the highly non-linear relationships between thousands of interacting metabolites and proteins without requiring human bias or manual parameter intervention. This idealized pipeline would enable the immediate, unhindered identification of rare, low-abundance molecular biomarkers that are critical for the early detection and subtyping of complex diseases.
+Ideally, one might hope that the computational analysis of clinical Mass Spectrometry Imaging datasets would be entirely automated, seamlessly translating high-dimensional raw physical data into robust diagnostic signatures without human intervention. In such a theoretical environment, machine learning models would accurately capture highly non-linear relationships, permitting the unhindered identification of rare, low-abundance molecular biomarkers.
 
-The reality of current MSI analysis, however, stands in stark contrast to this ideal. The conventional computational processing of MSI data is fundamentally limited by highly heuristic, multistep preprocessing pipelines that are required to compress the massive data hypercubes before any statistical analysis can occur. The most critical, computationally expensive, and subjective of these steps is "peak picking". Classical peak picking algorithms, such as those relying on sparse frame multipliers, continuous wavelet transforms, local maxima detection, or strict signal-to-noise ratio (SNR) thresholding, require extensive empirical parameter tuning~\citep{lieb2020sparse}.This subjectivity introduces a severe analytical bottleneck into the diagnostic pipeline: arbitrary thresholds inevitably discard low-abundance molecular signals, permanently masking crucial biological phenomena, while simultaneously retaining highly structured chemical noise derived from the matrix application process. Furthermore, traditional peak picking fundamentally destroys the underlying non-linear spectral manifold of the data, forcing all downstream machine learning classifiers and clustering algorithms to operate on a highly biased, artificially truncated, and linear representation of the tissue microenvironment. \citep{abdelmoula2021peak}
+The reality, however, is that current MSI analysis is fundamentally limited by highly heuristic preprocessing pipelines required to compress massive data hypercubes. The most subjective step is the extraction of relevant molecular features through manual algorithmic tuning.  Subjective thresholds inevitably discard low-abundance molecular signals, potentially masking crucial biological phenomena permanently, while simultaneously retaining highly structured chemical noise~\citep{lieb2020sparse}.Furthermore, classical filtering might fundamentally distort the underlying non-linear spectral manifold of the data. Navigating away from this bottleneck might require a fundamental reconceptualization of how molecular signals are extracted. \citep{abdelmoula2021peak}
 
-To propose an improvement to this reality and transition the field toward the ideal analytical environment, it is proposed that unsupervised deep learning models be deployed directly on raw, un-preprocessed MSI data arrays. Artificial neural networks, specifically deep generative models such as Variational Autoencoders (VAEs) and contrastive representation learning networks, possess the mathematical capacity to learn the generative physical processes and spatial correlations of molecular ions without requiring heuristic thresholding or prior baseline correction~\citep{abdelmoula2021peak}. By reconceptualizing peak detection not as an arbitrary signal-filtering task, but as an advanced manifold learning and spatial representation problem (often termed "peak learning) deep neural networks can autonomously discover biologically relevant $m/z$ features while retaining the complex, non-linear structural relationships inherent in the raw mass spectrometry data. Developing, evaluating, and optimizing these advanced deep learning frameworks, particularly for highly diverse and noisy datasets sourced from local clinical hospital environments, forms the core research imperative of this study. \citep{guo2024deepion}
+\subsection*{Peak Picking versus Peak Learning}
+
+To address specific feedback regarding the fundamental nature of these processes, it seems necessary to explicitly, yet briefly, distinguish between the traditional paradigm of "peak picking" and the emerging paradigm of "peak learning."
+
+The traditional paradigm, commonly referred to as peak picking, is fundamentally a deterministic, rule-based signal filtering task~\citep{li2022machinelearningpeakpicking}. Algorithms attempt to separate true molecular ion signals from noise by applying stric geometric and intensity constraints, such as signal-to-noise ratio (SNR) thresholding. In a standard workflow, a human operator is typically required to manually define empirical parameters. The critical limitation here is inherent rigidity and subjectivity. A slight alteration in the SNR threshold can drastically alter the final peak list, making the process highly irreproducible. Perhaps most alarmingly, critical early-stage disease biomarkers often exist in exceptionally low endogenous concentrations; because their signal intensity may fall below the manually defined SNR threshold, peak picking algorithms might blindly erase them from the dataset entirely.\citep{abdelmoula2021peak}
+
+Conversely, the concept of "peak learning" modestly attempts to abandon heuristic thresholds entirely, treating feature extraction instead as an advanced manifold learning and unsupervised representation problem. Utilizing generative probabilistic models, such as a Variational Autoencoder (VAE), the neural network ingests raw mass spectra directly. The network is mathematically forced to compress the massive input data into a tiny abstract latent space and then attempt to reconstruct the original spectrum. To minimize its reconstruction error, the network must autonomously "learn" which specific mass-to-charge ($m/z$) features represent true biological structures.
+
+Crucially, the "peaks" are extracted not by applying arbitrary thresholds to the raw data, but by mathematically analyzing the trained connection weights of the neural network itself. The nodes corresponding to the most critical molecular ions will naturally possess the largest mathematical connection weights. By cautiously attempting to transition from peak picking to peak learning, researchers hope to gently eliminate human bias and potentially recover subtle, low-abundance biomarkers.
 
 \section{Expected Contributions}
 
-This research aims to contribute a practical computational bridge to the field of spatial proteomics. By mathematically integrating physical neighborhood covariance into an existing, lightweight VAE framework, this project provides an optimized feature extraction pipeline. It evaluates whether we can achieve spatially-aware biochemical mapping and eliminate subjective human bias from MSI preprocessing without taking on the crippling computational burden of 3D convolutional networks.
+This research modestly aims to contribute a practical, perhaps more accessible computational bridge to the growing field of spatial proteomics. By attempting to mathematically integrate physical neighborhood covariance into an existing, lightweight Variational Autoencoder framework, this project hopes to provide a carefully optimized feature extraction pipeline. It will tentatively evaluate whether we might achieve spatially-aware biochemical mapping and eliminate subjective human bias from MSI preprocessing without taking on the crippling computational and memory burdens typically associated with heavy three-dimensional convolutional networks. If successful, this could offer a more efficient and scalable solution for processing large mass spectrometry imaging datasets in standard laboratory environments.
 
 % \section{Research Questions}
 
@@ -272,6 +280,9 @@ This research aims to contribute a practical computational bridge to the field o
 %\chapter{Background} --- optional
 % \chapter{Related Work}
 \chapter{Background and Related Work}
+
+To adequately contextualize the proposed research, it is helpful to trace the developmental trajectory of computational MSI analysis as documented in recent literature. This progression illustrates a clear transition from classical mathematical heuristics to the current, somewhat complex frontiers of spatial self-supervised deep learning.
+
 %\section{Background} --- optional
 \section{Background: Foundations of MSI}
 
@@ -333,6 +344,8 @@ The scientific literature demonstrates an accelerating paradigm shift toward dee
 %     \textcolor{red}{The typical sections in this chapter are listed as section titles below. Depending on your specific method, some of these sections might not be applicable.} 
 % \end{quote}
 
+To carefully address the limitations identified within the literature, the following methodology details the tentative construction, training, and evaluation of the proposed Spatial-msiPL model. The procedural structure emphasizes mathematical rigor and reproducibility while ensuring operations remain constrained to standard public MSI datasets.
+
 \section{Research Questions}
 This project is guided by the following specific research questions:
 \begin{enumerate}
@@ -342,53 +355,77 @@ This project is guided by the following specific research questions:
 \end{enumerate}
 
 \section{Research Aims and Objectives}
-\textbf{Aim:} To adapt and evaluate a Spatially-Aware Variational Autoencoder (Spatial-msiPL) capable of autonomously identifying spatially coherent molecular peaks in untargeted Mass Spectrometry Imaging data, acting as a computationally efficient alternative to 3D convolutional networks.
+\textbf{Aim:} To cautiously adapt and evaluate a Spatially-Aware Variational Autoencoder (tentatively named Spatial-msiPL) that might be capable of autonomously identifying spatially coherent molecular peaks in untargeted raw Mass Spectrometry Imaging data, acting as a potentially computationally efficient alternative to 3D convolutional networks.
 
 \textbf{Objectives:}
 \begin{itemize}
-    \item Curate and preprocess high-resolution, raw profile-mode MSI datasets from public repositories.
-    \item Formulate a modified VAE architecture that ingests contextual input vectors (concatenating central spectra with spatial neighborhood averages).
-    \item Augment the standard Evidence Lower Bound (ELBO) loss function with a spatial penalty term to enforce biological coherence.
-    \item Extract relevant mass-to-charge ($m/z$) peaks autonomously using backpropagated mathematical weight analysis.
-    \item Quantitatively evaluate the extracted ion images against expert-annotated structural masks using the mean Spatial F1-score (mSCF1) and Pearson Correlation Coefficients.
+    \item Curate and carefully preprocess high-resolution, raw profile-mode MSI datasets (specifically glioblastoma and colorectal adenocarcinoma models) sourced from public metabolomics repositories.~\citep{abdelmoula2022massnet}
+    \item Formulate a modified neural network input architecture that ingests contextual vectors, achieved by concatenating a central spatial pixel's spectrum with the averaged spectra of its immediate neighborhood.
+    \item Augment the standard Evidence Lower Bound (ELBO) loss function of a Variational Autoencoder with a targeted spatial penalty term intended to mathematically encourage biological coherence.
+    \item Extract relevant $m/z$ peaks autonomously utilizing a backpropagated mathematical weight analysis, attempting to bypass human-engineered thresholds entirely.
+    \item Quantitatively benchmark the extracted spatial ion images against expert-annotated structural segmentation masks utilizing correlation-based metrics, specifically the mean Spatial F1-score (mSCF1) and Pearson Correlation Coefficients.
 \end{itemize}
 
 % \section{Dataset(s)}
 
-\section{Dataset(s)}
-To ensure strict scientific reproducibility, the proposed model will be trained and evaluated against diverse, high-resolution public datasets sourced from the ProteomeXchange consortium and the METASPACE knowledge base. A strict methodological requirement for this project is the exclusive utilization of raw, profile-mode mass spectrometry data stored in the standard \texttt{imzML} format. Centroided data strips the non-linear morphological wave-shapes that representation learning models require to differentiate signal from noise. 
+\section{Dataset Selection and Acquisition}
 
-Specific benchmark datasets selected for this study include:
-\begin{itemize}
-    \item \textbf{Glioblastoma Multiforme (GBM) Dataset:} A highly heterogeneous brain tumor model sourced via the National Metabolomics Data Repository (NMDR) under project ID PR001292.\citep{abdelmoula2021peak}
-    \item \textbf{Human Colorectal Adenocarcinoma (CAC) Dataset:} Available from the MetaboLights repository under accession MTBLS415. 
-\end{itemize}
-Expert-annotated ground truth segmentation masks corresponding to these datasets will be sourced from the open-source S3PL benchmark repository.\citep{weigand2026spatial}
+To ensure strict scientific reproducibility, and per the guidance to utilize independently sourced data, the proposed model will be developed and evaluated exclusively against diverse, high-resolution public datasets. These will be sourced from the ProteomeXchange consortium and the National Metabolomics Data Repository (NMDR). Additionally, if supplementary data is required, raw imzML datasets can also be acquired from the METASPACE knowledge base. A strict methodological requirement for this investigation is the exclusive use of raw, profile-mode mass spectrometry data stored in the standard imzML format. As previously noted, profile-mode data gently preserves the non-linear morphological wave-shapes and minor baseline artifacts that are entirely stripped from centroided data. This rich mathematical complexity is arguably necessary for representation learning models to successfully differentiate signal from noise.
+
+Specific benchmark datasets cautiously selected for this study include:
+\begin{enumerate}
+    \item \textbf{Glioblastoma Multiforme (GBM) Dataset (PR001292):} Acquired via a highly sensitive 9.4 Tesla SolariX FT-ICR mass spectrometer, this dataset maps tissue from an intracranial patient-derived xenograft (PDX) mouse model of glioblastoma. The extreme high-mass resolution and the highly heterogeneous nature of the tumor boundaries make this an ideal stress test for spatial peak learning models seeking subtle, low-abundance ions. This is the dataset originally utilized in the~\citet{abdelmoula2022massnet} studies.
+    \item \textbf{Human Colorectal Adenocarcinoma (CAC) Dataset (MTBLS415):} Available from MetaboLights, providing an alternate pathological landscape to ensure model generalizability beyond neurological tissues.
+\end{enumerate}
+
+Crucially, expert-annotated structural segmentation masks corresponding to these specific tissues will be acquired from the open-source repositories associated with the S3PL benchmark to serve as the objective ground truth for evaluation.~\citep{weigand2026spatial}
 
 % \section{Preprocessing}
 % \begin{quote}
 %     \textcolor{red}{If applicable. It can also be combined with `Dataset(s)' section.}
 % \end{quote}
 
-\section{Preprocessing}
-The datasets will undergo Total-Ion-Count (TIC) normalization. To introduce spatial awareness before network ingestion, the input space will be restructured. For any given spatial coordinate, a contextual vector $\tilde{x}^{(i)}$ will be generated by mathematically concatenating the original central spectrum $x^{(i)}$ with the spatially averaged spectra of its immediate 8-pixel Moore neighborhood. Furthermore, inspired by DeepION, synthetic Poisson statistical noise will be injected into the input arrays to simulate the true physical ion detection mechanics of the mass spectrometer, preventing the model from overfitting to localized matrix artifacts.\citep{weigand2026spatial}
+\section{Preprocessing Pipeline}
+Although the primary goal of the model is to eliminate heuristic dimensionality reduction, basic data scaling is mathematically required to stabilize deep learning gradients during training.
+\begin{itemize}
+    \item \textbf{Total-Ion-Count (TIC) Normalization:} Each raw profile spectrum will undergo TIC normalization to ensure uniform intensity scaling across the tissue sections, modestly mitigating ionization efficiency artifacts that naturally occur during MALDI acquisition \citep{deininger2011normalization}.
+    \item \textbf{Contextual Input Re-engineering:} To carefully circumvent the need for computationally expensive 3D convolutions while still attempting to introduce spatial awareness, the data input space will be fundamentally restructured. For any given pixel coordinate $(x, y)$, the algorithm will mathematically isolate the spectrum of that central pixel, denoted as $x^{(i)}$. It will then compute the mean spectrum of its immediate 8-pixel Moore neighborhood \citep{winderbaum2015feature}. A new "contextual vector", $\tilde{x}^{(i)}$, will be generated by concatenating the central spectrum with the spatially averaged neighbor spectrum.
+    \item \textbf{Physical Prior Injections:} Inspired by the apparent success of the DeepION architecture \citep{guo2024deepion}, synthetic Poisson statistical noise will be dynamically injected into the input arrays during the training phase. This cautiously simulates the physical ion counting statistics inherent to mass spectrometer detectors, theoretically preventing the network from merely memorizing localized matrix crystallization artifacts.
+\end{itemize}
 
 % \section{(Models and Algorithms Used)}
 % \begin{quote}
 %     \textcolor{red}{Provide an in-depth and technically detailed discussion of your chosen models or algorithms. Your explanation should cover: (i) Why is this specific model (e.g., YOLOv8, Transformer, or DenseNet) the best fit for your problem compared to alternatives? (ii) How does it work or theoretical mechanics: Use math equations or include architecture diagrams to show the data flow. (The following subsection title and text are just a segment from a methodology section of an previous Hons RR.)}
 % \end{quote}
 
-\section{Models and Algorithms Used}
-The core model, \textbf{Spatial-msiPL}, builds upon the proven 1D Variational Autoencoder architecture. The probabilistic encoder network infers the distribution of a low-dimensional latent variable $z$ from the contextual vector. The decoder network then attempts to accurately reconstruct \textit{only} the original, isolated center spectrum. This architectural bottleneck forces the network to utilize the broader spatial context to denoise the localized output.
+\section{Models and Algorithms Used: Spatial-msiPL}
+The core architecture of Spatial-msiPL is proposed to build upon a standard, fully connected Variational Autoencoder, utilizing multi-layer perceptrons (MLPs) \citep{abdelmoula2021peak} rather than the heavy convolutional blocks seen in S3PL \citep{weigand2026spatial}.
 
-The network will be optimized by maximizing the Evidence Lower Bound (ELBO), augmented by a novel explicit spatial regularization term, $\lambda \mathcal{L}_{spatial}$. This penalty calculates the Euclidean distance between the latent representation of a central pixel and the mean latent representation of its physical neighbors, smoothing the latent manifold:
-% \begin{equation}
-% \mathcal{L}_{total} = \mathbb{E}_{q_\phi(z|\tilde{x})}[\log p_\theta(x|z)] - D_{KL}(q_\phi(z|\tilde{x}) |
+The network fundamentally consists of an Encoder network, $q_\phi(z|\tilde{x})$, and a Decoder network, $p_\theta(x|z)$.
+The probabilistic Encoder will ingest the high-dimensional contextual vector $\tilde{x}^{(i)}$ and attempt to compute the mean ($\mu$) and variance ($\sigma^2$) parameters, defining a Gaussian distribution in a highly compressed latent space $z$ \citep{abdelmoula2021peak}.
+Crucially, the Decoder network will be programmed to attempt to reconstruct \textit{only} the original, isolated central spectrum $x^{(i)}$, rather than the entire contextual input. It is hoped that this deliberate architectural bottleneck will force the model to utilize the broader spatial neighborhood context to effectively "denoise" the localized output spectrum.
 
-% | p(z)) + \lambda \sum_{j \in \text{neighbors}} ||\mu_\phi(\tilde{x}^{(i)}) - \mu_\phi(\tilde{x}^{(j)})||^2
-% \end{equation}
+\subsection{Loss Function and Spatial Coherence Penalty}
+A standard VAE is optimized by maximizing the Evidence Lower Bound (ELBO), which carefully balances the reconstruction fidelity against the Kullback-Leibler (KL) divergence \citep{abdelmoula2021peak}. To mathematically enforce biological structure, this project tentatively proposes augmenting the objective function with a novel, explicit spatial regularization term, $\lambda \mathcal{L}_{spatial}$.
 
-Following successful convergence, unsupervised peak extraction will be executed via a backpropagated analysis on the connection weights $W^{(1)}$ linking the input layer to the first hidden layer. The relative importance of each specific $m/z$ bin is determined by calculating the $L2$-norm across all hidden units, bypassing heuristic thresholds entirely.\citep{weigand2026spatial}
+This explicit penalty will continuously calculate the Euclidean distance between the generated latent representation of a central pixel and the mean latent representations of its adjacent physical neighbors.
+
+The proposed total loss function might be formally expressed as:
+
+$$ \mathcal{L}_{total}=\mathbb{E}_{q_\phi(z|\tilde{x})}[\log p_\theta(x|z)]-D_{KL}(q_\phi(z|\tilde{x})||p(z))+\lambda \sum_{j \in \mathcal{N}(i)} ||\mu_\phi(\tilde{x}^{(i)})-\mu_\phi(\tilde{x}^{(j)})||^2 $$
+
+Where $\mathcal{N}(i)$ represents the immediate spatial neighborhood of pixel $i$, and $\lambda$ acts as a tunable hyperparameter dictating the strength of the spatial smoothing. By attempting to minimize this specific loss configuration, the network might actively discourage extreme latent space divergence between adjacent pixels, potentially acting as a powerful filter against stochastic, spatially random mass spectrometry noise \citep{winderbaum2015feature}.
+
+\subsection{Unsupervised Peak Extraction via Backpropagated Weight Analysis}
+The hoped-for elimination of the classical "peak picking" step relies heavily on mathematical feature extraction post-training. Following successful convergence and stabilization of the loss function, the network weights will be frozen \citep{abdelmoula2021peak}.
+
+Instead of generating arbitrary local maxima thresholds, the Spatial-msiPL model will attempt to execute a backpropagated analysis directly on the learned connection weights $W^{(1)}$ linking the input contextual vector layer to the first hidden layer of the neural network \citep{abdelmoula2021peak}. In a fully connected network, each input node corresponds directly to a specific $m/z$ spectral bin. Through the mechanics of backpropagation via gradient descent, the network has iteratively updated these weights ($\Delta W=-\eta \frac{\partial \mathcal{L}}{\partial W}$) over thousands of epochs in an attempt to minimize reconstruction error. Consequently, it is assumed that input nodes with large resulting weight values are mathematically identified by the network as the most critical features required for accurate, spatially coherent spectral reconstruction.
+
+The relative importance of each specific mass-to-charge bin ($m/z_k$) will be objectively determined by calculating the $L2$-norm across all hidden units ($H$) for that specific input node \citep{abdelmoula2021peak}:
+
+$$ Importance(m/z_k)=\sqrt{\sum_{h=1}^{H} (W^{(1)}_{h, k})^2} $$
+
+The $m/z$ values demonstrating the highest structural weight importance will be subsequently extracted and carefully cross-referenced to the nearest local maximum on the average spectrum to form the final, threshold-free "learned" peak list \citep{abdelmoula2021peak}.
 
 % \subsection{Feature Extraction}
 % Accurate feature extraction serves as the cornerstone of 3D object detection systems, particularly in the context of autonomous driving and driver assistance technologies. The ability to detect, track, and localize vehicles in a scene forms the foundation for understanding their spatial attributes and predicting their behavior. However, achieving robust feature extraction in dynamic and congested environments is challenging due to factors like occlusion, truncation, and the need for real-time performance.
@@ -399,10 +436,39 @@ Following successful convergence, unsupervised peak extraction will be executed 
 %     \textcolor{red}{What evaluation methods or metrics, e.g., Accuracy, Precision/Recall, or inference speed, are you going to use? This section is very important. You must be able to evaluate the method/system you developed. The evaluation approach must be standard or compatible with other similar works in the literature so that your method/results can be compared against other works fairly. }
 % \end{quote}
 
-\section{Evaluation Method}
-Because defining an absolute biological ``ground truth'' for untargeted peak picking is exceptionally difficult across tens of thousands of ions, the evaluation procedure will utilize the expert-annotated structural segmentation masks. 
+\section{Evaluation Method and Statistical Validation}
+A pervasive difficulty in untargeted mass spectrometry imaging informatics is the apparent absence of an absolute, mathematically objective biological "ground truth" across tens of thousands of potential ions. To cautiously circumvent reliance on subjective visual inspection, this research plans to implement a rigorous, spatially structured quantitative evaluation protocol utilizing the previously acquired expert-annotated histological segmentation masks \citep{weigand2026spatial}.
 
-We will benchmark Spatial-msiPL against current state-of-the-art peak picking methods (standard msiPL, S3PL, and MALDIquant). Performance will be evaluated by computing the Pearson Correlation Coefficient (PCC) between the algorithmically extracted ion images and the pathological binary masks. The overall precision and recall of the spatial structure will be determined using the mean Spatial F1-score (mSCF1).\citep{weigand2026spatial} This ensures the model is objectively evaluated on its ability to pick biologically relevant spatial structures rather than isolated noise.
+\subsection{The Mean Spatial F1-Score (mSCF1)}
+The primary evaluation metric will be the mean Spatial Correlation F1-score (mSCF1), recently introduced in the literature specifically for benchmarking spatial fidelity in MSI datasets \citep{weigand2026spatial}.
+
+The proposed evaluation pipeline will cautiously proceed as follows:
+\begin{enumerate}
+    \item \textbf{Ion Image Generation:} For every $m/z$ peak tentatively identified by the Spatial-msiPL model, the 2D spatial ion distribution image will be plotted across the tissue coordinates.
+    \item \textbf{Pearson Correlation Coefficient (PCC):} The 2D spatial PCC will be carefully calculated between the extracted spatial ion image and the binary, expert-annotated structural segmentation mask provided in the benchmark dataset.
+    \item \textbf{Thresholded Binary Classification:} To evaluate whether the model successfully isolated structured biological signals from stochastic noise, the continuous PCC values will be thresholded. Following established protocols, four distinct empirical correlation thresholds will be utilized: $T_{PCC} \in \{0.3, 0.4, 0.5, 0.6\}$ \citep{weigand2026spatial}.
+    \item If an extracted ion image exhibits a PCC greater than or equal to $T_{PCC}$ against \textit{any} annotated biological structure in the mask, it will be classified as a True Positive (implying a biologically meaningful spatial peak).
+    \item Conversely, if the ion image fails to meet the threshold for any structure, it will be categorized as non-informative stochastic noise, or a False Positive.
+    \item \textbf{mSCF1 Calculation:} For each of the four thresholds, standard Precision, Recall, and F1-scores will be calculated based on the identified peaks. The final reported metric will be the unweighted mean of these four F1-scores, yielding the mSCF1 \citep{weigand2026spatial}.
+\end{enumerate}
+
+This stringent methodology is intended to ensure the proposed architecture is evaluated strictly on its capacity to uncover meaningful spatial biological architecture, rather than its ability to merely isolate high-intensity mass spectrometry matrix clusters.
+
+\subsection{Baseline Comparisons}
+To rigorously contextualize any potential performance gains of the proposed Spatial-msiPL architecture, it will be computationally benchmarked against several established methods:
+\begin{itemize}
+    \item \textbf{Classical Baselines:} Standard heuristic peak picking utilizing the R-based MALDIquant framework will provide a baseline for traditional methods \citep{gibb2012maldiquant}.
+    \item \textbf{1D Baselines:} The original, spatially blind msiPL Variational Autoencoder will be tested, ensuring an exact assessment of any performance gain yielded specifically by the added spatial penalty \citep{abdelmoula2021peak}.
+    \item \textbf{3D Baselines:} If hardware permits, the heavy 3D-convolutional S3PL network might be utilized to measure computational runtime efficiency and memory consumption against the proposed 1D model \citep{weigand2026spatial}.
+\end{itemize}
+
+Table 2 outlines the planned comparative metrics:
+\begin{itemize}
+    \item \textbf{mSCF1 Score:} Assess spatial fidelity of extracted peaks. Target Baseline Comparison: msiPL (1D) and MALDIquant.
+    \item \textbf{PCC Distribution:} Analyze correlation strength with tumor masks. Target Baseline Comparison: S3PL (3D Convolutional).
+    \item \textbf{GPU Memory Usage:} Quantify hardware requirements during training. Target Baseline Comparison: S3PL (3D Convolutional).
+    \item \textbf{Inference Runtime:} Measure processing speed for clinical scalability. Target Baseline Comparison: msiPL and S3PL.
+\end{itemize}
 
 
 % \section{Summary (or Conclusion)}
@@ -411,17 +477,18 @@ We will benchmark Spatial-msiPL against current state-of-the-art peak picking me
 % --- Optional. Discussions can be incorporated in Results chapter
 %\chapter{Discussion}
 
-\chapter{Work Schedule}
 % \begin{quote}
 %     \textcolor{red}{You need to complete this chapter in the research proposal, not necessarily in the literature review.}
 % \end{quote}
+\chapter{Work Schedule}
 
-The project will be executed over a 4-month period, divided into the following phases:
+The project is tentatively structured to be executed over a 4-month academic period, logically divided into the following iterative phases to ensure continuous progression and allow time for troubleshooting.
+
 \begin{itemize}
-    \item \textbf{Month 1 (Literature \& Data):} Consolidate the literature review, navigate public repositories, and acquire/parse the multi-gigabyte raw \texttt{imzML} profile datasets (GBM and CAC) and their corresponding segmentation masks.
-    \item \textbf{Month 2 (Preprocessing \& Baseline):} Implement the data preprocessing pipeline (TIC normalization, contextual vector generation) and replicate the baseline msiPL model for comparative analysis.
-    \item \textbf{Month 3 (Model Development):} Architect the Spatial-msiPL network, integrate the spatial coherence penalty into the ELBO loss function, and conduct training with Poisson noise augmentations.
-    \item \textbf{Month 4 (Evaluation \& Documentation):} Extract final peak lists, execute comparative benchmarking using mSCF1 and PCC metrics, and compile the final Honours research report.
+    \item \textbf{Phase 1 (Literature \& Data):} The primary focus will be to consolidate the literature review, navigate the NMDR and ProteomeXchange repositories, and gently acquire and parse the multi-gigabyte raw \texttt{imzML} profile datasets (PR001292 GBM and MTBLS415 CAC) and their corresponding segmentation masks. Managing the sheer size of these files may present early challenges that need to be carefully mitigated.
+    \item \textbf{Phase 2 (Preprocessing \& Baseline):} The next step will involve implementing the basic data preprocessing pipeline, including TIC normalization and the generation of the contextual vectors. An attempt will also be made to replicate the baseline msiPL model locally to ensure a fair comparative analysis later.
+    \item \textbf{Phase 3 (Model Development):} This phase will be dedicated to architecting the Spatial-msiPL network itself. The spatial coherence penalty will be integrated into the ELBO loss function, and training runs will commence with the Poisson noise augmentations. It is anticipated that hyperparameter tuning, specifically for the $\lambda$ penalty, will require patience and multiple iterations.
+    \item \textbf{Phase 4 (Evaluation \& Documentation):} The final month will focus on extracting the final peak lists via backpropagation analysis, executing the comparative benchmarking using the mSCF1 and PCC metrics, and carefully compiling the results into the final Honours research report.
 \end{itemize}
 
 \chapter{Conclusion}
@@ -429,7 +496,12 @@ The project will be executed over a 4-month period, divided into the following p
 % \begin{quote}
 %     \textcolor{red}{For completeness, always write a concise and succinct conclusion. }
 % \end{quote}
-The computational bottleneck of heuristic peak picking remains a primary barrier preventing the clinical automation of Mass Spectrometry Imaging. While unsupervised spectral generative models like the foundational msiPL framework have proven the viability of mathematical feature extraction, their failure to utilize biological spatial context limits their accuracy. The proposed Spatial-msiPL architecture seeks to bridge this critical gap by mathematically integrating physical neighborhood covariance directly into the encoding process. By evaluating this hybrid model using rigorous spatial correlation metrics, this research aims to contribute a highly efficient, spatially-aware deep learning framework capable of autonomously mapping the biochemical topography of diseased tissues without the severe computational overhead of full 3D convolutions.
+The computational bottleneck caused by heuristic peak picking currently appears to remain one of the primary barriers preventing the seamless integration of Mass Spectrometry Imaging into automated, clinical diagnostic workflows. While early unsupervised spectral generative models, such as the foundational 1D msiPL framework, have successfully suggested the viability of autonomous mathematical feature extraction, their failure to utilize structural biological context might inherently limit their diagnostic accuracy and noise-filtering capabilities. Conversely, 3D convolutional models seem to provide high spatial fidelity but impose somewhat restrictive computational burdens that could limit their clinical scalability in standard laboratory settings.
+
+The tentatively proposed Spatial-msiPL architecture seeks to modestly bridge this critical gap. By cautiously attempting to integrate physical neighborhood covariance directly into the encoding process via contextual input vectors and an explicit spatial coherence penalty, it is hypothesized that spatial awareness might be achieved within a highly efficient 1D framework. By rigorously evaluating this architecture using spatial correlation metrics against expert-annotated tumor masks, this preliminary research hopes to contribute a potentially more accessible deep learning framework capable of autonomously mapping the biochemical topography of diseased tissues. If successful, this gentle approach might offer a computationally modest step toward reducing human bias in spatial omics analysis.
+
+% --------------------------------------------------------
 \nocite{*}
 \bibliography{references}\addcontentsline{toc}{chapter}{References}
+\includepdf[pages=-]{PG student AI declaration RP.pdf}
 \end{document}
