@@ -110,7 +110,10 @@ headsepline, % Uncomment to get a line under the header
 \thesistitle{Representation Learning for Autonomous Peak Detection in Mass Spectrometry Imaging} % Your thesis title, this is used in the title and abstract, print it elsewhere with \ttitle
 \author{Zayd \textsc{Suliman}} % Your name, this is used in the title page and abstract, print it elsewhere with \authorname
 
-
+\university{University of the Witwatersrand}
+\faculty{Faculty of Science}
+\department{School of Computer Science and Applied Mathematics}
+\degree{Bachelor of Science (Honours) in Computer Science} % Your degree name, this is used in the title page and abstract, print it elsewhere with \degreename
 
 \begin{document}
 
@@ -126,14 +129,14 @@ headsepline, % Uncomment to get a line under the header
 \begin{center}
   \vspace*{.06\textheight}
   \includegraphics[width=0.18\textwidth]{images/witslogonew.png}~\\[20pt]
-  \Large \textsc{Literature Review}\\[12pt]
+  \Large \textsc{Research Proposal}\\[12pt]
   {\huge \bf \ttitle}\\[20pt]  
   {\Large \bf \authorname}\\
   {\Large 2653934}\\[20pt]
   \large School of Computer Science and Applied Mathematics\\
   \large Faculty of Science\\
   \large University of the Witwatersrand\\[20pt]
-  Supervisor: \\ Hairong Bau and Richard Klein
+  Supervisor(s): \\ Hairong Bau and Richard Klein
   \vfill
   \today
   %\vfill
@@ -156,14 +159,20 @@ headsepline, % Uncomment to get a line under the header
 %	ABSTRACT PAGE
 %----------------------------------------------------------------------------------------
 % --- Uncomment when an abstract is to be included
-%\include{abstract}
+\include{abstract}
 
 %----------------------------------------------------------------------------------------
 %	ACKNOWLEDGEMENTS
 %----------------------------------------------------------------------------------------
 \begin{acknowledgements}
 \addchaptertocentry{\acknowledgementname} % Add the acknowledgements to the table of contents
-The acknowledgments and the people to thank go here \ldots
+
+I would like to express my deepest gratitude to my supervisor, Professor Hairong Bau, for her exceptional guidance, invaluable feedback, and continuous support throughout the development of this research on spatial mass spectrometry. Her expertise has been instrumental in shaping the direction of the Spatial-msiPL project. 
+
+I also extend my sincere thanks to Professor Richard for his foundational advice, early direction, and ongoing collaborative role in this broader endeavor. 
+
+Furthermore, I would like to thank my friend, family, the School of CSAM and the University of Witwatersrand for allowing me to pursue this research.
+
 \end{acknowledgements}
 
 
@@ -174,7 +183,7 @@ The acknowledgments and the people to thank go here \ldots
 
 % --- Comment the following lines if ou don't have any figures/tables. 
 
-\listoffigures % Prints the list of figures
+% \listoffigures % Prints the list of figures
 
 \listoftables % Prints the list of tables
 
@@ -212,6 +221,8 @@ The acknowledgments and the people to thank go here \ldots
 The characterization of biological tissues has historically relied upon classical histological staining techniques and light microscopy. However, modern precision medicine might necessitate a significantly deeper understanding of the intricate molecular pathogenesis that underlies morphological changes. To gently bridge this gap, Mass Spectrometry Imaging (MSI), particularly Matrix-Assisted Laser Desorption/Ionization (MALDI), has tentatively emerged as a revolutionary molecular microscopy technique.~\citep{schwamborn2010molecular} By attempting to map the spatial distribution of thousands of distinct biomolecules directly within an intact tissue section, MSI seems to provide a highly multiplexed view of the cellular microenvironment, which cautiously facilitates critical advancements in biomarker discovery and clinical diagnostics.~\citep{ye2013msi}
 
 The theoretical ability to simultaneously capture spatial relationships and complex spectral data without prior knowledge of the target molecules has propelled MSI to the forefront of contemporary biomedical research, facilitating advancements in biomarker discovery, pharmaceutical drug mapping, and clinical diagnostics~\citep{abdelmoula2021peak}. In complex localized pathologies such as glioblastoma, colorectal carcinoma, and infectious diseases, MSI enables the direct visualization of tumor heterogeneity, xenobiotic toxins, and localized immune responses that are otherwise entirely invisible to standard hematoxylin and eosin (H\&E) staining. Despite these profound advantages and the rapid maturation of the hardware, the clinical translation of MSI into routine diagnostic pipelines is heavily impeded by massive computational bottlenecks. A single high-resolution MSI experiment can generate three-dimensional data hypercubes ranging from tens of gigabytes to several terabytes per tissue slice~\citep{korber2025mass}. Each individual pixel within this spatial grid contains a high-dimensional mass spectrum, often consisting of tens to hundreds of thousands of discrete mass-to-charge ($m/z$) bins~\citep{abdelmoula2021peak}. Extracting biologically meaningful, statistically robust signals from this immense, noisy, and highly sparse data structure represents one of the most significant challenges in modern computational biology and medical image analysis~\citep{zhang2025msi_infectious}.
+
+The remainder of this research proposal is structured as follows. The Background and Related Work section traces the progression of MSI analysis from classical heuristics to deep representation learning, highlighting current spatial limitations. The Research Methodology section details the design of the Spatial-msiPL architecture, outlining dataset acquisition, preprocessing pipelines, model mechanics, and the rigorous quantitative evaluation protocol. The Work Schedule provides a tentative four-month timeline for project execution, and the Conclusion summarizes the expected impact and contributions of this study.
 
 \section{Problem Statement}
 
@@ -462,13 +473,33 @@ To rigorously contextualize any potential performance gains of the proposed Spat
     \item \textbf{3D Baselines:} If hardware permits, the heavy 3D-convolutional S3PL network might be utilized to measure computational runtime efficiency and memory consumption against the proposed 1D model \citep{weigand2026spatial}.
 \end{itemize}
 
-Table 2 outlines the planned comparative metrics:
-\begin{itemize}
-    \item \textbf{mSCF1 Score:} Assess spatial fidelity of extracted peaks. Target Baseline Comparison: msiPL (1D) and MALDIquant.
-    \item \textbf{PCC Distribution:} Analyze correlation strength with tumor masks. Target Baseline Comparison: S3PL (3D Convolutional).
-    \item \textbf{GPU Memory Usage:} Quantify hardware requirements during training. Target Baseline Comparison: S3PL (3D Convolutional).
-    \item \textbf{Inference Runtime:} Measure processing speed for clinical scalability. Target Baseline Comparison: msiPL and S3PL.
-\end{itemize}
+Table \ref{tab:evaluation_metrics} outlines the planned comparative metrics:
+\begin{table}[h!]
+\centering
+\begin{tabular}{|p{4cm}|p{5.5cm}|p{5cm}|}
+\hline
+\textbf{Evaluation Metric} & \textbf{Purpose within Study} & \textbf{Target Baseline Comparison} \\ \hline
+
+mSCF1 Score &
+Assess spatial fidelity of extracted peaks. &
+msiPL (1D) and MALDIquant. \\ \hline
+
+PCC Distribution &
+Analyze correlation strength with tumor masks. &
+S3PL (3D Convolutional). \\ \hline
+
+GPU Memory Usage &
+Quantify hardware requirements during training. &
+S3PL (3D Convolutional). \\ \hline
+
+Inference Runtime &
+Measure processing speed for clinical scalability. &
+msiPL and S3PL. \\ \hline
+
+\end{tabular}
+\caption{Evaluation metrics and baseline comparisons used in the study.}
+\label{tab:evaluation_metrics}
+\end{table}
 
 
 % \section{Summary (or Conclusion)}
@@ -498,7 +529,7 @@ The project is tentatively structured to be executed over a 4-month academic per
 % \end{quote}
 The computational bottleneck caused by heuristic peak picking currently appears to remain one of the primary barriers preventing the seamless integration of Mass Spectrometry Imaging into automated, clinical diagnostic workflows. While early unsupervised spectral generative models, such as the foundational 1D msiPL framework, have successfully suggested the viability of autonomous mathematical feature extraction, their failure to utilize structural biological context might inherently limit their diagnostic accuracy and noise-filtering capabilities. Conversely, 3D convolutional models seem to provide high spatial fidelity but impose somewhat restrictive computational burdens that could limit their clinical scalability in standard laboratory settings.
 
-The tentatively proposed Spatial-msiPL architecture seeks to modestly bridge this critical gap. By cautiously attempting to integrate physical neighborhood covariance directly into the encoding process via contextual input vectors and an explicit spatial coherence penalty, it is hypothesized that spatial awareness might be achieved within a highly efficient 1D framework. By rigorously evaluating this architecture using spatial correlation metrics against expert-annotated tumor masks, this preliminary research hopes to contribute a potentially more accessible deep learning framework capable of autonomously mapping the biochemical topography of diseased tissues. If successful, this gentle approach might offer a computationally modest step toward reducing human bias in spatial omics analysis.
+The proposed Spatial-msiPL architecture seeks to modestly bridge this critical gap. By attempting to integrate physical neighborhood covariance directly into the encoding process via contextual input vectors and an explicit spatial coherence penalty, it is hypothesized that spatial awareness might be achieved within a highly efficient 1D framework. By rigorously evaluating this architecture using spatial correlation metrics against expert-annotated tumor masks, this preliminary research hopes to contribute a potentially more accessible deep learning framework capable of autonomously mapping the biochemical topography of diseased tissues. If successful, this gentle approach might offer a computationally modest step toward reducing human bias in spatial omics analysis.
 
 % --------------------------------------------------------
 \nocite{*}

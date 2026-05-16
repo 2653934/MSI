@@ -17,3 +17,4 @@ lr:
 clean:
 	rm -rf $(file).{aux,bbl,blg,lof,log,lot,out,synctex.gz,toc}
 	rm -rf $(file2).{aux,bbl,blg,lof,log,lot,out,synctex.gz,toc}
+	rm -rf abstract.aux
