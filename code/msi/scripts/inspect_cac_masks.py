@@ -20,11 +20,25 @@ def main():
     for path in mask_files:
         mask = np.load(path)
 
+        values, counts = np.unique(mask, return_counts=True)
+
         print(f"--- {path.name} ---")
         print(f"Shape: {mask.shape}")
         print(f"Dtype: {mask.dtype}")
-        print(f"Unique values: {np.unique(mask)}")
-        print(f"Number of unique values: {len(np.unique(mask))}")
+        print(f"Total pixels: {mask.size}")
+        print()
+
+        print("Class distribution:")
+
+        for value, count in zip(values, counts):
+            percentage = (count / mask.size) * 100
+
+            print(
+                f"  Class {value}: "
+                f"{count} pixels "
+                f"({percentage:.2f}%)"
+            )
+
         print()
 
 
