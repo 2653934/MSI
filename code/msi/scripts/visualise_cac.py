@@ -1,16 +1,222 @@
 import argparse
-from pathlib import Path
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
 from pyimzml.ImzMLParser import ImzMLParser
 
 
-def load_cac_data(imzml_path, mask_path):
-    """Load spectra, coordinates, and segmentation mask."""
+# ------------------------------------------------------------
+# Configuration
+# ------------------------------------------------------------
+
+MASK_COLORS = [
+    "#20252B",  # Class 0 - background
+    "#E76F51",  # Class 1
+    "#2A9D8F",  # Class 2
+]
+
+MASK_LABELS = [
+    "Class 0",
+    "Class 1",
+    "Class 2",
+]
+
+
+# ------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------
+
+def load_spectra(imzml_path):
+    """Load all spectra and spatial coordinates from an imzML file."""
 
     print(f"Loading MSI file: {imzml_path}")
-    parser = ImzMLParser(str(imzml_path))
+
+    parser = ImzMLParser(imzml_path)
+
+    spectra = []
+    x_coords = []
+    y_coords = []
+
+    for idx, (x, y, z) in enumerate(parser.coordinates):
+        mzs, intensities = parser.getspectrum(idx)
+
+        spectra.append(intensities)
+        x_coords.append(x)
+        y_coords.append(y)
+
+    spectra = np.asarray(spectra)
+    x_coords = np.asarray(x_coords)
+    y_coords = np.asarray(y_coords)
+
+    # m/z values are assumed to be the same across spectra.
+    mz_values, _ = parser.getspectrum(0)
+
+    return (
+        parser,
+        spectra,
+        np.asarray(mz_values),
+        x_coords,
+        y_coords,
+    )
+
+
+def spectra_to_image(values, x_coords, y_coords):
+    """Convert one value per spectrum into a spatial image."""
+
+    width = int(np.max(x_coords))
+    height = int(np.max(y_coords))
+
+    image = np.full((height, width), np.nan)
+
+    for value, x, y in zip(values, x_coords, y_coords):
+        image[int(y) - 1, int(x) - 1] = value
+
+    return image
+
+
+def save_mask_visualisation(mask, dataset, output_path):
+    """Save a clean discrete segmentation mask."""
+
+    cmap = ListedColormap(MASK_COLORS)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    ax.imshow(
+        mask,
+        cmap=cmap,
+        interpolation="nearest",
+        vmin=0,
+        vmax=2,
+    )
+
+    ax.set_title(f"{dataset} - Segmentation Mask", fontsize=18)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    legend_handles = [
+        Patch(
+            facecolor=MASK_COLORS[i],
+            edgecolor="black",
+            label=MASK_LABELS[i],
+        )
+        for i in range(3)
+    ]
+
+    ax.legend(
+        handles=legend_handles,
+        title="Segmentation",
+        loc="upper right",
+    )
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
+
+
+def save_heatmap(
+    image,
+    dataset,
+    title,
+    colorbar_label,
+    output_path,
+):
+    """Save a spatial heatmap."""
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    im = ax.imshow(
+        image,
+        interpolation="nearest",
+    )
+
+    ax.set_title(f"{dataset} - {title}", fontsize=18)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label(colorbar_label)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
+
+
+def save_ion_image(
+    image,
+    dataset,
+    mz,
+    index,
+    output_path,
+):
+    """Save an ion image for one m/z value."""
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    im = ax.imshow(
+        image,
+        interpolation="nearest",
+    )
+
+    ax.set_title(
+        f"{dataset} - Ion Image\n"
+        f"m/z = {mz:.6f}  (index {index})",
+        fontsize=18,
+    )
+
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Intensity")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
+
+
+# ------------------------------------------------------------
+# Main visualisation
+# ------------------------------------------------------------
+
+def visualise_dataset(dataset, data_dir, output_dir):
+
+    print()
+    print("=" * 60)
+    print(f"VISUALISING {dataset}")
+    print("=" * 60)
+
+    imzml_path = os.path.join(
+        data_dir,
+        f"{dataset}.imzML",
+    )
+
+    mask_path = os.path.join(
+        data_dir,
+        "masks",
+        f"{dataset}_mask.npy",
+    )
+
+    dataset_output = os.path.join(
+        output_dir,
+        dataset,
+    )
+
+    os.makedirs(dataset_output, exist_ok=True)
+
+    if not os.path.exists(imzml_path):
+        print(f"ERROR: Missing {imzml_path}")
+        return
+
+    if not os.path.exists(mask_path):
+        print(f"ERROR: Missing {mask_path}")
+        return
+
+    # --------------------------------------------------------
+    # Load data
+    # --------------------------------------------------------
 
     mask = np.load(mask_path)
 
@@ -18,273 +224,247 @@ def load_cac_data(imzml_path, mask_path):
     print(f"Mask shape: {mask.shape}")
     print(f"Mask classes: {np.unique(mask)}")
 
-    spectra = []
-    coordinates = []
-
-    for idx, (x, y, z) in enumerate(parser.coordinates):
-        mzs, intensities = parser.getspectrum(idx)
-
-        spectra.append(intensities)
-        coordinates.append((x, y, z))
-
-    spectra = np.asarray(spectra)
-    coordinates = np.asarray(coordinates)
-
-    # m/z values are shared across the continuous imzML file.
-    mz_values, _ = parser.getspectrum(0)
-    mz_values = np.asarray(mz_values)
+    (
+        parser,
+        spectra,
+        mz_values,
+        x_coords,
+        y_coords,
+    ) = load_spectra(imzml_path)
 
     print()
     print("=== DATA INFORMATION ===")
-    print(f"Number of pixels: {len(coordinates)}")
+
+    print(f"Number of pixels: {len(spectra)}")
     print(f"Spectrum shape: {spectra.shape}")
     print(f"Number of m/z values: {len(mz_values)}")
-    print(f"m/z range: {mz_values.min():.4f} - {mz_values.max():.4f}")
-    print(f"Coordinates x: {coordinates[:, 0].min()} - {coordinates[:, 0].max()}")
-    print(f"Coordinates y: {coordinates[:, 1].min()} - {coordinates[:, 1].max()}")
-
-    return parser, mz_values, spectra, coordinates, mask
-
-
-def create_image(values, coordinates, image_shape):
-    """Place one value at each MSI spatial coordinate."""
-
-    image = np.full(image_shape, np.nan, dtype=float)
-
-    for value, (x, y, _) in zip(values, coordinates):
-        image[y - 1, x - 1] = value
-
-    return image
-
-
-def save_image(
-    image,
-    output_path,
-    title,
-    cmap="viridis",
-    colorbar_label=None,
-    vmin=None,
-    vmax=None,
-):
-    """Save a single image."""
-
-    plt.figure(figsize=(8, 6))
-
-    plt.imshow(
-        image,
-        cmap=cmap,
-        interpolation="nearest",
-        vmin=vmin,
-        vmax=vmax,
+    print(
+        f"m/z range: "
+        f"{mz_values.min():.4f} - "
+        f"{mz_values.max():.4f}"
     )
 
-    plt.title(title)
-    plt.xlabel("X")
-    plt.ylabel("Y")
+    print(
+        f"Coordinates x: "
+        f"{x_coords.min()} - {x_coords.max()}"
+    )
 
-    cbar = plt.colorbar()
+    print(
+        f"Coordinates y: "
+        f"{y_coords.min()} - {y_coords.max()}"
+    )
 
-    if colorbar_label:
-        cbar.set_label(colorbar_label)
+    # --------------------------------------------------------
+    # Mask
+    # --------------------------------------------------------
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=200)
-    plt.close()
+    if mask.shape != (
+        int(y_coords.max()),
+        int(x_coords.max()),
+    ):
+        print()
+        print("WARNING:")
+        print(
+            "Mask dimensions do not exactly match "
+            "the MSI coordinate dimensions."
+        )
 
+    print()
+    print("Saving segmentation mask...")
+
+    save_mask_visualisation(
+        mask,
+        dataset,
+        os.path.join(
+            dataset_output,
+            "mask.png",
+        ),
+    )
+
+    # --------------------------------------------------------
+    # Base peak intensity
+    # --------------------------------------------------------
+
+    print("Calculating base peak intensity...")
+
+    base_peak = np.max(
+        spectra,
+        axis=1,
+    )
+
+    base_peak_image = spectra_to_image(
+        base_peak,
+        x_coords,
+        y_coords,
+    )
+
+    save_heatmap(
+        base_peak_image,
+        dataset,
+        "Base Peak Intensity",
+        "Intensity",
+        os.path.join(
+            dataset_output,
+            "base_peak.png",
+        ),
+    )
+
+    # --------------------------------------------------------
+    # Total ion current
+    # --------------------------------------------------------
+
+    print("Calculating total ion current...")
+
+    tic = np.sum(
+        spectra,
+        axis=1,
+    )
+
+    tic_image = spectra_to_image(
+        tic,
+        x_coords,
+        y_coords,
+    )
+
+    save_heatmap(
+        tic_image,
+        dataset,
+        "Total Ion Current",
+        "Total intensity",
+        os.path.join(
+            dataset_output,
+            "tic.png",
+        ),
+    )
+
+    # --------------------------------------------------------
+    # Representative ion images
+    # --------------------------------------------------------
+
+    print("Creating representative ion images...")
+
+    num_mz = len(mz_values)
+
+    representative_indices = np.linspace(
+        0,
+        num_mz - 1,
+        6,
+        dtype=int,
+    )
+
+    ion_dir = os.path.join(
+        dataset_output,
+        "ion_images",
+    )
+
+    os.makedirs(
+        ion_dir,
+        exist_ok=True,
+    )
+
+    for index in representative_indices:
+
+        mz = mz_values[index]
+
+        ion_values = spectra[:, index]
+
+        ion_image = spectra_to_image(
+            ion_values,
+            x_coords,
+            y_coords,
+        )
+
+        save_ion_image(
+            ion_image,
+            dataset,
+            mz,
+            index,
+            os.path.join(
+                ion_dir,
+                f"mz_{index:04d}_{mz:.4f}.png",
+            ),
+        )
+
+    # --------------------------------------------------------
+    # Summary
+    # --------------------------------------------------------
+
+    print()
+    print("=== VISUALISATION COMPLETE ===")
+
+    print(
+        f"Results saved to: {dataset_output}"
+    )
+
+
+# ------------------------------------------------------------
+# CLI
+# ------------------------------------------------------------
 
 def main():
+
     parser = argparse.ArgumentParser(
-        description="Visualise CAC MSI data, segmentation masks, and ion images."
+        description=(
+            "Visualise CAC MSI datasets."
+        )
     )
 
     parser.add_argument(
         "--dataset",
-        default="40TopL",
-        help="CAC dataset name, e.g. 40TopL",
+        type=str,
+        default=None,
+        help=(
+            "Dataset name, e.g. 40TopL. "
+            "If omitted, all CAC datasets are processed."
+        ),
     )
 
     parser.add_argument(
         "--data-dir",
-        default="/datasets/zsuliman/msi_data/cac",
-        help="Directory containing CAC .imzML and .ibd files.",
+        type=str,
+        required=True,
+        help="Path to CAC dataset directory.",
     )
 
     parser.add_argument(
         "--output-dir",
-        default="results/visualisations/cac",
-        help="Directory where visualisations will be saved.",
+        type=str,
+        required=True,
+        help="Output directory.",
     )
 
     args = parser.parse_args()
 
-    data_dir = Path(args.data_dir)
-    output_dir = Path(args.output_dir) / args.dataset
+    if args.dataset is not None:
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+        datasets = [args.dataset]
 
-    imzml_path = data_dir / f"{args.dataset}.imzML"
-    mask_path = data_dir / "masks" / f"{args.dataset}_mask.npy"
+    else:
 
-    if not imzml_path.exists():
-        raise FileNotFoundError(f"MSI file not found: {imzml_path}")
-
-    if not mask_path.exists():
-        raise FileNotFoundError(f"Mask file not found: {mask_path}")
+        datasets = sorted(
+            filename.replace(
+                ".imzML",
+                "",
+            )
+            for filename in os.listdir(args.data_dir)
+            if filename.endswith(".imzML")
+        )
 
     print("=== CAC VISUALISATION ===")
-    print(f"Dataset: {args.dataset}")
-    print(f"Output directory: {output_dir}")
-    print()
+    print(f"Dataset directory: {args.data_dir}")
+    print(f"Output directory: {args.output_dir}")
+    print(f"Datasets: {datasets}")
 
-    (
-        parser,
-        mz_values,
-        spectra,
-        coordinates,
-        mask,
-    ) = load_cac_data(imzml_path, mask_path)
+    for dataset in datasets:
 
-    # ---------------------------------------------------------
-    # Determine spatial dimensions
-    # ---------------------------------------------------------
-
-    height, width = mask.shape
-
-    print()
-    print("=== SPATIAL INFORMATION ===")
-    print(f"Image dimensions: {width} x {height}")
-    print(f"Pixels in mask: {height * width}")
-    print(f"Spectra available: {len(spectra)}")
-
-    # ---------------------------------------------------------
-    # 1. Segmentation mask
-    # ---------------------------------------------------------
-
-    save_image(
-        mask,
-        output_dir / "mask.png",
-        f"{args.dataset} - Segmentation Mask",
-        cmap="tab10",
-        colorbar_label="Class",
-        vmin=0,
-        vmax=2,
-    )
-
-    # ---------------------------------------------------------
-    # 2. Total Ion Current (TIC)
-    # ---------------------------------------------------------
-
-    tic = np.sum(spectra, axis=1)
-
-    tic_image = create_image(
-        tic,
-        coordinates,
-        mask.shape,
-    )
-
-    save_image(
-        tic_image,
-        output_dir / "tic.png",
-        f"{args.dataset} - Total Ion Current",
-        cmap="viridis",
-        colorbar_label="Total ion intensity",
-    )
-
-    # ---------------------------------------------------------
-    # 3. Base peak intensity
-    # ---------------------------------------------------------
-
-    base_peak = np.max(spectra, axis=1)
-
-    base_peak_image = create_image(
-        base_peak,
-        coordinates,
-        mask.shape,
-    )
-
-    save_image(
-        base_peak_image,
-        output_dir / "base_peak_intensity.png",
-        f"{args.dataset} - Base Peak Intensity",
-        cmap="viridis",
-        colorbar_label="Intensity",
-    )
-
-    # ---------------------------------------------------------
-    # 4. Representative m/z ion images
-    # ---------------------------------------------------------
-
-    print()
-    print("=== REPRESENTATIVE m/z VALUES ===")
-
-    # Choose several evenly spaced m/z indices.
-    num_ion_images = 6
-
-    mz_indices = np.linspace(
-        0,
-        len(mz_values) - 1,
-        num=num_ion_images,
-        dtype=int,
-    )
-
-    for index in mz_indices:
-        mz = mz_values[index]
-
-        ion_image = create_image(
-            spectra[:, index],
-            coordinates,
-            mask.shape,
+        visualise_dataset(
+            dataset,
+            args.data_dir,
+            args.output_dir,
         )
 
-        filename = f"ion_mz_{mz:.4f}.png"
-
-        print(
-            f"Index {index}: "
-            f"m/z = {mz:.6f}"
-        )
-
-        save_image(
-            ion_image,
-            output_dir / filename,
-            f"{args.dataset} - m/z {mz:.4f}",
-            cmap="viridis",
-            colorbar_label="Intensity",
-        )
-
-    # ---------------------------------------------------------
-    # 5. Save metadata
-    # ---------------------------------------------------------
-
-    metadata_path = output_dir / "metadata.txt"
-
-    with open(metadata_path, "w") as f:
-        f.write(f"Dataset: {args.dataset}\n")
-        f.write(f"MSI file: {imzml_path}\n")
-        f.write(f"Mask file: {mask_path}\n")
-        f.write(f"Mask shape: {mask.shape}\n")
-        f.write(f"Number of pixels: {len(coordinates)}\n")
-        f.write(f"Number of m/z values: {len(mz_values)}\n")
-        f.write(f"m/z minimum: {mz_values.min()}\n")
-        f.write(f"m/z maximum: {mz_values.max()}\n")
-        f.write(f"Coordinate X range: {coordinates[:, 0].min()} - {coordinates[:, 0].max()}\n")
-        f.write(f"Coordinate Y range: {coordinates[:, 1].min()} - {coordinates[:, 1].max()}\n")
-
-        f.write("\nClass distribution:\n")
-
-        unique, counts = np.unique(mask, return_counts=True)
-
-        for class_value, count in zip(unique, counts):
-            percentage = count / mask.size * 100
-
-            f.write(
-                f"Class {class_value}: "
-                f"{count} pixels "
-                f"({percentage:.2f}%)\n"
-            )
-
     print()
-    print("=== VISUALISATION COMPLETE ===")
-    print(f"Results saved to: {output_dir}")
+    print("=== ALL CAC VISUALISATIONS COMPLETE ===")
 
 
 if __name__ == "__main__":
