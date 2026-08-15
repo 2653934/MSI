@@ -219,8 +219,7 @@ def main():
         args.output_dir
     )
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    os.makedirs(args.output_dir, exist_ok=True)
 
     # ---------------------------------------------------------------
     # Seeds
