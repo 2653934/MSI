@@ -580,12 +580,7 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(
-        args.output_dir
-    ):
-        os.makedirs(
-            args.output_dir
-        )
+    os.makedirs(args.output_dir, exist_ok=True)
 
     print("==========================================")
     print("       LEGACY msiPL VISUALISATION")
