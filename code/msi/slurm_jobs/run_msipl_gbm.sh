@@ -2,7 +2,7 @@
 #SBATCH --job-name=msipl-gbm
 #SBATCH --output=logs/msipl-gbm-%j.out
 #SBATCH --error=logs/msipl-gbm-%j.err
-#SBATCH --time=12:00:00
+#SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -45,8 +45,8 @@ cd ~/msi
 
 python scripts/run_msipl_gbm.py \
     --input /datasets/zsuliman/msi_data/gbm/Dataset_S1.h5 \
-    --output-dir results/baselines/msipl/test_S1 \
-    --epochs 2 \
+    --output-dir results/baselines/msipl/baseline_S1 \
+    --epochs 100 \
     --batch-size 128 \
     --latent-dim 5 \
     --intermediate-dim 512 \
