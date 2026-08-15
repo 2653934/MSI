@@ -1,91 +1,212 @@
 # -*- coding: utf-8 -*-
 """
-Implementation of msiPL (Abdelmoula et al): Neural Network Architecture (VAE_BN)
+msiPL (Abdelmoula et al.) Neural Network Architecture
 
-    Keras-based implementation of a fully connected variational autoecnoder
-    equipped with Batch normalization to correct for covariate shift and improve learning stability
+VAE_BN:
+    Fully-connected Variational Autoencoder equipped with
+    Batch Normalization.
 
+This version preserves the original msiPL architecture while
+using a TensorFlow/Keras-compatible VAE loss implementation.
 """
 
 import numpy as np
-from keras.layers import Lambda, Input, Dense, ReLU, BatchNormalization
+
+from keras.layers import (
+    Lambda,
+    Input,
+    Dense,
+    ReLU,
+    BatchNormalization,
+)
 from keras.models import Model
-from keras.losses import  categorical_crossentropy
-from keras.utils import plot_model
 from keras import backend as K
 
 
 class VAE_BN(object):
-    
-    def __init__ (self, nSpecFeatures,  intermediate_dim, latent_dim):
+
+    def __init__(self, nSpecFeatures, intermediate_dim, latent_dim):
         self.nSpecFeatures = nSpecFeatures
         self.intermediate_dim = intermediate_dim
         self.latent_dim = latent_dim
-        
+
     def sampling(self, args):
         """
-        Reparameterization trick by sampling from a continuous function (Gaussian with an auxiliary variable ~N(0,1)).
-        [see Our methods and for more details see arXiv:1312.6114]
+        Reparameterization trick.
+
+        z = z_mean + exp(0.5 * z_log_var) * epsilon
+
+        where epsilon ~ N(0, I).
         """
-        self.z_mean, self.z_log_var = args
-        self.batch = K.shape(self.z_mean)[0]
-        self.dim = K.int_shape(self.z_mean)[1]
-        self.epsilon = K.random_normal(shape=(self.batch, self.dim)) # random_normal (mean=0 and std=1)
-        return self.z_mean + K.exp(0.5 * self.z_log_var) * self.epsilon
-    
+        z_mean, z_log_var = args
+
+        batch = K.shape(z_mean)[0]
+        dim = K.int_shape(z_mean)[1]
+
+        epsilon = K.random_normal(
+            shape=(batch, dim),
+            mean=0.0,
+            stddev=1.0,
+        )
+
+        return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
     def get_architecture(self):
-        # =========== 1. Encoder Model================
-        input_shape = (self.nSpecFeatures, )
-        inputs = Input(shape=input_shape, name='encoder_input')
-        h = Dense(self.intermediate_dim)(inputs)
-        h = BatchNormalization()(h)
-        h = ReLU()(h)
-        z_mean = Dense(self.latent_dim, name = 'z_mean')(h)
-        z_mean = BatchNormalization()(z_mean)
-        z_log_var = Dense(self.latent_dim, name = 'z_log_var')(h)
-        z_log_var = BatchNormalization()(z_log_var)
-        
-        # Reparametrization Tric:
-        z = Lambda(self.sampling, output_shape = (self.latent_dim,), name='z')([z_mean, z_log_var])
-        encoder = Model(inputs, [z_mean, z_log_var, z], name = 'encoder')
+
+        # ============================================================
+        # 1. Encoder
+        # ============================================================
+
+        input_shape = (self.nSpecFeatures,)
+
+        inputs = Input(
+            shape=input_shape,
+            name="encoder_input",
+        )
+
+        h = Dense(
+            self.intermediate_dim,
+            name="encoder_dense",
+        )(inputs)
+
+        h = BatchNormalization(
+            name="encoder_batchnorm",
+        )(h)
+
+        h = ReLU(
+            name="encoder_relu",
+        )(h)
+
+        z_mean = Dense(
+            self.latent_dim,
+            name="z_mean",
+        )(h)
+
+        z_mean = BatchNormalization(
+            name="z_mean_batchnorm",
+        )(z_mean)
+
+        z_log_var = Dense(
+            self.latent_dim,
+            name="z_log_var",
+        )(h)
+
+        z_log_var = BatchNormalization(
+            name="z_log_var_batchnorm",
+        )(z_log_var)
+
+        z = Lambda(
+            self.sampling,
+            output_shape=(self.latent_dim,),
+            name="z",
+        )([z_mean, z_log_var])
+
+        encoder = Model(
+            inputs,
+            [z_mean, z_log_var, z],
+            name="encoder",
+        )
+
         print("==== Encoder Architecture...")
         encoder.summary()
-        # plot_model(encoder, to_file='VAE_BN_encoder.png', show_shapes=True)
-        
-        # =========== 2. Encoder Model================
-        latent_inputs = Input(shape = (self.latent_dim,), name='Latent_Space')
-        hdec = Dense(self.intermediate_dim)(latent_inputs)
-        hdec = BatchNormalization()(hdec)
-        hdec = ReLU()(hdec)
-        outputs = Dense(self.nSpecFeatures, activation = 'sigmoid')(hdec)
-        decoder = Model(latent_inputs, outputs, name = 'decoder')
+
+        # ============================================================
+        # 2. Decoder
+        # ============================================================
+
+        latent_inputs = Input(
+            shape=(self.latent_dim,),
+            name="Latent_Space",
+        )
+
+        hdec = Dense(
+            self.intermediate_dim,
+            name="decoder_dense",
+        )(latent_inputs)
+
+        hdec = BatchNormalization(
+            name="decoder_batchnorm",
+        )(hdec)
+
+        hdec = ReLU(
+            name="decoder_relu",
+        )(hdec)
+
+        outputs = Dense(
+            self.nSpecFeatures,
+            activation="sigmoid",
+            name="decoder_output",
+        )(hdec)
+
+        decoder = Model(
+            latent_inputs,
+            outputs,
+            name="decoder",
+        )
+
         print("==== Decoder Architecture...")
-        decoder.summary()       
-        # plot_model(decoder, to_file='VAE_BN__decoder.png', show_shapes=True)
-        
-        #=========== VAE_BN: Encoder_Decoder ================
-        outputs = decoder(encoder(inputs)[2])
-        VAE_BN_model = Model(inputs, outputs, name='VAE_BN')
-        
-        # ====== Cost Function (Variational Lower Bound)  ==============
-        "KL-div (regularizes encoder) and reconstruction loss (of the decoder): see equation(3) in our paper"
-        # 1. KL-Divergence:
-        kl_Loss = 1 + self.z_log_var - K.square(self.z_mean) - K.exp(self.z_log_var)
-        kl_Loss = K.sum(kl_Loss, axis=-1)
-        kl_Loss *= -0.5
-        # 2. Reconstruction Loss
-        reconstruction_loss = categorical_crossentropy(inputs,outputs) # Use sigmoid at output layer
+        decoder.summary()
+
+        # ============================================================
+        # 3. VAE
+        # ============================================================
+
+        # Build the encoder graph once and explicitly retain its
+        # symbolic outputs. This avoids the graph-scope issue caused
+        # by repeatedly calling encoder(inputs).
+        z_mean_out, z_log_var_out, z_out = encoder(inputs)
+
+        outputs = decoder(z_out)
+
+        VAE_BN_model = Model(
+            inputs,
+            outputs,
+            name="VAE_BN",
+        )
+
+        # ============================================================
+        # 4. VAE Loss
+        # ============================================================
+
+        # KL divergence:
+        #
+        # -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+        #
+        kl_loss = (
+            1.0
+            + z_log_var_out
+            - K.square(z_mean_out)
+            - K.exp(z_log_var_out)
+        )
+
+        kl_loss = K.sum(
+            kl_loss,
+            axis=-1,
+        )
+
+        kl_loss *= -0.5
+
+        # Reconstruction loss.
+        #
+        # msiPL uses categorical_crossentropy despite the sigmoid
+        # output layer. We preserve that behaviour from the original
+        # implementation.
+        reconstruction_loss = K.categorical_crossentropy(
+            inputs,
+            outputs,
+        )
+
         reconstruction_loss *= self.nSpecFeatures
-        
-        # ========== Compile VAE_BN model ===========
-        model_Loss = K.mean(reconstruction_loss + kl_Loss)
-        VAE_BN_model.add_loss(model_Loss)
-        VAE_BN_model.compile(optimizer='adam')
+
+        # Total VAE loss.
+        model_loss = K.mean(
+            reconstruction_loss + kl_loss
+        )
+
+        VAE_BN_model.add_loss(model_loss)
+
+        VAE_BN_model.compile(
+            optimizer="adam"
+        )
+
         return VAE_BN_model, encoder
-
-
-
-
-
-
