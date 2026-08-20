@@ -11,9 +11,9 @@ from torchvision import transforms
 import tqdm
 import m2aia as m2
 
-from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
+from code.msi.baselines.s3pl.model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 from test import test
-from utils.helpers import tic_norm_spectra
+from code.msi.baselines.s3pl.utils.helpers import artifact_directories, resolve_data_paths, tic_norm_spectra
 
 def train(config):   
     random_seed = config["random_seed"]
@@ -24,10 +24,9 @@ def train(config):
     use_cuda = torch.cuda.is_available()
 
     data_dir = config["data_dir"]
-    dataname = data_dir.split('/')[-1].replace('.imzML', '').replace('.npy', '')
     directory_name = os.path.dirname(__file__)
-    folderpath = directory_name + data_dir.split(dataname + '.imzML')[0]
-    filepath = directory_name + data_dir
+    filepath, folderpath, dataname = resolve_data_paths(data_dir, directory_name)
+    artifact_dirs = artifact_directories(config, directory_name)
 
     I = m2.ImzMLReader(filepath)
     mz_list = I.GetXAxis()
@@ -54,10 +53,10 @@ def train(config):
     if use_cuda:
         model = model.cuda()
 
-    if not os.path.exists('weights'): os.mkdir('weights')
-    if not os.path.exists('logs'): os.mkdir('logs')
+    for path in artifact_dirs.values():
+        path.mkdir(parents=True, exist_ok=True)
     training_name = dataname + '_' + model._get_name() + '_' + str(config["n_epochs"]) + 'epochs_' + str(config["peaks_per_spectral_patch"]) + '_' + 'spectral_patch_size_' + str(config["spectral_patch_size"])
-    path_to_weights = 'weights/' + training_name + '.pt'
+    path_to_weights = artifact_dirs["weights"] / (training_name + '.pt')
 
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(path_to_weights)
@@ -95,12 +94,12 @@ def train(config):
         loss = loss.item()
         train_history.append(loss)
         
-    torch.save(model.state_dict(), path_to_weights)
+    torch.save(model.state_dict(), str(path_to_weights))
 
     config["training_name"] = training_name
     config["train_history"] = train_history
     
-    with open('logs/' + training_name + '.json', 'w') as f:
+    with open(artifact_dirs["logs"] / (training_name + '.json'), 'w') as f:
         json.dump(config, f, indent=4)
 
     mSCF1 = test(config, test_indices)

@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import argparse
 import json
-import os
+import os 
 import sys
 
 import h5py
