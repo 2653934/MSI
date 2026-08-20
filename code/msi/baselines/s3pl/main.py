@@ -1,7 +1,6 @@
 import os
 import json
 import argparse
-from train import train
 
 def load_config(config_path, args):
     with open(config_path, "r") as f:
@@ -9,6 +8,7 @@ def load_config(config_path, args):
 
     # Override config values if provided via CLI
     if args.data_dir is not None: config["data_dir"] = args.data_dir
+    if args.artifact_root is not None: config["artifact_root"] = args.artifact_root
     if args.number_classes is not None: config["number_classes"] = args.number_classes
     if args.eval_picking is not None: config["evaluate_peak_picking"] = args.eval_picking
     if args.number_peaks is not None: config["number_peaks"] = args.number_peaks
@@ -28,21 +28,24 @@ if __name__ == "__main__":
     directory_name = os.path.dirname(__file__)
 
     parser = argparse.ArgumentParser("S3PL training, peak picking and evaluation.")
-    parser.add_argument("--data_dir", type=str, default="")
+    parser.add_argument("--data_dir", type=str, default=None)
+    parser.add_argument("--artifact_root", type=str, default=None)
     parser.add_argument("--number_classes", type=int, default=None, help="number of annotated classes in the segmentation mask (including background)")
-    parser.add_argument("--eval_picking", type=bool, default=True, help="whether picked peaks should be evaluated (segmentation is required)")
+    parser.add_argument("--eval_picking", action=argparse.BooleanOptionalAction, default=None, help="whether picked peaks should be evaluated (segmentation is required)")
     parser.add_argument("--number_peaks", type=int, default=None, required=False)
-    parser.add_argument("--peaks_per_spectral_patch", type=int, default=512)
-    parser.add_argument("--spectral_patch_size", type=int, default=3)
-    parser.add_argument("--kernel_depth_d1", type=int, default=51)
-    parser.add_argument("--kernel_depth_d2", type=int, default=1)
-    parser.add_argument("--n_epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--learning_rate", type=float, default=1e-2)
-    parser.add_argument("--dropout", type=float, default=0)
-    parser.add_argument("--random_seed", type=int, default=1)
+    parser.add_argument("--peaks_per_spectral_patch", type=int, default=None)
+    parser.add_argument("--spectral_patch_size", type=int, default=None)
+    parser.add_argument("--kernel_depth_d1", type=int, default=None)
+    parser.add_argument("--kernel_depth_d2", type=int, default=None)
+    parser.add_argument("--n_epochs", type=int, default=None)
+    parser.add_argument("--batch_size", type=int, default=None)
+    parser.add_argument("--learning_rate", type=float, default=None)
+    parser.add_argument("--dropout", type=float, default=None)
+    parser.add_argument("--random_seed", type=int, default=None)
 
     args = parser.parse_args()
     config = load_config(config_path=f'{directory_name}/config.json', args=args)
+
+    from code.msi.baselines.s3pl.train import train
 
     mSCF1 = train(config)
