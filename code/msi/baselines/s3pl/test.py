@@ -9,15 +9,15 @@ from torchvision import transforms
 import tqdm
 import m2aia as m2
 
-from code.msi.baselines.s3pl.utils.PeakEvaluation import PeakEvaluation, PeakEvaluationMultipleClasses
-from code.msi.baselines.s3pl.utils.helpers import (
+from utils.PeakEvaluation import PeakEvaluation, PeakEvaluationMultipleClasses
+from utils.helpers import (
     artifact_directories,
     check_for_labels,
     resolve_data_paths,
     tic_norm_spectra,
 )
-from code.msi.baselines.s3pl.model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
-import code.msi.baselines.s3pl.data_configs as data_configs
+from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
+import data_configs
 
 def test(config, test_indices):
     training_name = config["training_name"]

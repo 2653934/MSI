@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from code.msi.baselines.s3pl.utils.create_pearson_labels import create_pearson_labels
+from utils.create_pearson_labels import create_pearson_labels
 
 
 def resolve_data_paths(data_path, project_dir):

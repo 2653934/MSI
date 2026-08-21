@@ -46,6 +46,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = load_config(config_path=f'{directory_name}/config.json', args=args)
 
-    from code.msi.baselines.s3pl.train import train
+    from train import train
 
     mSCF1 = train(config)

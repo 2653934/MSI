@@ -1,6 +1,7 @@
 import os
 import random
 import json
+import time
 import numpy as np
 
 import torch
@@ -11,9 +12,9 @@ from torchvision import transforms
 import tqdm
 import m2aia as m2
 
-from code.msi.baselines.s3pl.model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
+from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 from test import test
-from code.msi.baselines.s3pl.utils.helpers import artifact_directories, resolve_data_paths, tic_norm_spectra
+from utils.helpers import artifact_directories, resolve_data_paths, tic_norm_spectra
 
 def train(config):   
     random_seed = config["random_seed"]
@@ -22,6 +23,10 @@ def train(config):
     torch.manual_seed(random_seed)
     torch.cuda.manual_seed(random_seed)
     use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        torch.cuda.reset_peak_memory_stats()
+
+    total_started_at = time.perf_counter()
 
     data_dir = config["data_dir"]
     directory_name = os.path.dirname(__file__)
@@ -67,6 +72,7 @@ def train(config):
     
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["learning_rate"])
 
+    train_started_at = time.perf_counter()
     train_history = []
     for epoch in range(config["n_epochs"]):
         model.train()
@@ -94,6 +100,7 @@ def train(config):
         loss = loss.item()
         train_history.append(loss)
         
+    training_seconds = time.perf_counter() - train_started_at
     torch.save(model.state_dict(), str(path_to_weights))
 
     config["training_name"] = training_name
@@ -102,5 +109,25 @@ def train(config):
     with open(artifact_dirs["logs"] / (training_name + '.json'), 'w') as f:
         json.dump(config, f, indent=4)
 
+    evaluation_started_at = time.perf_counter()
     mSCF1 = test(config, test_indices)
+    evaluation_seconds = time.perf_counter() - evaluation_started_at
+    total_seconds = time.perf_counter() - total_started_at
+
+    runtime_metrics = {
+        "dataset": dataname,
+        "device": torch.cuda.get_device_name(0) if use_cuda else "cpu",
+        "training_seconds": training_seconds,
+        "evaluation_seconds": evaluation_seconds,
+        "total_seconds": total_seconds,
+        "peak_gpu_memory_bytes": (
+            int(torch.cuda.max_memory_allocated()) if use_cuda else None
+        ),
+    }
+    resultfolder = artifact_dirs["results"] / training_name
+    resultfolder.mkdir(parents=True, exist_ok=True)
+    with open(resultfolder / "runtime_metrics.json", "w") as f:
+        json.dump(runtime_metrics, f, indent=4)
+
+    print("Runtime metrics:", runtime_metrics)
     return mSCF1
