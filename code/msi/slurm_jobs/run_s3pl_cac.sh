@@ -6,11 +6,10 @@
 #SBATCH --partition=bigbatch
 #SBATCH --time=02:00:00
 #SBATCH --mem=32G
-#SBATCH --gres=gpu:1
 #SBATCH --output=logs/s3pl-cac-%j.out
 #SBATCH --error=logs/s3pl-cac-%j.err
 
-set -euo pipefail
+set -eo pipefail
 
 DATASET="${1:-40TopL}"
 
