@@ -7,9 +7,9 @@ import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 import tqdm
-import m2aia as m2
 
 from utils.PeakEvaluation import PeakEvaluation, PeakEvaluationMultipleClasses
+from utils.data_source import build_patch_dataset
 from utils.helpers import (
     artifact_directories,
     check_for_labels,
@@ -44,13 +44,13 @@ def test(config, test_indices):
     else:
         number_classes = data_configs.number_classes[dataname]
 
-    I = m2.ImzMLReader(filepath)
-    mz_list = torch.tensor(I.GetXAxis())
-    image_handles=[I]
-
     transform = transforms.Lambda(lambda x: torch.tensor(tic_norm_spectra(x), dtype=torch.float32))
-    
-    test_dataset = m2.SpectrumDataset(image_handles, shape=(config["spectral_patch_size"], config["spectral_patch_size"]), buffer_type="memory", transform_data=transform)
+    test_dataset, mz_values = build_patch_dataset(
+        filepath,
+        config["spectral_patch_size"],
+        transform,
+    )
+    mz_list = torch.tensor(mz_values)
     test_sampler = SubsetRandomSampler(test_indices)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, drop_last=False, sampler=test_sampler)
 
@@ -108,7 +108,7 @@ def test(config, test_indices):
 
     mSCF1 = None
     if config["evaluate_peak_picking"]:
-        check_for_labels(folderpath, dataname)
+        check_for_labels(folderpath, dataname, filepath)
         evaluation_metrics = {
             "dataset": dataname,
             "number_picked_peaks": len(peak_list),
@@ -124,7 +124,7 @@ def test(config, test_indices):
         print('number picked peaks = ' + str(len(peak_list)))
 
         for pcc_threshold in [0.3, 0.4, 0.5, 0.6]:
-            evaluate_peaks = PeakEvaluationMultipleClasses(dataname, list(range(number_classes)), pcc_threshold, folderpath, peak_list, show_ion_images=False)
+            evaluate_peaks = PeakEvaluationMultipleClasses(dataname, list(range(number_classes)), pcc_threshold, folderpath, peak_list, show_ion_images=False, mz_values=mz_values)
             class_metrics = evaluate_peaks.calculate_metrics()
             evaluation_metrics["class_metrics"][str(pcc_threshold)] = class_metrics
 
@@ -144,7 +144,7 @@ def test(config, test_indices):
 
         F1_scores_mixed = []
         for pcc_threshold in [0.3, 0.4, 0.5, 0.6]:      
-            evaluate_peaks = PeakEvaluation(dataname, list(range(number_classes)), pcc_threshold, folderpath, peak_list, show_ion_images=False)
+            evaluate_peaks = PeakEvaluation(dataname, list(range(number_classes)), pcc_threshold, folderpath, peak_list, show_ion_images=False, mz_values=mz_values)
             recall, precision, F1 = evaluate_peaks.calculate_metrics()
 
             F1_scores_mixed.append(F1)

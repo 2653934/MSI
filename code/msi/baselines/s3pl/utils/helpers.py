@@ -41,9 +41,9 @@ def tic_norm_spectra(arr):
     normalized = arr / max_vals
     return normalized
 
-def check_for_labels(folderpath, dataname):
+def check_for_labels(folderpath, dataname, data_path=None):
     if not os.path.exists(folderpath + 'masks/' + dataname + '_mask.npy'):
-        raise Exception('There is no mask given for the file ' + dataname + '.imzML in the folder "' + folderpath + 'masks/". The mask should have the name "' + dataname + '_mask.npy".')
+        raise Exception('There is no mask given for ' + dataname + ' in the folder "' + folderpath + 'masks/". The mask should have the name "' + dataname + '_mask.npy".')
     
     num_classes = len(np.unique(np.load(folderpath + 'masks/' + dataname + '_mask.npy')))
     labels_are_missing = False
@@ -60,4 +60,4 @@ def check_for_labels(folderpath, dataname):
             labels_are_missing = True
     
     if labels_are_missing:
-        create_pearson_labels(dataname, folderpath, num_classes)
+        create_pearson_labels(dataname, folderpath, num_classes, data_path=data_path)

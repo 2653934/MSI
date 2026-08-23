@@ -11,7 +11,7 @@ class PeakEvaluation:
     Optional: show picked ion images, normalize results in case of major deviations between the number of ground truth positive peaks and the number of picked peaks.
     """
 
-    def __init__(self, dataname, num_classes, pearson_threshold, folderpath, peak_list, show_ion_images = False, normalise_results = False):
+    def __init__(self, dataname, num_classes, pearson_threshold, folderpath, peak_list, show_ion_images = False, normalise_results = False, mz_values=None):
         self.dataname = dataname
         self.num_classes = num_classes
         self.pearson_threshold = pearson_threshold
@@ -21,8 +21,12 @@ class PeakEvaluation:
         self.number_picked_peaks = len(peak_list)
         self.normalise_results = normalise_results
 
-        self.parser = ImzMLParser(folderpath + dataname + '.imzML')
-        self.all_mz, _ = self.parser.getspectrum(0)
+        self.parser = None
+        if mz_values is None:
+            self.parser = ImzMLParser(folderpath + dataname + '.imzML')
+            self.all_mz, _ = self.parser.getspectrum(0)
+        else:
+            self.all_mz = np.asarray(mz_values)
 
         for idx, mz in enumerate(self.peak_list):
             if mz not in self.all_mz:
@@ -75,6 +79,8 @@ class PeakEvaluation:
         FN = len(set(self.non_peaks) & set(self.true_peaks)) 
         TN = len(set(self.non_peaks) & set(self.false_peaks))
         
+        if self.show_ion_images and self.parser is None:
+            raise ValueError("Ion-image display is only available for imzML inputs")
         if self.show_ion_images:
             for peak in self.peak_list:
                 img = getionimage(self.parser, peak, tol=0.0001)
@@ -126,7 +132,7 @@ class PeakEvaluationMultipleClasses:
     Optional: show picked ion images, normalize results in case of major deviations between the number of ground truth positive peaks and the number of picked peaks.
     """
         
-    def __init__(self, dataname, num_classes, pearson_threshold, folderpath, peak_list, show_ion_images = False, normalise_results = False):
+    def __init__(self, dataname, num_classes, pearson_threshold, folderpath, peak_list, show_ion_images = False, normalise_results = False, mz_values=None):
         self.dataname = dataname
         self.num_classes = num_classes
         self.pearson_threshold = pearson_threshold
@@ -136,8 +142,12 @@ class PeakEvaluationMultipleClasses:
         self.number_picked_peaks = len(peak_list)
         self.normalise_results = normalise_results
 
-        self.parser = ImzMLParser(folderpath + dataname + '.imzML')
-        self.all_mz, _ = self.parser.getspectrum(0)
+        self.parser = None
+        if mz_values is None:
+            self.parser = ImzMLParser(folderpath + dataname + '.imzML')
+            self.all_mz, _ = self.parser.getspectrum(0)
+        else:
+            self.all_mz = np.asarray(mz_values)
 
         for idx, mz in enumerate(self.peak_list):
             if mz not in self.all_mz:
@@ -203,6 +213,8 @@ class PeakEvaluationMultipleClasses:
             FN = len(set(self.non_peaks) & set(self.groundtruth["true_peaks_class" + str(class_id)])) 
             TN = len(set(self.non_peaks) & set(self.groundtruth["false_peaks_class" + str(class_id)]))
             
+            if self.show_ion_images and self.parser is None:
+                raise ValueError("Ion-image display is only available for imzML inputs")
             if self.show_ion_images:
                 for peak in self.peak_list:
                     img = getionimage(self.parser, peak, tol=0.0001)

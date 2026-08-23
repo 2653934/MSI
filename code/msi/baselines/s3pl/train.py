@@ -10,10 +10,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 import tqdm
-import m2aia as m2
 
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 from test import test
+from utils.data_source import build_patch_dataset
 from utils.helpers import artifact_directories, resolve_data_paths, tic_norm_spectra
 
 def train(config):   
@@ -33,13 +33,13 @@ def train(config):
     filepath, folderpath, dataname = resolve_data_paths(data_dir, directory_name)
     artifact_dirs = artifact_directories(config, directory_name)
 
-    I = m2.ImzMLReader(filepath)
-    mz_list = I.GetXAxis()
-    image_handles=[I]
-    num_input_channels = len(mz_list)
-
     transform = transforms.Lambda(lambda x: torch.tensor(tic_norm_spectra(x), dtype=torch.float32))
-    training_dataset = m2.SpectrumDataset(image_handles, shape=(config["spectral_patch_size"], config["spectral_patch_size"]), buffer_type="memory", transform_data=transform)
+    training_dataset, mz_list = build_patch_dataset(
+        filepath,
+        config["spectral_patch_size"],
+        transform,
+    )
+    num_input_channels = len(mz_list)
     
     dataset_size = len(training_dataset)
     indices = list(range(dataset_size))
