@@ -49,6 +49,8 @@ DATA_PATH="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env
 
+python -c 'import sys, torch; sys.exit(0 if torch.cuda.is_available() else "CUDA is unavailable on this node; refusing to run S3PL on CPU.")'
+
 cd "$S3PL_ROOT"
 python main.py \
     --data_dir "$DATA_PATH" \
