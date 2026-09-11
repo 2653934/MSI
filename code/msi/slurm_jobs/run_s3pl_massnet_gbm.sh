@@ -14,6 +14,7 @@ set -eo pipefail
 DATASET="${1:-GBM108_positive}"
 EPOCHS="${2:-10}"
 EVALUATE="${3:-true}"
+PATCH_SIZE="${4:-3}"
 
 case "$DATASET" in
     GBM108_negative|GBM108_positive|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
@@ -26,6 +27,11 @@ esac
 
 if ! [[ "$EPOCHS" =~ ^[1-9][0-9]*$ ]]; then
     echo "Epochs must be a positive integer: $EPOCHS" >&2
+    exit 2
+fi
+
+if ! [[ "$PATCH_SIZE" =~ ^[1-9][0-9]*$ ]] || (( PATCH_SIZE % 2 == 0 )); then
+    echo "Patch size must be a positive odd integer: $PATCH_SIZE" >&2
     exit 2
 fi
 
@@ -57,4 +63,5 @@ python main.py \
     --artifact_root "$PROJECT_ROOT" \
     --number_classes 2 \
     --n_epochs "$EPOCHS" \
+    --spectral_patch_size "$PATCH_SIZE" \
     "$EVAL_FLAG"

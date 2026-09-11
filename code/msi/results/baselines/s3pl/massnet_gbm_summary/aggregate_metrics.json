@@ -1,0 +1,175 @@
+{
+  "dataset_collection": "MassNet GBM",
+  "model": "S3PL Attention3DConvAutoencoder",
+  "experiment_label": "patch-size-9 transfer run",
+  "paper_alignment": {
+    "status": "not the paper-aligned GBM configuration",
+    "difference": "This run uses p=9 inherited from CAC; the paper reports p=3 for GBM."
+  },
+  "configuration": {
+    "epochs": 10,
+    "batch_size": 16,
+    "spectral_patch_size": 9,
+    "peaks_per_spectral_patch": 256,
+    "learning_rate": 0.01,
+    "random_seed": 1,
+    "pcc_thresholds": [
+      0.3,
+      0.4,
+      0.5,
+      0.6
+    ]
+  },
+  "section_count": 8,
+  "all_logs_clean": true,
+  "aggregate": {
+    "measured_pixels": {
+      "mean": 3290.875,
+      "median": 3482.0,
+      "minimum": 2071.0,
+      "maximum": 4524.0
+    },
+    "coverage_percent": {
+      "mean": 75.515970644941,
+      "median": 77.4318754220458,
+      "minimum": 54.62056968906284,
+      "maximum": 82.94784580498866
+    },
+    "tumour_fraction": {
+      "mean": 0.27292176248530836,
+      "median": 0.23852862318121582,
+      "minimum": 0.08091853471842538,
+      "maximum": 0.6178343949044586
+    },
+    "candidate_peaks": {
+      "mean": 3081.625,
+      "median": 2899.5,
+      "minimum": 2026.0,
+      "maximum": 4914.0
+    },
+    "picked_peaks": {
+      "mean": 832.75,
+      "median": 881.0,
+      "minimum": 581.0,
+      "maximum": 1014.0
+    },
+    "f1_0.3": {
+      "mean": 0.4509150177835961,
+      "median": 0.45996829709376835,
+      "minimum": 0.20509849362688296,
+      "maximum": 0.62784588441331
+    },
+    "f1_0.4": {
+      "mean": 0.3900711716616303,
+      "median": 0.3982652648848838,
+      "minimum": 0.1316931982633864,
+      "maximum": 0.6232657417289221
+    },
+    "f1_0.5": {
+      "mean": 0.31790379403700797,
+      "median": 0.3087737460881333,
+      "minimum": 0.09472743521000894,
+      "maximum": 0.5698254364089775
+    },
+    "f1_0.6": {
+      "mean": 0.22556097315786017,
+      "median": 0.19852441059736514,
+      "minimum": 0.056338028169014086,
+      "maximum": 0.44055433989788473
+    },
+    "mscf1": {
+      "mean": 0.346125,
+      "median": 0.348,
+      "minimum": 0.122,
+      "maximum": 0.565
+    },
+    "normal_f1_0.3": {
+      "mean": 0.4196186636771462,
+      "median": 0.44005614643291163,
+      "minimum": 0.2015810276679842,
+      "maximum": 0.6134628730048577
+    },
+    "tumour_f1_0.3": {
+      "mean": 0.23498074071062808,
+      "median": 0.20342843841447195,
+      "minimum": 0.10676156583629894,
+      "maximum": 0.5967645296584781
+    },
+    "training_minutes": {
+      "mean": 76.51172623717719,
+      "median": 80.83826484210005,
+      "minimum": 47.98484893396768,
+      "maximum": 104.05559141583313
+    },
+    "evaluation_minutes": {
+      "mean": 9.24430450477536,
+      "median": 9.758151741633386,
+      "minimum": 5.625641112784312,
+      "maximum": 12.125670913767923
+    },
+    "total_minutes": {
+      "mean": 86.10530107422701,
+      "median": 90.96639018210007,
+      "minimum": 53.856305819749835,
+      "maximum": 116.65948122133268
+    },
+    "peak_gpu_memory_gib": {
+      "mean": 5.425704002380371,
+      "median": 5.425704002380371,
+      "minimum": 5.425704002380371,
+      "maximum": 5.425704002380371
+    },
+    "loss_reduction_percent": {
+      "mean": 62.06381926926977,
+      "median": 60.17663549248198,
+      "minimum": 48.219942005340776,
+      "maximum": 73.65390299014376
+    }
+  },
+  "exploratory_correlations_with_mscf1": {
+    "tumour_fraction": 0.8268371972399786,
+    "coverage_percent": -0.6909601584111041,
+    "measured_pixels": -0.640578677807776,
+    "picked_peaks": 0.3762367961646795
+  },
+  "ranking_by_mscf1": [
+    {
+      "dataset": "GBM108_negative",
+      "mscf1": 0.565
+    },
+    {
+      "dataset": "GBM39_2",
+      "mscf1": 0.488
+    },
+    {
+      "dataset": "GBM108_positive",
+      "mscf1": 0.409
+    },
+    {
+      "dataset": "GBM22_2",
+      "mscf1": 0.358
+    },
+    {
+      "dataset": "GBM12_2",
+      "mscf1": 0.338
+    },
+    {
+      "dataset": "GBM39_1",
+      "mscf1": 0.274
+    },
+    {
+      "dataset": "GBM22_1",
+      "mscf1": 0.215
+    },
+    {
+      "dataset": "GBM12_1",
+      "mscf1": 0.122
+    }
+  ],
+  "cautions": [
+    "Eight sections are too few for causal inference from exploratory correlations.",
+    "GBM108 positive and negative are distinct tissue sections and not a controlled polarity pair.",
+    "Class imbalance and spatial morphology both affect mask-to-ion Pearson correlations.",
+    "Section means are unweighted so that large sections do not dominate the collection summary."
+  ]
+}
