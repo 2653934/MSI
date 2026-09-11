@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate the eight-section MassNet GBM S3PL patch-size-9 transfer run."""
+"""Aggregate an eight-section MassNet GBM S3PL experiment."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ DATASETS = (
     "GBM39_2",
 )
 THRESHOLDS = ("0.3", "0.4", "0.5", "0.6")
-TRAINING_SUFFIX = "Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9"
+TRAINING_SUFFIX = "Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_{patch_size}"
 ISSUE_PATTERN = re.compile(
     r"traceback|cuda out of memory|out of memory|\bnan\b|\binf\b|error|warning",
     re.IGNORECASE,
@@ -45,12 +45,21 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, default=project_root)
     parser.add_argument(
+        "--patch-size",
+        type=int,
+        default=9,
+        help="Odd spatial patch width used by the experiment (default: 9)",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
-        help="Defaults to results/baselines/s3pl/massnet_gbm_summary",
+        help="Defaults to massnet_gbm_summary for p=9 or massnet_gbm_summary_pN otherwise",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.patch_size <= 0 or args.patch_size % 2 == 0:
+        parser.error("--patch-size must be a positive odd integer")
+    return args
 
 
 def read_json(path: Path) -> dict:
@@ -60,10 +69,10 @@ def read_json(path: Path) -> dict:
         return json.load(handle)
 
 
-def find_job(project_root: Path, dataset: str) -> tuple[str | None, int | None, int]:
+def find_job(project_root: Path, training_name: str) -> tuple[str | None, int | None, int]:
     for path in sorted((project_root / "logs").glob("s3pl-gbm-*.out")):
         text = path.read_text(encoding="utf-8", errors="replace")
-        if f"'dataset': '{dataset}'" not in text:
+        if training_name not in text:
             continue
         job_match = re.search(r"s3pl-gbm-(\d+)\.out$", path.name)
         candidate_match = re.search(
@@ -85,20 +94,21 @@ def find_job(project_root: Path, dataset: str) -> tuple[str | None, int | None, 
     return None, None, 0
 
 
-def load_rows(project_root: Path) -> list[dict]:
+def load_rows(project_root: Path, patch_size: int) -> list[dict]:
     result_root = project_root / "results" / "baselines" / "s3pl"
     visual_root = project_root / "results" / "visualisations" / "gbm_massnet"
     config_root = project_root / "logs" / "s3pl"
     rows = []
+    training_suffix = TRAINING_SUFFIX.format(patch_size=patch_size)
 
     for dataset in DATASETS:
-        training_name = f"{dataset}_{TRAINING_SUFFIX}"
+        training_name = f"{dataset}_{training_suffix}"
         result_dir = result_root / training_name
         metrics = read_json(result_dir / "metrics.json")
         runtime = read_json(result_dir / "runtime_metrics.json")
         config = read_json(config_root / f"{training_name}.json")
         section = read_json(visual_root / dataset / "summary.json")
-        job_id, candidates, issue_count = find_job(project_root, dataset)
+        job_id, candidates, issue_count = find_job(project_root, training_name)
 
         mixed = [float(metrics["mixed_f1"][threshold]) for threshold in THRESHOLDS]
         reported_mscf1 = float(metrics["mSCF1"])
@@ -165,7 +175,7 @@ def write_csv(rows: list[dict], path: Path) -> None:
         writer.writerows({key: row[key] for key in fieldnames} for row in rows)
 
 
-def build_summary(rows: list[dict]) -> dict:
+def build_summary(rows: list[dict], patch_size: int) -> dict:
     numeric_keys = (
         "measured_pixels",
         "coverage_percent",
@@ -196,18 +206,36 @@ def build_summary(rows: list[dict]) -> dict:
         }
 
     ranking = sorted(rows, key=lambda row: row["mscf1"], reverse=True)
+    paper_aligned = patch_size == 3
     return {
         "dataset_collection": "MassNet GBM",
         "model": "S3PL Attention3DConvAutoencoder",
-        "experiment_label": "patch-size-9 transfer run",
+        "experiment_label": f"patch-size-{patch_size} " + (
+            "paper-aligned reproduction" if paper_aligned else "transfer run"
+        ),
         "paper_alignment": {
-            "status": "not the paper-aligned GBM configuration",
-            "difference": "This run uses p=9 inherited from CAC; the paper reports p=3 for GBM.",
+            "status": (
+                "uses the paper-reported GBM spatial patch size"
+                if paper_aligned
+                else "not the paper-aligned GBM spatial patch size"
+            ),
+            "difference": (
+                "This run uses p=3, matching the paper's reported GBM optimum."
+                if paper_aligned
+                else f"This run uses p={patch_size}; the paper reports p=3 for GBM."
+            ),
+            "paper_reported_gbm_means": {
+                "f1_0.3": 0.564,
+                "f1_0.4": 0.556,
+                "f1_0.5": 0.488,
+                "f1_0.6": 0.371,
+                "mscf1": 0.496,
+            },
         },
         "configuration": {
             "epochs": 10,
             "batch_size": 16,
-            "spectral_patch_size": 9,
+            "spectral_patch_size": patch_size,
             "peaks_per_spectral_patch": 256,
             "learning_rate": 0.01,
             "random_seed": 1,
@@ -250,15 +278,16 @@ def save_figure(fig: plt.Figure, output_dir: Path, stem: str) -> None:
     plt.close(fig)
 
 
-def plot_performance(rows: list[dict], output_dir: Path) -> None:
+def plot_performance(rows: list[dict], output_dir: Path, patch_size: int) -> None:
     labels = [row["dataset"] for row in rows]
     x = np.arange(len(rows))
     mean_mscf1 = np.mean([row["mscf1"] for row in rows])
 
     fig, axes = plt.subplots(2, 2, figsize=(13, 8.5), constrained_layout=True)
-    fig.suptitle("S3PL MassNet GBM transfer run (spatial patch size p=9)", fontsize=15, color=INK)
+    fig.suptitle(f"S3PL MassNet GBM (spatial patch size p={patch_size})", fontsize=15, color=INK)
 
-    colours = [ORANGE if row["dataset"] == "GBM12_1" else BLUE for row in rows]
+    lowest_dataset = min(rows, key=lambda row: row["mscf1"])["dataset"]
+    colours = [ORANGE if row["dataset"] == lowest_dataset else BLUE for row in rows]
     axes[0, 0].bar(x, [row["mscf1"] for row in rows], color=colours, width=0.72)
     axes[0, 0].axhline(mean_mscf1, color=INK, linestyle="--", linewidth=1, label=f"Mean {mean_mscf1:.3f}")
     axes[0, 0].set_ylabel("mSCF1")
@@ -271,7 +300,7 @@ def plot_performance(rows: list[dict], output_dir: Path) -> None:
     threshold_x = np.asarray([float(value) for value in THRESHOLDS])
     for row in rows:
         values = [row[f"f1_{threshold}"] for threshold in THRESHOLDS]
-        highlight = row["dataset"] == "GBM12_1"
+        highlight = row["dataset"] == lowest_dataset
         axes[0, 1].plot(
             threshold_x,
             values,
@@ -321,12 +350,12 @@ def plot_performance(rows: list[dict], output_dir: Path) -> None:
     save_figure(fig, output_dir, "performance_overview")
 
 
-def plot_runtime(rows: list[dict], output_dir: Path) -> None:
+def plot_runtime(rows: list[dict], output_dir: Path, patch_size: int) -> None:
     pixels = np.asarray([row["measured_pixels"] for row in rows], dtype=float)
     runtime = np.asarray([row["total_minutes"] for row in rows], dtype=float)
 
     fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.6), constrained_layout=True)
-    fig.suptitle("S3PL MassNet GBM p=9 runtime and optimisation diagnostics", fontsize=15, color=INK)
+    fig.suptitle(f"S3PL MassNet GBM p={patch_size} runtime and optimisation diagnostics", fontsize=15, color=INK)
 
     axes[0].scatter(pixels, runtime, s=55, color=BLUE, edgecolor="white", linewidth=0.7, zorder=3)
     slope, intercept = np.polyfit(pixels, runtime, 1)
@@ -340,8 +369,9 @@ def plot_runtime(rows: list[dict], output_dir: Path) -> None:
     style_axis(axes[0])
 
     epochs = np.arange(1, 11)
+    lowest_dataset = min(rows, key=lambda row: row["mscf1"])["dataset"]
     for row in rows:
-        highlight = row["dataset"] == "GBM12_1"
+        highlight = row["dataset"] == lowest_dataset
         axes[1].plot(
             epochs,
             row["train_history"],
@@ -354,7 +384,7 @@ def plot_runtime(rows: list[dict], output_dir: Path) -> None:
         )
     axes[1].set_xlabel("Epoch")
     axes[1].set_ylabel("Training loss")
-    axes[1].set_title("B. All runs converged; GBM12_1 highlighted")
+    axes[1].set_title(f"B. Training histories; {lowest_dataset} highlighted")
     axes[1].set_xticks(epochs)
     axes[1].legend(frameon=False, fontsize=6.8, ncol=2)
     style_axis(axes[1])
@@ -362,10 +392,10 @@ def plot_runtime(rows: list[dict], output_dir: Path) -> None:
     save_figure(fig, output_dir, "runtime_diagnostics")
 
 
-def write_readme(rows: list[dict], summary: dict, path: Path) -> None:
+def write_readme(rows: list[dict], summary: dict, path: Path, patch_size: int) -> None:
     ranking = sorted(rows, key=lambda row: row["mscf1"], reverse=True)
     lines = [
-        "# MassNet GBM S3PL patch-size-9 transfer summary",
+        f"# MassNet GBM S3PL patch-size-{patch_size} summary",
         "",
         "This directory is generated by `scripts/summarise_s3pl_massnet.py` from the committed section-level artifacts.",
         "",
@@ -376,7 +406,7 @@ def write_readme(rows: list[dict], summary: dict, path: Path) -> None:
         f"- Median mSCF1: {summary['aggregate']['mscf1']['median']:.3f}",
         f"- Mean instrumented runtime: {summary['aggregate']['total_minutes']['mean']:.2f} minutes",
         f"- Logs free of detected warnings/errors: {summary['all_logs_clean']}",
-        "- Paper alignment: not the paper-aligned GBM baseline; this run uses `p=9`, while the paper reports `p=3` for GBM.",
+        f"- Paper alignment: {summary['paper_alignment']['status']}.",
         "",
         "| Rank | Section | Picked peaks | F1@0.3 | F1@0.4 | F1@0.5 | F1@0.6 | mSCF1 | Total min |",
         "|---:|---|---:|---:|---:|---:|---:|---:|---:|",
@@ -392,7 +422,7 @@ def write_readme(rows: list[dict], summary: dict, path: Path) -> None:
             "",
             "## Interpretation boundary",
             "",
-            "`GBM12_1` is a technically valid low-scoring section, not a failed run: its loss converged and its artifacts/logs passed validation. It also has the smallest tumour fraction (8.1%), so class imbalance and spatial morphology are plausible contributors. With only eight sections, the reported correlations are descriptive and must not be interpreted causally.",
+            f"`{ranking[-1]['dataset']}` is the lowest-scoring section in this run. Its artifacts and metrics are internally complete; score differences still require scientific interpretation rather than being treated as execution failures. With only eight sections, the reported correlations are descriptive and must not be interpreted causally.",
             "",
             "The collection mean is an unweighted mean over sections. Despite their filenames, `GBM108_positive` and `GBM108_negative` are not ionisation modes: the paper states that the GBM collection was acquired in positive-ion mode.",
             "",
@@ -404,20 +434,21 @@ def write_readme(rows: list[dict], summary: dict, path: Path) -> None:
 def main() -> None:
     args = parse_args()
     project_root = args.project_root.resolve()
+    default_name = "massnet_gbm_summary" if args.patch_size == 9 else f"massnet_gbm_summary_p{args.patch_size}"
     output_dir = args.output_dir or (
-        project_root / "results" / "baselines" / "s3pl" / "massnet_gbm_summary"
+        project_root / "results" / "baselines" / "s3pl" / default_name
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = load_rows(project_root)
-    summary = build_summary(rows)
+    rows = load_rows(project_root, args.patch_size)
+    summary = build_summary(rows, args.patch_size)
     write_csv(rows, output_dir / "section_metrics.csv")
     (output_dir / "aggregate_metrics.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
-    plot_performance(rows, output_dir)
-    plot_runtime(rows, output_dir)
-    write_readme(rows, summary, output_dir / "README.md")
+    plot_performance(rows, output_dir, args.patch_size)
+    plot_runtime(rows, output_dir, args.patch_size)
+    write_readme(rows, summary, output_dir / "README.md", args.patch_size)
 
     print(f"Validated {len(rows)} MassNet GBM S3PL sections")
     print(f"Mean mSCF1: {summary['aggregate']['mscf1']['mean']:.3f}")
