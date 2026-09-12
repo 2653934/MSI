@@ -1,0 +1,74 @@
+MS CLUSTER NODE ISSUE LOG
+=========================
+
+Purpose
+-------
+Keep a factual record of node-specific problems observed during this research.
+An entry means that one of our jobs had a problem on the node. It does not prove
+that the physical node is broken. In particular, a node may work for CPU jobs
+while not exposing a usable NVIDIA GPU/CUDA runtime.
+
+
+Observed problematic nodes
+--------------------------
+
+mscluster45
+  Symptom: PyTorch reported that CUDA was unavailable. The S3PL imzML pilot
+  stopped safely before attempting CPU training.
+  Evidence: job 53370; logs/s3pl-imzml-pilot-53370.err
+  Classification: GPU/CUDA unavailable for this job.
+  Status: Avoid relying on this node for GPU work until cluster configuration
+  is clarified. CPU capability is not in question.
+
+mscluster65
+  Symptom: PyTorch reported that CUDA was unavailable. The S3PL imzML pilot
+  stopped safely before attempting CPU training.
+  Evidence: job 53339; logs/s3pl-imzml-pilot-53339.err
+  Classification: GPU/CUDA unavailable for this job.
+  Status: Avoid relying on this node for GPU work until cluster configuration
+  is clarified. Other CPU-oriented jobs have run on this node.
+
+mscluster74
+  Symptom: Cancelled S3PL job remained in Slurm state COMPLETING (CG) for an
+  unusually long time. Slurm reported Reason=Prolog and ExitCode=0:0. The job
+  eventually disappeared without user intervention.
+  Evidence: job 44990; terminal output recorded during the research session.
+  Classification: Slurm cleanup/prolog incident, not a demonstrated GPU fault.
+  Status: Resolved by the cluster; retain as historical evidence if it recurs.
+
+mscluster83
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. Spatial-msiPL jobs stopped at the preflight check before
+  allocating a model or loading training data.
+  Evidence: feasibility jobs 53427-53429 were observed on this node. Slurm
+  accounting confirms stability jobs 53432 and 53435 also failed on this node
+  after 6 and 5 seconds respectively, both with ExitCode=1:0.
+  Classification: Repeated GPU/CUDA access failure.
+  Status: Known problematic node for our current GPU workflow. A retry on
+  mscluster88 completed successfully with the same code and environment.
+
+
+How to identify a failed job's node
+-----------------------------------
+
+Run on the cluster, replacing JOB_ID:
+
+  sacct -j JOB_ID --format=JobID,JobName,State,Elapsed,NodeList,ExitCode
+
+Add the allocated NodeList and exact symptom to this file. Do not add nodes that
+only appeared as down in a general sinfo listing unless one of our jobs actually
+failed there.
+
+
+Confirmed successful comparison
+--------------------------------
+
+mscluster49
+  Job 53338 completed the S3PL imzML pilot with CUDA.
+
+mscluster88
+  Job 53430 completed the production-shape Spatial-msiPL GPU feasibility
+  benchmark on an NVIDIA GeForce RTX 3090.
+
+
+Last updated: 2026-09-12
