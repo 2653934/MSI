@@ -211,16 +211,16 @@ def build_summary(rows: list[dict], patch_size: int) -> dict:
         "dataset_collection": "MassNet GBM",
         "model": "S3PL Attention3DConvAutoencoder",
         "experiment_label": f"patch-size-{patch_size} " + (
-            "paper-aligned reproduction" if paper_aligned else "transfer run"
+            "released-code reproduction" if paper_aligned else "transfer run"
         ),
         "paper_alignment": {
             "status": (
-                "uses the paper-reported GBM spatial patch size"
+                "uses the paper-reported GBM spatial patch size with the released-code normalization"
                 if paper_aligned
                 else "not the paper-aligned GBM spatial patch size"
             ),
             "difference": (
-                "This run uses p=3, matching the paper's reported GBM optimum."
+                "This run uses p=3, matching the paper's reported GBM optimum, but preserves the released code's spatial-maximum normalization rather than paper-described TIC normalization."
                 if paper_aligned
                 else f"This run uses p={patch_size}; the paper reports p=3 for GBM."
             ),

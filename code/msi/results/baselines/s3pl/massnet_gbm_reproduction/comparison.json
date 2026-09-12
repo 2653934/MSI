@@ -1,0 +1,47 @@
+{
+  "status": "interim partial reproduction",
+  "dataset_collection": "MassNet GBM, eight sections",
+  "primary_baseline": {
+    "name": "released-code p=3",
+    "normalization": "reference_spatial_max",
+    "mean_mscf1": 0.3155,
+    "role": "primary executable baseline"
+  },
+  "sensitivity_analysis": {
+    "name": "paper-described TIC p=3",
+    "normalization": "paper_tic",
+    "mean_mscf1": 0.28875,
+    "role": "preprocessing sensitivity analysis"
+  },
+  "context_only": {
+    "name": "released-code p=9",
+    "mean_mscf1": 0.346125,
+    "role": "earlier transfer run; not the paper-reported GBM patch size"
+  },
+  "published_reference": {
+    "mean_mscf1": 0.496,
+    "reproduced": false
+  },
+  "section_results": [
+    {"dataset": "GBM108_negative", "released_code_p3": 0.664, "paper_tic_p3": 0.291},
+    {"dataset": "GBM108_positive", "released_code_p3": 0.033, "paper_tic_p3": 0.267},
+    {"dataset": "GBM12_1", "released_code_p3": 0.145, "paper_tic_p3": 0.236},
+    {"dataset": "GBM12_2", "released_code_p3": 0.512, "paper_tic_p3": 0.292},
+    {"dataset": "GBM22_1", "released_code_p3": 0.295, "paper_tic_p3": 0.304},
+    {"dataset": "GBM22_2", "released_code_p3": 0.339, "paper_tic_p3": 0.347},
+    {"dataset": "GBM39_1", "released_code_p3": 0.255, "paper_tic_p3": 0.282},
+    {"dataset": "GBM39_2", "released_code_p3": 0.281, "paper_tic_p3": 0.291}
+  ],
+  "interpretation_rules": [
+    "Do not mix normalization methods within a collection result.",
+    "Do not present p=9 as the paper-aligned GBM configuration.",
+    "Do not present 0.496 as reproduced.",
+    "Treat the official GBM imzML package as a candidate input until its contents are verified."
+  ],
+  "next_gate": {
+    "input": "Mannheim-hosted GBM mSCF1 evaluation package linked by the official IonMorphNet repository",
+    "url": "https://clousi.hs-mannheim.de/index.php/s/gnxRf6fXFQ7faFf",
+    "pilot_sections": ["GBM108_positive", "GBM108_negative"],
+    "expand_to_eight_sections_only_after_pilot": true
+  }
+}
