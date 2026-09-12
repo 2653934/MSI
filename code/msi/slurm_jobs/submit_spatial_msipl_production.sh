@@ -5,6 +5,7 @@ set -euo pipefail
 
 PROJECT_ROOT="${HOME}/msi"
 RUNNER="${PROJECT_ROOT}/slurm_jobs/run_spatial_msipl_production.sh"
+CHECKPOINT_ROOT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1"
 VARIANTS=(uniform_mean depthwise attention)
 
 if [[ ! -f "$RUNNER" ]]; then
@@ -13,6 +14,9 @@ if [[ ! -f "$RUNNER" ]]; then
 fi
 
 mkdir -p "${PROJECT_ROOT}/logs"
+for variant in "${VARIANTS[@]}"; do
+    mkdir -p "${CHECKPOINT_ROOT}/${variant}"
+done
 cd "$PROJECT_ROOT"
 
 printf '%-18s %-12s %s\n' "VARIANT" "JOB_ID" "NODE SHARING"
