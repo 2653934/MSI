@@ -35,11 +35,37 @@ def artifact_directories(config, project_dir):
         "results": root / "results",
     }
 
-def tic_norm_spectra(arr):
+NORMALIZATION_METHODS = ("reference_spatial_max", "paper_tic")
+
+
+def reference_spatial_max_norm(arr):
+    """Preserve the normalization shipped in the reference S3PL code."""
     max_vals = np.max(arr, axis=2, keepdims=True)
     max_vals[max_vals == 0] = 1 # avoid division by zero
     normalized = arr / max_vals
     return normalized
+
+
+def paper_tic_norm(arr):
+    """Normalize every [m/z] spectrum by its total ion count."""
+    totals = np.sum(arr, axis=1, keepdims=True, dtype=np.float32)
+    totals[totals == 0] = 1
+    return arr / totals
+
+
+def normalize_spectra(arr, method="reference_spatial_max"):
+    if method == "reference_spatial_max":
+        return reference_spatial_max_norm(arr)
+    if method == "paper_tic":
+        return paper_tic_norm(arr)
+    raise ValueError(
+        f"Unknown normalization {method!r}; expected one of {NORMALIZATION_METHODS}"
+    )
+
+
+def tic_norm_spectra(arr):
+    """Backward-compatible name for the reference implementation's operation."""
+    return reference_spatial_max_norm(arr)
 
 def check_for_labels(folderpath, dataname, data_path=None):
     if not os.path.exists(folderpath + 'masks/' + dataname + '_mask.npy'):

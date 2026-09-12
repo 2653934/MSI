@@ -17,6 +17,7 @@ EPOCHS="${2:-10}"
 EVALUATE="${3:-true}"
 PATCH_SIZE="${4:-3}"
 ARTIFACT_ROOT="${5:-$PROJECT_ROOT}"
+NORMALIZATION="${6:-reference_spatial_max}"
 
 case "$DATASET" in
     GBM108_negative|GBM108_positive|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
@@ -59,6 +60,15 @@ case "$EVALUATE" in
         ;;
 esac
 
+case "$NORMALIZATION" in
+    reference_spatial_max|paper_tic)
+        ;;
+    *)
+        echo "Normalization must be reference_spatial_max or paper_tic: $NORMALIZATION" >&2
+        exit 2
+        ;;
+esac
+
 S3PL_ROOT="$PROJECT_ROOT/baselines/s3pl"
 DATA_PATH="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
 
@@ -74,4 +84,5 @@ python main.py \
     --number_classes 2 \
     --n_epochs "$EPOCHS" \
     --spectral_patch_size "$PATCH_SIZE" \
+    --normalization "$NORMALIZATION" \
     "$EVAL_FLAG"

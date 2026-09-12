@@ -21,6 +21,7 @@ def load_config(config_path, args):
     if args.learning_rate is not None: config["learning_rate"] = args.learning_rate
     if args.dropout is not None: config["dropout"] = args.dropout
     if args.random_seed is not None: config["random_seed"] = args.random_seed
+    if args.normalization is not None: config["normalization"] = args.normalization
 
     return config
 
@@ -42,6 +43,11 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=None)
     parser.add_argument("--dropout", type=float, default=None)
     parser.add_argument("--random_seed", type=int, default=None)
+    parser.add_argument(
+        "--normalization",
+        choices=("reference_spatial_max", "paper_tic"),
+        default=None,
+    )
 
     args = parser.parse_args()
     config = load_config(config_path=f'{directory_name}/config.json', args=args)

@@ -14,7 +14,7 @@ import tqdm
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 from test import test
 from utils.data_source import build_patch_dataset
-from utils.helpers import artifact_directories, resolve_data_paths, tic_norm_spectra
+from utils.helpers import artifact_directories, normalize_spectra, resolve_data_paths
 
 def train(config):   
     random_seed = config["random_seed"]
@@ -33,7 +33,12 @@ def train(config):
     filepath, folderpath, dataname = resolve_data_paths(data_dir, directory_name)
     artifact_dirs = artifact_directories(config, directory_name)
 
-    transform = transforms.Lambda(lambda x: torch.tensor(tic_norm_spectra(x), dtype=torch.float32))
+    normalization = config.get("normalization", "reference_spatial_max")
+    transform = transforms.Lambda(
+        lambda x: torch.tensor(
+            normalize_spectra(x, normalization), dtype=torch.float32
+        )
+    )
     training_dataset, mz_list = build_patch_dataset(
         filepath,
         config["spectral_patch_size"],
@@ -61,6 +66,8 @@ def train(config):
     for path in artifact_dirs.values():
         path.mkdir(parents=True, exist_ok=True)
     training_name = dataname + '_' + model._get_name() + '_' + str(config["n_epochs"]) + 'epochs_' + str(config["peaks_per_spectral_patch"]) + '_' + 'spectral_patch_size_' + str(config["spectral_patch_size"])
+    if normalization != "reference_spatial_max":
+        training_name += "_" + normalization
     path_to_weights = artifact_dirs["weights"] / (training_name + '.pt')
 
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -69,6 +76,7 @@ def train(config):
     print('input channels = ' + str(num_input_channels))
     print('trainable parameters: ' + str(pytorch_total_params))
     print('GPU available: ' + str(use_cuda))
+    print('normalization: ' + normalization)
     
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["learning_rate"])
 
@@ -116,6 +124,7 @@ def train(config):
 
     runtime_metrics = {
         "dataset": dataname,
+        "normalization": normalization,
         "device": torch.cuda.get_device_name(0) if use_cuda else "cpu",
         "training_seconds": training_seconds,
         "evaluation_seconds": evaluation_seconds,

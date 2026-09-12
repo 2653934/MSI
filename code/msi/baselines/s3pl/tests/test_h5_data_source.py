@@ -13,6 +13,7 @@ if str(S3PL_ROOT) not in sys.path:
 
 from utils.create_pearson_labels import create_pearson_labels
 from utils.data_source import H5SpectrumPatchDataset, load_massnet_h5
+from utils.helpers import normalize_spectra
 
 
 class MassNetH5AdapterTests(unittest.TestCase):
@@ -90,6 +91,25 @@ class MassNetH5AdapterTests(unittest.TestCase):
         self.assertEqual(class_one[0], 0)
         self.assertEqual(len(class_one), len(self.mz))
         self.assertAlmostEqual(correlations[0], 1.0)
+
+    def test_paper_tic_normalizes_each_nonempty_spectrum(self):
+        patch = np.zeros((1, 3, 2, 2), dtype=np.float32)
+        patch[0, :, 0, 0] = [1.0, 2.0, 3.0]
+        patch[0, :, 1, 1] = [2.0, 2.0, 0.0]
+
+        normalized = normalize_spectra(patch, "paper_tic")
+
+        self.assertAlmostEqual(float(normalized[0, :, 0, 0].sum()), 1.0)
+        self.assertAlmostEqual(float(normalized[0, :, 1, 1].sum()), 1.0)
+        np.testing.assert_array_equal(normalized[0, :, 0, 1], np.zeros(3))
+
+    def test_reference_mode_remains_unchanged(self):
+        patch = np.arange(1, 13, dtype=np.float32).reshape(1, 3, 2, 2)
+        expected = patch / np.max(patch, axis=2, keepdims=True)
+
+        normalized = normalize_spectra(patch, "reference_spatial_max")
+
+        np.testing.assert_array_equal(normalized, expected)
 
 
 if __name__ == "__main__":

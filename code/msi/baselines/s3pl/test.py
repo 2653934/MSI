@@ -13,8 +13,8 @@ from utils.data_source import build_patch_dataset
 from utils.helpers import (
     artifact_directories,
     check_for_labels,
+    normalize_spectra,
     resolve_data_paths,
-    tic_norm_spectra,
 )
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 import data_configs
@@ -44,7 +44,12 @@ def test(config, test_indices):
     else:
         number_classes = data_configs.number_classes[dataname]
 
-    transform = transforms.Lambda(lambda x: torch.tensor(tic_norm_spectra(x), dtype=torch.float32))
+    normalization = config.get("normalization", "reference_spatial_max")
+    transform = transforms.Lambda(
+        lambda x: torch.tensor(
+            normalize_spectra(x, normalization), dtype=torch.float32
+        )
+    )
     test_dataset, mz_values = build_patch_dataset(
         filepath,
         config["spectral_patch_size"],
@@ -111,6 +116,7 @@ def test(config, test_indices):
         check_for_labels(folderpath, dataname, filepath)
         evaluation_metrics = {
             "dataset": dataname,
+            "normalization": normalization,
             "number_picked_peaks": len(peak_list),
             "class_metrics": {},
             "mixed_f1": {},
