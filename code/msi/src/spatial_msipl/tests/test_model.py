@@ -3,12 +3,13 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import torch
 from torch.utils.data import Dataset
 
 from spatial_msipl.model import SpatialVAE
-from spatial_msipl.training import msipl_vae_loss, train_vae
+from spatial_msipl.training import _atomic_torch_save, msipl_vae_loss, train_vae
 
 
 class TinyContextDataset(Dataset):
@@ -113,6 +114,53 @@ class SpatialVAETests(unittest.TestCase):
             )
             self.assertFalse(metadata["drop_last"])
             self.assertEqual(history[0]["samples_seen"], 10)
+
+    def test_training_resumes_from_last_complete_epoch(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            checkpoint_directory = root / "checkpoints"
+            interrupted_model = SpatialVAE(
+                spectral_dim=6, hidden_dim=4, latent_dim=2
+            )
+
+            def save_then_interrupt(value, path):
+                _atomic_torch_save(value, path)
+                raise RuntimeError("simulated interruption")
+
+            with patch(
+                "spatial_msipl.training._atomic_torch_save",
+                side_effect=save_then_interrupt,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "simulated interruption"):
+                    train_vae(
+                        model=interrupted_model,
+                        dataset=TinyContextDataset(),
+                        output_directory=root / "interrupted",
+                        checkpoint_directory=checkpoint_directory,
+                        epochs=3,
+                        batch_size=4,
+                        seed=1,
+                        checkpoint_interval=1,
+                    )
+
+            latest = checkpoint_directory / "checkpoint_latest.pt"
+            self.assertTrue(latest.is_file())
+            resumed_model = SpatialVAE(spectral_dim=6, hidden_dim=4, latent_dim=2)
+            metadata, history = train_vae(
+                model=resumed_model,
+                dataset=TinyContextDataset(),
+                output_directory=root / "resumed",
+                checkpoint_directory=checkpoint_directory,
+                epochs=3,
+                batch_size=4,
+                seed=1,
+                checkpoint_interval=1,
+                resume_checkpoint=latest,
+            )
+            self.assertEqual(metadata["resumed_from_epoch"], 1)
+            self.assertEqual([record["epoch"] for record in history], [1, 2, 3])
+            self.assertTrue((checkpoint_directory / "checkpoint.pt").is_file())
+            self.assertFalse(latest.exists())
 
 
 if __name__ == "__main__":
