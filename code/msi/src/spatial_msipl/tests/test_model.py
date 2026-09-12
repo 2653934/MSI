@@ -16,11 +16,11 @@ class TinyContextDataset(Dataset):
 
     path = "synthetic-test-data"
 
-    def __init__(self):
+    def __init__(self, size=8):
         generator = torch.Generator().manual_seed(7)
-        central = torch.rand(8, 6, generator=generator)
+        central = torch.rand(size, 6, generator=generator)
         self.central = central / central.sum(dim=1, keepdim=True)
-        context = torch.rand(8, 6, generator=generator)
+        context = torch.rand(size, 6, generator=generator)
         self.contextual = torch.cat((self.central, context), dim=1)
 
     def __len__(self):
@@ -98,6 +98,21 @@ class SpatialVAETests(unittest.TestCase):
             self.assertIsNone(metadata["checkpoint"])
             self.assertGreater(metadata["training_seconds"], 0)
             self.assertFalse((output / "checkpoint.pt").exists())
+
+    def test_training_keeps_a_multi_sample_final_batch(self):
+        model = SpatialVAE(spectral_dim=6, hidden_dim=4, latent_dim=2)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            metadata, history = train_vae(
+                model=model,
+                dataset=TinyContextDataset(size=10),
+                output_directory=temporary_directory,
+                epochs=1,
+                batch_size=4,
+                seed=1,
+                save_checkpoint=False,
+            )
+            self.assertFalse(metadata["drop_last"])
+            self.assertEqual(history[0]["samples_seen"], 10)
 
 
 if __name__ == "__main__":

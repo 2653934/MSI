@@ -93,12 +93,15 @@ def train_vae(
         torch.cuda.reset_peak_memory_stats(torch_device)
     model.to(torch_device)
     subset = Subset(dataset, selected_indices)
+    # BatchNorm cannot train on a one-sample batch. Keep every other partial
+    # final batch so a "full dataset" run really does see every selected pixel.
+    drop_last = len(subset) % batch_size == 1
     loader_generator = torch.Generator().manual_seed(seed)
     loader = DataLoader(
         subset,
         batch_size=batch_size,
         shuffle=True,
-        drop_last=True,
+        drop_last=drop_last,
         num_workers=0,
         generator=loader_generator,
     )
@@ -201,6 +204,7 @@ def train_vae(
         "selected_samples": len(selected_indices),
         "selected_indices": selected_indices,
         "samples_per_epoch": history[-1]["samples_seen"],
+        "drop_last": drop_last,
         "training_seconds": training_seconds,
         "overall_samples_per_second": (
             sum(record["samples_seen"] for record in history) / training_seconds
