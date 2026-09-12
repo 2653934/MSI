@@ -22,6 +22,32 @@
     "mean_mscf1": 0.496,
     "reproduced": false
   },
+  "official_imzml_gate": {
+    "status": "complete_no_expansion",
+    "normalization": "reference_spatial_max",
+    "spectral_patch_size": 3,
+    "sections": [
+      {
+        "dataset": "GBM108_positive",
+        "hdf5_mscf1": 0.033,
+        "imzml_mscf1": 0.027,
+        "change": -0.006,
+        "picked_peaks": 581,
+        "peak_overlap_4dp": 514,
+        "peak_overlap_percent": 88.5
+      },
+      {
+        "dataset": "GBM108_negative",
+        "hdf5_mscf1": 0.664,
+        "imzml_mscf1": 0.655,
+        "change": -0.009,
+        "picked_peaks": 937,
+        "peak_overlap_4dp": 855,
+        "peak_overlap_percent": 91.2
+      }
+    ],
+    "decision": "Do not expand to all eight sections because neither pilot improved alignment."
+  },
   "section_results": [
     {"dataset": "GBM108_negative", "released_code_p3": 0.664, "paper_tic_p3": 0.291},
     {"dataset": "GBM108_positive", "released_code_p3": 0.033, "paper_tic_p3": 0.267},
@@ -36,12 +62,10 @@
     "Do not mix normalization methods within a collection result.",
     "Do not present p=9 as the paper-aligned GBM configuration.",
     "Do not present 0.496 as reproduced.",
-    "Treat the official GBM imzML package as a candidate input until its contents are verified."
+    "The official imzML package has been verified and its two-section gate does not explain the reproduction gap."
   ],
   "next_gate": {
-    "input": "Mannheim-hosted GBM mSCF1 evaluation package linked by the official IonMorphNet repository",
-    "url": "https://clousi.hs-mannheim.de/index.php/s/gnxRf6fXFQ7faFf",
-    "pilot_sections": ["GBM108_positive", "GBM108_negative"],
-    "expand_to_eight_sections_only_after_pilot": true
+    "status": "official imzML gate closed without expansion",
+    "focus": "Document the executable baseline and investigate paper-versus-release methodological ambiguity without per-section tuning."
   }
 }

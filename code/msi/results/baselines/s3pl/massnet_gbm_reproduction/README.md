@@ -4,7 +4,7 @@
 
 This is an **interim partial reproduction**, not an exact reproduction of the paper's GBM result.
 
-The released implementation is deterministic on our cluster and the MassNet HDF5 adapter, coordinates, neighbourhoods, masks, and evaluation procedure have passed their audits. However, the paper describes TIC normalization while the released S3PL helper performs spatial-maximum normalization. Neither interpretation reproduces the paper's collection result.
+The released implementation is deterministic on our cluster and the MassNet HDF5 adapter, coordinates, neighbourhoods, masks, and evaluation procedure have passed their audits. The official imzML package also matches the HDF5 spectra, coordinates, and tissue regions. A two-section run through S3PL's original `m2aia` imzML loader reproduced the same high/low pattern as the HDF5 adapter. However, the paper describes TIC normalization while the released helper performs spatial-maximum normalization, and neither interpretation reproduces the paper's collection result.
 
 ## Locked comparison
 
@@ -34,22 +34,26 @@ All p=3 experiments use the same eight sections, 10 epochs, batch size 16, learn
 ## Conclusions we can support
 
 1. The `GBM108_positive` p=3 result is not random: an isolated repeat reproduced every scientific artifact exactly.
-2. The HDF5 spatial adapter is not the cause: all 18,639 p=3 neighbour entries, centre spectra, and mask labels checked for `GBM108_positive` matched their source data.
+2. The HDF5 spatial adapter is not the cause: all 18,639 p=3 neighbour entries, centre spectra, and mask labels checked for `GBM108_positive` matched their source data, and the original imzML loader produced nearly the same pilot scores.
 3. Correct TIC normalization rescues part of the positive-section failure but substantially reduces `GBM108_negative` and `GBM12_2`; it is therefore not the missing global fix.
 4. Results from the two normalizations must remain separate. Selecting the better result per section would invalidate the comparison.
-5. The gap most likely lies in the data representation or preprocessing path between the public MassNet data and the imzML inputs used by the S3PL workflow, or in an unreleased experimental code revision.
+5. The remaining gap is unlikely to be caused by HDF5 conversion, mask geometry, coordinate order, or the choice of HDF5 versus imzML loader. It more likely reflects an undocumented experimental detail, a difference between the released and experimental code, or an ambiguity in how the published aggregate was produced.
 
-## Original imzML lead
+## Original imzML gate
 
-The official [IonMorphNet repository](https://github.com/CeMOS-IS/IonMorphNet), from the same research group and with overlapping S3PL authorship, links a Mannheim-hosted [GBM mSCF1 evaluation package](https://clousi.hs-mannheim.de/index.php/s/gnxRf6fXFQ7faFf). Its documented layout contains `.imzML`, `.ibd`, and mask files.
+The Mannheim-hosted GBM package linked by the official IonMorphNet repository contains the same eight sections in `.imzML`/`.ibd` form. All coordinate sets matched the HDF5 release, the tested spectra agreed to floating-point tolerance, and the official masks matched the reconstructed tissue classes at every measured pixel after recoding `1/2` to `0/1`.
 
-This package is a strong candidate for the representation used by the S3PL evaluation, but it must be inspected before being called the exact S3PL input. We need to compare its filenames, m/z axes, coordinates, spectra, masks, and checksums with the MassNet HDF5 data.
+| Section | HDF5 adapter | Original imzML loader | Change | Peak overlap at 4 decimals |
+|---|---:|---:|---:|---:|
+| `GBM108_positive` | 0.033 | 0.027 | -0.006 | 514/581 (88.5%) |
+| `GBM108_negative` | 0.664 | 0.655 | -0.009 | 855/937 (91.2%) |
+
+The threshold-level F1 changes were at most 0.011. Both imzML results decreased slightly, so the gate provides no justification for an eight-section rerun.
 
 ## Decision and next gate
 
 - Use the released-code p=3 result (mean mSCF1 0.316) as the **primary executable baseline**.
 - Report paper-TIC p=3 (mean mSCF1 0.289) as a **preprocessing sensitivity analysis**.
 - Keep the paper value 0.496 as the **unreproduced published reference**.
-- Do not launch another eight-section sweep yet.
-- Next, download and inspect the official GBM imzML package. If it contains the expected eight sections, run only `GBM108_positive` and `GBM108_negative` through the original imzML path. Expand to all eight only if that two-section gate materially improves alignment without choosing settings per section.
-
+- Do not launch an eight-section imzML sweep; the two-section gate failed its expansion criterion.
+- Treat the released-code result as a valid executable baseline and clearly document the unresolved difference from the published aggregate rather than tuning sections individually.
