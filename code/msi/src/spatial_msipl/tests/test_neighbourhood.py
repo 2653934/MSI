@@ -1,8 +1,11 @@
 """Tests for the three controlled neighbourhood aggregation variants."""
 
 import unittest
+import tempfile
+from pathlib import Path
 
 import torch
+from torch.utils.data import Dataset
 
 from spatial_msipl.model import NeighbourhoodSpatialVAE
 from spatial_msipl.neighbourhood import (
@@ -10,6 +13,31 @@ from spatial_msipl.neighbourhood import (
     DepthwiseNeighbourhood,
     UniformMeanNeighbourhood,
 )
+from spatial_msipl.training import set_random_seed, train_vae
+
+
+class TinyNeighbourhoodDataset(Dataset):
+    """Synthetic measured neighbours for testing the shared training loop."""
+
+    path = "synthetic-neighbourhood-data"
+
+    def __init__(self):
+        generator = torch.Generator().manual_seed(11)
+        central = torch.rand(8, 6, generator=generator)
+        self.central = central / central.sum(dim=1, keepdim=True)
+        neighbours = torch.rand(8, 8, 6, generator=generator)
+        self.neighbours = neighbours / neighbours.sum(dim=2, keepdim=True)
+        self.mask = torch.ones(8, 8, dtype=torch.bool)
+
+    def __len__(self):
+        return len(self.central)
+
+    def __getitem__(self, index):
+        return {
+            "target": self.central[index],
+            "neighbours": self.neighbours[index],
+            "neighbour_mask": self.mask[index],
+        }
 
 
 class NeighbourhoodTests(unittest.TestCase):
@@ -95,6 +123,52 @@ class NeighbourhoodTests(unittest.TestCase):
             self.assertEqual(tuple(mean.shape), (2, 2))
             self.assertEqual(tuple(log_variance.shape), (2, 2))
             self.assertEqual(tuple(context.shape), (2, 3))
+
+    def test_seeded_variants_start_with_identical_vae_weights(self):
+        states = []
+        for name in ("uniform_mean", "depthwise", "attention"):
+            set_random_seed(17)
+            model = NeighbourhoodSpatialVAE(
+                spectral_dim=6,
+                neighbourhood=name,
+                hidden_dim=4,
+                latent_dim=2,
+                attention_dim=2,
+            )
+            states.append(model.vae.state_dict())
+        for parameter_name in states[0]:
+            torch.testing.assert_close(states[0][parameter_name], states[1][parameter_name])
+            torch.testing.assert_close(states[0][parameter_name], states[2][parameter_name])
+
+    def test_neighbourhood_model_uses_shared_training_loop(self):
+        set_random_seed(1)
+        model = NeighbourhoodSpatialVAE(
+            spectral_dim=6,
+            neighbourhood="attention",
+            hidden_dim=4,
+            latent_dim=2,
+            attention_dim=2,
+        )
+        initial_attention_weights = model.aggregator.projection.weight.detach().clone()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            metadata, history = train_vae(
+                model=model,
+                dataset=TinyNeighbourhoodDataset(),
+                output_directory=temporary_directory,
+                epochs=1,
+                batch_size=4,
+                seed=1,
+            )
+            self.assertEqual(metadata["model"], "NeighbourhoodSpatialVAE")
+            self.assertEqual(metadata["selected_indices"], list(range(8)))
+            self.assertTrue(Path(temporary_directory, "checkpoint.pt").is_file())
+            self.assertTrue(torch.isfinite(torch.tensor(history[0]["total_loss"])))
+            self.assertFalse(
+                torch.equal(
+                    initial_attention_weights,
+                    model.aggregator.projection.weight.detach(),
+                )
+            )
 
 
 if __name__ == "__main__":

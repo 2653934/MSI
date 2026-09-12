@@ -71,6 +71,7 @@ def train_vae(
     maximum_samples=None,
     seed=1,
     device="cpu",
+    experiment_metadata=None,
 ):
     """Train a VAE and save its checkpoint, history, and experiment metadata."""
     if epochs < 1:
@@ -103,18 +104,30 @@ def train_vae(
         model.train()
         totals = {"total": 0.0, "reconstruction": 0.0, "kl": 0.0, "samples": 0}
         for batch in loader:
-            contextual = batch["input"].to(torch_device, dtype=torch.float32)
             target = batch["target"].to(torch_device, dtype=torch.float32)
 
             optimizer.zero_grad(set_to_none=True)
-            reconstruction, mean, log_variance = model(contextual)
+            if getattr(model, "uses_neighbourhood_batch", False):
+                neighbours = batch["neighbours"].to(
+                    torch_device, dtype=torch.float32
+                )
+                neighbour_mask = batch["neighbour_mask"].to(
+                    torch_device, dtype=torch.bool
+                )
+                model_outputs = model(target, neighbours, neighbour_mask)
+            else:
+                contextual = batch["input"].to(
+                    torch_device, dtype=torch.float32
+                )
+                model_outputs = model(contextual)
+            reconstruction, mean, log_variance = model_outputs[:3]
             total_loss, reconstruction_loss, kl_loss = msipl_vae_loss(
                 reconstruction, target, mean, log_variance, beta=beta
             )
             total_loss.backward()
             optimizer.step()
 
-            sample_count = contextual.shape[0]
+            sample_count = target.shape[0]
             totals["total"] += float(total_loss.detach()) * sample_count
             totals["reconstruction"] += float(reconstruction_loss.detach()) * sample_count
             totals["kl"] += float(kl_loss.detach()) * sample_count
@@ -144,7 +157,7 @@ def train_vae(
 
     parameter_count = sum(parameter.numel() for parameter in model.parameters())
     metadata = {
-        "model": "SpatialVAE",
+        "model": model.__class__.__name__,
         "data_source": str(getattr(dataset, "path", "unspecified")),
         "model_configuration": model.configuration(),
         "parameter_count": parameter_count,
@@ -159,8 +172,10 @@ def train_vae(
         "device": str(torch_device),
         "dataset_size": len(dataset),
         "selected_samples": len(selected_indices),
+        "selected_indices": selected_indices,
         "samples_per_epoch": history[-1]["samples_seen"],
         "checkpoint": str(checkpoint_path),
+        "experiment": experiment_metadata or {},
         "status": "complete",
     }
     torch.save(

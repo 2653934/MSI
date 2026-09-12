@@ -75,6 +75,8 @@ class SpatialVAE(nn.Module):
 class NeighbourhoodSpatialVAE(nn.Module):
     """Combine one neighbourhood strategy with the otherwise identical VAE."""
 
+    uses_neighbourhood_batch = True
+
     def __init__(
         self,
         spectral_dim,
@@ -84,10 +86,12 @@ class NeighbourhoodSpatialVAE(nn.Module):
         attention_dim=8,
     ):
         super().__init__()
+        # Build the VAE first. With the seed reset before each variant, this makes
+        # its initial weights identical even when an aggregator has random weights.
+        self.vae = SpatialVAE(spectral_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
         self.aggregator = create_neighbourhood_aggregator(
             neighbourhood, spectral_dim, attention_dim=attention_dim
         )
-        self.vae = SpatialVAE(spectral_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
 
     def build_contextual_input(self, central, neighbours, neighbour_mask):
         context, weights = self.aggregator(central, neighbours, neighbour_mask)

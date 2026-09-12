@@ -1,0 +1,68 @@
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 11.499930381774902, "reconstruction_loss": 10.964421272277832, "kl_loss": 0.5355092883110046, "samples_seen": 8}
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 11.206148147583008, "reconstruction_loss": 10.898056983947754, "kl_loss": 0.30809132754802704, "samples_seen": 8}
+{"starting_variant": "uniform_mean"}
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 962893.6640625, "reconstruction_loss": 962893.5625, "kl_loss": 0.10054801590740681, "samples_seen": 32}
+{"starting_variant": "depthwise"}
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 962893.65625, "reconstruction_loss": 962893.5546875, "kl_loss": 0.10054876282811165, "samples_seen": 32}
+{"starting_variant": "attention"}
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 962892.6953125, "reconstruction_loss": 962892.5859375, "kl_loss": 0.10039763431996107, "samples_seen": 32}
+{
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "purpose": "matched gradient smoke test, not scientific comparison",
+  "controls": {
+    "same_selected_pixels": true,
+    "same_batch_order": true,
+    "same_initial_vae_weights": true,
+    "spatial_lambda": 0.0,
+    "poisson_augmentation": false,
+    "seed": 1,
+    "epochs": 1,
+    "batch_size": 4,
+    "maximum_samples": 32
+  },
+  "variants": {
+    "uniform_mean": {
+      "initial_vae_sha256": "c81c3a32bdd13b54af57902b5ee1c954fec449ee428473c1b774745692ca1d57",
+      "parameter_count": 8251696,
+      "final_losses": {
+        "epoch": 1,
+        "learning_rate": 0.001,
+        "total_loss": 962893.6640625,
+        "reconstruction_loss": 962893.5625,
+        "kl_loss": 0.10054801590740681,
+        "samples_seen": 32
+      },
+      "result_directory": "/home-mscluster/zsuliman/msi/results/validation/spatial_msipl_neighbourhood_training/GBM108_positive_pilot/uniform_mean",
+      "checkpoint_directory": "/home-mscluster/zsuliman/msi/checkpoints/spatial_msipl/validation/GBM108_positive_pilot/uniform_mean"
+    },
+    "depthwise": {
+      "initial_vae_sha256": "c81c3a32bdd13b54af57902b5ee1c954fec449ee428473c1b774745692ca1d57",
+      "parameter_count": 8932192,
+      "final_losses": {
+        "epoch": 1,
+        "learning_rate": 0.001,
+        "total_loss": 962893.65625,
+        "reconstruction_loss": 962893.5546875,
+        "kl_loss": 0.10054876282811165,
+        "samples_seen": 32
+      },
+      "result_directory": "/home-mscluster/zsuliman/msi/results/validation/spatial_msipl_neighbourhood_training/GBM108_positive_pilot/depthwise",
+      "checkpoint_directory": "/home-mscluster/zsuliman/msi/checkpoints/spatial_msipl/validation/GBM108_positive_pilot/depthwise"
+    },
+    "attention": {
+      "initial_vae_sha256": "c81c3a32bdd13b54af57902b5ee1c954fec449ee428473c1b774745692ca1d57",
+      "parameter_count": 8932200,
+      "final_losses": {
+        "epoch": 1,
+        "learning_rate": 0.001,
+        "total_loss": 962892.6953125,
+        "reconstruction_loss": 962892.5859375,
+        "kl_loss": 0.10039763431996107,
+        "samples_seen": 32
+      },
+      "result_directory": "/home-mscluster/zsuliman/msi/results/validation/spatial_msipl_neighbourhood_training/GBM108_positive_pilot/attention",
+      "checkpoint_directory": "/home-mscluster/zsuliman/msi/checkpoints/spatial_msipl/validation/GBM108_positive_pilot/attention"
+    }
+  },
+  "status": "valid"
+}
