@@ -1,0 +1,51 @@
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 11.476568698883057, "reconstruction_loss": 11.085128784179688, "kl_loss": 0.3914400190114975, "samples_seen": 8}
+{
+  "purpose": "architecture smoke test, not a scientific training result",
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "model_configuration": {
+    "spectral_dim": 85062,
+    "contextual_input_dim": 170124,
+    "hidden_dim": 32,
+    "latent_dim": 5
+  },
+  "maximum_samples": 32,
+  "device": "cpu"
+}
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 962893.6640625, "reconstruction_loss": 962893.5625, "kl_loss": 0.10054799448698759, "samples_seen": 32}
+{
+  "metadata": {
+    "model": "SpatialVAE",
+    "data_source": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+    "model_configuration": {
+      "spectral_dim": 85062,
+      "contextual_input_dim": 170124,
+      "hidden_dim": 32,
+      "latent_dim": 5
+    },
+    "parameter_count": 8251696,
+    "loss": "msiPL categorical cross-entropy + beta * KL divergence",
+    "decoder_target": "isolated TIC-normalized central spectrum",
+    "epochs": 1,
+    "batch_size": 4,
+    "learning_rate": 0.001,
+    "scheduler": "cosine annealing",
+    "beta": 1.0,
+    "seed": 1,
+    "device": "cpu",
+    "dataset_size": 2071,
+    "selected_samples": 32,
+    "samples_per_epoch": 32,
+    "checkpoint": "/home-mscluster/zsuliman/msi/results/validation/spatial_msipl_vae/GBM108_positive_smoke/checkpoint.pt",
+    "status": "complete"
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.001,
+      "total_loss": 962893.6640625,
+      "reconstruction_loss": 962893.5625,
+      "kl_loss": 0.10054799448698759,
+      "samples_seen": 32
+    }
+  ]
+}

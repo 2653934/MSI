@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--checkpoint-output", type=Path)
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--hidden-dim", type=int, default=32)
@@ -57,6 +58,7 @@ def main():
         model=model,
         dataset=dataset,
         output_directory=args.output,
+        checkpoint_directory=args.checkpoint_output,
         epochs=args.epochs,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
