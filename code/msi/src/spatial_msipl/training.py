@@ -2,6 +2,7 @@
 
 import json
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +14,9 @@ def set_random_seed(seed, include_cuda=False):
     """Seed CPU libraries and, only when requested, PyTorch CUDA generators."""
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
+    # torch.manual_seed also probes CUDA in this PyTorch build. Seed the CPU
+    # generator directly so CPU-only validation does not emit GPU warnings.
+    torch.random.default_generator.manual_seed(seed)
     if include_cuda:
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA seeding was requested but CUDA is unavailable")
@@ -72,6 +75,7 @@ def train_vae(
     seed=1,
     device="cpu",
     experiment_metadata=None,
+    save_checkpoint=True,
 ):
     """Train a VAE and save its checkpoint, history, and experiment metadata."""
     if epochs < 1:
@@ -85,6 +89,8 @@ def train_vae(
     if len(selected_indices) < batch_size:
         raise ValueError("the selected training subset must contain at least one full batch")
 
+    if torch_device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(torch_device)
     model.to(torch_device)
     subset = Subset(dataset, selected_indices)
     loader_generator = torch.Generator().manual_seed(seed)
@@ -100,7 +106,11 @@ def train_vae(
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     history = []
+    training_start = time.perf_counter()
     for epoch in range(1, epochs + 1):
+        if torch_device.type == "cuda":
+            torch.cuda.synchronize(torch_device)
+        epoch_start = time.perf_counter()
         model.train()
         totals = {"total": 0.0, "reconstruction": 0.0, "kl": 0.0, "samples": 0}
         for batch in loader:
@@ -133,6 +143,9 @@ def train_vae(
             totals["kl"] += float(kl_loss.detach()) * sample_count
             totals["samples"] += sample_count
 
+        if torch_device.type == "cuda":
+            torch.cuda.synchronize(torch_device)
+        epoch_seconds = time.perf_counter() - epoch_start
         record = {
             "epoch": epoch,
             "learning_rate": float(optimizer.param_groups[0]["lr"]),
@@ -140,18 +153,31 @@ def train_vae(
             "reconstruction_loss": totals["reconstruction"] / totals["samples"],
             "kl_loss": totals["kl"] / totals["samples"],
             "samples_seen": totals["samples"],
+            "epoch_seconds": epoch_seconds,
+            "samples_per_second": totals["samples"] / epoch_seconds,
         }
         history.append(record)
         print(json.dumps(record), flush=True)
         scheduler.step()
 
+    training_seconds = time.perf_counter() - training_start
+    peak_gpu_memory_allocated = None
+    peak_gpu_memory_reserved = None
+    device_name = "CPU"
+    if torch_device.type == "cuda":
+        peak_gpu_memory_allocated = int(torch.cuda.max_memory_allocated(torch_device))
+        peak_gpu_memory_reserved = int(torch.cuda.max_memory_reserved(torch_device))
+        device_name = torch.cuda.get_device_name(torch_device)
+
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
-    if checkpoint_directory is None:
-        checkpoint_directory = output_directory
-    checkpoint_directory = Path(checkpoint_directory)
-    checkpoint_directory.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = checkpoint_directory / "checkpoint.pt"
+    checkpoint_path = None
+    if save_checkpoint:
+        if checkpoint_directory is None:
+            checkpoint_directory = output_directory
+        checkpoint_directory = Path(checkpoint_directory)
+        checkpoint_directory.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_directory / "checkpoint.pt"
     history_path = output_directory / "training_history.json"
     metadata_path = output_directory / "metadata.json"
 
@@ -170,23 +196,32 @@ def train_vae(
         "beta": beta,
         "seed": seed,
         "device": str(torch_device),
+        "device_name": device_name,
         "dataset_size": len(dataset),
         "selected_samples": len(selected_indices),
         "selected_indices": selected_indices,
         "samples_per_epoch": history[-1]["samples_seen"],
-        "checkpoint": str(checkpoint_path),
+        "training_seconds": training_seconds,
+        "overall_samples_per_second": (
+            sum(record["samples_seen"] for record in history) / training_seconds
+        ),
+        "peak_gpu_memory_allocated_bytes": peak_gpu_memory_allocated,
+        "peak_gpu_memory_reserved_bytes": peak_gpu_memory_reserved,
+        "checkpoint_saved": bool(save_checkpoint),
+        "checkpoint": str(checkpoint_path) if checkpoint_path is not None else None,
         "experiment": experiment_metadata or {},
         "status": "complete",
     }
-    torch.save(
-        {
-            "model_state_dict": model.state_dict(),
-            "model_configuration": model.configuration(),
-            "training_configuration": metadata,
-            "history": history,
-        },
-        checkpoint_path,
-    )
+    if save_checkpoint:
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "model_configuration": model.configuration(),
+                "training_configuration": metadata,
+                "history": history,
+            },
+            checkpoint_path,
+        )
     history_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     return metadata, history

@@ -81,6 +81,24 @@ class SpatialVAETests(unittest.TestCase):
             self.assertTrue((output / "training_history.json").is_file())
             self.assertTrue((output / "metadata.json").is_file())
 
+    def test_training_can_measure_without_saving_checkpoint(self):
+        model = SpatialVAE(spectral_dim=6, hidden_dim=4, latent_dim=2)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            metadata, _ = train_vae(
+                model=model,
+                dataset=TinyContextDataset(),
+                output_directory=temporary_directory,
+                epochs=1,
+                batch_size=4,
+                seed=1,
+                save_checkpoint=False,
+            )
+            output = Path(temporary_directory)
+            self.assertFalse(metadata["checkpoint_saved"])
+            self.assertIsNone(metadata["checkpoint"])
+            self.assertGreater(metadata["training_seconds"], 0)
+            self.assertFalse((output / "checkpoint.pt").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
