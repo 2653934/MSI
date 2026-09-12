@@ -1,0 +1,78 @@
+{
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "purpose": "training stability check, not final scientific comparison",
+  "variant": "depthwise",
+  "initial_vae_sha256": "692de4925fe95a65ae94c9f95b35e8e57c9a229f42d3c44c8d11a59545b261ee",
+  "controls": {
+    "seed": 1,
+    "epochs": 5,
+    "batch_size": 128,
+    "hidden_dim": 512,
+    "latent_dim": 5,
+    "attention_dim": 8,
+    "spatial_lambda": 0.0,
+    "poisson_augmentation": false,
+    "full_dataset": true
+  },
+  "samples_per_epoch": 2071,
+  "dataset_size": 2071,
+  "training_seconds": 2020.077880013734,
+  "peak_gpu_memory_allocated_bytes": 5909177856,
+  "first_total_loss": 852622.158679382,
+  "final_total_loss": 635038.3843252052,
+  "total_loss_change_percent": -25.519366596241184,
+  "history": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.001,
+      "total_loss": 852622.158679382,
+      "reconstruction_loss": 852613.2035550459,
+      "kl_loss": 8.956236246716049,
+      "samples_seen": 2071,
+      "epoch_seconds": 413.8721873629838,
+      "samples_per_second": 5.003960312471162
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 0.0009045084971874737,
+      "total_loss": 692008.6696644133,
+      "reconstruction_loss": 691989.3886105746,
+      "kl_loss": 19.27957927403618,
+      "samples_seen": 2071,
+      "epoch_seconds": 401.4323657662608,
+      "samples_per_second": 5.159025969534969
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 0.0006545084971874737,
+      "total_loss": 653616.5250181071,
+      "reconstruction_loss": 653590.9473080637,
+      "kl_loss": 25.576043915944304,
+      "samples_seen": 2071,
+      "epoch_seconds": 401.635611389298,
+      "samples_per_second": 5.1564152711364475
+    },
+    {
+      "epoch": 4,
+      "learning_rate": 0.00034549150281252633,
+      "total_loss": 640247.4472175278,
+      "reconstruction_loss": 640216.9657170449,
+      "kl_loss": 30.485504157758463,
+      "samples_seen": 2071,
+      "epoch_seconds": 401.6715382360853,
+      "samples_per_second": 5.15595406409591
+    },
+    {
+      "epoch": 5,
+      "learning_rate": 9.549150281252633e-05,
+      "total_loss": 635038.3843252052,
+      "reconstruction_loss": 635007.1201110574,
+      "kl_loss": 31.258294605161186,
+      "samples_seen": 2071,
+      "epoch_seconds": 401.46291911415756,
+      "samples_per_second": 5.158633341703728
+    }
+  ],
+  "checkpoint": "/home-mscluster/zsuliman/msi/checkpoints/spatial_msipl/stability/GBM108_positive_seed1/depthwise/checkpoint.pt",
+  "status": "complete"
+}
