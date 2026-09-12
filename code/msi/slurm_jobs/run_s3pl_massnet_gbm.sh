@@ -11,10 +11,12 @@
 
 set -eo pipefail
 
+PROJECT_ROOT="$HOME/msi"
 DATASET="${1:-GBM108_positive}"
 EPOCHS="${2:-10}"
 EVALUATE="${3:-true}"
 PATCH_SIZE="${4:-3}"
+ARTIFACT_ROOT="${5:-$PROJECT_ROOT}"
 
 case "$DATASET" in
     GBM108_negative|GBM108_positive|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
@@ -35,6 +37,15 @@ if ! [[ "$PATCH_SIZE" =~ ^[1-9][0-9]*$ ]] || (( PATCH_SIZE % 2 == 0 )); then
     exit 2
 fi
 
+case "$ARTIFACT_ROOT" in
+    "$PROJECT_ROOT"|"$PROJECT_ROOT"/*)
+        ;;
+    *)
+        echo "Artifact root must stay inside $PROJECT_ROOT: $ARTIFACT_ROOT" >&2
+        exit 2
+        ;;
+esac
+
 case "$EVALUATE" in
     true)
         EVAL_FLAG="--eval_picking"
@@ -48,7 +59,6 @@ case "$EVALUATE" in
         ;;
 esac
 
-PROJECT_ROOT="$HOME/msi"
 S3PL_ROOT="$PROJECT_ROOT/baselines/s3pl"
 DATA_PATH="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
 
@@ -60,7 +70,7 @@ python -c 'import sys, torch; sys.exit(0 if torch.cuda.is_available() else "CUDA
 cd "$S3PL_ROOT"
 python main.py \
     --data_dir "$DATA_PATH" \
-    --artifact_root "$PROJECT_ROOT" \
+    --artifact_root "$ARTIFACT_ROOT" \
     --number_classes 2 \
     --n_epochs "$EPOCHS" \
     --spectral_patch_size "$PATCH_SIZE" \

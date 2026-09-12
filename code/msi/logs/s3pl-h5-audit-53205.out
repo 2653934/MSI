@@ -1,0 +1,40 @@
+{
+  "dataset": "GBM108_positive",
+  "spectra_shape_pixels_mz": [
+    2071,
+    85062
+  ],
+  "spatial_shape_y_x": [
+    36,
+    70
+  ],
+  "patch_size": 3,
+  "mask_mapping": {
+    "rule": "mask[y - 1, x - 1] == Class_Label - 1",
+    "all_pixels_correct": true
+  },
+  "neighbour_mapping": {
+    "entries_checked": 18639,
+    "mismatches": 0,
+    "all_centres_correct": true,
+    "valid_neighbours_including_centre": {
+      "minimum": 4,
+      "mean": 8.722839208112022,
+      "maximum": 9
+    }
+  },
+  "normalization": {
+    "tensor_order": "[channel, mz, y, x]",
+    "reference_code": "divide by max over axis 2 (y)",
+    "paper": "divide each spectrum by its total over mz",
+    "sample_spectrum_index": 1035,
+    "reference_centre_sum": 2446.9384992662817,
+    "paper_tic_centre_sum": 0.9999999999999999,
+    "maximum_absolute_difference": 0.9999998992138329,
+    "equivalent": false
+  },
+  "conclusion": {
+    "spatial_adapter_passes": true,
+    "reference_preprocessing_matches_paper": false
+  }
+}
