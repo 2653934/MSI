@@ -9,12 +9,14 @@ import torch
 from torch.utils.data import DataLoader, Subset
 
 
-def set_random_seed(seed):
-    """Seed Python, NumPy, and PyTorch for a reproducible experiment."""
+def set_random_seed(seed, include_cuda=False):
+    """Seed CPU libraries and, only when requested, PyTorch CUDA generators."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    if torch.cuda.is_available():
+    if include_cuda:
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA seeding was requested but CUDA is unavailable")
         torch.cuda.manual_seed_all(seed)
 
 
@@ -61,6 +63,7 @@ def train_vae(
     model,
     dataset,
     output_directory,
+    checkpoint_directory=None,
     epochs=1,
     batch_size=4,
     learning_rate=1e-3,
@@ -75,12 +78,12 @@ def train_vae(
     if batch_size < 2:
         raise ValueError("batch_size must be at least 2 because the model uses batch normalization")
 
-    set_random_seed(seed)
+    torch_device = torch.device(device)
+    set_random_seed(seed, include_cuda=torch_device.type == "cuda")
     selected_indices = select_training_indices(len(dataset), maximum_samples, seed)
     if len(selected_indices) < batch_size:
         raise ValueError("the selected training subset must contain at least one full batch")
 
-    torch_device = torch.device(device)
     model.to(torch_device)
     subset = Subset(dataset, selected_indices)
     loader_generator = torch.Generator().manual_seed(seed)
@@ -131,7 +134,11 @@ def train_vae(
 
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = output_directory / "checkpoint.pt"
+    if checkpoint_directory is None:
+        checkpoint_directory = output_directory
+    checkpoint_directory = Path(checkpoint_directory)
+    checkpoint_directory.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = checkpoint_directory / "checkpoint.pt"
     history_path = output_directory / "training_history.json"
     metadata_path = output_directory / "metadata.json"
 

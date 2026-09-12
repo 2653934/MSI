@@ -33,8 +33,8 @@ def tic_normalize(spectra):
     return normalized[0] if one_spectrum else normalized
 
 
-def build_moore_neighbours(x_coordinates, y_coordinates):
-    """Return measured pixel indices in each centre's 8-position neighbourhood."""
+def build_moore_neighbour_slots(x_coordinates, y_coordinates):
+    """Return an ``(pixels, 8)`` index array, using -1 for missing positions."""
     x = np.asarray(x_coordinates, dtype=np.int64).reshape(-1)
     y = np.asarray(y_coordinates, dtype=np.int64).reshape(-1)
     if len(x) == 0 or len(x) != len(y):
@@ -48,22 +48,28 @@ def build_moore_neighbours(x_coordinates, y_coordinates):
             raise ValueError(f"duplicate measured coordinate: {coordinate}")
         coordinate_to_index[coordinate] = index
 
-    neighbours = []
+    slots = np.full((len(x), len(MOORE_OFFSETS)), -1, dtype=np.int64)
     for centre_x, centre_y in zip(x.tolist(), y.tolist()):
-        indices = [
-            coordinate_to_index[(centre_x + dx, centre_y + dy)]
-            for dx, dy in MOORE_OFFSETS
-            if (centre_x + dx, centre_y + dy) in coordinate_to_index
-        ]
-        neighbours.append(np.asarray(indices, dtype=np.int64))
-    return tuple(neighbours)
+        centre_index = coordinate_to_index[(centre_x, centre_y)]
+        for slot, (dx, dy) in enumerate(MOORE_OFFSETS):
+            slots[centre_index, slot] = coordinate_to_index.get(
+                (centre_x + dx, centre_y + dy), -1
+            )
+    return slots
+
+
+def build_moore_neighbours(x_coordinates, y_coordinates):
+    """Return the valid measured neighbours for each centre (legacy interface)."""
+    slots = build_moore_neighbour_slots(x_coordinates, y_coordinates)
+    return tuple(row[row >= 0] for row in slots)
 
 
 class H5SpatialContextDataset:
     """Stream central spectra and their mean measured-neighbour contexts from HDF5."""
 
-    def __init__(self, path):
+    def __init__(self, path, include_neighbourhood=False):
         self.path = Path(path).expanduser().resolve()
+        self.include_neighbourhood = bool(include_neighbourhood)
         self._handle = None
         self._data = None
 
@@ -91,7 +97,10 @@ class H5SpatialContextDataset:
         if np.any(np.diff(self.mz_values) <= 0):
             raise ValueError("m/z values must be strictly increasing")
 
-        self.neighbour_indices = build_moore_neighbours(self.x, self.y)
+        self.neighbour_slots = build_moore_neighbour_slots(self.x, self.y)
+        self.neighbour_indices = tuple(
+            row[row >= 0] for row in self.neighbour_slots
+        )
 
     def __len__(self):
         return self.n_pixels
@@ -117,7 +126,9 @@ class H5SpatialContextDataset:
     def __getitem__(self, index):
         if not 0 <= index < self.n_pixels:
             raise IndexError(index)
-        neighbours = self.neighbour_indices[index]
+        slots = self.neighbour_slots[index]
+        valid_mask = slots >= 0
+        neighbours = slots[valid_mask]
         requested = np.concatenate(([index], neighbours))
         normalized = tic_normalize(self._read_spectra(requested))
         central = normalized[0]
@@ -126,7 +137,7 @@ class H5SpatialContextDataset:
         else:
             context = np.zeros(self.n_mz, dtype=np.float32)
         combined = np.concatenate((central, context)).astype(np.float32, copy=False)
-        return {
+        sample = {
             "input": combined,
             "target": central,
             "context": context,
@@ -135,6 +146,14 @@ class H5SpatialContextDataset:
             "y": np.int64(self.y[index]),
             "neighbour_count": np.int64(len(neighbours)),
         }
+        if self.include_neighbourhood:
+            neighbour_spectra = np.zeros(
+                (len(MOORE_OFFSETS), self.n_mz), dtype=np.float32
+            )
+            neighbour_spectra[valid_mask] = normalized[1:]
+            sample["neighbours"] = neighbour_spectra
+            sample["neighbour_mask"] = valid_mask
+        return sample
 
     def close(self):
         if self._handle is not None:

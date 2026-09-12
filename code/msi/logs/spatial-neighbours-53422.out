@@ -1,0 +1,144 @@
+{"epoch": 1, "learning_rate": 0.001, "total_loss": 11.33956241607666, "reconstruction_loss": 11.117346286773682, "kl_loss": 0.2222159430384636, "samples_seen": 8}
+{
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "purpose": "real-data interface validation, not model training or evaluation",
+  "pixels": 2071,
+  "mz_bins": 85062,
+  "sample_indices": [
+    0,
+    1035,
+    2070
+  ],
+  "sample_neighbour_counts": [
+    4,
+    8,
+    3
+  ],
+  "slot_order_dx_dy": [
+    [
+      -1,
+      -1
+    ],
+    [
+      0,
+      -1
+    ],
+    [
+      1,
+      -1
+    ],
+    [
+      -1,
+      0
+    ],
+    [
+      1,
+      0
+    ],
+    [
+      -1,
+      1
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      1
+    ]
+  ],
+  "uniform_baseline_max_absolute_error": 1.862645149230957e-09,
+  "depthwise_initial_vs_uniform_max_absolute_error": 0.0,
+  "variants": {
+    "uniform_mean": {
+      "aggregator_configuration": {
+        "name": "uniform_mean",
+        "learnable_parameters": 0,
+        "orientation_free": true
+      },
+      "total_model_parameters": 2126728,
+      "context_shape": [
+        3,
+        85062
+      ],
+      "weight_shape": [
+        3,
+        8
+      ],
+      "context_tic_sum_min": 1.0,
+      "context_tic_sum_max": 1.0,
+      "invalid_neighbour_weight_total": 0.0,
+      "reconstruction_shape": [
+        3,
+        85062
+      ],
+      "latent_mean_shape": [
+        3,
+        5
+      ],
+      "finite": true
+    },
+    "depthwise": {
+      "aggregator_configuration": {
+        "name": "depthwise",
+        "learnable_parameters": 680496,
+        "orientation_free": false,
+        "initialization": "uniform over valid neighbours"
+      },
+      "total_model_parameters": 2807224,
+      "context_shape": [
+        3,
+        85062
+      ],
+      "weight_shape": [
+        3,
+        8,
+        85062
+      ],
+      "context_tic_sum_min": 1.0,
+      "context_tic_sum_max": 1.0,
+      "invalid_neighbour_weight_total": 0.0,
+      "reconstruction_shape": [
+        3,
+        85062
+      ],
+      "latent_mean_shape": [
+        3,
+        5
+      ],
+      "finite": true
+    },
+    "attention": {
+      "aggregator_configuration": {
+        "name": "attention",
+        "attention_dim": 8,
+        "learnable_parameters": 680504,
+        "orientation_free": true,
+        "similarity": "shared nonlinear spectral projection and scaled dot product"
+      },
+      "total_model_parameters": 2807232,
+      "context_shape": [
+        3,
+        85062
+      ],
+      "weight_shape": [
+        3,
+        8
+      ],
+      "context_tic_sum_min": 1.0,
+      "context_tic_sum_max": 1.0,
+      "invalid_neighbour_weight_total": 0.0,
+      "reconstruction_shape": [
+        3,
+        85062
+      ],
+      "latent_mean_shape": [
+        3,
+        5
+      ],
+      "finite": true
+    }
+  },
+  "status": "valid"
+}

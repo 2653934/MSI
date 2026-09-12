@@ -50,6 +50,23 @@ class PreprocessingTests(unittest.TestCase):
             np.testing.assert_allclose(sample["context"], expected, rtol=1e-6)
             dataset.close()
 
+            neighbourhood_dataset = H5SpatialContextDataset(
+                path, include_neighbourhood=True
+            )
+            neighbourhood_sample = neighbourhood_dataset[0]
+            self.assertEqual(neighbourhood_sample["neighbours"].shape, (8, 3))
+            self.assertEqual(neighbourhood_sample["neighbour_mask"].shape, (8,))
+            self.assertEqual(int(neighbourhood_sample["neighbour_mask"].sum()), 2)
+            # For the top-left centre, right and below are slots 4 and 6 in the
+            # documented row-major Moore ordering.
+            self.assertTrue(neighbourhood_sample["neighbour_mask"][[4, 6]].all())
+            np.testing.assert_allclose(
+                neighbourhood_sample["neighbours"][[4, 6]],
+                tic_normalize(spectra[[1, 3]]),
+                rtol=1e-6,
+            )
+            neighbourhood_dataset.close()
+
 
 if __name__ == "__main__":
     unittest.main()

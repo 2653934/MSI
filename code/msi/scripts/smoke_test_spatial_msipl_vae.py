@@ -34,7 +34,7 @@ def main():
         raise RuntimeError("CUDA was requested but PyTorch cannot access a GPU")
 
     # Seed before constructing the model so its initial weights are reproducible.
-    set_random_seed(args.seed)
+    set_random_seed(args.seed, include_cuda=device == "cuda")
     dataset = H5SpatialContextDataset(args.input)
     model = SpatialVAE(
         spectral_dim=dataset.n_mz,

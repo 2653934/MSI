@@ -3,6 +3,8 @@
 import torch
 from torch import nn
 
+from .neighbourhood import create_neighbourhood_aggregator
+
 
 class SpatialVAE(nn.Module):
     """Encode central + context spectra and reconstruct only the central spectrum.
@@ -69,3 +71,44 @@ class SpatialVAE(nn.Module):
             "latent_dim": self.latent_dim,
         }
 
+
+class NeighbourhoodSpatialVAE(nn.Module):
+    """Combine one neighbourhood strategy with the otherwise identical VAE."""
+
+    def __init__(
+        self,
+        spectral_dim,
+        neighbourhood="uniform_mean",
+        hidden_dim=512,
+        latent_dim=5,
+        attention_dim=8,
+    ):
+        super().__init__()
+        self.aggregator = create_neighbourhood_aggregator(
+            neighbourhood, spectral_dim, attention_dim=attention_dim
+        )
+        self.vae = SpatialVAE(spectral_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
+
+    def build_contextual_input(self, central, neighbours, neighbour_mask):
+        context, weights = self.aggregator(central, neighbours, neighbour_mask)
+        return torch.cat((central, context), dim=1), context, weights
+
+    def encode(self, central, neighbours, neighbour_mask):
+        contextual, context, weights = self.build_contextual_input(
+            central, neighbours, neighbour_mask
+        )
+        mean, log_variance = self.vae.encode(contextual)
+        return mean, log_variance, context, weights
+
+    def forward(self, central, neighbours, neighbour_mask):
+        mean, log_variance, context, weights = self.encode(
+            central, neighbours, neighbour_mask
+        )
+        latent = self.vae.reparameterize(mean, log_variance)
+        reconstruction = self.vae.decode(latent)
+        return reconstruction, mean, log_variance, context, weights
+
+    def configuration(self):
+        configuration = self.vae.configuration()
+        configuration["neighbourhood"] = self.aggregator.configuration()
+        return configuration

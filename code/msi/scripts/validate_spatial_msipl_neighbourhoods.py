@@ -58,11 +58,10 @@ def main():
             raise ValueError(f"{name} produced a non-finite value")
         if tuple(reconstruction.shape) != (len(indices), dataset.n_mz):
             raise ValueError(f"{name} reconstructed the wrong shape")
-        invalid_weight_total = (
-            weights * (~neighbour_mask).to(weights.dtype).unsqueeze(-1)
-        ).abs().sum() if weights.ndim == 3 else (
-            weights * (~neighbour_mask).to(weights.dtype)
-        ).abs().sum()
+        invalid_mask = (~neighbour_mask).to(weights.dtype)
+        if weights.ndim == 3:
+            invalid_mask = invalid_mask.unsqueeze(-1)
+        invalid_weight_total = (weights * invalid_mask).abs().sum()
         if float(invalid_weight_total) != 0.0:
             raise ValueError(f"{name} assigned weight to a missing neighbour")
 
@@ -114,4 +113,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
