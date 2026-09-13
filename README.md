@@ -1,42 +1,46 @@
-# MSI
-Repo to store and track Honours Research
+# Spatial MSI Peak Learning Research
 
-## Cluster Folder Structure
+Honours research repository for reproducible experiments in spatially informed
+peak learning for mass spectrometry imaging (MSI).
 
-data/
-├── cac/
-│   ├── 40TopL.ibd
-│   ├── 40TopL.imzML
-│   ├── 160TopL.ibd
-│   ├── 160TopL.imzML
-│   ├── 200TopL.ibd
-│   ├── 200TopL.imzML
-│   ├── 240TopL.ibd
-│   ├── 240TopL.imzML
-│   ├── 280TopL.ibd
-│   ├── 280TopL.imzML
-│   ├── 360TopL.ibd
-│   ├── 360TopL.imzML
-│   ├── 400TopL.ibd
-│   ├── 400TopL.imzML
-│   ├── 520TopL.ibd
-│   ├── 520TopL.imzML
-│   └── masks/
-│       ├── 40TopL_mask.npy
-│       ├── 160TopL_mask.npy
-│       ├── 200TopL_mask.npy
-│       ├── 240TopL_mask.npy
-│       ├── 280TopL_mask.npy
-│       ├── 360TopL_mask.npy
-│       ├── 400TopL_mask.npy
-│       └── 520TopL_mask.npy
-├── gbm/
-│   ├── Dataset_S1.h5
-│   ├── Dataset_S2.h5
-│   ├── Dataset_S3.h5
-│   └── Dataset_S4.h5
-├── prostate/
-│   └── P_1900.h5
-└── zips/
-    ├── cac_data.zip
-    └── ST001857_msiPLData.zip
+The current research question is:
+
+> Can learned spatial context and nonlinear attribution improve MSI peak
+> learning over fixed neighbourhood averaging and first-layer weight
+> importance?
+
+## Start here
+
+- [`code/msi/README.md`](code/msi/README.md) - code, artifacts and cluster map
+- [`docs/meetings/2026-09-14-progress-brief.md`](docs/meetings/2026-09-14-progress-brief.md) - current scientific narrative
+- [`RP/proposal.pdf`](RP/proposal.pdf) - approved research proposal
+- [`code/msi/cluster_node_issues.txt`](code/msi/cluster_node_issues.txt) - observed cluster incidents
+
+## Repository boundaries
+
+This Git repository contains source code, job definitions, compact results,
+figures, logs and reproducibility metadata. Large raw datasets, Conda
+environments and trained checkpoints do not belong in Git.
+
+On the cluster:
+
+```text
+~/msi/                                      Git working tree
+/datasets/zsuliman/msi_data/                raw and prepared datasets
+/datasets/zsuliman/msi_checkpoints/         trained model checkpoints
+~/miniconda3/envs/                          Conda environments
+```
+
+The normal local sync intentionally excludes raw data and checkpoints.
+
+## Current status
+
+- S3PL completed on all eight CAC sections.
+- S3PL has a documented partial reproduction on eight MassNet GBM sections.
+- Three matched Spatial-msiPL neighbourhood VAEs completed on GBM108-positive.
+- The original attention mechanism was diagnosed as saturated.
+- A `sqrt(D)` attention correction passed a full-section five-epoch pilot.
+- A matched 100-epoch corrected-attention experiment is the current run.
+
+Scientific claims should be based on saved metrics and comparisons, not on a
+job merely completing successfully.
