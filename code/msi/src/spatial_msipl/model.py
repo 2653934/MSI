@@ -84,13 +84,17 @@ class NeighbourhoodSpatialVAE(nn.Module):
         hidden_dim=512,
         latent_dim=5,
         attention_dim=8,
+        attention_input_scale="spectral_bins",
     ):
         super().__init__()
         # Build the VAE first. With the seed reset before each variant, this makes
         # its initial weights identical even when an aggregator has random weights.
         self.vae = SpatialVAE(spectral_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
         self.aggregator = create_neighbourhood_aggregator(
-            neighbourhood, spectral_dim, attention_dim=attention_dim
+            neighbourhood,
+            spectral_dim,
+            attention_dim=attention_dim,
+            attention_input_scale=attention_input_scale,
         )
 
     def build_contextual_input(self, central, neighbours, neighbour_mask):

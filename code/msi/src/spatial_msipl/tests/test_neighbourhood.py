@@ -86,6 +86,26 @@ class NeighbourhoodTests(unittest.TestCase):
         context.sum().backward()
         self.assertIsNotNone(aggregator.projection.weight.grad)
 
+    def test_attention_scale_is_explicit_and_default_is_backward_compatible(self):
+        torch.manual_seed(5)
+        default = AttentionNeighbourhood(spectral_dim=3, attention_dim=2)
+        torch.manual_seed(5)
+        explicit = AttentionNeighbourhood(
+            spectral_dim=3,
+            attention_dim=2,
+            input_scale="spectral_bins",
+        )
+        default_weights = default(self.central, self.neighbours, self.mask)[1]
+        explicit_weights = explicit(self.central, self.neighbours, self.mask)[1]
+        torch.testing.assert_close(default_weights, explicit_weights)
+        self.assertNotIn("input_scale", default.configuration())
+        sqrt_scaled = AttentionNeighbourhood(
+            spectral_dim=9,
+            attention_dim=2,
+            input_scale="sqrt_bins",
+        )
+        self.assertEqual(sqrt_scaled.configuration()["input_scale"], 3.0)
+
     def test_isolated_pixel_produces_zero_context_without_nan(self):
         empty_neighbours = torch.zeros_like(self.neighbours)
         empty_mask = torch.zeros_like(self.mask)

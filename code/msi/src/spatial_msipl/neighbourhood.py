@@ -88,12 +88,23 @@ class AttentionNeighbourhood(nn.Module):
 
     name = "attention"
 
-    def __init__(self, spectral_dim, attention_dim=8):
+    def __init__(self, spectral_dim, attention_dim=8, input_scale="spectral_bins"):
         super().__init__()
         if spectral_dim < 1 or attention_dim < 1:
             raise ValueError("spectral_dim and attention_dim must be positive")
         self.spectral_dim = int(spectral_dim)
         self.attention_dim = int(attention_dim)
+        scale_names = {
+            "unit": 1.0,
+            "sqrt_bins": math.sqrt(self.spectral_dim),
+            "spectral_bins": float(self.spectral_dim),
+        }
+        if input_scale not in scale_names:
+            raise ValueError(
+                "input_scale must be unit, sqrt_bins, or spectral_bins"
+            )
+        self.input_scale_name = input_scale
+        self.input_scale = scale_names[input_scale]
         # The same projection is used for every neighbour, so slot orientation is
         # not encoded. Scaling compensates for TIC-normalized values being tiny.
         self.projection = nn.Linear(self.spectral_dim, self.attention_dim)
@@ -103,7 +114,7 @@ class AttentionNeighbourhood(nn.Module):
         if central.shape[1] != self.spectral_dim:
             raise ValueError(f"expected {self.spectral_dim} m/z bins")
 
-        scale = float(self.spectral_dim)
+        scale = self.input_scale
         central_embedding = torch.tanh(self.projection(central * scale))
         neighbour_embedding = torch.tanh(self.projection(neighbours * scale))
         similarity = torch.sum(
@@ -114,16 +125,24 @@ class AttentionNeighbourhood(nn.Module):
         return _tic_normalize_context(context), weights
 
     def configuration(self):
-        return {
+        configuration = {
             "name": self.name,
             "attention_dim": self.attention_dim,
             "learnable_parameters": sum(p.numel() for p in self.parameters()),
             "orientation_free": True,
             "similarity": "shared nonlinear spectral projection and scaled dot product",
         }
+        # Omit the historical default so old checkpoint resume signatures remain
+        # byte-for-byte compatible after this option was introduced.
+        if self.input_scale_name != "spectral_bins":
+            configuration["input_scale_name"] = self.input_scale_name
+            configuration["input_scale"] = self.input_scale
+        return configuration
 
 
-def create_neighbourhood_aggregator(name, spectral_dim, attention_dim=8):
+def create_neighbourhood_aggregator(
+    name, spectral_dim, attention_dim=8, attention_input_scale="spectral_bins"
+):
     """Construct a neighbourhood strategy from its experiment name."""
     normalized_name = name.lower().replace("-", "_")
     if normalized_name in {"uniform", "uniform_mean"}:
@@ -131,5 +150,9 @@ def create_neighbourhood_aggregator(name, spectral_dim, attention_dim=8):
     if normalized_name == "depthwise":
         return DepthwiseNeighbourhood(spectral_dim)
     if normalized_name == "attention":
-        return AttentionNeighbourhood(spectral_dim, attention_dim=attention_dim)
+        return AttentionNeighbourhood(
+            spectral_dim,
+            attention_dim=attention_dim,
+            input_scale=attention_input_scale,
+        )
     raise ValueError(f"unknown neighbourhood strategy: {name}")

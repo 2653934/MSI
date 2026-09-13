@@ -7,7 +7,7 @@
 #SBATCH --time=02:00:00
 #SBATCH --mem=32G
 #SBATCH --exclusive
-#SBATCH --exclude=mscluster45,mscluster51,mscluster65,mscluster83
+#SBATCH --exclude=mscluster45,mscluster50,mscluster51,mscluster65,mscluster83
 #SBATCH --output=logs/spatial-eval-%j.out
 #SBATCH --error=logs/spatial-eval-%j.err
 

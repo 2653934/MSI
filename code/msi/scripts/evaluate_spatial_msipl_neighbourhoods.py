@@ -96,6 +96,9 @@ def load_model(checkpoint_path, variant, spectral_dim, device):
         hidden_dim=configuration["hidden_dim"],
         latent_dim=configuration["latent_dim"],
         attention_dim=neighbourhood.get("attention_dim", 8),
+        attention_input_scale=neighbourhood.get(
+            "input_scale_name", "spectral_bins"
+        ),
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
@@ -159,7 +162,7 @@ def encode_dataset(model, dataset, batch_size, device):
             # Attention diagnostics distinguish genuinely similar neighbours
             # from a saturated projection that merely produces equal logits.
             if hasattr(model.aggregator, "projection"):
-                scale = float(model.vae.spectral_dim)
+                scale = model.aggregator.input_scale
                 central_embedding = torch.tanh(model.aggregator.projection(central * scale))
                 neighbour_embedding = torch.tanh(
                     model.aggregator.projection(neighbours * scale)
