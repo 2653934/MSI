@@ -12,6 +12,17 @@ while not exposing a usable NVIDIA GPU/CUDA runtime.
 Observed problematic nodes
 --------------------------
 
+mscluster44
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. Both attention-scaling pilots stopped at the CUDA
+  preflight before loading the model or training data.
+  Evidence: jobs 54162 and 54163; logs/attention-pilot-54162.err and
+  logs/attention-pilot-54163.err. The same pilot completed on mscluster46 as
+  job 54164.
+  Classification: Repeated GPU/CUDA access failure in our environment; root
+  cause and current node health have not been established.
+  Status: Exclude from our GPU jobs pending clarification.
+
 mscluster45
   Symptom: PyTorch reported that CUDA was unavailable. The S3PL imzML pilot
   stopped safely before attempting CPU training.

@@ -7,7 +7,7 @@
 #SBATCH --time=02:00:00
 #SBATCH --mem=32G
 #SBATCH --exclusive
-#SBATCH --exclude=mscluster45,mscluster50,mscluster51,mscluster65,mscluster83
+#SBATCH --exclude=mscluster44,mscluster45,mscluster50,mscluster51,mscluster65,mscluster83
 #SBATCH --output=logs/attention-pilot-%j.out
 #SBATCH --error=logs/attention-pilot-%j.err
 

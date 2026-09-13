@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 
 import torch
+from torch.utils.data import DataLoader, Subset
 
+from check_spatial_attention_scaling import measure
 from spatial_msipl.model import NeighbourhoodSpatialVAE
 from spatial_msipl.preprocessing import H5SpatialContextDataset
 from spatial_msipl.training import set_random_seed, train_vae
@@ -36,6 +38,11 @@ def main():
     parser.add_argument("--hidden-dim", type=int, default=512)
     parser.add_argument("--latent-dim", type=int, default=5)
     parser.add_argument("--attention-dim", type=int, default=8)
+    parser.add_argument(
+        "--attention-input-scale",
+        choices=("unit", "sqrt_bins", "spectral_bins"),
+        default="spectral_bins",
+    )
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--checkpoint-interval", type=int, default=5)
@@ -57,8 +64,28 @@ def main():
             hidden_dim=args.hidden_dim,
             latent_dim=args.latent_dim,
             attention_dim=args.attention_dim,
+            attention_input_scale=args.attention_input_scale,
         )
         initial_vae_hash = state_sha256(model.vae)
+        attention_diagnostics_before = None
+        diagnostic_indices = None
+        if args.variant == "attention":
+            diagnostic_indices = sorted(
+                torch.randperm(
+                    len(dataset),
+                    generator=torch.Generator().manual_seed(args.seed),
+                )[:16].tolist()
+            )
+            diagnostic_batch = next(
+                iter(DataLoader(Subset(dataset, diagnostic_indices), batch_size=16))
+            )
+            diagnostic_batch = {
+                key: diagnostic_batch[key].to("cuda")
+                for key in ("target", "neighbours", "neighbour_mask")
+            }
+            model.to("cuda")
+            with torch.no_grad():
+                attention_diagnostics_before = measure(model, diagnostic_batch)
         metadata, history = train_vae(
             model=model,
             dataset=dataset,
@@ -76,10 +103,15 @@ def main():
                 "spatial_lambda": 0.0,
                 "poisson_augmentation": False,
                 "initial_vae_sha256": initial_vae_hash,
+                "attention_input_scale": args.attention_input_scale,
             },
             checkpoint_interval=args.checkpoint_interval,
             resume_checkpoint=args.resume_checkpoint,
         )
+        attention_diagnostics_after = None
+        if args.variant == "attention":
+            with torch.no_grad():
+                attention_diagnostics_after = measure(model, diagnostic_batch)
     finally:
         dataset.close()
 
@@ -97,6 +129,7 @@ def main():
             "hidden_dim": args.hidden_dim,
             "latent_dim": args.latent_dim,
             "attention_dim": args.attention_dim,
+            "attention_input_scale": args.attention_input_scale,
             "spatial_lambda": 0.0,
             "poisson_augmentation": False,
             "full_dataset": True,
@@ -114,6 +147,11 @@ def main():
         "total_loss_change_percent": 100.0 * (final_loss - first_loss) / first_loss,
         "history": history,
         "checkpoint": metadata["checkpoint"],
+        "attention_diagnostics": {
+            "indices": diagnostic_indices,
+            "before_training": attention_diagnostics_before,
+            "after_training": attention_diagnostics_after,
+        } if args.variant == "attention" else None,
         "status": "complete",
     }
     args.output.mkdir(parents=True, exist_ok=True)

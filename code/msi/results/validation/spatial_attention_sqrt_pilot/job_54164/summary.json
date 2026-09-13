@@ -1,0 +1,121 @@
+{
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "purpose": "training stability check, not final scientific comparison",
+  "variant": "attention",
+  "initial_vae_sha256": "692de4925fe95a65ae94c9f95b35e8e57c9a229f42d3c44c8d11a59545b261ee",
+  "controls": {
+    "seed": 1,
+    "epochs": 5,
+    "batch_size": 128,
+    "hidden_dim": 512,
+    "latent_dim": 5,
+    "attention_dim": 8,
+    "attention_input_scale": "sqrt_bins",
+    "spatial_lambda": 0.0,
+    "poisson_augmentation": false,
+    "full_dataset": true
+  },
+  "samples_per_epoch": 2071,
+  "dataset_size": 2071,
+  "training_seconds": 1992.238386195153,
+  "peak_gpu_memory_allocated_bytes": 3431257088,
+  "first_total_loss": 852236.2821402705,
+  "final_total_loss": 635262.0758087881,
+  "total_loss_change_percent": -25.459395578252366,
+  "history": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.001,
+      "total_loss": 852236.2821402705,
+      "reconstruction_loss": 852226.8770219701,
+      "kl_loss": 9.410638703233893,
+      "samples_seen": 2071,
+      "epoch_seconds": 398.6084774490446,
+      "samples_per_second": 5.1955743973476896
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 0.0009045084971874737,
+      "total_loss": 690401.1070436987,
+      "reconstruction_loss": 690380.0264666828,
+      "kl_loss": 21.0765365101415,
+      "samples_seen": 2071,
+      "epoch_seconds": 398.53581373766065,
+      "samples_per_second": 5.196521689173089
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 0.0006545084971874737,
+      "total_loss": 653457.4183969097,
+      "reconstruction_loss": 653428.853573153,
+      "kl_loss": 28.564068844443874,
+      "samples_seen": 2071,
+      "epoch_seconds": 398.447892495431,
+      "samples_per_second": 5.197668350131249
+    },
+    {
+      "epoch": 4,
+      "learning_rate": 0.00034549150281252633,
+      "total_loss": 640420.6001629648,
+      "reconstruction_loss": 640387.1664051183,
+      "kl_loss": 33.43426966978006,
+      "samples_seen": 2071,
+      "epoch_seconds": 398.4009470581077,
+      "samples_per_second": 5.198280815577328
+    },
+    {
+      "epoch": 5,
+      "learning_rate": 9.549150281252633e-05,
+      "total_loss": 635262.0758087881,
+      "reconstruction_loss": 635227.580214872,
+      "kl_loss": 34.492011992612476,
+      "samples_seen": 2071,
+      "epoch_seconds": 398.24525545490906,
+      "samples_per_second": 5.2003130524036765
+    }
+  ],
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/validation/attention_sqrt/job_54164/checkpoint.pt",
+  "attention_diagnostics": {
+    "indices": [
+      91,
+      317,
+      560,
+      600,
+      633,
+      876,
+      888,
+      971,
+      1272,
+      1273,
+      1314,
+      1388,
+      1392,
+      1817,
+      1824,
+      1850
+    ],
+    "before_training": {
+      "pixels_with_at_least_two_neighbours": 16,
+      "entropy_mean": 0.9999998888816362,
+      "weight_deviation_mean": 6.326974835246801e-05,
+      "weight_deviation_max": 0.00035525858402252197,
+      "score_spread_mean": 0.0018271282315254211,
+      "score_spread_max": 0.004928739741444588,
+      "central_saturation_fraction": 0.0,
+      "neighbour_saturation_fraction": 0.0,
+      "mean_tanh_derivative": 0.9977821111679077
+    },
+    "after_training": {
+      "pixels_with_at_least_two_neighbours": 16,
+      "entropy_mean": 0.9558355357504285,
+      "weight_deviation_mean": 0.03536764159798622,
+      "weight_deviation_max": 0.22665372490882874,
+      "score_spread_mean": 1.2537251710891724,
+      "score_spread_max": 3.044261932373047,
+      "central_saturation_fraction": 0.1171875,
+      "neighbour_saturation_fraction": 0.1533203125,
+      "mean_tanh_derivative": 0.5109689831733704
+    }
+  },
+  "status": "complete"
+}
