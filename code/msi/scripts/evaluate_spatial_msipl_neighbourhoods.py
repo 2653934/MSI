@@ -109,6 +109,11 @@ def encode_dataset(model, dataset, batch_size, device):
     latent = np.empty((len(dataset), model.vae.latent_dim), dtype=np.float32)
     slot_weights = np.empty((len(dataset), len(MOORE_OFFSETS)), dtype=np.float32)
     entropy = np.empty(len(dataset), dtype=np.float32)
+    mean_deviation = np.empty(len(dataset), dtype=np.float32)
+    max_deviation = np.empty(len(dataset), dtype=np.float32)
+    attention_similarity_spread = np.full(len(dataset), np.nan, dtype=np.float32)
+    central_saturation = np.full(len(dataset), np.nan, dtype=np.float32)
+    neighbour_saturation = np.full(len(dataset), np.nan, dtype=np.float32)
 
     with torch.no_grad():
         for batch in loader:
@@ -118,22 +123,84 @@ def encode_dataset(model, dataset, batch_size, device):
             indices = batch["index"].numpy()
             mean, _, _, weights = model.encode(central, neighbours, mask)
 
-            # Depthwise has a separate weight for every m/z bin. Averaging over
-            # m/z yields the same compact eight-slot summary as the other models.
-            if weights.ndim == 3:
-                weights = weights.mean(dim=2)
-            safe_weights = weights.clamp_min(torch.finfo(weights.dtype).eps)
-            raw_entropy = -(weights * safe_weights.log()).sum(dim=1)
             counts = mask.sum(dim=1)
             maximum_entropy = counts.clamp_min(2).to(weights.dtype).log()
-            normalized_entropy = torch.where(
-                counts > 1, raw_entropy / maximum_entropy, torch.zeros_like(raw_entropy)
-            )
+            uniform = mask.to(weights.dtype) / counts.clamp_min(1).unsqueeze(1)
+
+            # Depthwise has a separate eight-neighbour distribution for every
+            # m/z bin. Calculate its entropy before making a compact slot average.
+            if weights.ndim == 3:
+                safe_weights = weights.clamp_min(torch.finfo(weights.dtype).eps)
+                entropy_by_mz = -(weights * safe_weights.log()).sum(dim=1)
+                normalized_entropy = torch.where(
+                    counts.unsqueeze(1) > 1,
+                    entropy_by_mz / maximum_entropy.unsqueeze(1),
+                    torch.zeros_like(entropy_by_mz),
+                ).mean(dim=1)
+                deviations = (weights - uniform.unsqueeze(2)).abs()
+                mean_batch_deviation = deviations.sum(dim=(1, 2)) / (
+                    counts.clamp_min(1).to(weights.dtype) * weights.shape[2]
+                )
+                max_batch_deviation = deviations.amax(dim=(1, 2))
+                compact_weights = weights.mean(dim=2)
+            else:
+                safe_weights = weights.clamp_min(torch.finfo(weights.dtype).eps)
+                raw_entropy = -(weights * safe_weights.log()).sum(dim=1)
+                normalized_entropy = torch.where(
+                    counts > 1,
+                    raw_entropy / maximum_entropy,
+                    torch.zeros_like(raw_entropy),
+                )
+                deviations = (weights - uniform).abs()
+                mean_batch_deviation = deviations.sum(dim=1) / counts.clamp_min(1)
+                max_batch_deviation = deviations.amax(dim=1)
+                compact_weights = weights
+
+            # Attention diagnostics distinguish genuinely similar neighbours
+            # from a saturated projection that merely produces equal logits.
+            if hasattr(model.aggregator, "projection"):
+                scale = float(model.vae.spectral_dim)
+                central_embedding = torch.tanh(model.aggregator.projection(central * scale))
+                neighbour_embedding = torch.tanh(
+                    model.aggregator.projection(neighbours * scale)
+                )
+                similarity = torch.sum(
+                    neighbour_embedding * central_embedding.unsqueeze(1), dim=2
+                ) / np.sqrt(model.aggregator.attention_dim)
+                minimum = torch.finfo(similarity.dtype).min
+                maximum_similarity = torch.where(mask, similarity, minimum).max(dim=1).values
+                minimum_similarity = torch.where(mask, similarity, -minimum).min(dim=1).values
+                spread = torch.where(
+                    counts > 1,
+                    maximum_similarity - minimum_similarity,
+                    torch.zeros_like(maximum_similarity),
+                )
+                central_sat = (central_embedding.abs() >= 0.99).to(weights.dtype).mean(dim=1)
+                valid_neighbour_values = counts.clamp_min(1) * model.aggregator.attention_dim
+                neighbour_sat = (
+                    ((neighbour_embedding.abs() >= 0.99) & mask.unsqueeze(2))
+                    .to(weights.dtype)
+                    .sum(dim=(1, 2))
+                    / valid_neighbour_values
+                )
+                attention_similarity_spread[indices] = spread.cpu().numpy()
+                central_saturation[indices] = central_sat.cpu().numpy()
+                neighbour_saturation[indices] = neighbour_sat.cpu().numpy()
 
             latent[indices] = mean.cpu().numpy()
-            slot_weights[indices] = weights.cpu().numpy()
+            slot_weights[indices] = compact_weights.cpu().numpy()
             entropy[indices] = normalized_entropy.cpu().numpy()
-    return latent, slot_weights, entropy
+            mean_deviation[indices] = mean_batch_deviation.cpu().numpy()
+            max_deviation[indices] = max_batch_deviation.cpu().numpy()
+    diagnostics = {
+        "normalized_entropy": entropy,
+        "mean_absolute_deviation_from_uniform": mean_deviation,
+        "max_absolute_deviation_from_uniform": max_deviation,
+        "attention_similarity_spread": attention_similarity_spread,
+        "central_projection_saturation": central_saturation,
+        "neighbour_projection_saturation": neighbour_saturation,
+    }
+    return latent, slot_weights, diagnostics
 
 
 def spatial_probe(latent, labels, x, y, rows, columns, halo, seed):
@@ -335,9 +402,10 @@ def evaluate_variant(args, variant, dataset, labels, device):
     print(f"Evaluating {variant} from {checkpoint_path}", flush=True)
     started = time.perf_counter()
     model, checkpoint = load_model(checkpoint_path, variant, dataset.n_mz, device)
-    latent, slot_weights, entropy = encode_dataset(
+    latent, slot_weights, weight_diagnostics = encode_dataset(
         model, dataset, args.batch_size, device
     )
+    entropy = weight_diagnostics["normalized_entropy"]
     if not np.all(np.isfinite(latent)):
         raise ValueError(f"{variant} produced non-finite latent values")
 
@@ -368,13 +436,51 @@ def evaluate_variant(args, variant, dataset, labels, device):
     np.save(output / "latent_mean.npy", latent)
     np.save(output / "spatial_probe_tumour_probability.npy", probabilities)
     np.save(output / "spatial_probe_prediction.npy", predictions)
+    np.savez(output / "neighbourhood_diagnostics.npz", **weight_diagnostics)
     np.savez(
         output / "coordinates_and_labels.npz",
         x=dataset.x,
         y=dataset.y,
         label=labels,
     )
+    neighbourhood_metrics = {
+        "offset_order_dx_dy": [list(offset) for offset in MOORE_OFFSETS],
+        "mean_weight_when_present": slot_means.tolist(),
+        "normalized_entropy": {
+            "mean": float(np.mean(entropy)),
+            "minimum": float(np.min(entropy)),
+            "maximum": float(np.max(entropy)),
+        },
+        "absolute_deviation_from_uniform": {
+            "mean": float(
+                np.mean(weight_diagnostics["mean_absolute_deviation_from_uniform"])
+            ),
+            "maximum": float(
+                np.max(weight_diagnostics["max_absolute_deviation_from_uniform"])
+            ),
+        },
+        "entropy_method": (
+            "per-pixel, per-m/z before averaging"
+            if variant == "depthwise"
+            else "per-pixel neighbour distribution"
+        ),
+    }
+    similarity_spread = weight_diagnostics["attention_similarity_spread"]
+    if np.any(np.isfinite(similarity_spread)):
+        neighbourhood_metrics["attention_diagnostics"] = {
+            "similarity_spread_mean": float(np.nanmean(similarity_spread)),
+            "similarity_spread_maximum": float(np.nanmax(similarity_spread)),
+            "central_projection_saturation_fraction": float(
+                np.nanmean(weight_diagnostics["central_projection_saturation"])
+            ),
+            "neighbour_projection_saturation_fraction": float(
+                np.nanmean(weight_diagnostics["neighbour_projection_saturation"])
+            ),
+            "saturation_threshold_absolute_tanh": 0.99,
+        }
+
     metrics = {
+        "evaluation_version": 2,
         "variant": variant,
         "checkpoint": str(checkpoint_path),
         "completed_training_epochs": int(checkpoint["completed_epochs"]),
@@ -403,11 +509,7 @@ def evaluate_variant(args, variant, dataset, labels, device):
             "mean": float(np.mean(moran_values)),
             "interpretation": "higher means neighbouring pixels have more similar latent values",
         },
-        "neighbourhood_weights": {
-            "offset_order_dx_dy": [list(offset) for offset in MOORE_OFFSETS],
-            "mean_weight_when_present": slot_means.tolist(),
-            "mean_normalized_entropy": float(np.mean(entropy)),
-        },
+        "neighbourhood_weights": neighbourhood_metrics,
         "evaluation_seconds": float(time.perf_counter() - started),
         "status": "complete",
     }
