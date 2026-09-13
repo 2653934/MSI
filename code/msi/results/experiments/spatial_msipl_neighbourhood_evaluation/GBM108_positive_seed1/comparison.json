@@ -7,6 +7,7 @@
   },
   "variants": {
     "uniform_mean": {
+      "evaluation_version": 2,
       "variant": "uniform_mean",
       "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/uniform_mean/checkpoint.pt",
       "completed_training_epochs": 100,
@@ -219,12 +220,22 @@
           0.1294886474609375,
           0.12899063840621064
         ],
-        "mean_normalized_entropy": 1.0
+        "normalized_entropy": {
+          "mean": 1.0,
+          "minimum": 1.0,
+          "maximum": 1.0000001192092896
+        },
+        "absolute_deviation_from_uniform": {
+          "mean": 0.0,
+          "maximum": 0.0
+        },
+        "entropy_method": "per-pixel neighbour distribution"
       },
-      "evaluation_seconds": 437.6244625062682,
+      "evaluation_seconds": 432.65990590816364,
       "status": "complete"
     },
     "depthwise": {
+      "evaluation_version": 2,
       "variant": "depthwise",
       "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/depthwise/checkpoint.pt",
       "completed_training_epochs": 100,
@@ -437,12 +448,22 @@
           0.1295789794921875,
           0.12897026773063602
         ],
-        "mean_normalized_entropy": 1.0
+        "normalized_entropy": {
+          "mean": 0.9999231100082397,
+          "minimum": 0.9998926520347595,
+          "maximum": 0.9999242424964905
+        },
+        "absolute_deviation_from_uniform": {
+          "mean": 0.0018032031366601586,
+          "maximum": 0.03986835479736328
+        },
+        "entropy_method": "per-pixel, per-m/z before averaging"
       },
-      "evaluation_seconds": 418.2765363547951,
+      "evaluation_seconds": 414.0382130369544,
       "status": "complete"
     },
     "attention": {
+      "evaluation_version": 2,
       "variant": "attention",
       "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/attention/checkpoint.pt",
       "completed_training_epochs": 100,
@@ -655,9 +676,25 @@
           0.1294886474609375,
           0.12899063840621064
         ],
-        "mean_normalized_entropy": 1.0
+        "normalized_entropy": {
+          "mean": 1.0,
+          "minimum": 1.0,
+          "maximum": 1.0000001192092896
+        },
+        "absolute_deviation_from_uniform": {
+          "mean": 0.0,
+          "maximum": 0.0
+        },
+        "entropy_method": "per-pixel neighbour distribution",
+        "attention_diagnostics": {
+          "similarity_spread_mean": 0.0,
+          "similarity_spread_maximum": 0.0,
+          "central_projection_saturation_fraction": 1.0,
+          "neighbour_projection_saturation_fraction": 1.0,
+          "saturation_threshold_absolute_tanh": 0.99
+        }
       },
-      "evaluation_seconds": 419.0931458598934,
+      "evaluation_seconds": 415.809859237168,
       "status": "complete"
     }
   },
