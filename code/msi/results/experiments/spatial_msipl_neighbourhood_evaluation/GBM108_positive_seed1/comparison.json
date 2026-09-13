@@ -1,0 +1,665 @@
+{
+  "dataset": "GBM108_positive",
+  "design": {
+    "latent_representation": "deterministic encoder mean",
+    "spatial_probe": "rectangular tile holdout with one-pixel halo",
+    "same_training_controls": true
+  },
+  "variants": {
+    "uniform_mean": {
+      "variant": "uniform_mean",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/uniform_mean/checkpoint.pt",
+      "completed_training_epochs": 100,
+      "pixels": 2071,
+      "latent_dimensions": 5,
+      "class_counts": {
+        "normal": 1173,
+        "tumour": 898
+      },
+      "spatial_probe": {
+        "balanced_accuracy": 0.8901594335807335,
+        "macro_f1": 0.8899554037384951,
+        "roc_auc": 0.9624428254888671,
+        "folds": [
+          {
+            "tile": 0,
+            "training_pixels": 2036,
+            "test_pixels": 22,
+            "halo_pixels_excluded": 13,
+            "test_normal": 22,
+            "test_tumour": 0
+          },
+          {
+            "tile": 1,
+            "training_pixels": 1927,
+            "test_pixels": 112,
+            "halo_pixels_excluded": 32,
+            "test_normal": 101,
+            "test_tumour": 11
+          },
+          {
+            "tile": 2,
+            "training_pixels": 1881,
+            "test_pixels": 155,
+            "halo_pixels_excluded": 35,
+            "test_normal": 88,
+            "test_tumour": 67
+          },
+          {
+            "tile": 3,
+            "training_pixels": 2015,
+            "test_pixels": 37,
+            "halo_pixels_excluded": 19,
+            "test_normal": 29,
+            "test_tumour": 8
+          },
+          {
+            "tile": 4,
+            "training_pixels": 1917,
+            "test_pixels": 121,
+            "halo_pixels_excluded": 33,
+            "test_normal": 121,
+            "test_tumour": 0
+          },
+          {
+            "tile": 5,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 90,
+            "test_tumour": 63
+          },
+          {
+            "tile": 6,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 0,
+            "test_tumour": 162
+          },
+          {
+            "tile": 7,
+            "training_pixels": 1904,
+            "test_pixels": 129,
+            "halo_pixels_excluded": 38,
+            "test_normal": 0,
+            "test_tumour": 129
+          },
+          {
+            "tile": 8,
+            "training_pixels": 1872,
+            "test_pixels": 154,
+            "halo_pixels_excluded": 45,
+            "test_normal": 104,
+            "test_tumour": 50
+          },
+          {
+            "tile": 9,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 83,
+            "test_tumour": 70
+          },
+          {
+            "tile": 10,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 55,
+            "test_tumour": 107
+          },
+          {
+            "tile": 11,
+            "training_pixels": 1878,
+            "test_pixels": 149,
+            "halo_pixels_excluded": 44,
+            "test_normal": 6,
+            "test_tumour": 143
+          },
+          {
+            "tile": 12,
+            "training_pixels": 1908,
+            "test_pixels": 135,
+            "halo_pixels_excluded": 28,
+            "test_normal": 118,
+            "test_tumour": 17
+          },
+          {
+            "tile": 13,
+            "training_pixels": 1882,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 36,
+            "test_normal": 136,
+            "test_tumour": 17
+          },
+          {
+            "tile": 14,
+            "training_pixels": 1892,
+            "test_pixels": 144,
+            "halo_pixels_excluded": 35,
+            "test_normal": 144,
+            "test_tumour": 0
+          },
+          {
+            "tile": 15,
+            "training_pixels": 1918,
+            "test_pixels": 130,
+            "halo_pixels_excluded": 23,
+            "test_normal": 76,
+            "test_tumour": 54
+          }
+        ],
+        "tile_grid": [
+          4,
+          4
+        ],
+        "halo_pixels": 1,
+        "scope": "transductive: representation learned without labels on the full section",
+        "interpretation": "higher is better; out-of-fold predictions"
+      },
+      "label_silhouette": 0.2522176504135132,
+      "gmm_two_cluster": {
+        "adjusted_rand_index": 0.6442926307511928,
+        "normalized_mutual_information": 0.5446142911965355
+      },
+      "morans_i": {
+        "per_latent_dimension": [
+          0.8920003290970758,
+          0.6980541102193942,
+          0.8675028344905136,
+          0.6730351818983552,
+          0.588755228677753
+        ],
+        "mean": 0.7438695368766184,
+        "interpretation": "higher means neighbouring pixels have more similar latent values"
+      },
+      "neighbourhood_weights": {
+        "offset_order_dx_dy": [
+          [
+            -1,
+            -1
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "mean_weight_when_present": [
+          0.1292616375747796,
+          0.12932196044921876,
+          0.12910557707892953,
+          0.13031889381577733,
+          0.13048302158823394,
+          0.1288748774367231,
+          0.1294886474609375,
+          0.12899063840621064
+        ],
+        "mean_normalized_entropy": 1.0
+      },
+      "evaluation_seconds": 437.6244625062682,
+      "status": "complete"
+    },
+    "depthwise": {
+      "variant": "depthwise",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/depthwise/checkpoint.pt",
+      "completed_training_epochs": 100,
+      "pixels": 2071,
+      "latent_dimensions": 5,
+      "class_counts": {
+        "normal": 1173,
+        "tumour": 898
+      },
+      "spatial_probe": {
+        "balanced_accuracy": 0.8921255342458471,
+        "macro_f1": 0.8919204858145935,
+        "roc_auc": 0.9618456853061743,
+        "folds": [
+          {
+            "tile": 0,
+            "training_pixels": 2036,
+            "test_pixels": 22,
+            "halo_pixels_excluded": 13,
+            "test_normal": 22,
+            "test_tumour": 0
+          },
+          {
+            "tile": 1,
+            "training_pixels": 1927,
+            "test_pixels": 112,
+            "halo_pixels_excluded": 32,
+            "test_normal": 101,
+            "test_tumour": 11
+          },
+          {
+            "tile": 2,
+            "training_pixels": 1881,
+            "test_pixels": 155,
+            "halo_pixels_excluded": 35,
+            "test_normal": 88,
+            "test_tumour": 67
+          },
+          {
+            "tile": 3,
+            "training_pixels": 2015,
+            "test_pixels": 37,
+            "halo_pixels_excluded": 19,
+            "test_normal": 29,
+            "test_tumour": 8
+          },
+          {
+            "tile": 4,
+            "training_pixels": 1917,
+            "test_pixels": 121,
+            "halo_pixels_excluded": 33,
+            "test_normal": 121,
+            "test_tumour": 0
+          },
+          {
+            "tile": 5,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 90,
+            "test_tumour": 63
+          },
+          {
+            "tile": 6,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 0,
+            "test_tumour": 162
+          },
+          {
+            "tile": 7,
+            "training_pixels": 1904,
+            "test_pixels": 129,
+            "halo_pixels_excluded": 38,
+            "test_normal": 0,
+            "test_tumour": 129
+          },
+          {
+            "tile": 8,
+            "training_pixels": 1872,
+            "test_pixels": 154,
+            "halo_pixels_excluded": 45,
+            "test_normal": 104,
+            "test_tumour": 50
+          },
+          {
+            "tile": 9,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 83,
+            "test_tumour": 70
+          },
+          {
+            "tile": 10,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 55,
+            "test_tumour": 107
+          },
+          {
+            "tile": 11,
+            "training_pixels": 1878,
+            "test_pixels": 149,
+            "halo_pixels_excluded": 44,
+            "test_normal": 6,
+            "test_tumour": 143
+          },
+          {
+            "tile": 12,
+            "training_pixels": 1908,
+            "test_pixels": 135,
+            "halo_pixels_excluded": 28,
+            "test_normal": 118,
+            "test_tumour": 17
+          },
+          {
+            "tile": 13,
+            "training_pixels": 1882,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 36,
+            "test_normal": 136,
+            "test_tumour": 17
+          },
+          {
+            "tile": 14,
+            "training_pixels": 1892,
+            "test_pixels": 144,
+            "halo_pixels_excluded": 35,
+            "test_normal": 144,
+            "test_tumour": 0
+          },
+          {
+            "tile": 15,
+            "training_pixels": 1918,
+            "test_pixels": 130,
+            "halo_pixels_excluded": 23,
+            "test_normal": 76,
+            "test_tumour": 54
+          }
+        ],
+        "tile_grid": [
+          4,
+          4
+        ],
+        "halo_pixels": 1,
+        "scope": "transductive: representation learned without labels on the full section",
+        "interpretation": "higher is better; out-of-fold predictions"
+      },
+      "label_silhouette": 0.2515980303287506,
+      "gmm_two_cluster": {
+        "adjusted_rand_index": 0.6411956633894604,
+        "normalized_mutual_information": 0.5406591175134211
+      },
+      "morans_i": {
+        "per_latent_dimension": [
+          0.8921087021376778,
+          0.707316262668647,
+          0.867987227134488,
+          0.6426087318251851,
+          0.5901296202786216
+        ],
+        "mean": 0.7400301088089238,
+        "interpretation": "higher means neighbouring pixels have more similar latent values"
+      },
+      "neighbourhood_weights": {
+        "offset_order_dx_dy": [
+          [
+            -1,
+            -1
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "mean_weight_when_present": [
+          0.12922601579718987,
+          0.12938450622558595,
+          0.12905848357245395,
+          0.1302873093996184,
+          0.1305656188934792,
+          0.12877737061656044,
+          0.1295789794921875,
+          0.12897026773063602
+        ],
+        "mean_normalized_entropy": 1.0
+      },
+      "evaluation_seconds": 418.2765363547951,
+      "status": "complete"
+    },
+    "attention": {
+      "variant": "attention",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/attention/checkpoint.pt",
+      "completed_training_epochs": 100,
+      "pixels": 2071,
+      "latent_dimensions": 5,
+      "class_counts": {
+        "normal": 1173,
+        "tumour": 898
+      },
+      "spatial_probe": {
+        "balanced_accuracy": 0.893961099497415,
+        "macro_f1": 0.893858173852631,
+        "roc_auc": 0.9651104946675096,
+        "folds": [
+          {
+            "tile": 0,
+            "training_pixels": 2036,
+            "test_pixels": 22,
+            "halo_pixels_excluded": 13,
+            "test_normal": 22,
+            "test_tumour": 0
+          },
+          {
+            "tile": 1,
+            "training_pixels": 1927,
+            "test_pixels": 112,
+            "halo_pixels_excluded": 32,
+            "test_normal": 101,
+            "test_tumour": 11
+          },
+          {
+            "tile": 2,
+            "training_pixels": 1881,
+            "test_pixels": 155,
+            "halo_pixels_excluded": 35,
+            "test_normal": 88,
+            "test_tumour": 67
+          },
+          {
+            "tile": 3,
+            "training_pixels": 2015,
+            "test_pixels": 37,
+            "halo_pixels_excluded": 19,
+            "test_normal": 29,
+            "test_tumour": 8
+          },
+          {
+            "tile": 4,
+            "training_pixels": 1917,
+            "test_pixels": 121,
+            "halo_pixels_excluded": 33,
+            "test_normal": 121,
+            "test_tumour": 0
+          },
+          {
+            "tile": 5,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 90,
+            "test_tumour": 63
+          },
+          {
+            "tile": 6,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 0,
+            "test_tumour": 162
+          },
+          {
+            "tile": 7,
+            "training_pixels": 1904,
+            "test_pixels": 129,
+            "halo_pixels_excluded": 38,
+            "test_normal": 0,
+            "test_tumour": 129
+          },
+          {
+            "tile": 8,
+            "training_pixels": 1872,
+            "test_pixels": 154,
+            "halo_pixels_excluded": 45,
+            "test_normal": 104,
+            "test_tumour": 50
+          },
+          {
+            "tile": 9,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 83,
+            "test_tumour": 70
+          },
+          {
+            "tile": 10,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 55,
+            "test_tumour": 107
+          },
+          {
+            "tile": 11,
+            "training_pixels": 1878,
+            "test_pixels": 149,
+            "halo_pixels_excluded": 44,
+            "test_normal": 6,
+            "test_tumour": 143
+          },
+          {
+            "tile": 12,
+            "training_pixels": 1908,
+            "test_pixels": 135,
+            "halo_pixels_excluded": 28,
+            "test_normal": 118,
+            "test_tumour": 17
+          },
+          {
+            "tile": 13,
+            "training_pixels": 1882,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 36,
+            "test_normal": 136,
+            "test_tumour": 17
+          },
+          {
+            "tile": 14,
+            "training_pixels": 1892,
+            "test_pixels": 144,
+            "halo_pixels_excluded": 35,
+            "test_normal": 144,
+            "test_tumour": 0
+          },
+          {
+            "tile": 15,
+            "training_pixels": 1918,
+            "test_pixels": 130,
+            "halo_pixels_excluded": 23,
+            "test_normal": 76,
+            "test_tumour": 54
+          }
+        ],
+        "tile_grid": [
+          4,
+          4
+        ],
+        "halo_pixels": 1,
+        "scope": "transductive: representation learned without labels on the full section",
+        "interpretation": "higher is better; out-of-fold predictions"
+      },
+      "label_silhouette": 0.25486767292022705,
+      "gmm_two_cluster": {
+        "adjusted_rand_index": 0.6289705120042434,
+        "normalized_mutual_information": 0.518898769917378
+      },
+      "morans_i": {
+        "per_latent_dimension": [
+          0.8734725740648114,
+          0.6632410963302152,
+          0.871038318910917,
+          0.7049703756006664,
+          0.6092168084911683
+        ],
+        "mean": 0.7443878346795556,
+        "interpretation": "higher means neighbouring pixels have more similar latent values"
+      },
+      "neighbourhood_weights": {
+        "offset_order_dx_dy": [
+          [
+            -1,
+            -1
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "mean_weight_when_present": [
+          0.1292616375747796,
+          0.12932196044921876,
+          0.12910557707892953,
+          0.13031889381577733,
+          0.13048302158823394,
+          0.1288748774367231,
+          0.1294886474609375,
+          0.12899063840621064
+        ],
+        "mean_normalized_entropy": 1.0
+      },
+      "evaluation_seconds": 419.0931458598934,
+      "status": "complete"
+    }
+  },
+  "status": "complete"
+}
