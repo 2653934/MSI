@@ -1,0 +1,261 @@
+=== LOADING DATA ===
+Input: /datasets/zsuliman/msi_data/gbm_massnet/GBM12_2.h5
+HDF5 keys: ['Class_Label', 'Data', 'mzArray', 'xLocation', 'yLocation']
+Raw Data shape: (85062, 3306)
+mzArray shape: (85062,)
+xLocation shape: (3306,)
+yLocation shape: (3306,)
+Transposing Data to (pixels, m/z)...
+Final spectra shape: (3306, 85062)
+m/z range: 101.923820 - 999.985901
+==== Encoder Architecture...
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+encoder_input (InputLayer)      (None, 85062)        0                                            
+__________________________________________________________________________________________________
+dense_1 (Dense)                 (None, 512)          43552256    encoder_input[0][0]              
+__________________________________________________________________________________________________
+batch_normalization_1 (BatchNor (None, 512)          2048        dense_1[0][0]                    
+__________________________________________________________________________________________________
+activation_1 (Activation)       (None, 512)          0           batch_normalization_1[0][0]      
+__________________________________________________________________________________________________
+z_mean (Dense)                  (None, 5)            2565        activation_1[0][0]               
+__________________________________________________________________________________________________
+z_log_var (Dense)               (None, 5)            2565        activation_1[0][0]               
+__________________________________________________________________________________________________
+batch_normalization_2 (BatchNor (None, 5)            20          z_mean[0][0]                     
+__________________________________________________________________________________________________
+batch_normalization_3 (BatchNor (None, 5)            20          z_log_var[0][0]                  
+__________________________________________________________________________________________________
+z (Lambda)                      (None, 5)            0           batch_normalization_2[0][0]      
+                                                                 batch_normalization_3[0][0]      
+==================================================================================================
+Total params: 43,559,474
+Trainable params: 43,558,430
+Non-trainable params: 1,044
+__________________________________________________________________________________________________
+==== Decoder Architecture...
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+Latent_Space (InputLayer)    (None, 5)                 0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 512)               3072      
+_________________________________________________________________
+batch_normalization_4 (Batch (None, 512)               2048      
+_________________________________________________________________
+activation_2 (Activation)    (None, 512)               0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 85062)             43636806  
+=================================================================
+Total params: 43,641,926
+Trainable params: 43,640,902
+Non-trainable params: 1,024
+_________________________________________________________________
+Beta 2.50: 478 peaks (target 981, difference -503)
+Beta 2.45: 488 peaks (target 981, difference -493)
+Beta 2.40: 501 peaks (target 981, difference -480)
+Beta 2.35: 510 peaks (target 981, difference -471)
+Beta 2.30: 517 peaks (target 981, difference -464)
+Beta 2.25: 528 peaks (target 981, difference -453)
+Beta 2.20: 538 peaks (target 981, difference -443)
+Beta 2.15: 551 peaks (target 981, difference -430)
+Beta 2.10: 561 peaks (target 981, difference -420)
+Beta 2.05: 569 peaks (target 981, difference -412)
+Beta 2.00: 587 peaks (target 981, difference -394)
+Beta 1.95: 603 peaks (target 981, difference -378)
+Beta 1.90: 620 peaks (target 981, difference -361)
+Beta 1.85: 636 peaks (target 981, difference -345)
+Beta 1.80: 649 peaks (target 981, difference -332)
+Beta 1.75: 663 peaks (target 981, difference -318)
+Beta 1.70: 682 peaks (target 981, difference -299)
+Beta 1.65: 698 peaks (target 981, difference -283)
+Beta 1.60: 715 peaks (target 981, difference -266)
+Beta 1.55: 728 peaks (target 981, difference -253)
+Beta 1.50: 744 peaks (target 981, difference -237)
+Beta 1.45: 763 peaks (target 981, difference -218)
+Beta 1.40: 776 peaks (target 981, difference -205)
+Beta 1.35: 799 peaks (target 981, difference -182)
+Beta 1.30: 829 peaks (target 981, difference -152)
+Beta 1.25: 857 peaks (target 981, difference -124)
+Beta 1.20: 885 peaks (target 981, difference -96)
+Beta 1.15: 915 peaks (target 981, difference -66)
+Beta 1.10: 950 peaks (target 981, difference -31)
+Beta 1.05: 986 peaks (target 981, difference +5)
+Beta 1.00: 1014 peaks (target 981, difference +33)
+{
+  "dataset": "GBM12_2",
+  "purpose": "paper-aligned post-training msiPL peak-count tuning",
+  "training_reused": true,
+  "weights": "/datasets/zsuliman/msi_checkpoints/baselines/msipl/massnet/GBM12_2/msipl_weights.h5",
+  "target_peaks": 981,
+  "tolerance": 50,
+  "tested_beta": {
+    "minimum": 1.0,
+    "maximum": 2.5,
+    "step": 0.05
+  },
+  "chosen": {
+    "beta": 1.05,
+    "selected_peaks": 986,
+    "target_peaks": 981,
+    "difference": 5,
+    "absolute_difference": 5,
+    "within_tolerance": true
+  },
+  "status": "within_tolerance"
+}
+Selected peaks saved to /home-mscluster/zsuliman/msi/results/baselines/msipl/massnet_paper_aligned/GBM12_2/learned_peaks.csv
+{
+  "dataset": "GBM12_2",
+  "method": "legacy msiPL VAE-BN plus LearnPeaks",
+  "evaluation": "S3PL-compatible PCC-threshold peak classification",
+  "thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6
+  ],
+  "spectral_bins": 85062,
+  "reported_peaks": 986,
+  "unique_nearest_bins": 986,
+  "threshold_results": {
+    "0.3": {
+      "class_metrics": {
+        "normal": {
+          "true_positive": 315,
+          "false_positive": 671,
+          "false_negative": 219,
+          "true_negative": 83857,
+          "recall": 0.5898876404494382,
+          "precision": 0.31947261663286003,
+          "F1": 0.4144736842105263
+        },
+        "tumour": {
+          "true_positive": 283,
+          "false_positive": 703,
+          "false_negative": 528,
+          "true_negative": 83548,
+          "recall": 0.34895191122071517,
+          "precision": 0.2870182555780933,
+          "F1": 0.3149693934335003
+        }
+      },
+      "mixed_classes": {
+        "true_positive": 598,
+        "false_positive": 388,
+        "false_negative": 747,
+        "true_negative": 83329,
+        "recall": 0.4446096654275093,
+        "precision": 0.6064908722109533,
+        "F1": 0.5130845130845131
+      },
+      "true_bins_mixed": 1345
+    },
+    "0.4": {
+      "class_metrics": {
+        "normal": {
+          "true_positive": 253,
+          "false_positive": 733,
+          "false_negative": 139,
+          "true_negative": 83937,
+          "recall": 0.6454081632653061,
+          "precision": 0.2565922920892495,
+          "F1": 0.3671988388969521
+        },
+        "tumour": {
+          "true_positive": 248,
+          "false_positive": 738,
+          "false_negative": 341,
+          "true_negative": 83735,
+          "recall": 0.42105263157894735,
+          "precision": 0.2515212981744422,
+          "F1": 0.31492063492063493
+        }
+      },
+      "mixed_classes": {
+        "true_positive": 501,
+        "false_positive": 485,
+        "false_negative": 480,
+        "true_negative": 83596,
+        "recall": 0.5107033639143731,
+        "precision": 0.5081135902636917,
+        "F1": 0.5094051855617692
+      },
+      "true_bins_mixed": 981
+    },
+    "0.5": {
+      "class_metrics": {
+        "normal": {
+          "true_positive": 205,
+          "false_positive": 781,
+          "false_negative": 92,
+          "true_negative": 83984,
+          "recall": 0.6902356902356902,
+          "precision": 0.2079107505070994,
+          "F1": 0.3195635229929852
+        },
+        "tumour": {
+          "true_positive": 198,
+          "false_positive": 788,
+          "false_negative": 213,
+          "true_negative": 83863,
+          "recall": 0.48175182481751827,
+          "precision": 0.20081135902636918,
+          "F1": 0.28346456692913385
+        }
+      },
+      "mixed_classes": {
+        "true_positive": 403,
+        "false_positive": 583,
+        "false_negative": 305,
+        "true_negative": 83771,
+        "recall": 0.5692090395480226,
+        "precision": 0.40872210953346855,
+        "F1": 0.4757969303423849
+      },
+      "true_bins_mixed": 708
+    },
+    "0.6": {
+      "class_metrics": {
+        "normal": {
+          "true_positive": 141,
+          "false_positive": 845,
+          "false_negative": 47,
+          "true_negative": 84029,
+          "recall": 0.75,
+          "precision": 0.14300202839756593,
+          "F1": 0.2402044293015332
+        },
+        "tumour": {
+          "true_positive": 158,
+          "false_positive": 828,
+          "false_negative": 120,
+          "true_negative": 83956,
+          "recall": 0.5683453237410072,
+          "precision": 0.16024340770791076,
+          "F1": 0.25
+        }
+      },
+      "mixed_classes": {
+        "true_positive": 299,
+        "false_positive": 687,
+        "false_negative": 167,
+        "true_negative": 83909,
+        "recall": 0.6416309012875536,
+        "precision": 0.30324543610547666,
+        "F1": 0.4118457300275482
+      },
+      "true_bins_mixed": 466
+    }
+  },
+  "mixed_f1": {
+    "0.3": 0.5130845130845131,
+    "0.4": 0.5094051855617692,
+    "0.5": 0.4757969303423849,
+    "0.6": 0.4118457300275482
+  },
+  "mSCF1": 0.47753308975405384,
+  "status": "complete"
+}
