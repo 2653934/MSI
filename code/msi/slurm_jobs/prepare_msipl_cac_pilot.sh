@@ -9,7 +9,7 @@
 #SBATCH --output=logs/msipl-cac-data-%j.out
 #SBATCH --error=logs/msipl-cac-data-%j.err
 
-set -euo pipefail
+set -eo pipefail
 
 DATASET="${1:-40TopL}"
 case "$DATASET" in
@@ -31,7 +31,9 @@ AUDIT="$PROJECT_ROOT/results/validation/msipl_cac_adapter/$DATASET.json"
 mkdir -p "$PROJECT_ROOT/logs" "$ADAPTER_ROOT" "$(dirname "$AUDIT")"
 cd "$PROJECT_ROOT"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
-conda activate data_tools_env
+conda activate s3pl_env
+
+python -c "import h5py, pyimzml; print('h5py:', h5py.__version__); print('pyimzML: available')"
 
 python -m py_compile scripts/prepare_msipl_cac_h5.py
 python scripts/prepare_msipl_cac_h5.py \
