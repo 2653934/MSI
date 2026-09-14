@@ -46,11 +46,18 @@ def main():
 
     table = load_imzml_table(input_path)
     mask = np.load(mask_path)
-    expected_shape = (int(table.y.max()), int(table.x.max()))
-    if mask.shape != expected_shape:
+    if mask.ndim != 2:
         raise ValueError(
-            "mask shape {} does not match coordinate grid {}".format(
-                mask.shape, expected_shape
+            "CAC mask must be two-dimensional; found shape {}".format(mask.shape)
+        )
+    coordinate_extent = (int(table.y.max()), int(table.x.max()))
+    if (
+        coordinate_extent[0] > mask.shape[0]
+        or coordinate_extent[1] > mask.shape[1]
+    ):
+        raise ValueError(
+            "measured coordinate extent {} falls outside mask shape {}".format(
+                coordinate_extent, mask.shape
             )
         )
 
@@ -97,7 +104,8 @@ def main():
         "output_h5": str(output_path),
         "spectra_shape_pixels_mz": [int(value) for value in table.spectra.shape],
         "mz_range": [float(table.mz_values[0]), float(table.mz_values[-1])],
-        "spatial_shape_y_x": list(expected_shape),
+        "spatial_shape_y_x": [int(value) for value in mask.shape],
+        "measured_coordinate_extent_y_x": list(coordinate_extent),
         "measured_pixels": int(len(table.x)),
         "grid_pixels": int(mask.size),
         "coverage_percent": float(100.0 * len(table.x) / mask.size),
