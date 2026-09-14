@@ -110,9 +110,14 @@ def read_dataset(dataset, root):
 def summarise_dataset(dataset, records, missing):
     paper = PAPER[dataset]
     reproduced_mean = None
+    reproduced_sd = None
+    reproduced_range = None
     threshold_means = {threshold: None for threshold in THRESHOLDS}
     if records:
-        reproduced_mean = float(np.mean([record["mSCF1"] for record in records]))
+        section_values = np.asarray([record["mSCF1"] for record in records], dtype=float)
+        reproduced_mean = float(np.mean(section_values))
+        reproduced_sd = float(np.std(section_values, ddof=1)) if len(records) > 1 else None
+        reproduced_range = [float(np.min(section_values)), float(np.max(section_values))]
         threshold_means = {
             threshold: float(np.mean([record["F1_" + threshold] for record in records]))
             for threshold in THRESHOLDS
@@ -125,6 +130,8 @@ def summarise_dataset(dataset, records, missing):
         "missing_sections": missing,
         "complete": len(records) == len(SECTIONS[dataset]),
         "reproduced_mean_mSCF1": reproduced_mean,
+        "reproduced_section_sd_mSCF1": reproduced_sd,
+        "reproduced_section_range_mSCF1": reproduced_range,
         "reproduced_mean_threshold_f1": threshold_means,
         "paper_mean_mSCF1": paper["mSCF1"],
         "paper_mSCF1_95_ci": paper_ci,
@@ -178,6 +185,15 @@ def plot_sections(ax, dataset, records):
     ax.axhline(
         PAPER[dataset]["mSCF1"], color="#c44e52", linewidth=2, label="Paper mean"
     )
+    if records:
+        reproduced_mean = np.mean([record["mSCF1"] for record in records])
+        ax.axhline(
+            reproduced_mean,
+            color="#2b7a78",
+            linewidth=2,
+            linestyle="--",
+            label="Our mean",
+        )
     ax.set_xticks(x, names, rotation=35, ha="center")
     ax.set_ylim(0, 0.75)
     ax.set_ylabel("mSCF1 (higher is better)")
