@@ -8,7 +8,7 @@ from unittest.mock import patch
 import torch
 from torch.utils.data import Dataset
 
-from spatial_msipl.model import SpatialVAE
+from spatial_msipl.model import CentralOnlyVAE, SpatialVAE
 from spatial_msipl.training import _atomic_torch_save, msipl_vae_loss, train_vae
 
 
@@ -44,6 +44,23 @@ class SpatialVAETests(unittest.TestCase):
         self.assertEqual(tuple(reconstruction.shape), (4, 12))
         self.assertTrue(torch.all(reconstruction >= 0))
         self.assertTrue(torch.all(reconstruction <= 1))
+
+    def test_central_only_control_has_no_context_input(self):
+        model = CentralOnlyVAE(spectral_dim=12, hidden_dim=8, latent_dim=3)
+        model.eval()
+        central = torch.rand(4, 12)
+        neighbours = torch.rand(4, 8, 12)
+        mask = torch.ones(4, 8, dtype=torch.bool)
+        with torch.no_grad():
+            reconstruction, mean, log_variance = model(
+                central, neighbours, mask
+            )
+
+        self.assertEqual(tuple(model.vae.encoder_dense.weight.shape), (8, 12))
+        self.assertEqual(model.configuration()["input_mode"], "central_only")
+        self.assertEqual(tuple(reconstruction.shape), (4, 12))
+        self.assertEqual(tuple(mean.shape), (4, 3))
+        self.assertEqual(tuple(log_variance.shape), (4, 3))
 
     def test_loss_returns_finite_separate_terms(self):
         model = SpatialVAE(spectral_dim=12, hidden_dim=8, latent_dim=3)

@@ -10,12 +10,12 @@ import torch
 from torch.utils.data import DataLoader, Subset
 
 from check_spatial_attention_scaling import measure
-from spatial_msipl.model import NeighbourhoodSpatialVAE
+from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
 from spatial_msipl.preprocessing import H5SpatialContextDataset
 from spatial_msipl.training import set_random_seed, train_vae
 
 
-VARIANTS = ("uniform_mean", "depthwise", "attention")
+VARIANTS = ("central_only", "uniform_mean", "depthwise", "attention")
 
 
 def state_sha256(module):
@@ -58,14 +58,21 @@ def main():
     dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
     try:
         set_random_seed(args.seed, include_cuda=True)
-        model = NeighbourhoodSpatialVAE(
-            spectral_dim=dataset.n_mz,
-            neighbourhood=args.variant,
-            hidden_dim=args.hidden_dim,
-            latent_dim=args.latent_dim,
-            attention_dim=args.attention_dim,
-            attention_input_scale=args.attention_input_scale,
-        )
+        if args.variant == "central_only":
+            model = CentralOnlyVAE(
+                spectral_dim=dataset.n_mz,
+                hidden_dim=args.hidden_dim,
+                latent_dim=args.latent_dim,
+            )
+        else:
+            model = NeighbourhoodSpatialVAE(
+                spectral_dim=dataset.n_mz,
+                neighbourhood=args.variant,
+                hidden_dim=args.hidden_dim,
+                latent_dim=args.latent_dim,
+                attention_dim=args.attention_dim,
+                attention_input_scale=args.attention_input_scale,
+            )
         initial_vae_hash = state_sha256(model.vae)
         attention_diagnostics_before = None
         diagnostic_indices = None
@@ -119,7 +126,11 @@ def main():
     final_loss = history[-1]["total_loss"]
     summary = {
         "input": str(dataset.path),
-        "purpose": "production neighbourhood baseline",
+        "purpose": (
+            "production reconstruction baseline"
+            if args.variant == "central_only"
+            else "production neighbourhood baseline"
+        ),
         "variant": args.variant,
         "initial_vae_sha256": initial_vae_hash,
         "controls": {

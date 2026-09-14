@@ -178,6 +178,12 @@ def main():
     )
 
     parser.add_argument(
+        "--checkpoint-root",
+        default=None,
+        help="Optional cluster-side root for large model weights."
+    )
+
+    parser.add_argument(
         "--epochs",
         type=int,
         default=100
@@ -354,16 +360,21 @@ def main():
     # Save weights into checkpoints, NOT results
     # ---------------------------------------------------------------
 
-    checkpoint_dir = os.path.join(
-        PROJECT_ROOT,
-        "checkpoints",
-        "baselines",
-        "msipl",
-        "legacy",
-        os.path.splitext(
-            os.path.basename(args.input)
-        )[0]
-    )
+    dataset_name = os.path.splitext(os.path.basename(args.input))[0]
+    if args.checkpoint_root is None:
+        checkpoint_dir = os.path.join(
+            PROJECT_ROOT,
+            "checkpoints",
+            "baselines",
+            "msipl",
+            "legacy",
+            dataset_name
+        )
+    else:
+        checkpoint_dir = os.path.join(
+            os.path.abspath(args.checkpoint_root),
+            dataset_name
+        )
 
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -643,6 +654,7 @@ def main():
 
     results = {
         "dataset": os.path.basename(args.input),
+        "input": os.path.abspath(args.input),
         "pixels": int(n_pixels),
         "mz_features": int(n_features),
         "latent_dim": int(args.latent_dim),
@@ -664,7 +676,8 @@ def main():
         ),
         "learned_peak_count": int(
             len(learned_peaks)
-        )
+        ),
+        "checkpoint_weights": weight_path
     }
 
     save_json(

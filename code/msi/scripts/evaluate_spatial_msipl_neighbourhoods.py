@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate three trained Spatial-msiPL neighbourhoods without retraining them.
+"""Evaluate trained Spatial-msiPL neighbourhoods without retraining them.
 
 The script deliberately uses the encoder mean rather than a random latent draw.
 Its linear probe holds out rectangular spatial tiles and removes a one-pixel
@@ -40,11 +40,18 @@ from spatial_msipl.model import NeighbourhoodSpatialVAE
 from spatial_msipl.preprocessing import H5SpatialContextDataset, MOORE_OFFSETS
 
 
-VARIANTS = ("uniform_mean", "depthwise", "attention")
+VARIANTS = ("uniform_mean", "depthwise", "attention", "attention_sqrt_bins")
+MODEL_VARIANTS = {
+    "uniform_mean": "uniform_mean",
+    "depthwise": "depthwise",
+    "attention": "attention",
+    "attention_sqrt_bins": "attention",
+}
 DISPLAY_NAMES = {
     "uniform_mean": "Uniform mean",
     "depthwise": "Depthwise",
     "attention": "Attention",
+    "attention_sqrt_bins": "Corrected attention",
 }
 NORMAL_COLOUR = "#2A9D8F"
 TUMOUR_COLOUR = "#E76F51"
@@ -52,6 +59,7 @@ VARIANT_COLOURS = {
     "uniform_mean": "#457B9D",
     "depthwise": "#E9C46A",
     "attention": "#E76F51",
+    "attention_sqrt_bins": "#6D597A",
 }
 UNMEASURED_COLOUR = "#ECECEC"
 
@@ -88,11 +96,15 @@ def load_model(checkpoint_path, variant, spectral_dim, device):
         raise ValueError(f"{checkpoint_path} is not a complete 100-epoch checkpoint")
     configuration = checkpoint["model_configuration"]
     neighbourhood = configuration["neighbourhood"]
-    if neighbourhood["name"] != variant or configuration["spectral_dim"] != spectral_dim:
+    model_variant = MODEL_VARIANTS[variant]
+    if (
+        neighbourhood["name"] != model_variant
+        or configuration["spectral_dim"] != spectral_dim
+    ):
         raise ValueError(f"checkpoint configuration does not match {variant}")
     model = NeighbourhoodSpatialVAE(
         spectral_dim=spectral_dim,
-        neighbourhood=variant,
+        neighbourhood=model_variant,
         hidden_dim=configuration["hidden_dim"],
         latent_dim=configuration["latent_dim"],
         attention_dim=neighbourhood.get("attention_dim", 8),

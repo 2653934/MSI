@@ -14,16 +14,26 @@ class SpatialVAE(nn.Module):
     ``spectral_dim`` values.
     """
 
-    def __init__(self, spectral_dim, hidden_dim=512, latent_dim=5):
+    def __init__(
+        self, spectral_dim, hidden_dim=512, latent_dim=5, input_spectra=2
+    ):
         super().__init__()
-        if spectral_dim < 1 or hidden_dim < 1 or latent_dim < 1:
+        if (
+            spectral_dim < 1
+            or hidden_dim < 1
+            or latent_dim < 1
+            or input_spectra not in (1, 2)
+        ):
             raise ValueError("all model dimensions must be positive")
 
         self.spectral_dim = int(spectral_dim)
         self.hidden_dim = int(hidden_dim)
         self.latent_dim = int(latent_dim)
+        self.input_spectra = int(input_spectra)
 
-        self.encoder_dense = nn.Linear(2 * self.spectral_dim, self.hidden_dim)
+        self.encoder_dense = nn.Linear(
+            self.input_spectra * self.spectral_dim, self.hidden_dim
+        )
         self.encoder_batchnorm = nn.BatchNorm1d(self.hidden_dim)
         self.z_mean = nn.Linear(self.hidden_dim, self.latent_dim)
         self.z_log_var = nn.Linear(self.hidden_dim, self.latent_dim)
@@ -35,7 +45,7 @@ class SpatialVAE(nn.Module):
 
     def encode(self, contextual_spectrum):
         """Return the mean and log-variance of the learned latent distribution."""
-        expected = 2 * self.spectral_dim
+        expected = self.input_spectra * self.spectral_dim
         if contextual_spectrum.ndim != 2 or contextual_spectrum.shape[1] != expected:
             raise ValueError(
                 f"encoder input must have shape (batch, {expected}); "
@@ -64,12 +74,44 @@ class SpatialVAE(nn.Module):
 
     def configuration(self):
         """Return the dimensions needed to reconstruct this model later."""
-        return {
+        configuration = {
             "spectral_dim": self.spectral_dim,
-            "contextual_input_dim": 2 * self.spectral_dim,
+            "contextual_input_dim": self.input_spectra * self.spectral_dim,
             "hidden_dim": self.hidden_dim,
             "latent_dim": self.latent_dim,
         }
+        # Preserve the exact historical configuration for contextual checkpoints.
+        if self.input_spectra == 1:
+            configuration["input_mode"] = "central_only"
+        return configuration
+
+
+class CentralOnlyVAE(nn.Module):
+    """Matched basic VAE control that receives only the central spectrum."""
+
+    uses_neighbourhood_batch = True
+
+    def __init__(self, spectral_dim, hidden_dim=512, latent_dim=5):
+        super().__init__()
+        self.vae = SpatialVAE(
+            spectral_dim,
+            hidden_dim=hidden_dim,
+            latent_dim=latent_dim,
+            input_spectra=1,
+        )
+
+    def encode(self, central, neighbours=None, neighbour_mask=None):
+        del neighbours, neighbour_mask
+        return self.vae.encode(central)
+
+    def forward(self, central, neighbours=None, neighbour_mask=None):
+        mean, log_variance = self.encode(central, neighbours, neighbour_mask)
+        latent = self.vae.reparameterize(mean, log_variance)
+        reconstruction = self.vae.decode(latent)
+        return reconstruction, mean, log_variance
+
+    def configuration(self):
+        return self.vae.configuration()
 
 
 class NeighbourhoodSpatialVAE(nn.Module):
