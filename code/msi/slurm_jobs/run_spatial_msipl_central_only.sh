@@ -7,7 +7,7 @@
 #SBATCH --time=16:00:00
 #SBATCH --mem=32G
 #SBATCH --exclusive
-#SBATCH --exclude=mscluster44,mscluster45,mscluster50,mscluster51,mscluster65,mscluster83
+#SBATCH --exclude=mscluster44,mscluster45,mscluster50,mscluster51,mscluster65,mscluster74,mscluster83
 #SBATCH --output=logs/central-vae-%j.out
 #SBATCH --error=logs/central-vae-%j.err
 
