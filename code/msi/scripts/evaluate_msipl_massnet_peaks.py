@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-"""Score legacy msiPL peaks with the S3PL PCC-threshold mSCF1 protocol."""
+"""Score legacy msiPL peaks with the S3PL PCC-threshold mSCF1 protocol.
+
+The input may contain any number of integer-labelled classes.  This keeps the
+original two-class MassNet evaluation intact while also supporting the three
+classes in the CAC masks.
+"""
 
 from __future__ import print_function
 
@@ -121,35 +126,41 @@ def main():
         mz_first = data.shape == (len(mz_axis), len(raw_labels))
         if not pixels_first and not mz_first:
             raise ValueError("cannot orient Data shape {}".format(data.shape))
-        if set(np.unique(raw_labels).tolist()) != set((1, 2)):
-            raise ValueError("expected MassNet labels 1 normal and 2 tumour")
+        class_values = sorted(np.unique(raw_labels).tolist())
+        if len(class_values) < 2:
+            raise ValueError("evaluation requires at least two mask classes")
 
         correlations = {}
-        for class_id in (0, 1):
-            binary_mask = (raw_labels == class_id + 1).astype(np.uint8)
-            correlations[class_id] = pearson_by_feature(
+        for class_value in class_values:
+            binary_mask = (raw_labels == class_value).astype(np.uint8)
+            correlations[class_value] = pearson_by_feature(
                 data, binary_mask, pixels_first, args.chunk_size
             )
+
+    if class_values == [1, 2]:
+        class_names = {1: "normal", 2: "tumour"}
+    else:
+        class_names = {value: "class_{}".format(value) for value in class_values}
 
     picked_indices = nearest_unique_indices(mz_axis, picked_mz)
     threshold_results = {}
     mixed_f1 = []
     for threshold in THRESHOLDS:
         class_true = {
-            class_id: true_indices_at_threshold(correlations[class_id], threshold)
-            for class_id in (0, 1)
+            class_value: true_indices_at_threshold(
+                correlations[class_value], threshold
+            )
+            for class_value in class_values
         }
-        mixed_true = class_true[0] | class_true[1]
+        mixed_true = set().union(*class_true.values())
         mixed = classification_metrics(picked_indices, mixed_true, len(mz_axis))
         mixed_f1.append(mixed["F1"])
         threshold_results[str(threshold)] = {
             "class_metrics": {
-                "normal": classification_metrics(
-                    picked_indices, class_true[0], len(mz_axis)
-                ),
-                "tumour": classification_metrics(
-                    picked_indices, class_true[1], len(mz_axis)
-                ),
+                class_names[class_value]: classification_metrics(
+                    picked_indices, class_true[class_value], len(mz_axis)
+                )
+                for class_value in class_values
             },
             "mixed_classes": mixed,
             "true_bins_mixed": len(mixed_true),
@@ -161,6 +172,10 @@ def main():
         "evaluation": "S3PL-compatible PCC-threshold peak classification",
         "thresholds": list(THRESHOLDS),
         "spectral_bins": len(mz_axis),
+        "class_values": [int(value) for value in class_values],
+        "class_names": {
+            str(value): class_names[value] for value in class_values
+        },
         "reported_peaks": int(len(picked_mz)),
         "unique_nearest_bins": int(len(picked_indices)),
         "threshold_results": threshold_results,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Legacy msiPL reproduction on the GBM dataset.
+Legacy msiPL reproduction on an HDF5 MSI dataset.
 
 Purpose:
     Reproduce the original msiPL VAE-BN + LearnPeaks pipeline using
@@ -61,7 +61,7 @@ from LearnPeaks import LearnPeaks
 
 
 def load_dataset(path):
-    """Load GBM HDF5 and orient to (pixels, m/z)."""
+    """Load compatible HDF5 MSI data and orient it to (pixels, m/z)."""
 
     print("=== LOADING DATA ===")
     print("Input:", path)
@@ -164,7 +164,7 @@ def save_json(path, obj):
 def main():
 
     parser = argparse.ArgumentParser(
-        description="Legacy msiPL GBM reproduction"
+        description="Legacy msiPL HDF5 reproduction"
     )
 
     parser.add_argument(
@@ -690,7 +690,7 @@ def main():
 
     print()
     print("==========================================")
-    print("       LEGACY msiPL S1 COMPLETE")
+    print("       LEGACY msiPL RUN COMPLETE")
     print("==========================================")
     print("Dataset:", os.path.basename(args.input))
     print("Training time:", training_time)
