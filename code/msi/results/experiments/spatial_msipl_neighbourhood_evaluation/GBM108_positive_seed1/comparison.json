@@ -231,7 +231,7 @@
         },
         "entropy_method": "per-pixel neighbour distribution"
       },
-      "evaluation_seconds": 432.65990590816364,
+      "evaluation_seconds": 427.97519519226626,
       "status": "complete"
     },
     "depthwise": {
@@ -459,7 +459,7 @@
         },
         "entropy_method": "per-pixel, per-m/z before averaging"
       },
-      "evaluation_seconds": 414.0382130369544,
+      "evaluation_seconds": 411.35476032085717,
       "status": "complete"
     },
     "attention": {
@@ -694,7 +694,242 @@
           "saturation_threshold_absolute_tanh": 0.99
         }
       },
-      "evaluation_seconds": 415.809859237168,
+      "evaluation_seconds": 413.52001794986427,
+      "status": "complete"
+    },
+    "attention_sqrt_bins": {
+      "evaluation_version": 2,
+      "variant": "attention_sqrt_bins",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/attention_sqrt_bins/checkpoint.pt",
+      "completed_training_epochs": 100,
+      "pixels": 2071,
+      "latent_dimensions": 5,
+      "class_counts": {
+        "normal": 1173,
+        "tumour": 898
+      },
+      "spatial_probe": {
+        "balanced_accuracy": 0.8853747173314954,
+        "macro_f1": 0.885072142064373,
+        "roc_auc": 0.9604719780814427,
+        "folds": [
+          {
+            "tile": 0,
+            "training_pixels": 2036,
+            "test_pixels": 22,
+            "halo_pixels_excluded": 13,
+            "test_normal": 22,
+            "test_tumour": 0
+          },
+          {
+            "tile": 1,
+            "training_pixels": 1927,
+            "test_pixels": 112,
+            "halo_pixels_excluded": 32,
+            "test_normal": 101,
+            "test_tumour": 11
+          },
+          {
+            "tile": 2,
+            "training_pixels": 1881,
+            "test_pixels": 155,
+            "halo_pixels_excluded": 35,
+            "test_normal": 88,
+            "test_tumour": 67
+          },
+          {
+            "tile": 3,
+            "training_pixels": 2015,
+            "test_pixels": 37,
+            "halo_pixels_excluded": 19,
+            "test_normal": 29,
+            "test_tumour": 8
+          },
+          {
+            "tile": 4,
+            "training_pixels": 1917,
+            "test_pixels": 121,
+            "halo_pixels_excluded": 33,
+            "test_normal": 121,
+            "test_tumour": 0
+          },
+          {
+            "tile": 5,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 90,
+            "test_tumour": 63
+          },
+          {
+            "tile": 6,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 0,
+            "test_tumour": 162
+          },
+          {
+            "tile": 7,
+            "training_pixels": 1904,
+            "test_pixels": 129,
+            "halo_pixels_excluded": 38,
+            "test_normal": 0,
+            "test_tumour": 129
+          },
+          {
+            "tile": 8,
+            "training_pixels": 1872,
+            "test_pixels": 154,
+            "halo_pixels_excluded": 45,
+            "test_normal": 104,
+            "test_tumour": 50
+          },
+          {
+            "tile": 9,
+            "training_pixels": 1862,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 56,
+            "test_normal": 83,
+            "test_tumour": 70
+          },
+          {
+            "tile": 10,
+            "training_pixels": 1851,
+            "test_pixels": 162,
+            "halo_pixels_excluded": 58,
+            "test_normal": 55,
+            "test_tumour": 107
+          },
+          {
+            "tile": 11,
+            "training_pixels": 1878,
+            "test_pixels": 149,
+            "halo_pixels_excluded": 44,
+            "test_normal": 6,
+            "test_tumour": 143
+          },
+          {
+            "tile": 12,
+            "training_pixels": 1908,
+            "test_pixels": 135,
+            "halo_pixels_excluded": 28,
+            "test_normal": 118,
+            "test_tumour": 17
+          },
+          {
+            "tile": 13,
+            "training_pixels": 1882,
+            "test_pixels": 153,
+            "halo_pixels_excluded": 36,
+            "test_normal": 136,
+            "test_tumour": 17
+          },
+          {
+            "tile": 14,
+            "training_pixels": 1892,
+            "test_pixels": 144,
+            "halo_pixels_excluded": 35,
+            "test_normal": 144,
+            "test_tumour": 0
+          },
+          {
+            "tile": 15,
+            "training_pixels": 1918,
+            "test_pixels": 130,
+            "halo_pixels_excluded": 23,
+            "test_normal": 76,
+            "test_tumour": 54
+          }
+        ],
+        "tile_grid": [
+          4,
+          4
+        ],
+        "halo_pixels": 1,
+        "scope": "transductive: representation learned without labels on the full section",
+        "interpretation": "higher is better; out-of-fold predictions"
+      },
+      "label_silhouette": 0.26431044936180115,
+      "gmm_two_cluster": {
+        "adjusted_rand_index": 0.6304265110103118,
+        "normalized_mutual_information": 0.5262655937726075
+      },
+      "morans_i": {
+        "per_latent_dimension": [
+          0.8938272435978881,
+          0.6741518204470698,
+          0.8448034307879585,
+          0.6790274711406172,
+          0.6358833619700737
+        ],
+        "mean": 0.7455386655887215,
+        "interpretation": "higher means neighbouring pixels have more similar latent values"
+      },
+      "neighbourhood_weights": {
+        "offset_order_dx_dy": [
+          [
+            -1,
+            -1
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "mean_weight_when_present": [
+          0.12511097021607367,
+          0.12704589080810547,
+          0.1269915069010088,
+          0.13638809031303853,
+          0.13929771825282342,
+          0.1254080050765475,
+          0.12820826721191406,
+          0.12706525596022905
+        ],
+        "normalized_entropy": {
+          "mean": 0.9543078541755676,
+          "minimum": 0.3267749547958374,
+          "maximum": 1.0000001192092896
+        },
+        "absolute_deviation_from_uniform": {
+          "mean": 0.03476948291063309,
+          "maximum": 0.6899427771568298
+        },
+        "entropy_method": "per-pixel neighbour distribution",
+        "attention_diagnostics": {
+          "similarity_spread_mean": 1.083889126777649,
+          "similarity_spread_maximum": 4.926206111907959,
+          "central_projection_saturation_fraction": 0.3177209198474884,
+          "neighbour_projection_saturation_fraction": 0.31554287672042847,
+          "saturation_threshold_absolute_tanh": 0.99
+        }
+      },
+      "evaluation_seconds": 412.624658879824,
       "status": "complete"
     }
   },

@@ -1,7 +1,7 @@
 {
   "evaluation_version": 2,
-  "variant": "uniform_mean",
-  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/uniform_mean/checkpoint.pt",
+  "variant": "attention_sqrt_bins",
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/attention_sqrt_bins/checkpoint.pt",
   "completed_training_epochs": 100,
   "pixels": 2071,
   "latent_dimensions": 5,
@@ -10,9 +10,9 @@
     "tumour": 898
   },
   "spatial_probe": {
-    "balanced_accuracy": 0.8901594335807335,
-    "macro_f1": 0.8899554037384951,
-    "roc_auc": 0.9624428254888671,
+    "balanced_accuracy": 0.8853747173314954,
+    "macro_f1": 0.885072142064373,
+    "roc_auc": 0.9604719780814427,
     "folds": [
       {
         "tile": 0,
@@ -151,20 +151,20 @@
     "scope": "transductive: representation learned without labels on the full section",
     "interpretation": "higher is better; out-of-fold predictions"
   },
-  "label_silhouette": 0.2522176504135132,
+  "label_silhouette": 0.26431044936180115,
   "gmm_two_cluster": {
-    "adjusted_rand_index": 0.6442926307511928,
-    "normalized_mutual_information": 0.5446142911965355
+    "adjusted_rand_index": 0.6304265110103118,
+    "normalized_mutual_information": 0.5262655937726075
   },
   "morans_i": {
     "per_latent_dimension": [
-      0.8920003290970758,
-      0.6980541102193942,
-      0.8675028344905136,
-      0.6730351818983552,
-      0.588755228677753
+      0.8938272435978881,
+      0.6741518204470698,
+      0.8448034307879585,
+      0.6790274711406172,
+      0.6358833619700737
     ],
-    "mean": 0.7438695368766184,
+    "mean": 0.7455386655887215,
     "interpretation": "higher means neighbouring pixels have more similar latent values"
   },
   "neighbourhood_weights": {
@@ -203,26 +203,33 @@
       ]
     ],
     "mean_weight_when_present": [
-      0.1292616375747796,
-      0.12932196044921876,
-      0.12910557707892953,
-      0.13031889381577733,
-      0.13048302158823394,
-      0.1288748774367231,
-      0.1294886474609375,
-      0.12899063840621064
+      0.12511097021607367,
+      0.12704589080810547,
+      0.1269915069010088,
+      0.13638809031303853,
+      0.13929771825282342,
+      0.1254080050765475,
+      0.12820826721191406,
+      0.12706525596022905
     ],
     "normalized_entropy": {
-      "mean": 1.0,
-      "minimum": 1.0,
+      "mean": 0.9543078541755676,
+      "minimum": 0.3267749547958374,
       "maximum": 1.0000001192092896
     },
     "absolute_deviation_from_uniform": {
-      "mean": 0.0,
-      "maximum": 0.0
+      "mean": 0.03476948291063309,
+      "maximum": 0.6899427771568298
     },
-    "entropy_method": "per-pixel neighbour distribution"
+    "entropy_method": "per-pixel neighbour distribution",
+    "attention_diagnostics": {
+      "similarity_spread_mean": 1.083889126777649,
+      "similarity_spread_maximum": 4.926206111907959,
+      "central_projection_saturation_fraction": 0.3177209198474884,
+      "neighbour_projection_saturation_fraction": 0.31554287672042847,
+      "saturation_threshold_absolute_tanh": 0.99
+    }
   },
-  "evaluation_seconds": 427.97519519226626,
+  "evaluation_seconds": 412.624658879824,
   "status": "complete"
 }
