@@ -44,6 +44,7 @@ def main():
         default="spectral_bins",
     )
     parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument("--spatial-lambda", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--checkpoint-interval", type=int, default=5)
     parser.add_argument("--resume-checkpoint", type=Path)
@@ -101,13 +102,14 @@ def main():
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
+            spatial_lambda=args.spatial_lambda,
             maximum_samples=None,
             seed=args.seed,
             device="cuda",
             experiment_metadata={
                 "purpose": "production neighbourhood baseline",
                 "neighbourhood_variant": args.variant,
-                "spatial_lambda": 0.0,
+                "spatial_lambda": args.spatial_lambda,
                 "poisson_augmentation": False,
                 "initial_vae_sha256": initial_vae_hash,
                 "attention_input_scale": args.attention_input_scale,
@@ -129,7 +131,11 @@ def main():
         "purpose": (
             "production reconstruction baseline"
             if args.variant == "central_only"
-            else "production neighbourhood baseline"
+            else (
+                "spatial-loss pilot"
+                if args.spatial_lambda > 0
+                else "production neighbourhood baseline"
+            )
         ),
         "variant": args.variant,
         "initial_vae_sha256": initial_vae_hash,
@@ -141,7 +147,7 @@ def main():
             "latent_dim": args.latent_dim,
             "attention_dim": args.attention_dim,
             "attention_input_scale": args.attention_input_scale,
-            "spatial_lambda": 0.0,
+            "spatial_lambda": args.spatial_lambda,
             "poisson_augmentation": False,
             "full_dataset": True,
         },

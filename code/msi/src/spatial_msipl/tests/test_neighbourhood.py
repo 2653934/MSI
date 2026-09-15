@@ -37,6 +37,8 @@ class TinyNeighbourhoodDataset(Dataset):
             "target": self.central[index],
             "neighbours": self.neighbours[index],
             "neighbour_mask": self.mask[index],
+            "x": index % 4 + 1,
+            "y": index // 4 + 1,
         }
 
 
@@ -189,6 +191,34 @@ class NeighbourhoodTests(unittest.TestCase):
                     model.aggregator.projection.weight.detach(),
                 )
             )
+
+    def test_training_logs_spatial_loss_separately(self):
+        set_random_seed(1)
+        model = NeighbourhoodSpatialVAE(
+            spectral_dim=6,
+            neighbourhood="uniform_mean",
+            hidden_dim=4,
+            latent_dim=2,
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            metadata, history = train_vae(
+                model=model,
+                dataset=TinyNeighbourhoodDataset(),
+                output_directory=temporary_directory,
+                epochs=1,
+                batch_size=8,
+                seed=1,
+                spatial_lambda=0.1,
+                save_checkpoint=False,
+            )
+        self.assertEqual(metadata["spatial_lambda"], 0.1)
+        self.assertGreater(history[0]["spatial_pairs"], 0)
+        self.assertGreaterEqual(history[0]["spatial_loss"], 0.0)
+        self.assertAlmostEqual(
+            history[0]["total_loss"],
+            history[0]["vae_loss"] + history[0]["weighted_spatial_loss"],
+            places=4,
+        )
 
 
 if __name__ == "__main__":

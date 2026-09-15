@@ -52,6 +52,33 @@ def msipl_vae_loss(reconstruction, target, mean, log_variance, beta=1.0):
     return total_loss, reconstruction_loss, kl_loss
 
 
+def latent_spatial_coherence_loss(mean, x_coordinates, y_coordinates):
+    """Penalise latent-mean differences between adjacent measured pixels.
+
+    Adjacency uses the eight-position Moore neighbourhood already used by the
+    contextual input.  Each unordered pair is counted once.  The loss is the
+    mean squared latent difference across adjacent pairs and latent dimensions.
+    A batch with no adjacent pair returns a differentiable zero.
+    """
+    if mean.ndim != 2:
+        raise ValueError("mean must have shape (batch, latent dimensions)")
+    x = torch.as_tensor(x_coordinates, device=mean.device).reshape(-1)
+    y = torch.as_tensor(y_coordinates, device=mean.device).reshape(-1)
+    if len(x) != len(mean) or len(y) != len(mean):
+        raise ValueError("coordinates and latent means must have equal batch size")
+
+    delta_x = (x[:, None] - x[None, :]).abs()
+    delta_y = (y[:, None] - y[None, :]).abs()
+    adjacent = (torch.maximum(delta_x, delta_y) == 1).triu(diagonal=1)
+    pair_indices = adjacent.nonzero(as_tuple=False)
+    pair_count = int(pair_indices.shape[0])
+    if pair_count == 0:
+        return mean.sum() * 0.0, 0
+
+    differences = mean[pair_indices[:, 0]] - mean[pair_indices[:, 1]]
+    return differences.pow(2).mean(), pair_count
+
+
 def select_training_indices(dataset_size, maximum_samples, seed):
     """Select a fixed random subset, or every index when no limit is requested."""
     if maximum_samples is None or maximum_samples >= dataset_size:
@@ -114,6 +141,7 @@ def train_vae(
     batch_size=4,
     learning_rate=1e-3,
     beta=1.0,
+    spatial_lambda=0.0,
     maximum_samples=None,
     seed=1,
     device="cpu",
@@ -129,6 +157,8 @@ def train_vae(
         raise ValueError("batch_size must be at least 2 because the model uses batch normalization")
     if checkpoint_interval < 0:
         raise ValueError("checkpoint_interval cannot be negative")
+    if spatial_lambda < 0:
+        raise ValueError("spatial_lambda cannot be negative")
     if resume_checkpoint is not None and not save_checkpoint:
         raise ValueError("resume_checkpoint requires save_checkpoint=True")
 
@@ -183,6 +213,7 @@ def train_vae(
         "batch_size": batch_size,
         "learning_rate": learning_rate,
         "beta": beta,
+        "spatial_lambda": spatial_lambda,
         "seed": seed,
     }
     history = []
@@ -256,7 +287,15 @@ def train_vae(
             torch.cuda.synchronize(torch_device)
         epoch_start = time.perf_counter()
         model.train()
-        totals = {"total": 0.0, "reconstruction": 0.0, "kl": 0.0, "samples": 0}
+        totals = {
+            "total": 0.0,
+            "vae": 0.0,
+            "reconstruction": 0.0,
+            "kl": 0.0,
+            "spatial": 0.0,
+            "spatial_pairs": 0,
+            "samples": 0,
+        }
         for batch in loader:
             target = batch["target"].to(torch_device, dtype=torch.float32)
 
@@ -275,16 +314,31 @@ def train_vae(
                 )
                 model_outputs = model(contextual)
             reconstruction, mean, log_variance = model_outputs[:3]
-            total_loss, reconstruction_loss, kl_loss = msipl_vae_loss(
+            vae_loss, reconstruction_loss, kl_loss = msipl_vae_loss(
                 reconstruction, target, mean, log_variance, beta=beta
             )
+            if spatial_lambda > 0:
+                if "x" not in batch or "y" not in batch:
+                    raise KeyError(
+                        "spatial loss requires x and y coordinates in each batch"
+                    )
+                spatial_loss, spatial_pairs = latent_spatial_coherence_loss(
+                    mean, batch["x"], batch["y"]
+                )
+            else:
+                spatial_loss = mean.sum() * 0.0
+                spatial_pairs = 0
+            total_loss = vae_loss + float(spatial_lambda) * spatial_loss
             total_loss.backward()
             optimizer.step()
 
             sample_count = target.shape[0]
             totals["total"] += float(total_loss.detach()) * sample_count
+            totals["vae"] += float(vae_loss.detach()) * sample_count
             totals["reconstruction"] += float(reconstruction_loss.detach()) * sample_count
             totals["kl"] += float(kl_loss.detach()) * sample_count
+            totals["spatial"] += float(spatial_loss.detach()) * sample_count
+            totals["spatial_pairs"] += spatial_pairs
             totals["samples"] += sample_count
 
         if uses_cuda:
@@ -294,8 +348,16 @@ def train_vae(
             "epoch": epoch,
             "learning_rate": float(optimizer.param_groups[0]["lr"]),
             "total_loss": totals["total"] / totals["samples"],
+            "vae_loss": totals["vae"] / totals["samples"],
             "reconstruction_loss": totals["reconstruction"] / totals["samples"],
             "kl_loss": totals["kl"] / totals["samples"],
+            "spatial_loss": (
+                totals["spatial"] / totals["samples"]
+            ),
+            "weighted_spatial_loss": (
+                float(spatial_lambda) * totals["spatial"] / totals["samples"]
+            ),
+            "spatial_pairs": totals["spatial_pairs"],
             "samples_seen": totals["samples"],
             "epoch_seconds": epoch_seconds,
             "samples_per_second": totals["samples"] / epoch_seconds,
@@ -356,13 +418,17 @@ def train_vae(
         "data_source": str(getattr(dataset, "path", "unspecified")),
         "model_configuration": model.configuration(),
         "parameter_count": parameter_count,
-        "loss": "msiPL categorical cross-entropy + beta * KL divergence",
+        "loss": (
+            "msiPL categorical cross-entropy + beta * KL divergence "
+            "+ spatial_lambda * adjacent latent-mean MSE"
+        ),
         "decoder_target": "isolated TIC-normalized central spectrum",
         "epochs": epochs,
         "batch_size": batch_size,
         "learning_rate": learning_rate,
         "scheduler": "cosine annealing",
         "beta": beta,
+        "spatial_lambda": spatial_lambda,
         "seed": seed,
         "device": str(torch_device),
         "device_name": device_name,

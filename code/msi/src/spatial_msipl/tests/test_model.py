@@ -9,7 +9,12 @@ import torch
 from torch.utils.data import Dataset
 
 from spatial_msipl.model import CentralOnlyVAE, SpatialVAE
-from spatial_msipl.training import _atomic_torch_save, msipl_vae_loss, train_vae
+from spatial_msipl.training import (
+    _atomic_torch_save,
+    latent_spatial_coherence_loss,
+    msipl_vae_loss,
+    train_vae,
+)
 
 
 class TinyContextDataset(Dataset):
@@ -32,6 +37,27 @@ class TinyContextDataset(Dataset):
 
 
 class SpatialVAETests(unittest.TestCase):
+    def test_spatial_loss_uses_each_adjacent_pair_once(self):
+        means = torch.tensor([[0.0, 0.0], [2.0, 0.0], [10.0, 10.0]])
+        loss, pair_count = latent_spatial_coherence_loss(
+            means,
+            torch.tensor([1, 2, 5]),
+            torch.tensor([1, 1, 1]),
+        )
+        self.assertEqual(pair_count, 1)
+        self.assertAlmostEqual(float(loss), 2.0)
+
+    def test_spatial_loss_is_differentiable_when_batch_has_no_pairs(self):
+        means = torch.tensor([[0.0, 1.0], [2.0, 3.0]], requires_grad=True)
+        loss, pair_count = latent_spatial_coherence_loss(
+            means,
+            torch.tensor([1, 5]),
+            torch.tensor([1, 5]),
+        )
+        self.assertEqual(pair_count, 0)
+        loss.backward()
+        self.assertIsNotNone(means.grad)
+
     def test_encoder_and_decoder_dimensions(self):
         model = SpatialVAE(spectral_dim=12, hidden_dim=8, latent_dim=3)
         model.eval()

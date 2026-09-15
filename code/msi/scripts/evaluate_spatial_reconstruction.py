@@ -163,7 +163,7 @@ def save_figure(metrics, output):
         axis.set_title(title)
         axis.set_ylabel("Higher is better" if higher_is_better else "Lower is better")
         axis.ticklabel_format(axis="y", style="sci", scilimits=(-3, 4))
-    figure.suptitle("Matched deterministic reconstruction on GBM108_positive")
+    figure.suptitle("Controlled deterministic reconstruction on GBM108_positive")
     figure.tight_layout()
     figure.savefig(output / "reconstruction_comparison.png", dpi=220, bbox_inches="tight")
     plt.close(figure)

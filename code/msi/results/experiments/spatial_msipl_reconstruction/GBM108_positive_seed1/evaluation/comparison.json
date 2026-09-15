@@ -1,0 +1,64 @@
+{
+  "dataset": "GBM108_positive",
+  "evaluation": "deterministic decoder output from encoder mean",
+  "scope": "in-sample reconstruction of the label-free full-section training data",
+  "interpretation": {
+    "scaled_categorical_cross_entropy": "lower is better; matches the training reconstruction definition",
+    "mean_squared_error": "lower is better; calculated after decoder TIC normalization",
+    "mean_absolute_error": "lower is better; calculated after decoder TIC normalization",
+    "cosine_similarity": "higher is better; calculated after decoder TIC normalization"
+  },
+  "models": {
+    "central_only": {
+      "label": "Centre-only VAE",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/reconstruction/GBM108_positive_seed1/central_only/checkpoint.pt",
+      "parameters": 87199312,
+      "pixels": 2071,
+      "scaled_categorical_cross_entropy": 570981.288266538,
+      "mean_squared_error": 5.6832746035450465e-09,
+      "mean_absolute_error": 4.662525563568051e-06,
+      "cosine_similarity": 0.968201309859839
+    },
+    "uniform_mean": {
+      "label": "Uniform mean",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/uniform_mean/checkpoint.pt",
+      "parameters": 130751056,
+      "pixels": 2071,
+      "scaled_categorical_cross_entropy": 571061.9758570739,
+      "mean_squared_error": 6.590935158126855e-09,
+      "mean_absolute_error": 4.6869381509661915e-06,
+      "cosine_similarity": 0.9634068229818966
+    },
+    "depthwise": {
+      "label": "Depthwise",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/depthwise/checkpoint.pt",
+      "parameters": 131431552,
+      "pixels": 2071,
+      "scaled_categorical_cross_entropy": 571076.0038628682,
+      "mean_squared_error": 6.602453484738046e-09,
+      "mean_absolute_error": 4.689118334926163e-06,
+      "cosine_similarity": 0.9633237082620912
+    },
+    "attention": {
+      "label": "Original attention",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/attention/checkpoint.pt",
+      "parameters": 131431560,
+      "pixels": 2071,
+      "scaled_categorical_cross_entropy": 571038.7503621439,
+      "mean_squared_error": 6.5531492296551905e-09,
+      "mean_absolute_error": 4.686558293982511e-06,
+      "cosine_similarity": 0.9636309498004554
+    },
+    "attention_sqrt_bins": {
+      "label": "Corrected attention",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM108_positive_seed1/attention_sqrt_bins/checkpoint.pt",
+      "parameters": 131431560,
+      "pixels": 2071,
+      "scaled_categorical_cross_entropy": 571120.6668276195,
+      "mean_squared_error": 6.603703044987298e-09,
+      "mean_absolute_error": 4.695778685395495e-06,
+      "cosine_similarity": 0.9633312630572796
+    }
+  },
+  "status": "complete"
+}
