@@ -142,6 +142,7 @@ def train_vae(
     learning_rate=1e-3,
     beta=1.0,
     spatial_lambda=0.0,
+    spatial_loss_scale=1.0,
     maximum_samples=None,
     seed=1,
     device="cpu",
@@ -159,6 +160,8 @@ def train_vae(
         raise ValueError("checkpoint_interval cannot be negative")
     if spatial_lambda < 0:
         raise ValueError("spatial_lambda cannot be negative")
+    if spatial_loss_scale <= 0:
+        raise ValueError("spatial_loss_scale must be positive")
     if resume_checkpoint is not None and not save_checkpoint:
         raise ValueError("resume_checkpoint requires save_checkpoint=True")
 
@@ -214,6 +217,7 @@ def train_vae(
         "learning_rate": learning_rate,
         "beta": beta,
         "spatial_lambda": spatial_lambda,
+        "spatial_loss_scale": spatial_loss_scale,
         "seed": seed,
     }
     history = []
@@ -328,7 +332,10 @@ def train_vae(
             else:
                 spatial_loss = mean.sum() * 0.0
                 spatial_pairs = 0
-            total_loss = vae_loss + float(spatial_lambda) * spatial_loss
+            weighted_spatial_loss = (
+                float(spatial_lambda) * float(spatial_loss_scale) * spatial_loss
+            )
+            total_loss = vae_loss + weighted_spatial_loss
             total_loss.backward()
             optimizer.step()
 
@@ -355,8 +362,12 @@ def train_vae(
                 totals["spatial"] / totals["samples"]
             ),
             "weighted_spatial_loss": (
-                float(spatial_lambda) * totals["spatial"] / totals["samples"]
+                float(spatial_lambda)
+                * float(spatial_loss_scale)
+                * totals["spatial"]
+                / totals["samples"]
             ),
+            "spatial_loss_scale": float(spatial_loss_scale),
             "spatial_pairs": totals["spatial_pairs"],
             "samples_seen": totals["samples"],
             "epoch_seconds": epoch_seconds,
@@ -429,6 +440,7 @@ def train_vae(
         "scheduler": "cosine annealing",
         "beta": beta,
         "spatial_lambda": spatial_lambda,
+        "spatial_loss_scale": spatial_loss_scale,
         "seed": seed,
         "device": str(torch_device),
         "device_name": device_name,

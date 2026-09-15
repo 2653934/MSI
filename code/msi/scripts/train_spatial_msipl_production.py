@@ -45,6 +45,12 @@ def main():
     )
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--spatial-lambda", type=float, default=0.0)
+    parser.add_argument(
+        "--spatial-loss-scale",
+        choices=("unit", "spectral_bins"),
+        default="unit",
+        help="Scale applied to latent spatial MSE before multiplying by lambda.",
+    )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--checkpoint-interval", type=int, default=5)
     parser.add_argument("--resume-checkpoint", type=Path)
@@ -58,6 +64,9 @@ def main():
 
     dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
     try:
+        spatial_loss_scale = (
+            dataset.n_mz if args.spatial_loss_scale == "spectral_bins" else 1.0
+        )
         set_random_seed(args.seed, include_cuda=True)
         if args.variant == "central_only":
             model = CentralOnlyVAE(
@@ -103,6 +112,7 @@ def main():
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
             spatial_lambda=args.spatial_lambda,
+            spatial_loss_scale=spatial_loss_scale,
             maximum_samples=None,
             seed=args.seed,
             device="cuda",
@@ -110,6 +120,8 @@ def main():
                 "purpose": "production neighbourhood baseline",
                 "neighbourhood_variant": args.variant,
                 "spatial_lambda": args.spatial_lambda,
+                "spatial_loss_scale_name": args.spatial_loss_scale,
+                "spatial_loss_scale": spatial_loss_scale,
                 "poisson_augmentation": False,
                 "initial_vae_sha256": initial_vae_hash,
                 "attention_input_scale": args.attention_input_scale,
@@ -148,6 +160,8 @@ def main():
             "attention_dim": args.attention_dim,
             "attention_input_scale": args.attention_input_scale,
             "spatial_lambda": args.spatial_lambda,
+            "spatial_loss_scale_name": args.spatial_loss_scale,
+            "spatial_loss_scale": spatial_loss_scale,
             "poisson_augmentation": False,
             "full_dataset": True,
         },

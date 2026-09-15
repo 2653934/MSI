@@ -209,15 +209,22 @@ class NeighbourhoodTests(unittest.TestCase):
                 batch_size=8,
                 seed=1,
                 spatial_lambda=0.1,
+                spatial_loss_scale=6.0,
                 save_checkpoint=False,
             )
         self.assertEqual(metadata["spatial_lambda"], 0.1)
+        self.assertEqual(metadata["spatial_loss_scale"], 6.0)
         self.assertGreater(history[0]["spatial_pairs"], 0)
         self.assertGreaterEqual(history[0]["spatial_loss"], 0.0)
         self.assertAlmostEqual(
             history[0]["total_loss"],
             history[0]["vae_loss"] + history[0]["weighted_spatial_loss"],
             places=4,
+        )
+        self.assertAlmostEqual(
+            history[0]["weighted_spatial_loss"],
+            0.1 * 6.0 * history[0]["spatial_loss"],
+            places=6,
         )
 
 

@@ -13,8 +13,8 @@
 
 set -eo pipefail
 
-if [[ $# -ne 1 ]] || ! [[ "$1" =~ ^(0\.01|0\.1|1\.0)$ ]]; then
-    echo "Usage: sbatch $0 {0.01|0.1|1.0}" >&2
+if [[ $# -ne 1 ]] || ! [[ "$1" =~ ^(0\.0|0\.01|0\.1|1\.0)$ ]]; then
+    echo "Usage: sbatch $0 {0.0|0.01|0.1|1.0}" >&2
     exit 2
 fi
 
@@ -22,8 +22,8 @@ SPATIAL_LAMBDA="$1"
 LAMBDA_LABEL="${SPATIAL_LAMBDA//./p}"
 PROJECT_ROOT="$HOME/msi"
 INPUT="/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5"
-OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_spatial_loss/GBM108_positive_seed1/uniform_mean_lambda_${LAMBDA_LABEL}_pilot"
-CHECKPOINT_OUTPUT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/spatial_loss/GBM108_positive_seed1/uniform_mean_lambda_${LAMBDA_LABEL}_pilot"
+OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_spatial_loss/GBM108_positive_seed1/uniform_mean_lambda_${LAMBDA_LABEL}_spectral_scaled_pilot"
+CHECKPOINT_OUTPUT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/spatial_loss/GBM108_positive_seed1/uniform_mean_lambda_${LAMBDA_LABEL}_spectral_scaled_pilot"
 
 cd "$PROJECT_ROOT"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
@@ -43,4 +43,5 @@ python -u scripts/train_spatial_msipl_production.py \
     --latent-dim 5 \
     --learning-rate 0.001 \
     --spatial-lambda "$SPATIAL_LAMBDA" \
+    --spatial-loss-scale spectral_bins \
     --seed 1
