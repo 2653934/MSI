@@ -321,15 +321,15 @@ def train_vae(
             vae_loss, reconstruction_loss, kl_loss = msipl_vae_loss(
                 reconstruction, target, mean, log_variance, beta=beta
             )
-            if spatial_lambda > 0:
-                if "x" not in batch or "y" not in batch:
-                    raise KeyError(
-                        "spatial loss requires x and y coordinates in each batch"
-                    )
+            if "x" in batch and "y" in batch:
                 spatial_loss, spatial_pairs = latent_spatial_coherence_loss(
                     mean, batch["x"], batch["y"]
                 )
             else:
+                if spatial_lambda > 0:
+                    raise KeyError(
+                        "spatial loss requires x and y coordinates in each batch"
+                    )
                 spatial_loss = mean.sum() * 0.0
                 spatial_pairs = 0
             weighted_spatial_loss = (
