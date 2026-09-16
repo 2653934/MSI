@@ -1,0 +1,944 @@
+{
+  "dataset": "GBM108_positive",
+  "scope": "five-epoch development-only Poisson augmentation gate",
+  "design": {
+    "training_seed": 1,
+    "evaluation_noise_seed": 20260916,
+    "effective_count": 100000.0,
+    "latent_representation": "deterministic encoder mean",
+    "decoder_target": "clean TIC-normalized central spectrum",
+    "same_noisy_inputs_for_both_models": true,
+    "spatial_probe": "4x4 tile holdout with one-pixel halo",
+    "initial_vae_sha256": "692de4925fe95a65ae94c9f95b35e8e57c9a229f42d3c44c8d11a59545b261ee",
+    "matched_training_controls": true
+  },
+  "training": {
+    "augmentation_off": {
+      "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+      "purpose": "production neighbourhood baseline",
+      "variant": "uniform_mean",
+      "initial_vae_sha256": "692de4925fe95a65ae94c9f95b35e8e57c9a229f42d3c44c8d11a59545b261ee",
+      "controls": {
+        "seed": 1,
+        "epochs": 5,
+        "batch_size": 128,
+        "hidden_dim": 512,
+        "latent_dim": 5,
+        "attention_dim": 8,
+        "attention_input_scale": "spectral_bins",
+        "spatial_lambda": 0.0,
+        "spatial_loss_scale_name": "spectral_bins",
+        "spatial_loss_scale": 85062,
+        "poisson_augmentation": false,
+        "full_dataset": true
+      },
+      "samples_per_epoch": 2071,
+      "dataset_size": 2071,
+      "training_seconds": 2007.3916881401092,
+      "resumed_from_checkpoint": null,
+      "resumed_from_epoch": 0,
+      "peak_gpu_memory_allocated_bytes": 3112135168,
+      "first_total_loss": 852621.0174130854,
+      "final_total_loss": 635032.2187650893,
+      "total_loss_change_percent": -25.51999003123058,
+      "history": [
+        {
+          "epoch": 1,
+          "learning_rate": 0.001,
+          "total_loss": 852621.0174130854,
+          "vae_loss": 852621.0174130854,
+          "reconstruction_loss": 852612.0700144857,
+          "kl_loss": 8.95025500494003,
+          "spatial_loss": 0.0,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 85062.0,
+          "spatial_pairs": 0,
+          "samples_seen": 2071,
+          "epoch_seconds": 413.30223223380744,
+          "samples_per_second": 5.010860911170747
+        },
+        {
+          "epoch": 2,
+          "learning_rate": 0.0009045084971874737,
+          "total_loss": 691998.9740765331,
+          "vae_loss": 691998.9740765331,
+          "reconstruction_loss": 691979.6614256398,
+          "kl_loss": 19.3181929245253,
+          "spatial_loss": 0.0,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 85062.0,
+          "spatial_pairs": 0,
+          "samples_seen": 2071,
+          "epoch_seconds": 397.8425204879604,
+          "samples_per_second": 5.205577316019123
+        },
+        {
+          "epoch": 3,
+          "learning_rate": 0.0006545084971874737,
+          "total_loss": 653614.6615161757,
+          "vae_loss": 653614.6615161757,
+          "reconstruction_loss": 653588.9626690005,
+          "kl_loss": 25.703300783681385,
+          "spatial_loss": 0.0,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 85062.0,
+          "spatial_pairs": 0,
+          "samples_seen": 2071,
+          "epoch_seconds": 398.4707384761423,
+          "samples_per_second": 5.1973703462393575
+        },
+        {
+          "epoch": 4,
+          "learning_rate": 0.00034549150281252633,
+          "total_loss": 640239.8731289232,
+          "vae_loss": 640239.8731289232,
+          "reconstruction_loss": 640209.2943626267,
+          "kl_loss": 30.578517434908996,
+          "spatial_loss": 0.0,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 85062.0,
+          "spatial_pairs": 0,
+          "samples_seen": 2071,
+          "epoch_seconds": 398.04377670399845,
+          "samples_per_second": 5.2029453070436515
+        },
+        {
+          "epoch": 5,
+          "learning_rate": 9.549150281252633e-05,
+          "total_loss": 635032.2187650893,
+          "vae_loss": 635032.2187650893,
+          "reconstruction_loss": 635000.8850193144,
+          "kl_loss": 31.34103154652594,
+          "spatial_loss": 0.0,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 85062.0,
+          "spatial_pairs": 0,
+          "samples_seen": 2071,
+          "epoch_seconds": 399.7324202382006,
+          "samples_per_second": 5.180965803989306
+        }
+      ],
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/spatial_loss/GBM108_positive_seed1/uniform_mean_lambda_0p0_spectral_scaled_pilot/checkpoint.pt",
+      "attention_diagnostics": null,
+      "status": "complete"
+    },
+    "poisson_trained": {
+      "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+      "purpose": "Poisson augmentation pilot",
+      "variant": "uniform_mean",
+      "initial_vae_sha256": "692de4925fe95a65ae94c9f95b35e8e57c9a229f42d3c44c8d11a59545b261ee",
+      "controls": {
+        "seed": 1,
+        "epochs": 5,
+        "batch_size": 128,
+        "hidden_dim": 512,
+        "latent_dim": 5,
+        "attention_dim": 8,
+        "attention_input_scale": "spectral_bins",
+        "spatial_lambda": 0.0,
+        "spatial_loss_scale_name": "unit",
+        "spatial_loss_scale": 1.0,
+        "poisson_augmentation": true,
+        "poisson_effective_count": 100000.0,
+        "full_dataset": true
+      },
+      "samples_per_epoch": 2071,
+      "dataset_size": 2071,
+      "training_seconds": 2030.9839377161115,
+      "resumed_from_checkpoint": null,
+      "resumed_from_epoch": 0,
+      "peak_gpu_memory_allocated_bytes": 3156663808,
+      "first_total_loss": 852642.6846632062,
+      "final_total_loss": 635195.3731289232,
+      "total_loss_change_percent": -25.502747568892197,
+      "history": [
+        {
+          "epoch": 1,
+          "learning_rate": 0.001,
+          "total_loss": 852642.6846632062,
+          "vae_loss": 852642.6846632062,
+          "reconstruction_loss": 852633.7277583294,
+          "kl_loss": 8.95216080313256,
+          "spatial_loss": 0.39316798628259314,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 1.0,
+          "spatial_pairs": 451,
+          "poisson_effective_count": 100000.0,
+          "poisson_central_l1": 0.0851032638941221,
+          "poisson_central_cosine": 0.9991607831791943,
+          "samples_seen": 2071,
+          "epoch_seconds": 416.98666470171884,
+          "samples_per_second": 4.966585685615244
+        },
+        {
+          "epoch": 2,
+          "learning_rate": 0.0009045084971874737,
+          "total_loss": 692032.8596692419,
+          "vae_loss": 692032.8596692419,
+          "reconstruction_loss": 692013.7804804442,
+          "kl_loss": 19.081116138939002,
+          "spatial_loss": 0.6206980055618091,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 1.0,
+          "spatial_pairs": 469,
+          "poisson_effective_count": 100000.0,
+          "poisson_central_l1": 0.08511999897741569,
+          "poisson_central_cosine": 0.9991598899153797,
+          "samples_seen": 2071,
+          "epoch_seconds": 403.30859381891787,
+          "samples_per_second": 5.135025714155403
+        },
+        {
+          "epoch": 3,
+          "learning_rate": 0.0006545084971874737,
+          "total_loss": 653751.6415379044,
+          "vae_loss": 653751.6415379044,
+          "reconstruction_loss": 653726.7527160792,
+          "kl_loss": 24.893483754576604,
+          "spatial_loss": 0.8010204046522144,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 1.0,
+          "spatial_pairs": 492,
+          "poisson_effective_count": 100000.0,
+          "poisson_central_l1": 0.08503096786704056,
+          "poisson_central_cosine": 0.9991651562203077,
+          "samples_seen": 2071,
+          "epoch_seconds": 403.25686392141506,
+          "samples_per_second": 5.135684436616527
+        },
+        {
+          "epoch": 4,
+          "learning_rate": 0.00034549150281252633,
+          "total_loss": 640371.43052873,
+          "vae_loss": 640371.43052873,
+          "reconstruction_loss": 640341.8145219701,
+          "kl_loss": 29.61855577075614,
+          "spatial_loss": 0.8286634193763015,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 1.0,
+          "spatial_pairs": 517,
+          "poisson_effective_count": 100000.0,
+          "poisson_central_l1": 0.08509397324316746,
+          "poisson_central_cosine": 0.9991609693034037,
+          "samples_seen": 2071,
+          "epoch_seconds": 403.6136879529804,
+          "samples_per_second": 5.131144115809235
+        },
+        {
+          "epoch": 5,
+          "learning_rate": 9.549150281252633e-05,
+          "total_loss": 635195.3731289232,
+          "vae_loss": 635195.3731289232,
+          "reconstruction_loss": 635165.0509717527,
+          "kl_loss": 30.318402837866575,
+          "spatial_loss": 0.8716051353907049,
+          "weighted_spatial_loss": 0.0,
+          "spatial_loss_scale": 1.0,
+          "spatial_pairs": 487,
+          "poisson_effective_count": 100000.0,
+          "poisson_central_l1": 0.08509176769862711,
+          "poisson_central_cosine": 0.9991602509105798,
+          "samples_seen": 2071,
+          "epoch_seconds": 403.8181273210794,
+          "samples_per_second": 5.128546392255763
+        }
+      ],
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/poisson/GBM108_positive_seed1/uniform_mean_count_100000_pilot/checkpoint.pt",
+      "attention_diagnostics": null,
+      "status": "complete"
+    }
+  },
+  "evaluations": {
+    "augmentation_off": {
+      "clean_input": {
+        "evaluation_input": "clean",
+        "noise_seed": null,
+        "effective_count": null,
+        "pixels": 2071,
+        "deterministic_reconstruction": {
+          "scaled_categorical_cross_entropy": 670196.4123611782,
+          "mean_squared_error": 6.316904014730597e-08,
+          "mean_absolute_error": 1.5096355792636863e-05,
+          "cosine_similarity": 0.44374898434376037,
+          "input_l1": 0.0,
+          "input_cosine_similarity": 1.0
+        },
+        "spatial_probe": {
+          "balanced_accuracy": 0.9064796829935615,
+          "macro_f1": 0.9065857419868234,
+          "roc_auc": 0.9670243811672048,
+          "folds": [
+            {
+              "tile": 0,
+              "training_pixels": 2036,
+              "test_pixels": 22,
+              "halo_pixels_excluded": 13,
+              "test_normal": 22,
+              "test_tumour": 0
+            },
+            {
+              "tile": 1,
+              "training_pixels": 1927,
+              "test_pixels": 112,
+              "halo_pixels_excluded": 32,
+              "test_normal": 101,
+              "test_tumour": 11
+            },
+            {
+              "tile": 2,
+              "training_pixels": 1881,
+              "test_pixels": 155,
+              "halo_pixels_excluded": 35,
+              "test_normal": 88,
+              "test_tumour": 67
+            },
+            {
+              "tile": 3,
+              "training_pixels": 2015,
+              "test_pixels": 37,
+              "halo_pixels_excluded": 19,
+              "test_normal": 29,
+              "test_tumour": 8
+            },
+            {
+              "tile": 4,
+              "training_pixels": 1917,
+              "test_pixels": 121,
+              "halo_pixels_excluded": 33,
+              "test_normal": 121,
+              "test_tumour": 0
+            },
+            {
+              "tile": 5,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 90,
+              "test_tumour": 63
+            },
+            {
+              "tile": 6,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 0,
+              "test_tumour": 162
+            },
+            {
+              "tile": 7,
+              "training_pixels": 1904,
+              "test_pixels": 129,
+              "halo_pixels_excluded": 38,
+              "test_normal": 0,
+              "test_tumour": 129
+            },
+            {
+              "tile": 8,
+              "training_pixels": 1872,
+              "test_pixels": 154,
+              "halo_pixels_excluded": 45,
+              "test_normal": 104,
+              "test_tumour": 50
+            },
+            {
+              "tile": 9,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 83,
+              "test_tumour": 70
+            },
+            {
+              "tile": 10,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 55,
+              "test_tumour": 107
+            },
+            {
+              "tile": 11,
+              "training_pixels": 1878,
+              "test_pixels": 149,
+              "halo_pixels_excluded": 44,
+              "test_normal": 6,
+              "test_tumour": 143
+            },
+            {
+              "tile": 12,
+              "training_pixels": 1908,
+              "test_pixels": 135,
+              "halo_pixels_excluded": 28,
+              "test_normal": 118,
+              "test_tumour": 17
+            },
+            {
+              "tile": 13,
+              "training_pixels": 1882,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 36,
+              "test_normal": 136,
+              "test_tumour": 17
+            },
+            {
+              "tile": 14,
+              "training_pixels": 1892,
+              "test_pixels": 144,
+              "halo_pixels_excluded": 35,
+              "test_normal": 144,
+              "test_tumour": 0
+            },
+            {
+              "tile": 15,
+              "training_pixels": 1918,
+              "test_pixels": 130,
+              "halo_pixels_excluded": 23,
+              "test_normal": 76,
+              "test_tumour": 54
+            }
+          ]
+        },
+        "gmm_two_cluster": {
+          "adjusted_rand_index": 0.6089144352917016,
+          "normalized_mutual_information": 0.5226944994385523
+        },
+        "label_silhouette": 0.4252881109714508,
+        "morans_i": {
+          "per_latent_dimension": [
+            0.956627191288612,
+            0.8103279619338313,
+            0.9304792029984472,
+            0.8154697759733797,
+            0.8988549329842361
+          ],
+          "mean": 0.8823518130357012
+        },
+        "full_neighbour_latent_mse": 0.22638528048992157,
+        "full_neighbour_pairs": 7997,
+        "evaluation_seconds": 422.14610788878053
+      },
+      "poisson_noisy_input": {
+        "evaluation_input": "Poisson-noisy",
+        "noise_seed": 20260916,
+        "effective_count": 100000.0,
+        "pixels": 2071,
+        "deterministic_reconstruction": {
+          "scaled_categorical_cross_entropy": 670199.4292612264,
+          "mean_squared_error": 6.316911656067057e-08,
+          "mean_absolute_error": 1.5096512034252999e-05,
+          "cosine_similarity": 0.4437437531799582,
+          "input_l1": 0.08515897711252372,
+          "input_cosine_similarity": 0.9991604912286792
+        },
+        "spatial_probe": {
+          "balanced_accuracy": 0.906905940453067,
+          "macro_f1": 0.9070651511946202,
+          "roc_auc": 0.9670993796957149,
+          "folds": [
+            {
+              "tile": 0,
+              "training_pixels": 2036,
+              "test_pixels": 22,
+              "halo_pixels_excluded": 13,
+              "test_normal": 22,
+              "test_tumour": 0
+            },
+            {
+              "tile": 1,
+              "training_pixels": 1927,
+              "test_pixels": 112,
+              "halo_pixels_excluded": 32,
+              "test_normal": 101,
+              "test_tumour": 11
+            },
+            {
+              "tile": 2,
+              "training_pixels": 1881,
+              "test_pixels": 155,
+              "halo_pixels_excluded": 35,
+              "test_normal": 88,
+              "test_tumour": 67
+            },
+            {
+              "tile": 3,
+              "training_pixels": 2015,
+              "test_pixels": 37,
+              "halo_pixels_excluded": 19,
+              "test_normal": 29,
+              "test_tumour": 8
+            },
+            {
+              "tile": 4,
+              "training_pixels": 1917,
+              "test_pixels": 121,
+              "halo_pixels_excluded": 33,
+              "test_normal": 121,
+              "test_tumour": 0
+            },
+            {
+              "tile": 5,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 90,
+              "test_tumour": 63
+            },
+            {
+              "tile": 6,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 0,
+              "test_tumour": 162
+            },
+            {
+              "tile": 7,
+              "training_pixels": 1904,
+              "test_pixels": 129,
+              "halo_pixels_excluded": 38,
+              "test_normal": 0,
+              "test_tumour": 129
+            },
+            {
+              "tile": 8,
+              "training_pixels": 1872,
+              "test_pixels": 154,
+              "halo_pixels_excluded": 45,
+              "test_normal": 104,
+              "test_tumour": 50
+            },
+            {
+              "tile": 9,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 83,
+              "test_tumour": 70
+            },
+            {
+              "tile": 10,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 55,
+              "test_tumour": 107
+            },
+            {
+              "tile": 11,
+              "training_pixels": 1878,
+              "test_pixels": 149,
+              "halo_pixels_excluded": 44,
+              "test_normal": 6,
+              "test_tumour": 143
+            },
+            {
+              "tile": 12,
+              "training_pixels": 1908,
+              "test_pixels": 135,
+              "halo_pixels_excluded": 28,
+              "test_normal": 118,
+              "test_tumour": 17
+            },
+            {
+              "tile": 13,
+              "training_pixels": 1882,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 36,
+              "test_normal": 136,
+              "test_tumour": 17
+            },
+            {
+              "tile": 14,
+              "training_pixels": 1892,
+              "test_pixels": 144,
+              "halo_pixels_excluded": 35,
+              "test_normal": 144,
+              "test_tumour": 0
+            },
+            {
+              "tile": 15,
+              "training_pixels": 1918,
+              "test_pixels": 130,
+              "halo_pixels_excluded": 23,
+              "test_normal": 76,
+              "test_tumour": 54
+            }
+          ]
+        },
+        "gmm_two_cluster": {
+          "adjusted_rand_index": 0.6058893396825116,
+          "normalized_mutual_information": 0.5201823355187257
+        },
+        "label_silhouette": 0.42525914311408997,
+        "morans_i": {
+          "per_latent_dimension": [
+            0.9566798574962372,
+            0.8102836467434356,
+            0.9304999661463996,
+            0.8154571652261735,
+            0.8988440048952132
+          ],
+          "mean": 0.8823529281014919
+        },
+        "full_neighbour_latent_mse": 0.22634950280189514,
+        "full_neighbour_pairs": 7997,
+        "evaluation_seconds": 407.65622733393684
+      },
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/spatial_loss/GBM108_positive_seed1/uniform_mean_lambda_0p0_spectral_scaled_pilot/checkpoint.pt",
+      "completed_epochs": 5
+    },
+    "poisson_trained": {
+      "clean_input": {
+        "evaluation_input": "clean",
+        "noise_seed": null,
+        "effective_count": null,
+        "pixels": 2071,
+        "deterministic_reconstruction": {
+          "scaled_categorical_cross_entropy": 670292.2375663931,
+          "mean_squared_error": 6.318264090278677e-08,
+          "mean_absolute_error": 1.5104140301393763e-05,
+          "cosine_similarity": 0.4435773952637013,
+          "input_l1": 0.0,
+          "input_cosine_similarity": 1.0
+        },
+        "spatial_probe": {
+          "balanced_accuracy": 0.9069405916719355,
+          "macro_f1": 0.9074702886247878,
+          "roc_auc": 0.9657456087886883,
+          "folds": [
+            {
+              "tile": 0,
+              "training_pixels": 2036,
+              "test_pixels": 22,
+              "halo_pixels_excluded": 13,
+              "test_normal": 22,
+              "test_tumour": 0
+            },
+            {
+              "tile": 1,
+              "training_pixels": 1927,
+              "test_pixels": 112,
+              "halo_pixels_excluded": 32,
+              "test_normal": 101,
+              "test_tumour": 11
+            },
+            {
+              "tile": 2,
+              "training_pixels": 1881,
+              "test_pixels": 155,
+              "halo_pixels_excluded": 35,
+              "test_normal": 88,
+              "test_tumour": 67
+            },
+            {
+              "tile": 3,
+              "training_pixels": 2015,
+              "test_pixels": 37,
+              "halo_pixels_excluded": 19,
+              "test_normal": 29,
+              "test_tumour": 8
+            },
+            {
+              "tile": 4,
+              "training_pixels": 1917,
+              "test_pixels": 121,
+              "halo_pixels_excluded": 33,
+              "test_normal": 121,
+              "test_tumour": 0
+            },
+            {
+              "tile": 5,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 90,
+              "test_tumour": 63
+            },
+            {
+              "tile": 6,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 0,
+              "test_tumour": 162
+            },
+            {
+              "tile": 7,
+              "training_pixels": 1904,
+              "test_pixels": 129,
+              "halo_pixels_excluded": 38,
+              "test_normal": 0,
+              "test_tumour": 129
+            },
+            {
+              "tile": 8,
+              "training_pixels": 1872,
+              "test_pixels": 154,
+              "halo_pixels_excluded": 45,
+              "test_normal": 104,
+              "test_tumour": 50
+            },
+            {
+              "tile": 9,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 83,
+              "test_tumour": 70
+            },
+            {
+              "tile": 10,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 55,
+              "test_tumour": 107
+            },
+            {
+              "tile": 11,
+              "training_pixels": 1878,
+              "test_pixels": 149,
+              "halo_pixels_excluded": 44,
+              "test_normal": 6,
+              "test_tumour": 143
+            },
+            {
+              "tile": 12,
+              "training_pixels": 1908,
+              "test_pixels": 135,
+              "halo_pixels_excluded": 28,
+              "test_normal": 118,
+              "test_tumour": 17
+            },
+            {
+              "tile": 13,
+              "training_pixels": 1882,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 36,
+              "test_normal": 136,
+              "test_tumour": 17
+            },
+            {
+              "tile": 14,
+              "training_pixels": 1892,
+              "test_pixels": 144,
+              "halo_pixels_excluded": 35,
+              "test_normal": 144,
+              "test_tumour": 0
+            },
+            {
+              "tile": 15,
+              "training_pixels": 1918,
+              "test_pixels": 130,
+              "halo_pixels_excluded": 23,
+              "test_normal": 76,
+              "test_tumour": 54
+            }
+          ]
+        },
+        "gmm_two_cluster": {
+          "adjusted_rand_index": 0.6180608789245728,
+          "normalized_mutual_information": 0.5269776242392084
+        },
+        "label_silhouette": 0.3980333209037781,
+        "morans_i": {
+          "per_latent_dimension": [
+            0.9560913915066126,
+            0.8045706162321739,
+            0.9320250155210126,
+            0.7192089936343717,
+            0.8918981539359684
+          ],
+          "mean": 0.8607588341660278
+        },
+        "full_neighbour_latent_mse": 0.21652697026729584,
+        "full_neighbour_pairs": 7997,
+        "evaluation_seconds": 407.6557157272473
+      },
+      "poisson_noisy_input": {
+        "evaluation_input": "Poisson-noisy",
+        "noise_seed": 20260916,
+        "effective_count": 100000.0,
+        "pixels": 2071,
+        "deterministic_reconstruction": {
+          "scaled_categorical_cross_entropy": 670295.148720425,
+          "mean_squared_error": 6.318271221094815e-08,
+          "mean_absolute_error": 1.510428714153111e-05,
+          "cosine_similarity": 0.44357215258765487,
+          "input_l1": 0.08515897711252372,
+          "input_cosine_similarity": 0.9991604912286792
+        },
+        "spatial_probe": {
+          "balanced_accuracy": 0.9063837987988843,
+          "macro_f1": 0.9069654845391699,
+          "roc_auc": 0.9657987723025686,
+          "folds": [
+            {
+              "tile": 0,
+              "training_pixels": 2036,
+              "test_pixels": 22,
+              "halo_pixels_excluded": 13,
+              "test_normal": 22,
+              "test_tumour": 0
+            },
+            {
+              "tile": 1,
+              "training_pixels": 1927,
+              "test_pixels": 112,
+              "halo_pixels_excluded": 32,
+              "test_normal": 101,
+              "test_tumour": 11
+            },
+            {
+              "tile": 2,
+              "training_pixels": 1881,
+              "test_pixels": 155,
+              "halo_pixels_excluded": 35,
+              "test_normal": 88,
+              "test_tumour": 67
+            },
+            {
+              "tile": 3,
+              "training_pixels": 2015,
+              "test_pixels": 37,
+              "halo_pixels_excluded": 19,
+              "test_normal": 29,
+              "test_tumour": 8
+            },
+            {
+              "tile": 4,
+              "training_pixels": 1917,
+              "test_pixels": 121,
+              "halo_pixels_excluded": 33,
+              "test_normal": 121,
+              "test_tumour": 0
+            },
+            {
+              "tile": 5,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 90,
+              "test_tumour": 63
+            },
+            {
+              "tile": 6,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 0,
+              "test_tumour": 162
+            },
+            {
+              "tile": 7,
+              "training_pixels": 1904,
+              "test_pixels": 129,
+              "halo_pixels_excluded": 38,
+              "test_normal": 0,
+              "test_tumour": 129
+            },
+            {
+              "tile": 8,
+              "training_pixels": 1872,
+              "test_pixels": 154,
+              "halo_pixels_excluded": 45,
+              "test_normal": 104,
+              "test_tumour": 50
+            },
+            {
+              "tile": 9,
+              "training_pixels": 1862,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 56,
+              "test_normal": 83,
+              "test_tumour": 70
+            },
+            {
+              "tile": 10,
+              "training_pixels": 1851,
+              "test_pixels": 162,
+              "halo_pixels_excluded": 58,
+              "test_normal": 55,
+              "test_tumour": 107
+            },
+            {
+              "tile": 11,
+              "training_pixels": 1878,
+              "test_pixels": 149,
+              "halo_pixels_excluded": 44,
+              "test_normal": 6,
+              "test_tumour": 143
+            },
+            {
+              "tile": 12,
+              "training_pixels": 1908,
+              "test_pixels": 135,
+              "halo_pixels_excluded": 28,
+              "test_normal": 118,
+              "test_tumour": 17
+            },
+            {
+              "tile": 13,
+              "training_pixels": 1882,
+              "test_pixels": 153,
+              "halo_pixels_excluded": 36,
+              "test_normal": 136,
+              "test_tumour": 17
+            },
+            {
+              "tile": 14,
+              "training_pixels": 1892,
+              "test_pixels": 144,
+              "halo_pixels_excluded": 35,
+              "test_normal": 144,
+              "test_tumour": 0
+            },
+            {
+              "tile": 15,
+              "training_pixels": 1918,
+              "test_pixels": 130,
+              "halo_pixels_excluded": 23,
+              "test_normal": 76,
+              "test_tumour": 54
+            }
+          ]
+        },
+        "gmm_two_cluster": {
+          "adjusted_rand_index": 0.6120022720895428,
+          "normalized_mutual_information": 0.5187847613591035
+        },
+        "label_silhouette": 0.3980034291744232,
+        "morans_i": {
+          "per_latent_dimension": [
+            0.9561359614785204,
+            0.8045720702582543,
+            0.9320420234825906,
+            0.7192244744556251,
+            0.891878781796799
+          ],
+          "mean": 0.8607706622943578
+        },
+        "full_neighbour_latent_mse": 0.2165021300315857,
+        "full_neighbour_pairs": 7997,
+        "evaluation_seconds": 406.15348858805373
+      },
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/poisson/GBM108_positive_seed1/uniform_mean_count_100000_pilot/checkpoint.pt",
+      "completed_epochs": 5
+    }
+  },
+  "decision_summary": {
+    "poisson_model_clean_mse_change_percent_vs_off": 0.021530730004899568,
+    "poisson_model_noisy_mse_change_percent_vs_off": 0.021522622157481717,
+    "off_model_noisy_mse_degradation_percent": 0.00012096648046458635,
+    "poisson_model_noisy_mse_degradation_percent": 0.00011286036854402883,
+    "predeclared_reconstruction_rule": {
+      "maximum_clean_mse_regression_percent": 1.0,
+      "minimum_noisy_mse_improvement_percent": 1.0,
+      "clean_rule_passed": true,
+      "noisy_rule_passed": false,
+      "both_passed": false
+    },
+    "interpretation_guardrail": "The rule is a development gate, not a statistical significance test. Representation metrics and the one-section exploratory scope must also be reviewed."
+  },
+  "status": "complete"
+}
