@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torch.nn.functional as functional
 from torch.utils.data import DataLoader, Subset
 
 
@@ -79,6 +80,42 @@ def latent_spatial_coherence_loss(mean, x_coordinates, y_coordinates):
     return differences.pow(2).mean(), pair_count
 
 
+def poisson_augment_tic_normalized(spectra, effective_count, generator=None):
+    """Apply count-aware Poisson noise and restore TIC normalization.
+
+    ``spectra`` may contain any number of leading dimensions, but its final
+    dimension must be the m/z axis.  Each non-zero spectrum is interpreted as
+    a probability distribution over an explicitly recorded effective ion
+    count ``N``.  We draw ``Poisson(spectrum * N)`` independently per bin and
+    renormalize the sampled counts to sum to one.  Zero spectra (used for
+    missing neighbour slots) remain zero.
+
+    An explicit effective count is necessary because the training data have
+    already been TIC-normalized.  Applying ``Poisson(spectrum)`` directly
+    would imply only one expected ion per spectrum and destroy almost all
+    spectral information.
+    """
+    if effective_count is None or float(effective_count) <= 0:
+        raise ValueError("effective_count must be positive")
+    if spectra.ndim < 1:
+        raise ValueError("spectra must include an m/z dimension")
+    if not torch.is_floating_point(spectra):
+        raise TypeError("spectra must be floating point")
+    if not bool(torch.isfinite(spectra).all()):
+        raise ValueError("spectra contain non-finite values")
+    if bool((spectra < 0).any()):
+        raise ValueError("spectra contain negative intensities")
+
+    sampled_counts = torch.poisson(
+        spectra * float(effective_count), generator=generator
+    )
+    sampled_totals = sampled_counts.sum(dim=-1, keepdim=True)
+    noisy = sampled_counts / sampled_totals.clamp_min(1.0)
+    # A non-zero spectrum can very rarely draw zero total counts at very small
+    # N. Falling back to the clean input avoids producing an invalid target.
+    return torch.where(sampled_totals > 0, noisy, spectra)
+
+
 def select_training_indices(dataset_size, maximum_samples, seed):
     """Select a fixed random subset, or every index when no limit is requested."""
     if maximum_samples is None or maximum_samples >= dataset_size:
@@ -143,6 +180,7 @@ def train_vae(
     beta=1.0,
     spatial_lambda=0.0,
     spatial_loss_scale=1.0,
+    poisson_effective_count=None,
     maximum_samples=None,
     seed=1,
     device="cpu",
@@ -162,6 +200,8 @@ def train_vae(
         raise ValueError("spatial_lambda cannot be negative")
     if spatial_loss_scale <= 0:
         raise ValueError("spatial_loss_scale must be positive")
+    if poisson_effective_count is not None and poisson_effective_count <= 0:
+        raise ValueError("poisson_effective_count must be positive when enabled")
     if resume_checkpoint is not None and not save_checkpoint:
         raise ValueError("resume_checkpoint requires save_checkpoint=True")
 
@@ -196,6 +236,11 @@ def train_vae(
     # final batch so a "full dataset" run really does see every selected pixel.
     drop_last = len(subset) % batch_size == 1
     loader_generator = torch.Generator().manual_seed(seed)
+    poisson_generator = None
+    if poisson_effective_count is not None:
+        poisson_generator = torch.Generator(device=torch_device).manual_seed(
+            seed + 1_000_003
+        )
     loader = DataLoader(
         subset,
         batch_size=batch_size,
@@ -220,6 +265,12 @@ def train_vae(
         "spatial_loss_scale": spatial_loss_scale,
         "seed": seed,
     }
+    # Keep the historical signature byte-for-byte compatible for runs without
+    # augmentation, while making augmented checkpoints scale-specific.
+    if poisson_effective_count is not None:
+        resume_signature["poisson_effective_count"] = float(
+            poisson_effective_count
+        )
     history = []
     start_epoch = 1
     resumed_from_epoch = 0
@@ -237,6 +288,10 @@ def train_vae(
         _optimizer_to(optimizer, torch_device)
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         loader_generator.set_state(checkpoint["loader_generator_state"].cpu())
+        if poisson_generator is not None:
+            poisson_generator.set_state(
+                checkpoint["poisson_generator_state"].cpu()
+            )
         history = checkpoint["history"]
         resumed_from_epoch = int(checkpoint["completed_epochs"])
         start_epoch = resumed_from_epoch + 1
@@ -270,7 +325,7 @@ def train_vae(
             peak_reserved = max(
                 peak_reserved, int(torch.cuda.max_memory_reserved(torch_device))
             )
-        return {
+        payload = {
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),
@@ -284,6 +339,9 @@ def train_vae(
             "peak_gpu_memory_allocated_bytes": peak_allocated or None,
             "peak_gpu_memory_reserved_bytes": peak_reserved or None,
         }
+        if poisson_generator is not None:
+            payload["poisson_generator_state"] = poisson_generator.get_state()
+        return payload
 
     session_start = time.perf_counter()
     for epoch in range(start_epoch, epochs + 1):
@@ -298,10 +356,18 @@ def train_vae(
             "kl": 0.0,
             "spatial": 0.0,
             "spatial_pairs": 0,
+            "poisson_central_l1": 0.0,
+            "poisson_central_cosine": 0.0,
             "samples": 0,
         }
         for batch in loader:
             target = batch["target"].to(torch_device, dtype=torch.float32)
+            if poisson_effective_count is None:
+                central_input = target
+            else:
+                central_input = poisson_augment_tic_normalized(
+                    target, poisson_effective_count, generator=poisson_generator
+                )
 
             optimizer.zero_grad(set_to_none=True)
             if getattr(model, "uses_neighbourhood_batch", False):
@@ -311,11 +377,24 @@ def train_vae(
                 neighbour_mask = batch["neighbour_mask"].to(
                     torch_device, dtype=torch.bool
                 )
-                model_outputs = model(target, neighbours, neighbour_mask)
+                if poisson_effective_count is not None:
+                    neighbours = poisson_augment_tic_normalized(
+                        neighbours,
+                        poisson_effective_count,
+                        generator=poisson_generator,
+                    )
+                model_outputs = model(
+                    central_input, neighbours, neighbour_mask
+                )
             else:
                 contextual = batch["input"].to(
                     torch_device, dtype=torch.float32
                 )
+                if poisson_effective_count is not None:
+                    raise ValueError(
+                        "Poisson augmentation requires a model using the "
+                        "separate neighbourhood batch interface"
+                    )
                 model_outputs = model(contextual)
             reconstruction, mean, log_variance = model_outputs[:3]
             vae_loss, reconstruction_loss, kl_loss = msipl_vae_loss(
@@ -346,6 +425,20 @@ def train_vae(
             totals["kl"] += float(kl_loss.detach()) * sample_count
             totals["spatial"] += float(spatial_loss.detach()) * sample_count
             totals["spatial_pairs"] += spatial_pairs
+            if poisson_effective_count is None:
+                central_l1 = 0.0
+                central_cosine = 1.0
+            else:
+                central_l1 = float(
+                    (central_input - target).abs().sum(dim=1).mean().detach()
+                )
+                central_cosine = float(
+                    functional.cosine_similarity(
+                        central_input, target, dim=1, eps=1e-12
+                    ).mean().detach()
+                )
+            totals["poisson_central_l1"] += central_l1 * sample_count
+            totals["poisson_central_cosine"] += central_cosine * sample_count
             totals["samples"] += sample_count
 
         if uses_cuda:
@@ -369,6 +462,17 @@ def train_vae(
             ),
             "spatial_loss_scale": float(spatial_loss_scale),
             "spatial_pairs": totals["spatial_pairs"],
+            "poisson_effective_count": (
+                float(poisson_effective_count)
+                if poisson_effective_count is not None
+                else None
+            ),
+            "poisson_central_l1": (
+                totals["poisson_central_l1"] / totals["samples"]
+            ),
+            "poisson_central_cosine": (
+                totals["poisson_central_cosine"] / totals["samples"]
+            ),
             "samples_seen": totals["samples"],
             "epoch_seconds": epoch_seconds,
             "samples_per_second": totals["samples"] / epoch_seconds,
@@ -441,6 +545,18 @@ def train_vae(
         "beta": beta,
         "spatial_lambda": spatial_lambda,
         "spatial_loss_scale": spatial_loss_scale,
+        "poisson_augmentation": poisson_effective_count is not None,
+        "poisson_effective_count": (
+            float(poisson_effective_count)
+            if poisson_effective_count is not None
+            else None
+        ),
+        "poisson_rule": (
+            "training inputs only: Poisson(TIC-normalized spectrum * "
+            "effective_count), then TIC renormalize; decoder target stays clean"
+            if poisson_effective_count is not None
+            else None
+        ),
         "seed": seed,
         "device": str(torch_device),
         "device_name": device_name,

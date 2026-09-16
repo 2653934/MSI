@@ -51,6 +51,14 @@ def main():
         default="unit",
         help="Scale applied to latent spatial MSE before multiplying by lambda.",
     )
+    parser.add_argument(
+        "--poisson-effective-count",
+        type=float,
+        help=(
+            "Enable training-input Poisson augmentation using this explicit "
+            "effective ion count; the clean central spectrum remains the target."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--checkpoint-interval", type=int, default=5)
     parser.add_argument("--resume-checkpoint", type=Path)
@@ -113,6 +121,7 @@ def main():
             learning_rate=args.learning_rate,
             spatial_lambda=args.spatial_lambda,
             spatial_loss_scale=spatial_loss_scale,
+            poisson_effective_count=args.poisson_effective_count,
             maximum_samples=None,
             seed=args.seed,
             device="cuda",
@@ -122,7 +131,8 @@ def main():
                 "spatial_lambda": args.spatial_lambda,
                 "spatial_loss_scale_name": args.spatial_loss_scale,
                 "spatial_loss_scale": spatial_loss_scale,
-                "poisson_augmentation": False,
+                "poisson_augmentation": args.poisson_effective_count is not None,
+                "poisson_effective_count": args.poisson_effective_count,
                 "initial_vae_sha256": initial_vae_hash,
                 "attention_input_scale": args.attention_input_scale,
             },
@@ -144,9 +154,13 @@ def main():
             "production reconstruction baseline"
             if args.variant == "central_only"
             else (
-                "spatial-loss pilot"
-                if args.spatial_lambda > 0
-                else "production neighbourhood baseline"
+                "Poisson augmentation pilot"
+                if args.poisson_effective_count is not None
+                else (
+                    "spatial-loss pilot"
+                    if args.spatial_lambda > 0
+                    else "production neighbourhood baseline"
+                )
             )
         ),
         "variant": args.variant,
@@ -162,7 +176,8 @@ def main():
             "spatial_lambda": args.spatial_lambda,
             "spatial_loss_scale_name": args.spatial_loss_scale,
             "spatial_loss_scale": spatial_loss_scale,
-            "poisson_augmentation": False,
+            "poisson_augmentation": args.poisson_effective_count is not None,
+            "poisson_effective_count": args.poisson_effective_count,
             "full_dataset": True,
         },
         "samples_per_epoch": metadata["samples_per_epoch"],

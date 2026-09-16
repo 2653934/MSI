@@ -13,7 +13,11 @@ from spatial_msipl.neighbourhood import (
     DepthwiseNeighbourhood,
     UniformMeanNeighbourhood,
 )
-from spatial_msipl.training import set_random_seed, train_vae
+from spatial_msipl.training import (
+    poisson_augment_tic_normalized,
+    set_random_seed,
+    train_vae,
+)
 
 
 class TinyNeighbourhoodDataset(Dataset):
@@ -145,6 +149,49 @@ class NeighbourhoodTests(unittest.TestCase):
             self.assertEqual(tuple(mean.shape), (2, 2))
             self.assertEqual(tuple(log_variance.shape), (2, 2))
             self.assertEqual(tuple(context.shape), (2, 3))
+
+    def test_poisson_augmentation_is_seeded_tic_normalized_and_non_mutating(self):
+        spectra = torch.tensor(
+            [[0.2, 0.3, 0.5], [0.0, 0.0, 0.0]], dtype=torch.float32
+        )
+        original = spectra.clone()
+        set_random_seed(19)
+        first = poisson_augment_tic_normalized(spectra, 100.0)
+        set_random_seed(19)
+        second = poisson_augment_tic_normalized(spectra, 100.0)
+
+        torch.testing.assert_close(first, second)
+        torch.testing.assert_close(spectra, original)
+        torch.testing.assert_close(first[0].sum(), torch.tensor(1.0))
+        torch.testing.assert_close(first[1], torch.zeros(3))
+
+    def test_poisson_augmentation_keeps_clean_decoder_target(self):
+        set_random_seed(1)
+        model = NeighbourhoodSpatialVAE(
+            spectral_dim=6,
+            neighbourhood="uniform_mean",
+            hidden_dim=4,
+            latent_dim=2,
+        )
+        dataset = TinyNeighbourhoodDataset()
+        clean_targets = dataset.central.clone()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            metadata, history = train_vae(
+                model=model,
+                dataset=dataset,
+                output_directory=temporary_directory,
+                epochs=1,
+                batch_size=8,
+                seed=1,
+                poisson_effective_count=100.0,
+                save_checkpoint=False,
+            )
+
+        torch.testing.assert_close(dataset.central, clean_targets)
+        self.assertTrue(metadata["poisson_augmentation"])
+        self.assertEqual(metadata["poisson_effective_count"], 100.0)
+        self.assertGreater(history[0]["poisson_central_l1"], 0.0)
+        self.assertLess(history[0]["poisson_central_cosine"], 1.0)
 
     def test_seeded_variants_start_with_identical_vae_weights(self):
         states = []
