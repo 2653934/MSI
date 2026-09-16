@@ -1,0 +1,50 @@
+test_original_scale_preserves_original_outputs (test_attention_scaling.AttentionScalingTests.test_original_scale_preserves_original_outputs) ... ok
+test_scaling_changes_projection_only_and_restores_on_exception (test_attention_scaling.AttentionScalingTests.test_scaling_changes_projection_only_and_restores_on_exception) ... ok
+test_short_run_reports_actual_projection_gradients (test_attention_scaling.AttentionScalingTests.test_short_run_reports_actual_projection_gradients) ... ok
+test_gmm_posterior_is_normalized_and_differentiable (test_attribution.AttributionTests.test_gmm_posterior_is_normalized_and_differentiable) ... ok
+test_identical_input_and_baseline_have_zero_attribution (test_attribution.AttributionTests.test_identical_input_and_baseline_have_zero_attribution) ... ok
+test_integrated_gradients_is_complete_and_separates_paths (test_attribution.AttributionTests.test_integrated_gradients_is_complete_and_separates_paths) ... ok
+test_morans_i_is_positive_for_a_smooth_spatial_gradient (test_evaluation.SpatialEvaluationTests.test_morans_i_is_positive_for_a_smooth_spatial_gradient) ... ok
+test_morans_i_is_undefined_for_constant_values (test_evaluation.SpatialEvaluationTests.test_morans_i_is_undefined_for_constant_values) ... ok
+test_tiles_cover_each_pixel_once_and_exclude_immediate_halo (test_evaluation.SpatialEvaluationTests.test_tiles_cover_each_pixel_once_and_exclude_immediate_halo) ... ok
+test_central_only_control_has_no_context_input (test_model.SpatialVAETests.test_central_only_control_has_no_context_input) ... ok
+test_encoder_and_decoder_dimensions (test_model.SpatialVAETests.test_encoder_and_decoder_dimensions) ... ok
+test_loss_returns_finite_separate_terms (test_model.SpatialVAETests.test_loss_returns_finite_separate_terms) ... ok
+test_spatial_loss_is_differentiable_when_batch_has_no_pairs (test_model.SpatialVAETests.test_spatial_loss_is_differentiable_when_batch_has_no_pairs) ... ok
+test_spatial_loss_uses_each_adjacent_pair_once (test_model.SpatialVAETests.test_spatial_loss_uses_each_adjacent_pair_once) ... ok
+test_training_can_measure_without_saving_checkpoint (test_model.SpatialVAETests.test_training_can_measure_without_saving_checkpoint) ... ok
+test_training_keeps_a_multi_sample_final_batch (test_model.SpatialVAETests.test_training_keeps_a_multi_sample_final_batch) ... ok
+test_training_records_losses_and_saves_checkpoint (test_model.SpatialVAETests.test_training_records_losses_and_saves_checkpoint) ... ok
+test_training_resumes_from_last_complete_epoch (test_model.SpatialVAETests.test_training_resumes_from_last_complete_epoch) ... ok
+test_all_variants_share_the_same_vae_output_contract (test_neighbourhood.NeighbourhoodTests.test_all_variants_share_the_same_vae_output_contract) ... ok
+test_attention_is_orientation_free_and_masks_missing_slots (test_neighbourhood.NeighbourhoodTests.test_attention_is_orientation_free_and_masks_missing_slots) ... ok
+test_attention_scale_is_explicit_and_default_is_backward_compatible (test_neighbourhood.NeighbourhoodTests.test_attention_scale_is_explicit_and_default_is_backward_compatible) ... ok
+test_depthwise_starts_as_uniform_and_receives_gradients (test_neighbourhood.NeighbourhoodTests.test_depthwise_starts_as_uniform_and_receives_gradients) ... ok
+test_isolated_pixel_produces_zero_context_without_nan (test_neighbourhood.NeighbourhoodTests.test_isolated_pixel_produces_zero_context_without_nan) ... ok
+test_neighbourhood_model_uses_shared_training_loop (test_neighbourhood.NeighbourhoodTests.test_neighbourhood_model_uses_shared_training_loop) ... ok
+test_poisson_augmentation_is_seeded_tic_normalized_and_non_mutating (test_neighbourhood.NeighbourhoodTests.test_poisson_augmentation_is_seeded_tic_normalized_and_non_mutating) ... ok
+test_poisson_augmentation_keeps_clean_decoder_target (test_neighbourhood.NeighbourhoodTests.test_poisson_augmentation_keeps_clean_decoder_target) ... ok
+test_seeded_variants_start_with_identical_vae_weights (test_neighbourhood.NeighbourhoodTests.test_seeded_variants_start_with_identical_vae_weights) ... ok
+test_separate_poisson_generator_does_not_advance_model_rng (test_neighbourhood.NeighbourhoodTests.test_separate_poisson_generator_does_not_advance_model_rng) ... ok
+test_training_logs_spatial_loss_separately (test_neighbourhood.NeighbourhoodTests.test_training_logs_spatial_loss_separately) ... ok
+test_uniform_mean_ignores_missing_slots (test_neighbourhood.NeighbourhoodTests.test_uniform_mean_ignores_missing_slots) ... ok
+test_measured_neighbours_boundaries_and_shapes (test_preprocessing.PreprocessingTests.test_measured_neighbours_boundaries_and_shapes) ... ok
+test_tic_normalization_and_zero_spectrum (test_preprocessing.PreprocessingTests.test_tic_normalization_and_zero_spectrum) ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 16.997s
+
+OK
+Traceback (most recent call last):
+  File "/home-mscluster/zsuliman/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py", line 628, in <module>
+    main()
+  File "/home-mscluster/zsuliman/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py", line 449, in main
+    faithfulness = deletion_faithfulness(
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home-mscluster/zsuliman/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py", line 216, in deletion_faithfulness
+    changed_central, changed_neighbours = replace_bins(
+                                          ^^^^^^^^^^^^^
+  File "/home-mscluster/zsuliman/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py", line 175, in replace_bins
+    changed_central[:, bins] = mean_spectrum[bins]
+                               ~~~~~~~~~~~~~^^^^^^
+ValueError: At least one stride in the given numpy array is negative, and tensors with negative strides are not currently supported. (You can probably work around this by making a copy of your array  with array.copy().) 

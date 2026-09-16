@@ -212,7 +212,13 @@ def deletion_faithfulness(
                 ("integrated_gradients", rankings[component]),
                 ("first_layer_l2", first_layer_ranking),
             ):
-                bins = np.asarray(ranking[:budget], dtype=np.int64)
+                # Descending NumPy rankings are commonly produced with [::-1],
+                # which has a negative stride.  PyTorch cannot use such an
+                # array for advanced indexing, so make the boundary explicit
+                # and contiguous before indexing GPU tensors.
+                bins = np.ascontiguousarray(
+                    ranking[:budget], dtype=np.int64
+                )
                 changed_central, changed_neighbours = replace_bins(
                     central, neighbours, mask, mean_spectrum, bins
                 )
@@ -442,10 +448,10 @@ def main():
     first_context = first_context.cpu().numpy()
     first_combined = first_central + first_context
     rankings = {
-        component: np.argsort(values["combined_absolute_mean"])[::-1]
+        component: np.argsort(values["combined_absolute_mean"])[::-1].copy()
         for component, values in aggregate.items()
     }
-    first_layer_ranking = np.argsort(first_combined)[::-1]
+    first_layer_ranking = np.argsort(first_combined)[::-1].copy()
     faithfulness = deletion_faithfulness(
         model,
         dataset,
