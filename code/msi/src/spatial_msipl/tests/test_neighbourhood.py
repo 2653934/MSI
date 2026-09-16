@@ -193,6 +193,20 @@ class NeighbourhoodTests(unittest.TestCase):
         self.assertGreater(history[0]["poisson_central_l1"], 0.0)
         self.assertLess(history[0]["poisson_central_cosine"], 1.0)
 
+    def test_separate_poisson_generator_does_not_advance_model_rng(self):
+        spectra = torch.tensor([[0.2, 0.3, 0.5]], dtype=torch.float32)
+        set_random_seed(23)
+        expected_next_draw = torch.rand(4)
+
+        set_random_seed(23)
+        poisson_generator = torch.Generator().manual_seed(29)
+        poisson_augment_tic_normalized(
+            spectra, 100.0, generator=poisson_generator
+        )
+        actual_next_draw = torch.rand(4)
+
+        torch.testing.assert_close(actual_next_draw, expected_next_draw)
+
     def test_seeded_variants_start_with_identical_vae_weights(self):
         states = []
         for name in ("uniform_mean", "depthwise", "attention"):
