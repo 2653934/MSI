@@ -39,6 +39,16 @@ mscluster65
   Status: Avoid relying on this node for GPU work until cluster configuration
   is clarified. Other CPU-oriented jobs have run on this node.
 
+mscluster48
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. The attribution-sampling stability repeat stopped at the
+  CUDA preflight before loading the model.
+  Evidence: job 55605; logs/ig-stability-55605.err. Matching seed 2 and seed 3
+  jobs continued normally on mscluster42 and mscluster43.
+  Classification: GPU/CUDA unavailable for this job; current node health and
+  root cause have not been established.
+  Status: Exclude from our GPU jobs pending clarification.
+
 mscluster74
   Symptoms: (1) A cancelled S3PL job remained in Slurm state COMPLETING (CG)
   for an unusually long time; Slurm reported Reason=Prolog and ExitCode=0:0.
@@ -94,4 +104,4 @@ mscluster50
   Classification: Repeated CUDA access failure in our environment; root cause
   and current node health have not been established.
 
-Last updated: 2026-09-14
+Last updated: 2026-09-16
