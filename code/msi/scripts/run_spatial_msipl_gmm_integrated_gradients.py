@@ -46,6 +46,15 @@ def parse_arguments():
     parser.add_argument("--random-repeats", type=int, default=10)
     parser.add_argument("--top-candidates", type=int, default=50)
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument(
+        "--sampling-seed",
+        type=int,
+        default=None,
+        help=(
+            "Seed used only to choose attribution and held-out faithfulness "
+            "pixels. Defaults to --seed so existing runs remain reproducible."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -350,6 +359,7 @@ def save_faithfulness_figure(records, output):
 
 def main():
     args = parse_arguments()
+    sampling_seed = args.seed if args.sampling_seed is None else args.sampling_seed
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for the attribution pilot")
     device = torch.device("cuda")
@@ -386,7 +396,7 @@ def main():
         labels,
         args.attribution_per_cluster,
         args.faithfulness_per_cluster,
-        args.seed + 700,
+        sampling_seed + 700,
     )
     mean_spectrum = torch.as_tensor(mean_spectrum_np, device=device)
     aggregate = {}
@@ -462,7 +472,7 @@ def main():
         gmm_parameters,
         sorted(set(args.deletion_budgets)),
         args.random_repeats,
-        args.seed + 1700,
+        sampling_seed + 1700,
         device,
     )
 
@@ -596,7 +606,8 @@ def main():
             "integration": "trapezoidal rule including both endpoints",
             "attribution_pixels_per_component": args.attribution_per_cluster,
             "central_context_combination": "per-bin |central IG| + sum over valid neighbour slots of |neighbour IG|",
-            "selection_seed": args.seed + 700,
+            "sampling_seed": sampling_seed,
+            "selection_seed": sampling_seed + 700,
             "completeness": {
                 "passed": completeness_passed,
                 "median_absolute_residual": float(np.median(residuals)),
@@ -619,7 +630,7 @@ def main():
             "replacement": "selected bins in centre and all valid neighbours are replaced by section-mean values without renormalising other bins",
             "budgets": sorted(set(args.deletion_budgets)),
             "random_repeats": args.random_repeats,
-            "seed": args.seed + 1700,
+            "seed": sampling_seed + 1700,
             "records": faithfulness,
         },
         "runtime_seconds": time.perf_counter() - started,
