@@ -49,6 +49,24 @@ mscluster48
   root cause have not been established.
   Status: Exclude from our GPU jobs pending clarification.
 
+mscluster57
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. Frozen GBM validation training stopped at the preflight
+  before loading a model.
+  Evidence: job 55627; logs/spatial-gbm-val-55627.err.
+  Classification: GPU/CUDA unavailable for this job; current node health and
+  root cause have not been established.
+  Status: Exclude from our GPU jobs pending clarification.
+
+mscluster62
+  Symptom: PyTorch CUDA initialization repeatedly returned an unknown error
+  and exposed zero CUDA devices. Multiple independent original and continuation
+  jobs stopped at the preflight before loading a model.
+  Evidence: jobs 55616, 55618, 55628, and 55631-55638; corresponding
+  logs/spatial-gbm-val-*.err files and Slurm accounting.
+  Classification: Repeated GPU/CUDA access failure in our environment.
+  Status: Known problematic node for the current GPU workflow; exclude it.
+
 mscluster74
   Symptoms: (1) A cancelled S3PL job remained in Slurm state COMPLETING (CG)
   for an unusually long time; Slurm reported Reason=Prolog and ExitCode=0:0.
@@ -104,4 +122,4 @@ mscluster50
   Classification: Repeated CUDA access failure in our environment; root cause
   and current node health have not been established.
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
