@@ -59,6 +59,13 @@ def parse_arguments():
     parser.add_argument("--checkpoint-base", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        choices=tuple(MODEL_SPECS),
+        default=list(MODEL_SPECS),
+        help="Models to compare; defaults to every development variant.",
+    )
     return parser.parse_args()
 
 
@@ -146,7 +153,7 @@ def deterministic_reconstruction_metrics(model, dataset, batch_size, device):
     return {name: value / pixels for name, value in totals.items()}, pixels
 
 
-def save_figure(metrics, output):
+def save_figure(metrics, dataset_name, output):
     names = list(metrics)
     labels = [MODEL_SPECS[name]["label"] for name in names]
     colours = [MODEL_SPECS[name]["colour"] for name in names]
@@ -163,7 +170,7 @@ def save_figure(metrics, output):
         axis.set_title(title)
         axis.set_ylabel("Higher is better" if higher_is_better else "Lower is better")
         axis.ticklabel_format(axis="y", style="sci", scilimits=(-3, 4))
-    figure.suptitle("Controlled deterministic reconstruction on GBM108_positive")
+    figure.suptitle(f"Controlled deterministic reconstruction on {dataset_name}")
     figure.tight_layout()
     figure.savefig(output / "reconstruction_comparison.png", dpi=220, bbox_inches="tight")
     plt.close(figure)
@@ -177,15 +184,17 @@ def main():
         raise ValueError("batch size must be positive")
 
     args.output.mkdir(parents=True, exist_ok=True)
+    dataset_name = args.input.stem
     device = torch.device("cuda")
     dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
     results = {}
     try:
-        for name, spec in MODEL_SPECS.items():
+        for name in args.models:
+            spec = MODEL_SPECS[name]
             checkpoint_path = (
                 args.checkpoint_base
                 / spec["checkpoint_group"]
-                / "GBM108_positive_seed1"
+                / f"{dataset_name}_seed1"
                 / name
                 / "checkpoint.pt"
             )
@@ -209,9 +218,9 @@ def main():
     finally:
         dataset.close()
 
-    save_figure(results, args.output)
+    save_figure(results, dataset_name, args.output)
     comparison = {
-        "dataset": "GBM108_positive",
+        "dataset": dataset_name,
         "evaluation": "deterministic decoder output from encoder mean",
         "scope": "in-sample reconstruction of the label-free full-section training data",
         "interpretation": {
