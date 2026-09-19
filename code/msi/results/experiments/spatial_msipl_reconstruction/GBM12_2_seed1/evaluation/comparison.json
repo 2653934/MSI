@@ -1,0 +1,34 @@
+{
+  "dataset": "GBM12_2",
+  "evaluation": "deterministic decoder output from encoder mean",
+  "scope": "in-sample reconstruction of the label-free full-section training data",
+  "interpretation": {
+    "scaled_categorical_cross_entropy": "lower is better; matches the training reconstruction definition",
+    "mean_squared_error": "lower is better; calculated after decoder TIC normalization",
+    "mean_absolute_error": "lower is better; calculated after decoder TIC normalization",
+    "cosine_similarity": "higher is better; calculated after decoder TIC normalization"
+  },
+  "models": {
+    "central_only": {
+      "label": "Centre-only VAE",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/reconstruction/GBM12_2_seed1/central_only/checkpoint.pt",
+      "parameters": 87199312,
+      "pixels": 3306,
+      "scaled_categorical_cross_entropy": 566083.3720508167,
+      "mean_squared_error": 3.1139892815306345e-09,
+      "mean_absolute_error": 3.938331517052295e-06,
+      "cosine_similarity": 0.9808200806180997
+    },
+    "uniform_mean": {
+      "label": "Uniform mean",
+      "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/GBM12_2_seed1/uniform_mean/checkpoint.pt",
+      "parameters": 130751056,
+      "pixels": 3306,
+      "scaled_categorical_cross_entropy": 566104.6545674531,
+      "mean_squared_error": 3.347481836793579e-09,
+      "mean_absolute_error": 3.957998258818371e-06,
+      "cosine_similarity": 0.9793566595909455
+    }
+  },
+  "status": "complete"
+}

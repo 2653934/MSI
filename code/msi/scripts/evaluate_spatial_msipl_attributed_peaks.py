@@ -212,7 +212,7 @@ def save_cluster_mapping(mapping, expert, components, posterior, x, y, output):
     plt.close(fig)
 
 
-def save_mscf1_plot(methods, output):
+def save_mscf1_plot(methods, matched_count, output):
     labels = [str(value) for value in THRESHOLDS] + ["mSCF1"]
     x = np.arange(len(labels))
     width = 0.25
@@ -234,7 +234,7 @@ def save_mscf1_plot(methods, output):
     ax.set_xlabel("PCC threshold / mean")
     ax.set_ylabel("F1 (higher is better)")
     ax.set_ylim(0, 1)
-    ax.set_title("Matched 530-bin peak evaluation")
+    ax.set_title(f"Matched {matched_count}-bin peak evaluation")
     ax.legend()
     fig.tight_layout()
     fig.savefig(output, dpi=220, bbox_inches="tight")
@@ -396,7 +396,7 @@ def main():
     )
 
     write_selected_csv(
-        args.output / "ig_matched_530_bins.csv",
+        args.output / f"ig_matched_{args.matched_count}_bins.csv",
         ig_indices,
         mz,
         ig_score,
@@ -404,7 +404,7 @@ def main():
         sources=ig_sources,
     )
     write_selected_csv(
-        args.output / "first_layer_l2_matched_530_bins.csv",
+        args.output / f"first_layer_l2_matched_{args.matched_count}_bins.csv",
         l2_indices,
         mz,
         first_layer_score,
@@ -438,7 +438,11 @@ def main():
         y,
         args.output / "gmm_expert_mapping.png",
     )
-    save_mscf1_plot(methods, args.output / "matched_mscf1_comparison.png")
+    save_mscf1_plot(
+        methods,
+        args.matched_count,
+        args.output / "matched_mscf1_comparison.png",
+    )
     save_ion_images(
         ion_values,
         ion_indices,
