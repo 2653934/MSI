@@ -17,7 +17,8 @@ Scheduling policy from 2026-09-20
   a node is broken. GPU jobs may use these nodes again. The attribution
   campaign now runs an actual CUDA allocation and computation warm-up. If that
   warm-up fails, the job records the node, excludes it only from that job's
-  subsequent attempts, and requeues with a bounded retry limit. A successful
+  retry chain, and submits a bounded replacement job. Dataset gate jobs keep
+  the final campaign summary dependent on the latest replacement. A successful
   warm-up is new evidence that the node is usable at that time.
 
 mscluster44
@@ -41,8 +42,11 @@ mscluster45
 
 mscluster65
   Symptom: PyTorch reported that CUDA was unavailable. The S3PL imzML pilot
-  stopped safely before attempting CPU training.
-  Evidence: job 53339; logs/s3pl-imzml-pilot-53339.err
+  and the whole-GBM attribution canary both stopped safely before model loading.
+  Evidence: jobs 53339 and 56971; logs/s3pl-imzml-pilot-53339.err and
+  logs/gbm-ig-56971.err. Job 56971 also demonstrated that Slurm would not let a
+  running job update its own excluded-node list, motivating replacement jobs
+  with dataset gates instead of in-place requeueing.
   Classification: GPU/CUDA unavailable for this job.
   Status: Avoid relying on this node for GPU work until cluster configuration
   is clarified. Other CPU-oriented jobs have run on this node.

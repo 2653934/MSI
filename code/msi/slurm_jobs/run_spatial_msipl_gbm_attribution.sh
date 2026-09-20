@@ -35,8 +35,10 @@ CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASE
 ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/uniform_mean"
 LEGACY_DIR="$PROJECT_ROOT/results/baselines/msipl/massnet/$DATASET"
 EVALUATION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed1/uniform_mean"
-MAX_CUDA_REQUEUES=4
-FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${SLURM_JOB_ID}.failed_nodes"
+MAX_CUDA_RETRIES=4
+CUDA_RETRY_COUNT="${CUDA_RETRY_COUNT:-0}"
+CUDA_RETRY_ROOT="${CUDA_RETRY_ROOT:-$SLURM_JOB_ID}"
+FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${CUDA_RETRY_ROOT}.failed_nodes"
 
 mkdir -p "$PROJECT_ROOT/logs"
 
@@ -69,11 +71,10 @@ print(json.dumps({
 PY
 then
     failed_node="${SLURMD_NODENAME:-$(hostname -s)}"
-    restart_count="${SLURM_RESTART_COUNT:-0}"
     echo "$failed_node" >> "$FAILED_NODES_FILE"
-    echo "CUDA warm-up failed on $failed_node (attempt $((restart_count + 1)))." >&2
+    echo "CUDA warm-up failed on $failed_node (attempt $((CUDA_RETRY_COUNT + 1)))." >&2
 
-    if (( restart_count >= MAX_CUDA_REQUEUES )); then
+    if (( CUDA_RETRY_COUNT >= MAX_CUDA_RETRIES )); then
         echo "CUDA retry limit reached; job will fail for manual inspection." >&2
         exit 1
     fi
@@ -93,14 +94,37 @@ then
         esac
     done < <(sort -u "$FAILED_NODES_FILE")
 
-    echo "Requeueing job $SLURM_JOB_ID and excluding: $combined_excludes" >&2
-    if scontrol update JobId="$SLURM_JOB_ID" ExcNodeList="$combined_excludes"; then
-        scontrol requeue "$SLURM_JOB_ID"
-        exit 0
+    next_retry=$((CUDA_RETRY_COUNT + 1))
+    export_spec="ALL,CUDA_RETRY_COUNT=$next_retry,CUDA_RETRY_ROOT=$CUDA_RETRY_ROOT"
+    if [ -n "${GBM_GATE_JOB_ID:-}" ]; then
+        export_spec+=",GBM_GATE_JOB_ID=$GBM_GATE_JOB_ID"
     fi
 
-    echo "Automatic requeue was rejected by Slurm; rerun manually with the recorded exclusions." >&2
-    exit 1
+    echo "Submitting a replacement and excluding: $combined_excludes" >&2
+    if ! replacement_submission=$(sbatch \
+        --exclude="$combined_excludes" \
+        --export="$export_spec" \
+        --job-name="${SLURM_JOB_NAME:-gbm-ig}" \
+        "$PROJECT_ROOT/slurm_jobs/run_spatial_msipl_gbm_attribution.sh" \
+        "$DATASET" "$MATCHED_COUNT"); then
+        echo "Replacement submission failed; rerun manually with the recorded exclusions." >&2
+        exit 1
+    fi
+    replacement_job=${replacement_submission##* }
+
+    if [ -n "${GBM_GATE_JOB_ID:-}" ]; then
+        if ! scontrol update \
+            JobId="$GBM_GATE_JOB_ID" \
+            Dependency="afterok:$replacement_job"; then
+            echo "Could not repoint gate job $GBM_GATE_JOB_ID to replacement $replacement_job." >&2
+            scancel "$replacement_job" || true
+            exit 1
+        fi
+        echo "Gate job $GBM_GATE_JOB_ID now waits for replacement $replacement_job." >&2
+    fi
+
+    echo "Submitted replacement job $replacement_job (retry $next_retry/$MAX_CUDA_RETRIES)." >&2
+    exit 0
 fi
 
 cd "$PROJECT_ROOT"
