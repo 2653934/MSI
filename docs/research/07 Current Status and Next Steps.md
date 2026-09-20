@@ -25,7 +25,7 @@ This supports nonlinear attribution as a peak-ranking method. It does not yet
 isolate whether neighbourhood context adds value because the legacy comparison
 changes both model architecture and explanation method.
 
-## Running next: matched centre-only IG control
+## Running now: matched centre-only IG control
 
 Use the frozen 100-epoch centre-only checkpoints. No retraining is required.
 The control holds constant:
@@ -40,9 +40,15 @@ The control holds constant:
 The intended difference is only the encoder input: centre spectrum alone versus
 centre plus uniform-mean neighbourhood context.
 
-Run a single canary first. If it completes and passes completeness, submit the
-remaining controls. The final summary reports spatial IG minus centre-only IG,
-centre-only IG minus legacy msiPL, win/loss counts and paired tests.
+The `GBM108_negative` canary completed and passed all 37 tests and IG
+completeness. Centre-only IG achieved mSCF1 0.5321 versus 0.5400 for spatial IG,
+0.4571 for legacy msiPL and 0.1142 for centre-only first-layer L2. Spatial
+context therefore added 0.0079 mSCF1 (1.5%) on this section, while nonlinear IG
+accounted for most of the gain over legacy msiPL.
+
+The remaining seven controls are submitted as jobs `57245`-`57257`. Summary
+job `57258` waits for their gates and will report spatial IG minus centre-only
+IG, centre-only IG minus legacy msiPL, win/loss counts and paired tests.
 
 ## Decision after the control
 
@@ -59,8 +65,8 @@ a specific unresolved question that justifies it.
 ## Remaining sequence
 
 ```text
-centre-only IG canary
-  -> remaining centre-only IG sections
+centre-only IG canary complete
+  -> seven remaining centre-only IG sections queued
   -> aggregate context-control result
   -> frozen CAC validation
   -> cross-dataset synthesis

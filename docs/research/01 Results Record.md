@@ -227,8 +227,28 @@ All eight Integrated Gradients completeness checks passed.
 
 ## Matched centre-only attribution control
 
-The next frozen experiment applies the same GMM-targeted Integrated Gradients
-procedure to the already-trained centre-only VAEs. Dataset, seed, 100-epoch
-training duration, hidden and latent dimensions, GMM settings, attribution
-settings and peak budget remain matched. This isolates the contribution of
-neighbourhood context from the contribution of nonlinear explanation.
+The same GMM-targeted Integrated Gradients procedure is being applied to the
+already-trained centre-only VAEs. Dataset, seed, 100-epoch training duration,
+hidden and latent dimensions, GMM settings, attribution settings and peak
+budget remain matched. This isolates the contribution of neighbourhood context
+from the contribution of nonlinear explanation.
+
+The `GBM108_negative` canary completed successfully:
+
+| Method | mSCF1 |
+|---|---:|
+| Spatial IG (`uniform_mean`) | **0.5400** |
+| Centre-only IG | **0.5321** |
+| Legacy msiPL | 0.4571 |
+| Centre-only first-layer L2 | 0.1142 |
+
+Spatial context added 0.0079 mSCF1, or approximately 1.5%, beyond centre-only
+IG on this section. Centre-only IG still exceeded legacy msiPL by 0.0750. This
+suggests that nonlinear attribution explains most of the improvement on this
+section, while the neighbourhood provides a smaller increment. It is not yet a
+whole-dataset conclusion.
+
+All 37 tests passed, the centre-only attribution had a structurally zero
+neighbour path, and the IG completeness check passed. The seven remaining
+centre-only sections are queued; dependent summary job `57258` will produce the
+paired aggregate comparison.
