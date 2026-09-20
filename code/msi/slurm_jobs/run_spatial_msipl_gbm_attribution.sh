@@ -7,7 +7,8 @@
 #SBATCH --time=04:00:00
 #SBATCH --mem=48G
 #SBATCH --exclusive
-#SBATCH --exclude=mscluster44,mscluster45,mscluster48,mscluster50,mscluster51,mscluster57,mscluster62,mscluster65,mscluster74,mscluster75,mscluster83
+#SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --output=logs/gbm-ig-%j.out
 #SBATCH --error=logs/gbm-ig-%j.err
 
@@ -34,13 +35,73 @@ CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASE
 ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/uniform_mean"
 LEGACY_DIR="$PROJECT_ROOT/results/baselines/msipl/massnet/$DATASET"
 EVALUATION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed1/uniform_mean"
+MAX_CUDA_REQUEUES=4
+FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${SLURM_JOB_ID}.failed_nodes"
 
 mkdir -p "$PROJECT_ROOT/logs"
+
+if grep -q '"status": "complete"' "$EVALUATION_OUTPUT/summary.json" 2>/dev/null; then
+    echo "$DATASET already has a complete attribution evaluation; nothing to do."
+    exit 0
+fi
+
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env
 export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 
-python -c 'import sys, torch; sys.exit(0 if torch.cuda.is_available() else "CUDA is unavailable; GBM attribution stopped before loading the model.")'
+if ! python - <<'PY'
+import json
+import torch
+
+if not torch.cuda.is_available():
+    raise SystemExit("CUDA is unavailable")
+
+device = torch.device("cuda:0")
+left = torch.randn((1024, 1024), device=device)
+right = left @ left.T
+checksum = float(right[0, 0].item())
+torch.cuda.synchronize()
+print(json.dumps({
+    "cuda_warmup": "passed",
+    "device": torch.cuda.get_device_name(device),
+    "checksum": checksum,
+}), flush=True)
+PY
+then
+    failed_node="${SLURMD_NODENAME:-$(hostname -s)}"
+    restart_count="${SLURM_RESTART_COUNT:-0}"
+    echo "$failed_node" >> "$FAILED_NODES_FILE"
+    echo "CUDA warm-up failed on $failed_node (attempt $((restart_count + 1)))." >&2
+
+    if (( restart_count >= MAX_CUDA_REQUEUES )); then
+        echo "CUDA retry limit reached; job will fail for manual inspection." >&2
+        exit 1
+    fi
+
+    combined_excludes=""
+    while IFS= read -r node; do
+        [ -n "$node" ] || continue
+        case ",$combined_excludes," in
+            *",$node,"*) ;;
+            *)
+                if [ -z "$combined_excludes" ]; then
+                    combined_excludes="$node"
+                else
+                    combined_excludes="$combined_excludes,$node"
+                fi
+                ;;
+        esac
+    done < <(sort -u "$FAILED_NODES_FILE")
+
+    echo "Requeueing job $SLURM_JOB_ID and excluding: $combined_excludes" >&2
+    if scontrol update JobId="$SLURM_JOB_ID" ExcNodeList="$combined_excludes"; then
+        scontrol requeue "$SLURM_JOB_ID"
+        exit 0
+    fi
+
+    echo "Automatic requeue was rejected by Slurm; rerun manually with the recorded exclusions." >&2
+    exit 1
+fi
 
 cd "$PROJECT_ROOT"
 python -m unittest discover -s src/spatial_msipl/tests -v

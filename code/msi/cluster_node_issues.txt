@@ -12,6 +12,14 @@ while not exposing a usable NVIDIA GPU/CUDA runtime.
 Observed problematic nodes
 --------------------------
 
+Scheduling policy from 2026-09-20
+  These entries are historical observations, not permanent declarations that
+  a node is broken. GPU jobs may use these nodes again. The attribution
+  campaign now runs an actual CUDA allocation and computation warm-up. If that
+  warm-up fails, the job records the node, excludes it only from that job's
+  subsequent attempts, and requeues with a bounded retry limit. A successful
+  warm-up is new evidence that the node is usable at that time.
+
 mscluster44
   Symptom: PyTorch CUDA initialization returned an unknown error and exposed
   zero CUDA devices. Both attention-scaling pilots stopped at the CUDA
@@ -99,6 +107,15 @@ mscluster75
   Classification: Repeated GPU/CUDA access failure in our environment.
   Status: Known problematic node for the current GPU workflow; exclude it.
 
+mscluster76
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. All seven replacement whole-GBM attribution jobs stopped
+  at the CUDA preflight without producing partial attribution results.
+  Evidence: jobs 56798-56804; logs/gbm-ig-56798.err through
+  logs/gbm-ig-56804.err. Slurm accounting placed every job on mscluster76.
+  Classification: Repeated GPU/CUDA access failure in our environment.
+  Status: Known problematic node for the current GPU workflow; exclude it.
+
 
 How to identify a failed job's node
 -----------------------------------
@@ -131,4 +148,4 @@ mscluster50
   Classification: Repeated CUDA access failure in our environment; root cause
   and current node health have not been established.
 
-Last updated: 2026-09-19
+Last updated: 2026-09-20
