@@ -1,0 +1,490 @@
+{
+  "evaluation_version": 1,
+  "status": "complete",
+  "dataset": "GBM22_1",
+  "scope": "development-section attribution and matched-count peak evaluation",
+  "pixels": 3835,
+  "spectral_bins": 85062,
+  "cluster_mapping": {
+    "component_to_analysis_label": {
+      "0": 0,
+      "1": 1
+    },
+    "analysis_label_names": {
+      "0": "normal",
+      "1": "tumour"
+    },
+    "confusion_rows_components_columns_labels": [
+      [
+        2945,
+        0
+      ],
+      [
+        202,
+        688
+      ]
+    ],
+    "accuracy": 0.9473272490221643,
+    "balanced_accuracy": 0.9679059421671433,
+    "adjusted_rand_index": 0.7736618568285916,
+    "normalized_mutual_information": 0.6839959676357856,
+    "mapping_use": "evaluation and display only; expert labels did not fit the GMM or rank peaks"
+  },
+  "matched_peak_evaluation": {
+    "count": 589,
+    "selection": {
+      "integrated_gradients": "deterministic component-balanced round robin over combined absolute IG rankings",
+      "first_layer_l2": "descending combined central-plus-context first-layer L2",
+      "legacy_msipl": "existing LearnPeaks output"
+    },
+    "pcc_thresholds": [
+      0.3,
+      0.4,
+      0.5,
+      0.6
+    ],
+    "methods": {
+      "integrated_gradients": {
+        "selected_bins": 589,
+        "threshold_results": {
+          "0.3": {
+            "mixed_classes": {
+              "true_positive": 430,
+              "false_positive": 159,
+              "false_negative": 787,
+              "true_negative": 83686,
+              "recall": 0.3533278553820871,
+              "precision": 0.7300509337860781,
+              "F1": 0.47619047619047616
+            },
+            "true_bins_mixed": 1217,
+            "class_metrics": {
+              "1": {
+                "true_positive": 178,
+                "false_positive": 411,
+                "false_negative": 313,
+                "true_negative": 84160,
+                "recall": 0.3625254582484725,
+                "precision": 0.30220713073005095,
+                "F1": 0.3296296296296296
+              },
+              "2": {
+                "true_positive": 252,
+                "false_positive": 337,
+                "false_negative": 474,
+                "true_negative": 83999,
+                "recall": 0.34710743801652894,
+                "precision": 0.42784380305602715,
+                "F1": 0.3832699619771863
+              }
+            }
+          },
+          "0.4": {
+            "mixed_classes": {
+              "true_positive": 368,
+              "false_positive": 221,
+              "false_negative": 477,
+              "true_negative": 83996,
+              "recall": 0.43550295857988164,
+              "precision": 0.6247877758913413,
+              "F1": 0.5132496513249651
+            },
+            "true_bins_mixed": 845,
+            "class_metrics": {
+              "1": {
+                "true_positive": 137,
+                "false_positive": 452,
+                "false_negative": 204,
+                "true_negative": 84269,
+                "recall": 0.40175953079178883,
+                "precision": 0.23259762308998302,
+                "F1": 0.2946236559139785
+              },
+              "2": {
+                "true_positive": 231,
+                "false_positive": 358,
+                "false_negative": 273,
+                "true_negative": 84200,
+                "recall": 0.4583333333333333,
+                "precision": 0.3921901528013582,
+                "F1": 0.42268984446477587
+              }
+            }
+          },
+          "0.5": {
+            "mixed_classes": {
+              "true_positive": 318,
+              "false_positive": 271,
+              "false_negative": 272,
+              "true_negative": 84201,
+              "recall": 0.5389830508474577,
+              "precision": 0.5398981324278438,
+              "F1": 0.539440203562341
+            },
+            "true_bins_mixed": 590,
+            "class_metrics": {
+              "1": {
+                "true_positive": 100,
+                "false_positive": 489,
+                "false_negative": 136,
+                "true_negative": 84337,
+                "recall": 0.423728813559322,
+                "precision": 0.1697792869269949,
+                "F1": 0.24242424242424243
+              },
+              "2": {
+                "true_positive": 218,
+                "false_positive": 371,
+                "false_negative": 136,
+                "true_negative": 84337,
+                "recall": 0.615819209039548,
+                "precision": 0.3701188455008489,
+                "F1": 0.4623541887592789
+              }
+            }
+          },
+          "0.6": {
+            "mixed_classes": {
+              "true_positive": 262,
+              "false_positive": 327,
+              "false_negative": 133,
+              "true_negative": 84340,
+              "recall": 0.6632911392405063,
+              "precision": 0.44482173174872663,
+              "F1": 0.532520325203252
+            },
+            "true_bins_mixed": 395,
+            "class_metrics": {
+              "1": {
+                "true_positive": 63,
+                "false_positive": 526,
+                "false_negative": 84,
+                "true_negative": 84389,
+                "recall": 0.42857142857142855,
+                "precision": 0.10696095076400679,
+                "F1": 0.17119565217391305
+              },
+              "2": {
+                "true_positive": 199,
+                "false_positive": 390,
+                "false_negative": 49,
+                "true_negative": 84424,
+                "recall": 0.8024193548387096,
+                "precision": 0.3378607809847199,
+                "F1": 0.4755077658303465
+              }
+            }
+          }
+        },
+        "mixed_f1": {
+          "0.3": 0.47619047619047616,
+          "0.4": 0.5132496513249651,
+          "0.5": 0.539440203562341,
+          "0.6": 0.532520325203252
+        },
+        "mSCF1": 0.5153501640702586
+      },
+      "first_layer_l2": {
+        "selected_bins": 589,
+        "threshold_results": {
+          "0.3": {
+            "mixed_classes": {
+              "true_positive": 265,
+              "false_positive": 324,
+              "false_negative": 952,
+              "true_negative": 83521,
+              "recall": 0.21774856203779785,
+              "precision": 0.44991511035653653,
+              "F1": 0.29346622369878184
+            },
+            "true_bins_mixed": 1217,
+            "class_metrics": {
+              "1": {
+                "true_positive": 2,
+                "false_positive": 587,
+                "false_negative": 489,
+                "true_negative": 83984,
+                "recall": 0.004073319755600814,
+                "precision": 0.003395585738539898,
+                "F1": 0.003703703703703704
+              },
+              "2": {
+                "true_positive": 263,
+                "false_positive": 326,
+                "false_negative": 463,
+                "true_negative": 84010,
+                "recall": 0.3622589531680441,
+                "precision": 0.4465195246179966,
+                "F1": 0.4
+              }
+            }
+          },
+          "0.4": {
+            "mixed_classes": {
+              "true_positive": 217,
+              "false_positive": 372,
+              "false_negative": 628,
+              "true_negative": 83845,
+              "recall": 0.25680473372781065,
+              "precision": 0.3684210526315789,
+              "F1": 0.30264993026499304
+            },
+            "true_bins_mixed": 845,
+            "class_metrics": {
+              "1": {
+                "true_positive": 0,
+                "false_positive": 589,
+                "false_negative": 341,
+                "true_negative": 84132,
+                "recall": 0.0,
+                "precision": 0.0,
+                "F1": 0.0
+              },
+              "2": {
+                "true_positive": 217,
+                "false_positive": 372,
+                "false_negative": 287,
+                "true_negative": 84186,
+                "recall": 0.4305555555555556,
+                "precision": 0.3684210526315789,
+                "F1": 0.3970722781335773
+              }
+            }
+          },
+          "0.5": {
+            "mixed_classes": {
+              "true_positive": 164,
+              "false_positive": 425,
+              "false_negative": 426,
+              "true_negative": 84047,
+              "recall": 0.27796610169491526,
+              "precision": 0.27843803056027167,
+              "F1": 0.2782018659881255
+            },
+            "true_bins_mixed": 590,
+            "class_metrics": {
+              "1": {
+                "true_positive": 0,
+                "false_positive": 589,
+                "false_negative": 236,
+                "true_negative": 84237,
+                "recall": 0.0,
+                "precision": 0.0,
+                "F1": 0.0
+              },
+              "2": {
+                "true_positive": 164,
+                "false_positive": 425,
+                "false_negative": 190,
+                "true_negative": 84283,
+                "recall": 0.4632768361581921,
+                "precision": 0.27843803056027167,
+                "F1": 0.34782608695652173
+              }
+            }
+          },
+          "0.6": {
+            "mixed_classes": {
+              "true_positive": 116,
+              "false_positive": 473,
+              "false_negative": 279,
+              "true_negative": 84194,
+              "recall": 0.2936708860759494,
+              "precision": 0.1969439728353141,
+              "F1": 0.23577235772357724
+            },
+            "true_bins_mixed": 395,
+            "class_metrics": {
+              "1": {
+                "true_positive": 0,
+                "false_positive": 589,
+                "false_negative": 147,
+                "true_negative": 84326,
+                "recall": 0.0,
+                "precision": 0.0,
+                "F1": 0.0
+              },
+              "2": {
+                "true_positive": 116,
+                "false_positive": 473,
+                "false_negative": 132,
+                "true_negative": 84341,
+                "recall": 0.46774193548387094,
+                "precision": 0.1969439728353141,
+                "F1": 0.27718040621266427
+              }
+            }
+          }
+        },
+        "mixed_f1": {
+          "0.3": 0.29346622369878184,
+          "0.4": 0.30264993026499304,
+          "0.5": 0.2782018659881255,
+          "0.6": 0.23577235772357724
+        },
+        "mSCF1": 0.27752259441886945
+      },
+      "legacy_msipl": {
+        "selected_bins": 589,
+        "mixed_f1": {
+          "0.3": 0.3698781838316722,
+          "0.4": 0.3682008368200837,
+          "0.5": 0.3443596268023749,
+          "0.6": 0.3150406504065041
+        },
+        "mSCF1": 0.34936982446515874,
+        "threshold_results": {
+          "0.3": {
+            "class_metrics": {
+              "normal": {
+                "true_positive": 208,
+                "false_positive": 381,
+                "false_negative": 283,
+                "true_negative": 84190,
+                "recall": 0.42362525458248473,
+                "precision": 0.3531409168081494,
+                "F1": 0.3851851851851852
+              },
+              "tumour": {
+                "true_positive": 126,
+                "false_positive": 463,
+                "false_negative": 600,
+                "true_negative": 83873,
+                "recall": 0.17355371900826447,
+                "precision": 0.21392190152801357,
+                "F1": 0.19163498098859316
+              }
+            },
+            "mixed_classes": {
+              "true_positive": 334,
+              "false_positive": 255,
+              "false_negative": 883,
+              "true_negative": 83590,
+              "recall": 0.2744453574363188,
+              "precision": 0.567062818336163,
+              "F1": 0.3698781838316722
+            },
+            "true_bins_mixed": 1217
+          },
+          "0.4": {
+            "class_metrics": {
+              "normal": {
+                "true_positive": 158,
+                "false_positive": 431,
+                "false_negative": 183,
+                "true_negative": 84290,
+                "recall": 0.4633431085043988,
+                "precision": 0.26825127334465193,
+                "F1": 0.33978494623655914
+              },
+              "tumour": {
+                "true_positive": 106,
+                "false_positive": 483,
+                "false_negative": 398,
+                "true_negative": 84075,
+                "recall": 0.21031746031746032,
+                "precision": 0.1799660441426146,
+                "F1": 0.1939615736505032
+              }
+            },
+            "mixed_classes": {
+              "true_positive": 264,
+              "false_positive": 325,
+              "false_negative": 581,
+              "true_negative": 83892,
+              "recall": 0.31242603550295855,
+              "precision": 0.44821731748726656,
+              "F1": 0.3682008368200837
+            },
+            "true_bins_mixed": 845
+          },
+          "0.5": {
+            "class_metrics": {
+              "normal": {
+                "true_positive": 115,
+                "false_positive": 474,
+                "false_negative": 121,
+                "true_negative": 84352,
+                "recall": 0.4872881355932203,
+                "precision": 0.19524617996604415,
+                "F1": 0.2787878787878788
+              },
+              "tumour": {
+                "true_positive": 88,
+                "false_positive": 501,
+                "false_negative": 266,
+                "true_negative": 84207,
+                "recall": 0.24858757062146894,
+                "precision": 0.1494057724957555,
+                "F1": 0.18663838812301167
+              }
+            },
+            "mixed_classes": {
+              "true_positive": 203,
+              "false_positive": 386,
+              "false_negative": 387,
+              "true_negative": 84086,
+              "recall": 0.3440677966101695,
+              "precision": 0.34465195246179964,
+              "F1": 0.3443596268023749
+            },
+            "true_bins_mixed": 590
+          },
+          "0.6": {
+            "class_metrics": {
+              "normal": {
+                "true_positive": 80,
+                "false_positive": 509,
+                "false_negative": 67,
+                "true_negative": 84406,
+                "recall": 0.54421768707483,
+                "precision": 0.13582342954159593,
+                "F1": 0.21739130434782608
+              },
+              "tumour": {
+                "true_positive": 75,
+                "false_positive": 514,
+                "false_negative": 173,
+                "true_negative": 84300,
+                "recall": 0.3024193548387097,
+                "precision": 0.1273344651952462,
+                "F1": 0.17921146953405018
+              }
+            },
+            "mixed_classes": {
+              "true_positive": 155,
+              "false_positive": 434,
+              "false_negative": 240,
+              "true_negative": 84233,
+              "recall": 0.3924050632911392,
+              "precision": 0.2631578947368421,
+              "F1": 0.3150406504065041
+            },
+            "true_bins_mixed": 395
+          }
+        }
+      }
+    },
+    "overlap": {
+      "first_layer_l2__integrated_gradients": {
+        "intersection": 100,
+        "jaccard": 0.09276437847866419
+      },
+      "first_layer_l2__legacy_msipl": {
+        "intersection": 33,
+        "jaccard": 0.028820960698689956
+      },
+      "integrated_gradients__legacy_msipl": {
+        "intersection": 311,
+        "jaccard": 0.35870818915801617
+      }
+    }
+  },
+  "consolidation": {
+    "method": "greedy non-maximum suppression in descending attribution order",
+    "tolerance_ppm": 10.0,
+    "reported_candidates_per_method": 50,
+    "purpose": "interpretation and ion images only; matched mSCF1 uses raw bins"
+  },
+  "runtime_seconds": 27.564496180973947
+}
