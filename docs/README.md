@@ -28,12 +28,12 @@
 
 ## Project records
 
-- [`research-status-2026-09-16.md`](research-status-2026-09-16.md) — dated
-  project status snapshot.
 - [`meetings/2026-09-14-progress-brief.md`](meetings/2026-09-14-progress-brief.md)
   — supervisor meeting progress brief.
-- `my-understanding.txt` — personal local learning notes; intentionally ignored
-  by Git.
+
+Personal understanding notes and dated end-of-day status logs live in the
+Obsidian vault under `Research/MSI Research/`. This repository `docs/` folder
+is the durable technical and scientific project record.
 
 Notion is the concise task/status tracker. These Markdown files are the durable
 technical and scientific record kept beside the code and results.
