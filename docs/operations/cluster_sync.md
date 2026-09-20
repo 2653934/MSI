@@ -11,6 +11,10 @@ Run the local commands from `code/msi`, **not** from the outer `MSI`
 repository. The trailing slashes are intentional: they copy the contents of
 one workspace into the other workspace.
 
+`data` is a symbolic link rather than a physical directory in the workspace.
+Its rsync rule is therefore `--exclude='/data'` without a trailing slash. This
+matches the root entry itself whether it is a symlink, file or directory.
+
 ## Before every transfer
 
 In Git Bash, first move to the correct local directory and check it:
@@ -89,7 +93,7 @@ Preview first:
 ```bash
 rsync -avzn --itemize-changes \
   --exclude='.git/' \
-  --exclude='data/' \
+  --exclude='/data' \
   --exclude='checkpoints/' \
   --exclude='weights/' \
   --exclude='results/' \
@@ -114,7 +118,7 @@ Then perform the upload by changing `-avzn` to `-avz`:
 ```bash
 rsync -avz --progress \
   --exclude='.git/' \
-  --exclude='data/' \
+  --exclude='/data' \
   --exclude='checkpoints/' \
   --exclude='weights/' \
   --exclude='results/' \
@@ -150,7 +154,7 @@ Preview:
 ```bash
 rsync -avzn --itemize-changes \
   --exclude='.git/' \
-  --exclude='data/' \
+  --exclude='/data' \
   --exclude='checkpoints/' \
   --exclude='weights/' \
   --exclude='__pycache__/' \
@@ -172,7 +176,7 @@ Perform the full pull only after checking that preview:
 ```bash
 rsync -avz --progress \
   --exclude='.git/' \
-  --exclude='data/' \
+  --exclude='/data' \
   --exclude='checkpoints/' \
   --exclude='weights/' \
   --exclude='__pycache__/' \
@@ -192,6 +196,7 @@ rsync -avz --progress \
 ## What was corrected from the old commands
 
 - `.git/` is excluded in both directions.
+- The `data` symlink is excluded as an entry, not mistaken for a directory.
 - The malformed `*.pt`/`*.pth` portion of the pasted download command is
   repaired.
 - Python bytecode uses valid patterns: `__pycache__/` and `*.py[cod]`.

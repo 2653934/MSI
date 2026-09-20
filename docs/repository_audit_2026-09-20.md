@@ -157,6 +157,10 @@ The corrected commands are in `docs/operations/cluster_sync.md`. Daily result
 collection is now targeted; full pulls remain available as an explicit
 recovery operation with a dry-run first.
 
+The workspace `data` entry is a symbolic link, not a normal directory. Its
+ignore and rsync patterns intentionally omit the trailing slash so the link
+itself is excluded.
+
 ## Proposed cleanup phases
 
 ### Phase 1 — completed by this audit
