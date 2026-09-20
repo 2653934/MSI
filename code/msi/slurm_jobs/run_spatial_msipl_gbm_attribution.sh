@@ -7,7 +7,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --mem=48G
 #SBATCH --exclusive
-#SBATCH --exclude=mscluster44,mscluster45,mscluster48,mscluster50,mscluster51,mscluster57,mscluster62,mscluster65,mscluster74,mscluster83
+#SBATCH --exclude=mscluster44,mscluster45,mscluster48,mscluster50,mscluster51,mscluster57,mscluster62,mscluster65,mscluster74,mscluster75,mscluster83
 #SBATCH --output=logs/gbm-ig-%j.out
 #SBATCH --error=logs/gbm-ig-%j.err
 

@@ -90,6 +90,15 @@ mscluster83
   Status: Known problematic node for our current GPU workflow. A retry on
   mscluster88 completed successfully with the same code and environment.
 
+mscluster75
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. All seven whole-GBM attribution jobs stopped at the CUDA
+  preflight before loading a model or producing partial attribution results.
+  Evidence: jobs 56669-56675; logs/gbm-ig-56669.err through
+  logs/gbm-ig-56675.err. Slurm accounting placed every job on mscluster75.
+  Classification: Repeated GPU/CUDA access failure in our environment.
+  Status: Known problematic node for the current GPU workflow; exclude it.
+
 
 How to identify a failed job's node
 -----------------------------------
@@ -122,4 +131,4 @@ mscluster50
   Classification: Repeated CUDA access failure in our environment; root cause
   and current node health have not been established.
 
-Last updated: 2026-09-17
+Last updated: 2026-09-19
