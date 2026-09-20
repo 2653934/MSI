@@ -12,6 +12,9 @@ The current research question is:
 ## Start here
 
 - [`code/msi/README.md`](code/msi/README.md) - code, artifacts and cluster map
+- [`docs/operations/cluster_sync.md`](docs/operations/cluster_sync.md) - safe cluster transfer commands
+- [`docs/repository_audit_2026-09-20.md`](docs/repository_audit_2026-09-20.md) - repository audit and cleanup plan
+- [`docs/research/README.md`](docs/research/README.md) - research results and methodology handbook
 - [`docs/meetings/2026-09-14-progress-brief.md`](docs/meetings/2026-09-14-progress-brief.md) - current scientific narrative
 - [`RP/proposal.pdf`](RP/proposal.pdf) - approved research proposal
 - [`code/msi/cluster_node_issues.txt`](code/msi/cluster_node_issues.txt) - observed cluster incidents
@@ -19,8 +22,9 @@ The current research question is:
 ## Repository boundaries
 
 This Git repository contains source code, job definitions, compact results,
-figures, logs and reproducibility metadata. Large raw datasets, Conda
-environments and trained checkpoints do not belong in Git.
+figures, selected diagnostic evidence and reproducibility metadata. Routine
+Slurm logs, large raw datasets, Conda environments and trained checkpoints do
+not belong in Git.
 
 On the cluster:
 
@@ -31,7 +35,9 @@ On the cluster:
 ~/miniconda3/envs/                          Conda environments
 ```
 
-The normal local sync intentionally excludes raw data and checkpoints.
+The normal local sync intentionally excludes raw data, checkpoints, Git
+metadata and caches. Prefer the documented targeted pull when collecting
+results so that cluster copies of source files do not overwrite local edits.
 
 ## Current status
 

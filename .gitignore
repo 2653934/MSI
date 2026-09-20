@@ -2,6 +2,9 @@
 /code/msi/data/
 /code/msi/checkpoints/
 /code/msi/weights/
+# Routine Slurm output stays local/cluster-side. Selected evidence belongs in
+# code/msi/reproducibility instead.
+/code/msi/logs/
 
 # Raw MSI inputs and archives are stored under /datasets on the cluster.
 *.h5
@@ -13,6 +16,17 @@ __pycache__/
 *.py[cod]
 .uv-cache/
 .pym2aia_prefs.xml
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+Thumbs.db
+.DS_Store
+*.swp
+*~
+/tmp/
 # Trained model weights belong in cluster/external storage, not Git.
 *.pt
 *.pth

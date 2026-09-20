@@ -17,7 +17,7 @@ results/
   validation/       Smoke tests, audits and decision-gate pilots
   experiments/      Full experiments used for scientific comparisons
   visualisations/   Dataset-level exploratory figures
-logs/               Slurm stdout/stderr retained as execution evidence
+logs/               Local Slurm stdout/stderr (new files are ignored by Git)
 reproducibility/     Frozen manifests and compact snapshots for key reproductions
 cluster_node_issues.txt
                     Factual record of node-specific incidents
@@ -66,7 +66,16 @@ Repository:  /home-mscluster/zsuliman/msi/
 ```
 
 The `.gitignore` prevents common checkpoint formats and local caches from being
-added accidentally.
+added accidentally. Transfer commands and their exact local/cluster path
+mapping are documented in
+[`../../docs/operations/cluster_sync.md`](../../docs/operations/cluster_sync.md).
+
+Routine Slurm logs are useful locally while diagnosing a run, but they are not
+permanent scientific artifacts by default. New files in `logs/` are ignored;
+already tracked historical logs remain until the reviewed cleanup phase. The durable record should be compact
+metrics, summaries, figures, manifests and selected diagnostic logs. See the
+[repository audit](../../docs/repository_audit_2026-09-20.md) before changing the
+current tracked log history.
 
 ## Environments
 
@@ -95,6 +104,18 @@ should not be mixed into the PyTorch environment casually.
 5. Production checkpoints remain until evaluation and reproducibility checks
    are complete.
 6. Inspect exact disk usage before deleting cluster data.
+
+## Documentation
+
+- [`../../docs/README.md`](../../docs/README.md) indexes all durable project
+  documentation.
+- [`../../docs/research/README.md`](../../docs/research/README.md) is the entry point for
+  the research results and methodology handbook.
+- [`../../docs/operations/cluster_sync.md`](../../docs/operations/cluster_sync.md) contains
+  the copy-and-paste cluster transfer commands.
+- [`../../docs/repository_audit_2026-09-20.md`](../../docs/repository_audit_2026-09-20.md)
+  records what belongs in Git, what should remain local, and the proposed
+  cleanup phases.
 
 ## Typical workflow
 
