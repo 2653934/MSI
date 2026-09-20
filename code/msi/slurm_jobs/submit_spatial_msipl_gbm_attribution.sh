@@ -5,6 +5,20 @@ set -eo pipefail
 PROJECT_ROOT="$HOME/msi"
 cd "$PROJECT_ROOT"
 
+CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
+if [ ! -f "$CUDA_QUARANTINE_FILE" ]; then
+    echo "Missing CUDA quarantine file: $CUDA_QUARANTINE_FILE" >&2
+    exit 1
+fi
+BASE_EXCLUDES=$(sed -e 's/\r$//' \
+    -e 's/#.*$//' \
+    -e '/^[[:space:]]*$/d' \
+    "$CUDA_QUARANTINE_FILE" | sort -u | paste -sd, -)
+if [ -z "$BASE_EXCLUDES" ]; then
+    echo "CUDA quarantine file did not contain any nodes." >&2
+    exit 1
+fi
+
 datasets=(
     GBM108_negative
     GBM12_1
@@ -45,6 +59,7 @@ for index in "${!datasets[@]}"; do
     gate_id=${gate_submission##* }
 
     if ! worker_submission=$(sbatch \
+        --exclude="$BASE_EXCLUDES" \
         --export="ALL,GBM_GATE_JOB_ID=$gate_id" \
         --job-name="ig-${dataset}" \
         slurm_jobs/run_spatial_msipl_gbm_attribution.sh "$dataset" "$count")
@@ -75,6 +90,7 @@ summary_job_id=${summary_submission##* }
 echo
 echo "Submitted ${#worker_ids[@]} incomplete whole-GBM attribution evaluations."
 echo "GBM108_positive reuses the completed frozen evaluation."
+echo "Production CUDA quarantine: $BASE_EXCLUDES"
 echo "Each gate follows its dataset's current retry job."
 echo "Summary job: $summary_job_id (runs after every dataset gate succeeds)"
 echo 'Monitor with: squeue -u "$USER" -o "%.18i %.24j %.2t %.10M %.24R"'

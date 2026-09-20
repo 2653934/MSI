@@ -91,10 +91,19 @@ If this fails, the job records the node in:
 logs/gbm-ig-JOB_ID.failed_nodes
 ```
 
-It updates that job’s exclusion list and requeues the same job, with at most
-four requeues. Historical node incidents remain in
-[cluster_node_issues.txt](../../code/msi/cluster_node_issues.txt), but nodes are not
-assumed permanently broken.
+Slurm does not allow a running job to update its own exclusion list. The job
+therefore submits a bounded replacement and, during a multi-section campaign,
+repoints that dataset’s gate job so the final summary still waits for the
+latest attempt.
+
+Three consecutive September 20 canary attempts repeated historical failures on
+`mscluster65`, `mscluster57` and `mscluster45`. Production GPU submissions now
+start with the evidence-based quarantine in
+`slurm_jobs/gpu_cuda_quarantine.txt`, then add any newly failing node to only
+that retry chain. Historical evidence remains in
+[cluster_node_issues.txt](../../code/msi/cluster_node_issues.txt). Quarantine is
+not a declaration that hardware is permanently broken; removal should follow a
+separate successful GPU health test rather than an expensive production job.
 
 ## Synchronisation
 

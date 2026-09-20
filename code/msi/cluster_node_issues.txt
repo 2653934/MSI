@@ -13,13 +13,15 @@ Observed problematic nodes
 --------------------------
 
 Scheduling policy from 2026-09-20
-  These entries are historical observations, not permanent declarations that
-  a node is broken. GPU jobs may use these nodes again. The attribution
-  campaign now runs an actual CUDA allocation and computation warm-up. If that
-  warm-up fails, the job records the node, excludes it only from that job's
-  retry chain, and submits a bounded replacement job. Dataset gate jobs keep
-  the final campaign summary dependent on the latest replacement. A successful
-  warm-up is new evidence that the node is usable at that time.
+  Three consecutive canary attempts repeated earlier failures on mscluster65,
+  mscluster57 and mscluster45. Together with the seven-job failures on
+  mscluster75 and mscluster76, this no longer supports treating every incident
+  as an independent one-off. Nodes with direct CUDA-failure evidence are now
+  placed in the production quarantine at slurm_jobs/gpu_cuda_quarantine.txt.
+  The attribution campaign still runs an actual CUDA computation warm-up and
+  adds any newly failing node to that retry chain. Quarantine is not a claim
+  that hardware is permanently broken; nodes should be retested separately
+  before being returned to production GPU scheduling.
 
 mscluster44
   Symptom: PyTorch CUDA initialization returned an unknown error and exposed
@@ -35,7 +37,9 @@ mscluster44
 mscluster45
   Symptom: PyTorch reported that CUDA was unavailable. The S3PL imzML pilot
   stopped safely before attempting CPU training.
-  Evidence: job 53370; logs/s3pl-imzml-pilot-53370.err
+  Evidence: jobs 53370 and 57062; logs/s3pl-imzml-pilot-53370.err and
+  logs/gbm-ig-57062.err. The latter was the third consecutive canary-chain
+  allocation to repeat a historical CUDA failure.
   Classification: GPU/CUDA unavailable for this job.
   Status: Avoid relying on this node for GPU work until cluster configuration
   is clarified. CPU capability is not in question.
@@ -65,7 +69,8 @@ mscluster57
   Symptom: PyTorch CUDA initialization returned an unknown error and exposed
   zero CUDA devices. Frozen GBM validation training stopped at the preflight
   before loading a model.
-  Evidence: job 55627; logs/spatial-gbm-val-55627.err.
+  Evidence: jobs 55627 and 56993; logs/spatial-gbm-val-55627.err and
+  logs/gbm-ig-56993.err.
   Classification: GPU/CUDA unavailable for this job; current node health and
   root cause have not been established.
   Status: Exclude from our GPU jobs pending clarification.
@@ -78,6 +83,15 @@ mscluster62
   logs/spatial-gbm-val-*.err files and Slurm accounting.
   Classification: Repeated GPU/CUDA access failure in our environment.
   Status: Known problematic node for the current GPU workflow; exclude it.
+
+mscluster51
+  Symptom: PyTorch CUDA initialization returned an unknown error and exposed
+  zero CUDA devices. Spatial-msiPL production training stopped before model
+  allocation.
+  Evidence: job 53481; logs/spatial-production-53481.err.
+  Classification: GPU/CUDA unavailable for this job; current node health and
+  root cause have not been established.
+  Status: Production GPU quarantine pending a successful dedicated retest.
 
 mscluster74
   Symptoms: (1) A cancelled S3PL job remained in Slurm state COMPLETING (CG)

@@ -17,8 +17,13 @@ Completed:
 
 Running:
 
-- Canary job `56971`: `GBM108_negative`, 458 matched peaks.
-- Purpose: validate both the scientific pipeline and adaptive CUDA failover.
+- The `GBM108_negative` canary retry chain began at job `56971` with 458
+  matched peaks.
+- Jobs `56971`, `56993` and `57062` repeated historical CUDA failures on
+  `mscluster65`, `mscluster57` and `mscluster45` before model loading.
+- Replacement `57115` was submitted by the automatic retry mechanism.
+- The failover mechanism works, but the repeated nodes justify restoring a
+  persistent evidence-based production quarantine.
 
 Not yet complete:
 
@@ -29,7 +34,7 @@ Not yet complete:
 
 ## Immediate decision tree
 
-### If canary job 56971 completes
+### If the canary retry chain completes
 
 Run:
 
@@ -43,15 +48,17 @@ sections and schedules the aggregate summary after successful dependencies.
 
 ### If CUDA warm-up fails
 
-The same job should record the node and requeue. Check:
+The job records the node and submits a replacement that excludes the persistent
+quarantine plus failures from this retry chain. Check:
 
 ```bash
 cat logs/gbm-ig-56971.failed_nodes
-squeue -j 56971
+squeue -u "$USER"
 ```
 
-If Slurm rejects automatic requeue, the `.err` log will say so. That is an
-infrastructure limitation, not a model result.
+In a full campaign, a small gate job tracks each dataset’s latest replacement,
+preventing the final summary from running early. CUDA preflight failures remain
+infrastructure evidence, not model results.
 
 ## Whole-GBM attribution analysis
 

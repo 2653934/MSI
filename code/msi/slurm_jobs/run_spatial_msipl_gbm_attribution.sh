@@ -39,6 +39,7 @@ MAX_CUDA_RETRIES=4
 CUDA_RETRY_COUNT="${CUDA_RETRY_COUNT:-0}"
 CUDA_RETRY_ROOT="${CUDA_RETRY_ROOT:-$SLURM_JOB_ID}"
 FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${CUDA_RETRY_ROOT}.failed_nodes"
+CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
 
 mkdir -p "$PROJECT_ROOT/logs"
 
@@ -92,7 +93,17 @@ then
                 fi
                 ;;
         esac
-    done < <(sort -u "$FAILED_NODES_FILE")
+    done < <(
+        {
+            if [ -f "$CUDA_QUARANTINE_FILE" ]; then
+                sed -e 's/\r$//' \
+                    -e 's/#.*$//' \
+                    -e '/^[[:space:]]*$/d' \
+                    "$CUDA_QUARANTINE_FILE"
+            fi
+            cat "$FAILED_NODES_FILE"
+        } | sort -u
+    )
 
     next_retry=$((CUDA_RETRY_COUNT + 1))
     export_spec="ALL,CUDA_RETRY_COUNT=$next_retry,CUDA_RETRY_ROOT=$CUDA_RETRY_ROOT"
