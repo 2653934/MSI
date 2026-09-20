@@ -93,7 +93,7 @@ This chronology records the reasoning chain rather than every shell command.
 - Evaluated deterministic reconstruction for all eight paired sections.
 - Found a heterogeneous 4–4 MSE split rather than a consistent spatial benefit.
 
-## 11. Current attribution campaign
+## 11. Whole-GBM attribution campaign
 
 - Generalised attribution and peak evaluation to all GBM sections.
 - Matched each section’s legacy peak count instead of assuming 530 everywhere.
@@ -101,7 +101,21 @@ This chronology records the reasoning chain rather than every shell command.
   usable CUDA.
 - Added a real CUDA warm-up and bounded self-requeue that dynamically records
   and excludes a failing node for that job only.
-- Submitted canary job `56971` for `GBM108_negative`.
+- Restored the evidence-based CUDA-node quarantine after repeated failures.
+- Completed `GBM108_negative` as a canary and then all remaining sections.
+- Integrated Gradients beat legacy msiPL on all eight sections: mean 0.4562
+  versus 0.3643 mSCF1, an absolute gain of 0.0919.
+- The aggregate paired Wilcoxon result was `p = 0.0078125`, interpreted with
+  section-level dependence and the small sample count in mind.
+
+## 12. Centre-only attribution control
+
+- Generalised attribution to accept frozen centre-only checkpoints.
+- Preserved the same GMM, IG, faithfulness and matched-count evaluation.
+- Added a cross-model summary comparing centre-only IG with spatial IG,
+  legacy msiPL and the spatial first-layer L2 comparator.
+- This experiment isolates the contribution of neighbourhood context from the
+  benefit of nonlinear attribution.
 
 ## Why the history matters
 

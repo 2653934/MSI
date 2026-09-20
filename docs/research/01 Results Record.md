@@ -197,9 +197,38 @@ quality and substantial, though not perfect, exact-set stability.
 
 ![Attribution sampling stability](../../code/msi/results/experiments/spatial_msipl_attributed_peak_evaluation/GBM108_positive_seed1/sampling_stability/attribution_sampling_stability.png)
 
-## Result currently in progress
+## Whole-GBM nonlinear peak attribution
 
-The whole-GBM attribution campaign will compare Integrated Gradients, legacy
-msiPL and first-layer L2 at each section’s own legacy peak count. The completed
-development result must not be described as a whole-GBM result until this
-campaign and its aggregate summary finish.
+The frozen uniform-mean Spatial-msiPL model was evaluated on all eight MassNet
+GBM sections. Each section used its own legacy msiPL peak count, so every method
+was scored at an identical section-specific selection budget.
+
+| Method | Mean mSCF1 | Standard deviation | Median |
+|---|---:|---:|---:|
+| Spatial-msiPL Integrated Gradients | **0.456** | 0.090 | 0.474 |
+| Legacy msiPL | 0.364 | 0.075 | 0.381 |
+| First-layer L2 | 0.214 | 0.112 | 0.219 |
+
+Integrated Gradients beat legacy msiPL on all eight sections. The mean absolute
+gain was 0.0919 mSCF1 (25.2% relative), with paired section-level Wilcoxon
+`p = 0.0078125`. Direction consistency and effect sizes are primary because the
+eight sections are not asserted to be eight independent patients.
+
+Integrated Gradients beat the deliberately simple first-layer L2 comparator on
+seven of eight sections. `GBM12_1` was the exception. Legacy msiPL is not
+equivalent to this L2 comparator: LearnPeaks also traces a selected hidden
+neuron toward each latent feature, scales by spectral variability, thresholds
+candidates and snaps them to local spectral maxima.
+
+The label-free GMM had mean balanced accuracy 0.911 against the expert masks.
+All eight Integrated Gradients completeness checks passed.
+
+![Whole-GBM attributed peak validation](../../code/msi/results/experiments/spatial_msipl_gbm_validation/attributed_peaks/attributed_peak_validation.png)
+
+## Matched centre-only attribution control
+
+The next frozen experiment applies the same GMM-targeted Integrated Gradients
+procedure to the already-trained centre-only VAEs. Dataset, seed, 100-epoch
+training duration, hidden and latent dimensions, GMM settings, attribution
+settings and peak budget remain matched. This isolates the contribution of
+neighbourhood context from the contribution of nonlinear explanation.

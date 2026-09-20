@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pilot nonlinear m/z attribution through the full Spatial-msiPL encoder."""
+"""Nonlinear m/z attribution through a frozen Spatial-msiPL encoder."""
 
 import argparse
 import csv
@@ -23,7 +23,7 @@ from spatial_msipl.attribution import (
     gmm_posterior,
     integrated_gradients_cluster_posterior,
 )
-from spatial_msipl.model import NeighbourhoodSpatialVAE
+from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
 from spatial_msipl.preprocessing import H5SpatialContextDataset
 
 
@@ -35,6 +35,11 @@ def parse_arguments():
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--variant",
+        choices=("uniform_mean", "central_only"),
+        default="uniform_mean",
+    )
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--gmm-components", type=int, default=2)
     parser.add_argument("--gmm-n-init", type=int, default=20)
@@ -66,22 +71,31 @@ def state_sha256(model):
     return digest.hexdigest()
 
 
-def load_model(path, spectral_dim, device):
+def load_model(path, spectral_dim, variant, device):
     checkpoint = torch.load(path, map_location="cpu")
     if int(checkpoint.get("completed_epochs", 0)) != 100:
         raise ValueError("attribution requires the complete 100-epoch checkpoint")
     configuration = checkpoint["model_configuration"]
-    neighbourhood = configuration["neighbourhood"]
     if int(configuration["spectral_dim"]) != spectral_dim:
         raise ValueError("checkpoint and dataset spectral dimensions differ")
-    if neighbourhood["name"] != "uniform_mean":
-        raise ValueError("this controlled pilot requires the retained uniform-mean model")
-    model = NeighbourhoodSpatialVAE(
-        spectral_dim=spectral_dim,
-        neighbourhood="uniform_mean",
-        hidden_dim=configuration["hidden_dim"],
-        latent_dim=configuration["latent_dim"],
-    )
+    if variant == "central_only":
+        if configuration.get("input_mode") != "central_only":
+            raise ValueError("central-only attribution requires a central-only checkpoint")
+        model = CentralOnlyVAE(
+            spectral_dim=spectral_dim,
+            hidden_dim=configuration["hidden_dim"],
+            latent_dim=configuration["latent_dim"],
+        )
+    else:
+        neighbourhood = configuration.get("neighbourhood", {})
+        if neighbourhood.get("name") != "uniform_mean":
+            raise ValueError("uniform-mean attribution requires a uniform-mean checkpoint")
+        model = NeighbourhoodSpatialVAE(
+            spectral_dim=spectral_dim,
+            neighbourhood="uniform_mean",
+            hidden_dim=configuration["hidden_dim"],
+            latent_dim=configuration["latent_dim"],
+        )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
@@ -281,7 +295,7 @@ def spatial_image(values, x, y):
     return image
 
 
-def save_gmm_figure(labels, confidence, x, y, output):
+def save_gmm_figure(labels, confidence, x, y, variant, output):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
     cluster_cmap = matplotlib.colors.ListedColormap(CLUSTER_COLOURS[: len(np.unique(labels))])
     cluster_cmap.set_bad("#ECECEC")
@@ -304,13 +318,18 @@ def save_gmm_figure(labels, confidence, x, y, output):
         axis.set_xlabel("X")
         axis.set_ylabel("Y")
         axis.set_aspect("equal")
-    fig.suptitle("Uniform-mean Spatial-msiPL: latent GMM target", fontsize=14)
+    name = (
+        "Uniform-mean Spatial-msiPL"
+        if variant == "uniform_mean"
+        else "Centre-only VAE"
+    )
+    fig.suptitle(f"{name}: latent GMM target", fontsize=14)
     fig.tight_layout()
     fig.savefig(output, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
 
-def save_attribution_figure(mz, aggregate, output, top_n=20):
+def save_attribution_figure(mz, aggregate, variant, output, top_n=20):
     components = sorted(aggregate)
     fig, axes = plt.subplots(len(components), 1, figsize=(12, 5 * len(components)))
     axes = np.atleast_1d(axes)
@@ -324,7 +343,12 @@ def save_attribution_figure(mz, aggregate, output, top_n=20):
         axis.set_xlabel("Mean absolute IG contribution")
         axis.set_ylabel("m/z")
         axis.set_title(f"GMM component {component}: top {top_n} nonlinear features")
-    fig.suptitle("Integrated Gradients through central and neighbourhood pathways", fontsize=14)
+    pathway = (
+        "central and neighbourhood pathways"
+        if variant == "uniform_mean"
+        else "the centre-only pathway"
+    )
+    fig.suptitle(f"Integrated Gradients through {pathway}", fontsize=14)
     fig.tight_layout()
     fig.savefig(output, dpi=220, bbox_inches="tight")
     plt.close(fig)
@@ -367,7 +391,9 @@ def main():
     started = time.perf_counter()
 
     dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
-    model, checkpoint = load_model(args.checkpoint, dataset.n_mz, device)
+    model, checkpoint = load_model(
+        args.checkpoint, dataset.n_mz, args.variant, device
+    )
     latent, mean_spectrum_np = encode_all(model, dataset, args.batch_size, device)
     scaler = StandardScaler().fit(latent)
     standardized = scaler.transform(latent)
@@ -565,11 +591,13 @@ def main():
         confidence,
         dataset.x,
         dataset.y,
+        args.variant,
         args.output / "gmm_cluster_target.png",
     )
     save_attribution_figure(
         dataset.mz_values,
         aggregate,
+        args.variant,
         args.output / "top_nonlinear_mz_attributions.png",
     )
     save_faithfulness_figure(
@@ -577,8 +605,9 @@ def main():
     )
 
     summary = {
-        "attribution_version": 1,
-        "status": "valid_pilot" if completeness_passed else "needs_more_ig_steps",
+        "attribution_version": 2,
+        "status": "valid" if completeness_passed else "needs_more_ig_steps",
+        "variant": args.variant,
         "dataset": str(args.input),
         "checkpoint": str(args.checkpoint),
         "model_state_sha256": state_sha256(model),
@@ -605,7 +634,11 @@ def main():
             "steps": args.ig_steps,
             "integration": "trapezoidal rule including both endpoints",
             "attribution_pixels_per_component": args.attribution_per_cluster,
-            "central_context_combination": "per-bin |central IG| + sum over valid neighbour slots of |neighbour IG|",
+            "central_context_combination": (
+                "per-bin |central IG| + sum over valid neighbour slots of |neighbour IG|"
+                if args.variant == "uniform_mean"
+                else "per-bin |central IG|; neighbour contribution is structurally zero"
+            ),
             "sampling_seed": sampling_seed,
             "selection_seed": sampling_seed + 700,
             "completeness": {
@@ -620,8 +653,12 @@ def main():
             "per_pixel_diagnostics": diagnostics,
         },
         "first_layer_comparator": {
-            "method": "L2 norm over hidden units for the central and aggregated-context halves of encoder_dense",
-            "combination": "central L2 + context L2",
+            "method": "L2 norm over hidden units of encoder_dense input columns",
+            "combination": (
+                "central L2 + context L2"
+                if args.variant == "uniform_mean"
+                else "central L2 only"
+            ),
             "interpretation": "linear comparator only; not the primary nonlinear explanation",
         },
         "faithfulness": {

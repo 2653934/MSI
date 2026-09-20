@@ -472,7 +472,7 @@ def main():
         "evaluation_version": 1,
         "status": "complete",
         "dataset": args.input.stem,
-        "scope": "development-section attribution and matched-count peak evaluation",
+        "scope": "section attribution and matched-count peak evaluation",
         "pixels": int(len(x)),
         "spectral_bins": int(len(mz)),
         "cluster_mapping": {

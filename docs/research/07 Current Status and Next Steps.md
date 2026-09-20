@@ -2,128 +2,67 @@
 
 Last updated: 2026-09-20
 
-## Current state
-
-Completed:
+## Completed
 
 - CAC and GBM inspection, masks and visualisation.
 - Legacy msiPL reproduction on both collections.
 - S3PL CAC runs and documented MassNet GBM reproduction gap.
-- Spatial-msiPL preprocessing, model, tests and development experiments.
-- Frozen uniform-mean choice.
-- Whole-GBM uniform-mean and centre-only training.
-- Whole-GBM reconstruction comparison.
-- `GBM108_positive` Integrated Gradients pilot and sampling stability.
+- Spatial-msiPL preprocessing, model and tests.
+- Uniform mean frozen as the neighbourhood method.
+- Whole-GBM uniform-mean and centre-only 100-epoch training.
+- Whole-GBM reconstruction comparison: mixed 4-4 MSE split.
+- Whole-GBM nonlinear peak attribution and matched evaluation.
 
-Running:
+## Whole-GBM attribution result
 
-- The `GBM108_negative` canary retry chain began at job `56971` with 458
-  matched peaks.
-- Jobs `56971`, `56993` and `57062` repeated historical CUDA failures on
-  `mscluster65`, `mscluster57` and `mscluster45` before model loading.
-- Replacement `57115` was submitted by the automatic retry mechanism.
-- The failover mechanism works, but the repeated nodes justify restoring a
-  persistent evidence-based production quarantine.
+Spatial-msiPL Integrated Gradients achieved mean mSCF1 0.4562 versus 0.3643
+for legacy msiPL and won on all eight sections. Mean gain was 0.0919 mSCF1;
+paired section-level Wilcoxon `p = 0.0078125`. First-layer L2 averaged 0.2139
+and lost to IG on seven of eight sections. Mean GMM balanced accuracy was
+0.9113, and all attribution completeness checks passed.
 
-Not yet complete:
+This supports nonlinear attribution as a peak-ranking method. It does not yet
+isolate whether neighbourhood context adds value because the legacy comparison
+changes both model architecture and explanation method.
 
-- Attribution/evaluation on the remaining six non-development GBM sections.
-- Whole-GBM attribution aggregate.
-- Frozen Spatial-msiPL validation on CAC.
-- Final cross-dataset synthesis and dissertation-ready writing.
+## Running next: matched centre-only IG control
 
-## Immediate decision tree
+Use the frozen 100-epoch centre-only checkpoints. No retraining is required.
+The control holds constant:
 
-### If the canary retry chain completes
+- section and preprocessing;
+- seed and trained duration;
+- hidden and latent dimensions;
+- GMM components, initialisations and seed;
+- IG baseline, integration steps and sampled pixels;
+- section-specific matched peak count and PCC evaluation.
 
-Run:
+The intended difference is only the encoder input: centre spectrum alone versus
+centre plus uniform-mean neighbourhood context.
 
-```bash
-cd ~/msi
-bash slurm_jobs/submit_spatial_msipl_gbm_attribution.sh
-```
+Run a single canary first. If it completes and passes completeness, submit the
+remaining controls. The final summary reports spatial IG minus centre-only IG,
+centre-only IG minus legacy msiPL, win/loss counts and paired tests.
 
-The submission script skips completed evaluations, submits only missing
-sections and schedules the aggregate summary after successful dependencies.
+## Decision after the control
 
-### If CUDA warm-up fails
+- If spatial IG consistently beats centre-only IG, neighbourhood context has
+  evidence of added peak-selection value even though reconstruction was mixed.
+- If the results are tied or heterogeneous, IG is still useful but context is
+  not consistently beneficial for peak selection.
+- If centre-only IG wins, the nonlinear explanation method rather than spatial
+  context is the likely source of improvement.
 
-The job records the node and submits a replacement that excludes the persistent
-quarantine plus failures from this retry chain. Check:
+Do not add a Spatial LearnPeaks adaptation unless the centre-only result leaves
+a specific unresolved question that justifies it.
 
-```bash
-cat logs/gbm-ig-56971.failed_nodes
-squeue -u "$USER"
-```
-
-In a full campaign, a small gate job tracks each dataset’s latest replacement,
-preventing the final summary from running early. CUDA preflight failures remain
-infrastructure evidence, not model results.
-
-## Whole-GBM attribution analysis
-
-The aggregate will report, per section and overall:
-
-- Integrated Gradients mSCF1;
-- legacy msiPL mSCF1;
-- first-layer L2 mSCF1;
-- IG minus legacy effect;
-- win/loss counts;
-- paired Wilcoxon result;
-- GMM balanced accuracy, ARI and NMI;
-- peak budgets matched to each legacy section.
-
-### Interpretation gate
-
-If IG consistently beats legacy msiPL and L2, the supported claim is that the
-spatial nonlinear representation improves peak selection even though it does
-not consistently improve reconstruction.
-
-If effects are mixed, report the heterogeneity and examine whether it tracks
-GMM-mask agreement, class imbalance or coverage. Do not tune each validation
-section until it becomes positive.
-
-## CAC validation
-
-After the GBM method is evaluated, freeze all choices before moving to CAC:
-
-- uniform-mean neighbourhood;
-- central-only control;
-- five-dimensional latent space and matched training controls;
-- label-free clustering, adapted to three classes;
-- nonlinear attribution and matched peak evaluation;
-- reconstruction and computational-cost comparison.
-
-CAC is a generalisation test, not another development set. Any unavoidable
-dataset-specific change—such as three GMM components instead of two—must be
-defined from dataset structure rather than outcome tuning.
-
-## Final outputs
-
-The final research package should contain:
-
-1. Dataset and mask validation figure.
-2. msiPL and S3PL reproduction table.
-3. Neighbourhood development comparison.
-4. Whole-GBM centre-only versus uniform reconstruction figure.
-5. Whole-GBM matched peak-selection figure.
-6. Faithfulness and representative ion-image figure.
-7. CAC generalisation figure.
-8. Runtime, parameter and GPU-memory table.
-9. Limitations covering small section count, transductive unsupervised training,
-   paper/release ambiguity and cluster infrastructure.
-
-## Expected remaining sequence
+## Remaining sequence
 
 ```text
-canary
-  -> remaining GBM attribution
-  -> aggregate and interpret GBM
-  -> frozen CAC production and evaluation
-  -> cross-dataset statistics and figures
-  -> methods/results/discussion writing
+centre-only IG canary
+  -> remaining centre-only IG sections
+  -> aggregate context-control result
+  -> frozen CAC validation
+  -> cross-dataset synthesis
+  -> dissertation-ready methods, results and discussion
 ```
-
-The experimental scope should narrow after the whole-GBM attribution result.
-New experiments should answer a clear unresolved question, not merely search
-for a better-looking score.

@@ -14,31 +14,43 @@
 
 set -eo pipefail
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: sbatch $0 DATASET MATCHED_PEAK_COUNT" >&2
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    echo "Usage: sbatch $0 DATASET MATCHED_PEAK_COUNT [uniform_mean|central_only]" >&2
     exit 2
 fi
 
 DATASET="$1"
 MATCHED_COUNT="$2"
+VARIANT="${3:-uniform_mean}"
 case "$DATASET:$MATCHED_COUNT" in
-    GBM108_negative:458|GBM12_1:453|GBM12_2:478|GBM22_1:589|GBM22_2:464|GBM39_1:686|GBM39_2:523) ;;
+    GBM108_positive:530|GBM108_negative:458|GBM12_1:453|GBM12_2:478|GBM22_1:589|GBM22_2:464|GBM39_1:686|GBM39_2:523) ;;
     *)
         echo "Unknown dataset/count pair: $DATASET:$MATCHED_COUNT" >&2
+        exit 2
+        ;;
+esac
+case "$VARIANT" in
+    uniform_mean|central_only) ;;
+    *)
+        echo "Unknown attribution variant: $VARIANT" >&2
         exit 2
         ;;
 esac
 
 PROJECT_ROOT="$HOME/msi"
 INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
-CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASET}_seed1/uniform_mean/checkpoint.pt"
-ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/uniform_mean"
+if [ "$VARIANT" = "central_only" ]; then
+    CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/reconstruction/${DATASET}_seed1/central_only/checkpoint.pt"
+else
+    CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASET}_seed1/uniform_mean/checkpoint.pt"
+fi
+ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/${VARIANT}"
 LEGACY_DIR="$PROJECT_ROOT/results/baselines/msipl/massnet/$DATASET"
-EVALUATION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed1/uniform_mean"
+EVALUATION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed1/${VARIANT}"
 MAX_CUDA_RETRIES=4
 CUDA_RETRY_COUNT="${CUDA_RETRY_COUNT:-0}"
 CUDA_RETRY_ROOT="${CUDA_RETRY_ROOT:-$SLURM_JOB_ID}"
-FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${CUDA_RETRY_ROOT}.failed_nodes"
+FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${VARIANT}-${CUDA_RETRY_ROOT}.failed_nodes"
 CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
 
 mkdir -p "$PROJECT_ROOT/logs"
@@ -116,8 +128,10 @@ then
         --exclude="$combined_excludes" \
         --export="$export_spec" \
         --job-name="${SLURM_JOB_NAME:-gbm-ig}" \
+        --output="logs/gbm-ig-${VARIANT}-%j.out" \
+        --error="logs/gbm-ig-${VARIANT}-%j.err" \
         "$PROJECT_ROOT/slurm_jobs/run_spatial_msipl_gbm_attribution.sh" \
-        "$DATASET" "$MATCHED_COUNT"); then
+        "$DATASET" "$MATCHED_COUNT" "$VARIANT"); then
         echo "Replacement submission failed; rerun manually with the recorded exclusions." >&2
         exit 1
     fi
@@ -144,6 +158,7 @@ python -u scripts/run_spatial_msipl_gmm_integrated_gradients.py \
     --input "$INPUT" \
     --checkpoint "$CHECKPOINT" \
     --output "$ATTRIBUTION_OUTPUT" \
+    --variant "$VARIANT" \
     --batch-size 64 \
     --gmm-components 2 \
     --gmm-n-init 20 \

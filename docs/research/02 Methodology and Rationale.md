@@ -183,3 +183,33 @@ then measure the decrease in the assigned GMM posterior. A useful ranking should
 cause a larger decrease than random bins and the first-layer L2 comparator.
 This tests whether attribution identifies features the model actually relies
 on, not merely attractive-looking ion images.
+
+## What first-layer L2 does and does not represent
+
+First-layer L2 ranks each m/z bin by the Euclidean norm of its input weights
+across all first hidden units. For the contextual model, central and context
+norms are added. It is a deliberately simple linear comparator, not a complete
+reimplementation of legacy msiPL LearnPeaks.
+
+LearnPeaks additionally uses hidden-to-latent weights to choose a hidden neuron
+for each latent feature, multiplies input weights by spectral standard
+deviation, applies a beta-controlled threshold, unions candidates across latent
+features and maps them to local maxima in the mean spectrum. A poor L2 result
+therefore supports only the claim that raw first-layer magnitude is an
+inadequate explanation of the contextual model.
+
+## Matched centre-only attribution control
+
+Comparing spatial IG with legacy msiPL changes both the model and the peak
+explanation procedure. The centre-only IG control removes that ambiguity:
+
+```text
+centre-only VAE + identical IG and GMM
+              versus
+uniform-neighbourhood VAE + identical IG and GMM
+```
+
+The centre-only model receives no neighbour signal, so neighbour attributions
+are structurally zero. All other evaluation settings and each section's matched
+peak count are held fixed. This comparison tests the added value of context;
+the spatial model is not assumed to win.

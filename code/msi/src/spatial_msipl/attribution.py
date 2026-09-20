@@ -92,8 +92,16 @@ def integrated_gradients_cluster_posterior(
         posterior = gmm_posterior(latent, **gmm_parameters)
         target = posterior[:, int(target_component)]
         central_gradient, neighbour_gradient = torch.autograd.grad(
-            target.sum(), (interpolated_central, interpolated_neighbours)
+            target.sum(),
+            (interpolated_central, interpolated_neighbours),
+            allow_unused=True,
         )
+        if central_gradient is None:
+            central_gradient = torch.zeros_like(interpolated_central)
+        if neighbour_gradient is None:
+            # The matched centre-only control deliberately has no path from
+            # neighbour spectra to the GMM target.
+            neighbour_gradient = torch.zeros_like(interpolated_neighbours)
 
         trapezoid_weights = torch.ones_like(alpha)
         trapezoid_weights[alpha == 0.0] = 0.5
@@ -134,11 +142,16 @@ def integrated_gradients_cluster_posterior(
 
 
 def first_layer_l2_importance(model):
-    """Return the central/context L2 norms of the first encoder layer."""
+    """Return central/context L2 norms for contextual or centre-only VAEs."""
     weight = model.vae.encoder_dense.weight.detach()
     spectral_dim = model.vae.spectral_dim
+    if weight.shape[1] == spectral_dim:
+        return (
+            torch.linalg.vector_norm(weight, dim=0),
+            torch.zeros(spectral_dim, dtype=weight.dtype, device=weight.device),
+        )
     if weight.shape[1] != 2 * spectral_dim:
-        raise ValueError("first-layer comparator requires a contextual VAE")
+        raise ValueError("unexpected first-layer input dimension")
     return (
         torch.linalg.vector_norm(weight[:, :spectral_dim], dim=0),
         torch.linalg.vector_norm(weight[:, spectral_dim:], dim=0),
