@@ -54,7 +54,10 @@ CUDA_RETRY_ROOT="${CUDA_RETRY_ROOT:-$SLURM_JOB_ID}"
 FAILED_NODES_FILE="$PROJECT_ROOT/logs/cac-ig-${VARIANT}-${CUDA_RETRY_ROOT}.failed_nodes"
 CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
 
-mkdir -p "$PROJECT_ROOT/logs"
+mkdir -p \
+    "$PROJECT_ROOT/logs" \
+    "$ATTRIBUTION_OUTPUT" \
+    "$EVALUATION_OUTPUT"
 if grep -q '"status": "complete"' "$EVALUATION_OUTPUT/summary.json" 2>/dev/null; then
     echo "$DATASET $VARIANT already has a complete attribution evaluation; nothing to do."
     exit 0
@@ -114,23 +117,27 @@ fi
 
 cd "$PROJECT_ROOT"
 python -m unittest discover -s src/spatial_msipl/tests -v
-python -u scripts/run_spatial_msipl_gmm_integrated_gradients.py \
-    --input "$INPUT" \
-    --checkpoint "$CHECKPOINT" \
-    --output "$ATTRIBUTION_OUTPUT" \
-    --variant "$VARIANT" \
-    --batch-size 64 \
-    --gmm-components 3 \
-    --gmm-n-init 20 \
-    --attribution-per-cluster 12 \
-    --faithfulness-per-cluster 32 \
-    --ig-steps 64 \
-    --ig-internal-batch-size 8 \
-    --deletion-budgets 32 128 512 \
-    --random-repeats 10 \
-    --top-candidates 50 \
-    --seed 1 \
-    --sampling-seed 1
+if grep -q '"status": "valid"' "$ATTRIBUTION_OUTPUT/summary.json" 2>/dev/null; then
+    echo "Reusing complete attribution artifacts: $ATTRIBUTION_OUTPUT"
+else
+    python -u scripts/run_spatial_msipl_gmm_integrated_gradients.py \
+        --input "$INPUT" \
+        --checkpoint "$CHECKPOINT" \
+        --output "$ATTRIBUTION_OUTPUT" \
+        --variant "$VARIANT" \
+        --batch-size 64 \
+        --gmm-components 3 \
+        --gmm-n-init 20 \
+        --attribution-per-cluster 12 \
+        --faithfulness-per-cluster 32 \
+        --ig-steps 64 \
+        --ig-internal-batch-size 8 \
+        --deletion-budgets 32 128 512 \
+        --random-repeats 10 \
+        --top-candidates 50 \
+        --seed 1 \
+        --sampling-seed 1
+fi
 
 python -u scripts/evaluate_spatial_msipl_attributed_peaks.py \
     --input "$INPUT" \
