@@ -50,7 +50,9 @@ if [ -f "$FINAL_CHECKPOINT" ]; then
     exit 0
 fi
 
-mkdir -p "$PROJECT_ROOT/logs" "$CHECKPOINT_OUTPUT"
+# Pre-create the result directory with mkdir(1).  Parallel Python workers can
+# otherwise race while pathlib recursively creates the same parents on NFS.
+mkdir -p "$PROJECT_ROOT/logs" "$OUTPUT" "$CHECKPOINT_OUTPUT"
 cd "$PROJECT_ROOT"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env
@@ -102,4 +104,3 @@ python -u scripts/train_spatial_msipl_production.py \
     --checkpoint-interval 5 \
     "${ATTENTION_ARGUMENTS[@]}" \
     "${RESUME_ARGUMENTS[@]}"
-

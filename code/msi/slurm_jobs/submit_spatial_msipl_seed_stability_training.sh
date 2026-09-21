@@ -22,14 +22,26 @@ fi
 printf '%-22s %-8s %-12s\n' "VARIANT" "SEED" "JOB_ID"
 for variant in "${VARIANTS[@]}"; do
     for seed in "${SEEDS[@]}"; do
-        progress="$PROJECT_ROOT/results/experiments/spatial_msipl_training_seed_stability/GBM108_positive_seed${seed}/${variant}/progress.json"
+        result_directory="$PROJECT_ROOT/results/experiments/spatial_msipl_training_seed_stability/GBM108_positive_seed${seed}/${variant}"
+        progress="$result_directory/progress.json"
+        job_name="seed-${variant}-s${seed}"
+
+        # Create shared NFS parents serially before any new worker starts.
+        mkdir -p "$result_directory"
+
         if grep -q '"completed_epochs": 100' "$progress" 2>/dev/null; then
             printf '%-22s %-8s %-12s\n' "$variant" "$seed" "COMPLETE"
             continue
         fi
 
+        active_job=$(squeue -h -n "$job_name" -o "%i" | head -n 1)
+        if [ -n "$active_job" ]; then
+            printf '%-22s %-8s %-12s\n' "$variant" "$seed" "ACTIVE:$active_job"
+            continue
+        fi
+
         arguments=(
-            --job-name="seed-${variant}-s${seed}"
+            --job-name="$job_name"
             --output="logs/spatial-seed-${variant}-s${seed}-%j.out"
             --error="logs/spatial-seed-${variant}-s${seed}-%j.err"
         )
@@ -48,4 +60,3 @@ done
 echo
 echo "Submitted the six targeted training-seed stability runs."
 echo "Monitor with: bash slurm_jobs/check_spatial_msipl_seed_stability_training.sh"
-

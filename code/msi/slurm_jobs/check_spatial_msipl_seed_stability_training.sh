@@ -38,7 +38,11 @@ echo "Complete configurations: $complete/6"
 echo
 echo "=== RECENT FATAL MARKERS ==="
 if ! grep -H -E \
-    'Traceback|CUDA is unavailable|CUDA warm-up failed|RuntimeError|ValueError' \
+    'CUDA is unavailable; seed-stability|CUDA warm-up failed|RuntimeError:|ValueError:|FileNotFoundError:|OSError:' \
     logs/spatial-seed-*.err 2>/dev/null | tail -n 30; then
     echo "No matching fatal markers found."
 fi
+
+echo
+echo "Note: bare Traceback lines are intentionally ignored because some unit tests"
+echo "exercise expected exception paths. Use sacct to determine job success or failure."
