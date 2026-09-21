@@ -37,9 +37,20 @@ echo
 echo "Complete configurations: $complete/6"
 echo
 echo "=== RECENT FATAL MARKERS ==="
-if ! grep -H -E \
-    'CUDA is unavailable; seed-stability|CUDA warm-up failed|RuntimeError:|ValueError:|FileNotFoundError:|OSError:' \
-    logs/spatial-seed-*.err 2>/dev/null | tail -n 30; then
+fatal_found=0
+for variant in "${VARIANTS[@]}"; do
+    for seed in "${SEEDS[@]}"; do
+        latest_log=$(ls -1t \
+            logs/spatial-seed-"${variant}"-s"${seed}"-*.err \
+            2>/dev/null | head -n 1 || true)
+        if [ -n "$latest_log" ] && grep -H -E \
+            'CUDA is unavailable; seed-stability|CUDA warm-up failed|RuntimeError:|ValueError:|FileNotFoundError:|OSError:' \
+            "$latest_log"; then
+            fatal_found=1
+        fi
+    done
+done
+if [ "$fatal_found" -eq 0 ]; then
     echo "No matching fatal markers found."
 fi
 
