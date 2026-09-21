@@ -19,7 +19,12 @@ from utils.helpers import (
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 import data_configs
 
-def test(config, test_indices):
+def test(
+    config,
+    test_indices,
+    number_peaks_override=None,
+    result_suffix="",
+):
     training_name = config["training_name"]
     directory_name = os.path.dirname(__file__)
     artifact_dirs = artifact_directories(config, directory_name)
@@ -28,6 +33,11 @@ def test(config, test_indices):
 
     with open(config_path) as f:
         config = json.load(f)
+
+    if number_peaks_override is not None:
+        if number_peaks_override < 1:
+            raise ValueError("number_peaks_override must be positive")
+        config["number_peaks"] = int(number_peaks_override)
 
     data_dir = config["data_dir"]
     filepath, folderpath, dataname = resolve_data_paths(data_dir, directory_name)
@@ -56,8 +66,22 @@ def test(config, test_indices):
         transform,
     )
     mz_list = torch.tensor(mz_values)
-    test_sampler = SubsetRandomSampler(test_indices)
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, drop_last=False, sampler=test_sampler)
+    if test_indices is None:
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=1,
+            shuffle=False,
+            drop_last=False,
+        )
+    else:
+        test_sampler = SubsetRandomSampler(test_indices)
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=1,
+            shuffle=False,
+            drop_last=False,
+            sampler=test_sampler,
+        )
 
     model = Attention3DConvAutoencoder(batchsize=1, kernel_depth_d1=config["kernel_depth_d1"], kernel_depth_d2=config["kernel_depth_d2"], dropout=config["dropout"], spectral_patch_size=config["spectral_patch_size"])
     model.load_state_dict(torch.load(str(model_path), map_location=torch.device('cpu')), strict=False)
@@ -103,7 +127,7 @@ def test(config, test_indices):
     print('length of peak selection before cut-off = ' + str(len(sorted_peak_list)))
     peak_list = sorted_peak_list[:number_peaks]
 
-    resultfolder = artifact_dirs["results"] / training_name
+    resultfolder = artifact_dirs["results"] / (training_name + result_suffix)
     filename_peak_evaluation = resultfolder / ('peak_evaluation_' + dataname + '_' + str(config["n_epochs"]) + 'epochs.txt')
 
     resultfolder.mkdir(parents=True, exist_ok=True)
@@ -118,11 +142,17 @@ def test(config, test_indices):
             "dataset": dataname,
             "normalization": normalization,
             "number_picked_peaks": len(peak_list),
+            "peak_count_source": (
+                "explicit_matched_override"
+                if number_peaks_override is not None
+                else "training_configuration_or_data_default"
+            ),
+            "source_training_name": training_name,
             "class_metrics": {},
             "mixed_f1": {},
         }
 
-        with open(filename_peak_evaluation, 'a') as file:
+        with open(filename_peak_evaluation, 'w') as file:
             file.write(training_name + ':\n')
             file.write('number picked peaks = ' + str(len(peak_list)) + ', Recall/Precision/F1-Score/Correlation-Score\n')
 
