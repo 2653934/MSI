@@ -40,10 +40,18 @@ echo "=== RECENT FATAL MARKERS ==="
 fatal_found=0
 for variant in "${VARIANTS[@]}"; do
     for seed in "${SEEDS[@]}"; do
-        latest_log=$(ls -1t \
-            logs/spatial-seed-"${variant}"-s"${seed}"-*.err \
-            2>/dev/null | head -n 1 || true)
-        if [ -n "$latest_log" ] && grep -H -E \
+        job_name="seed-${variant}-s${seed}"
+        active_job=$(squeue -h -n "$job_name" -o "%i" | head -n 1 || true)
+        if [ -n "$active_job" ]; then
+            # A pending replacement has no log yet.  Do not fall back to a
+            # superseded failed allocation for the same configuration.
+            latest_log="logs/spatial-seed-${variant}-s${seed}-${active_job}.err"
+        else
+            latest_log=$(ls -1t \
+                logs/spatial-seed-"${variant}"-s"${seed}"-*.err \
+                2>/dev/null | head -n 1 || true)
+        fi
+        if [ -n "$latest_log" ] && [ -f "$latest_log" ] && grep -H -E \
             'CUDA is unavailable; seed-stability|CUDA warm-up failed|RuntimeError:|ValueError:|FileNotFoundError:|OSError:' \
             "$latest_log"; then
             fatal_found=1
