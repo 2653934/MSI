@@ -1,6 +1,6 @@
 # MSI Research Handbook
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 This folder is the human-readable guide to the MSI research project. The JSON,
 CSV, logs and checkpoints remain the authoritative machine-readable artifacts;
@@ -37,7 +37,7 @@ It is:
 - **Baseline reproduction** establishes executable comparison points.
 - **Development experiments** choose a method on `GBM108_positive` only.
 - **Frozen validation** tests that choice on the other GBM sections.
-- **Second-dataset validation** on CAC will test generalisation.
+- **Second-dataset validation** on CAC tests generalisation and is now complete.
 
 This distinction matters. A good result on the development section is a reason
 to continue, not proof that the method generalises.

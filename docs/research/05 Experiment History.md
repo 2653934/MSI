@@ -127,6 +127,28 @@ This chronology records the reasoning chain rather than every shell command.
   contribution, while uniform neighbourhood context has no demonstrated
   consistent mSCF1 advantage on GBM.
 
+## 13. Frozen CAC validation
+
+- Converted and validated every CAC section for the Spatial-msiPL pipeline.
+- Trained matched uniform-mean and centre-only models for 100 epochs on all
+  eight sections, with restartable checkpoints and completion audits.
+- Ran deterministic reconstruction, GMM, nonlinear Integrated Gradients,
+  first-layer L2 and matched-count mSCF1 evaluation.
+- Spatial IG averaged 0.5595 mSCF1 versus 0.5285 for centre-only IG and 0.4024
+  for legacy msiPL.
+- Spatial IG beat centre-only IG on all eight sections: mean paired gain 0.0310,
+  exact Wilcoxon `p = 0.0078125`.
+- Spatial IG beat legacy msiPL on all eight sections: mean paired gain 0.1572,
+  exact Wilcoxon `p = 0.0078125`.
+- Reconstruction MSE split four wins each and centre-only had slightly higher
+  mean GMM balanced accuracy, so the context benefit was specific to nonlinear
+  peak ranking rather than a universal improvement in every metric.
+- Compared with S3PL only as contextual evidence because its peak count was
+  not matched. S3PL averaged 0.5908 mSCF1 versus 0.5595 for spatial IG.
+- Closed frozen validation with a cross-dataset interaction: spatial context
+  was not consistently beneficial on GBM but was beneficial on every CAC
+  section; nonlinear attribution improved over legacy msiPL on both datasets.
+
 ## Why the history matters
 
 Several negative or mixed results were retained: S3PL’s reproduction gap,

@@ -265,3 +265,61 @@ Every centre-only run used a 100-epoch checkpoint, passed all 37 tests, reported
 count. The aggregate summary completed without errors.
 
 ![Matched centre-only attribution control](../../code/msi/results/experiments/spatial_msipl_gbm_validation/context_attribution_control/context_attribution_control.png)
+
+## Frozen CAC validation
+
+The GBM-selected uniform-mean Spatial-msiPL method was frozen and applied to
+all eight CAC sections without section-by-section retuning. Each spatial model
+was paired with a centre-only model trained for the same 100 epochs, and peak
+selection used the same nonlinear GMM-targeted Integrated Gradients procedure.
+Legacy msiPL and the two IG methods were evaluated at the same section-specific
+peak count. The existing S3PL reproduction is shown as useful context, but its
+peak counts were not matched and therefore it is not a controlled head-to-head
+comparison.
+
+| Method | Mean CAC mSCF1 |
+|---|---:|
+| S3PL reproduction (unmatched peak count) | 0.5908 |
+| **Spatial-msiPL IG** | **0.5595** |
+| Centre-only IG | 0.5285 |
+| Legacy msiPL | 0.4024 |
+| Centre-only first-layer L2 | 0.0238 |
+| Spatial first-layer L2 | 0.0079 |
+
+Spatial IG beat centre-only IG on all eight CAC sections. The mean absolute
+gain was 0.0310 mSCF1 and the exact paired Wilcoxon result was
+`p = 0.0078125`. Spatial IG also beat legacy msiPL on all eight sections, with
+a mean gain of 0.1572 and the same exact paired `p = 0.0078125`. These are
+strong directionally consistent results, while still being interpreted as
+section-level evidence rather than eight independent-patient replications.
+
+Against S3PL, spatial IG won two of eight sections and averaged 0.0312 lower
+mSCF1 (`p = 0.0546875`). This does not establish inferiority under a matched
+protocol because S3PL selected different numbers of peaks. It does show that
+the local S3PL reproduction remains a demanding contextual benchmark.
+
+The context benefit was specific to nonlinear peak ranking. Mean GMM balanced
+accuracy was 0.6690 for spatial models and 0.6845 for centre-only models
+(`p = 0.25`). Reconstruction MSE split four wins each (`p = 1.0`). Spatial IG
+had higher deletion faithfulness in six of eight sections, with a mean gain of
+0.0405 (`p = 0.078125`). Thus neighbourhood context did not universally
+improve reconstruction or latent clustering, but it consistently changed the
+nonlinear attribution ranking in a way that improved CAC mSCF1.
+
+Mean training time was 128.4 seconds for spatial models and 125.0 seconds for
+centre-only models, both at 100 epochs. S3PL averaged 55.1 seconds at 10 epochs,
+so those raw times must not be presented as per-epoch-equivalent. Mean reported
+GPU allocation was 68.7 MiB for spatial, 53.3 MiB for centre-only and 97.0 MiB
+for S3PL; this is allocated tensor memory, not total device occupancy.
+
+The cross-dataset conclusion is deliberately nuanced. Neighbourhood context
+did not consistently improve peak selection on GBM, but it improved it on all
+eight CAC sections. Nonlinear Integrated Gradients was the robust contribution
+on both datasets. The value of neighbourhood context is therefore
+dataset-dependent rather than universal.
+
+![CAC matched peak-selection comparison](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_peak_selection_comparison.png)
+
+![CAC context effects](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_context_effects.png)
+
+![CAC computational comparison](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_computational_comparison.png)
