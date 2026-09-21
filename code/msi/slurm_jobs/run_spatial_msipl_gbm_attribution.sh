@@ -15,7 +15,7 @@
 set -eo pipefail
 
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage: sbatch $0 DATASET MATCHED_PEAK_COUNT [uniform_mean|central_only]" >&2
+    echo "Usage: sbatch $0 DATASET MATCHED_PEAK_COUNT [uniform_mean|central_only|depthwise|attention|attention_sqrt_bins]" >&2
     exit 2
 fi
 
@@ -30,7 +30,7 @@ case "$DATASET:$MATCHED_COUNT" in
         ;;
 esac
 case "$VARIANT" in
-    uniform_mean|central_only) ;;
+    uniform_mean|central_only|depthwise|attention|attention_sqrt_bins) ;;
     *)
         echo "Unknown attribution variant: $VARIANT" >&2
         exit 2
@@ -42,7 +42,7 @@ INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
 if [ "$VARIANT" = "central_only" ]; then
     CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/reconstruction/${DATASET}_seed1/central_only/checkpoint.pt"
 else
-    CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASET}_seed1/uniform_mean/checkpoint.pt"
+    CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASET}_seed1/${VARIANT}/checkpoint.pt"
 fi
 ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/${VARIANT}"
 LEGACY_DIR="$PROJECT_ROOT/results/baselines/msipl/massnet/$DATASET"
@@ -58,6 +58,11 @@ mkdir -p "$PROJECT_ROOT/logs"
 if grep -q '"status": "complete"' "$EVALUATION_OUTPUT/summary.json" 2>/dev/null; then
     echo "$DATASET already has a complete attribution evaluation; nothing to do."
     exit 0
+fi
+
+if [ ! -f "$CHECKPOINT" ]; then
+    echo "Required 100-epoch checkpoint is missing: $CHECKPOINT" >&2
+    exit 1
 fi
 
 source "$HOME/miniconda3/etc/profile.d/conda.sh"

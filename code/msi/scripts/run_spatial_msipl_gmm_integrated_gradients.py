@@ -37,7 +37,13 @@ def parse_arguments():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument(
         "--variant",
-        choices=("uniform_mean", "central_only"),
+        choices=(
+            "uniform_mean",
+            "central_only",
+            "depthwise",
+            "attention",
+            "attention_sqrt_bins",
+        ),
         default="uniform_mean",
     )
     parser.add_argument("--batch-size", type=int, default=64)
@@ -88,13 +94,20 @@ def load_model(path, spectral_dim, variant, device):
         )
     else:
         neighbourhood = configuration.get("neighbourhood", {})
-        if neighbourhood.get("name") != "uniform_mean":
-            raise ValueError("uniform-mean attribution requires a uniform-mean checkpoint")
+        expected_name = "attention" if variant == "attention_sqrt_bins" else variant
+        if neighbourhood.get("name") != expected_name:
+            raise ValueError(
+                f"{variant} attribution requires a matching {expected_name} checkpoint"
+            )
         model = NeighbourhoodSpatialVAE(
             spectral_dim=spectral_dim,
-            neighbourhood="uniform_mean",
+            neighbourhood=expected_name,
             hidden_dim=configuration["hidden_dim"],
             latent_dim=configuration["latent_dim"],
+            attention_dim=neighbourhood.get("attention_dim", 8),
+            attention_input_scale=neighbourhood.get(
+                "input_scale_name", "spectral_bins"
+            ),
         )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
@@ -318,11 +331,14 @@ def save_gmm_figure(labels, confidence, x, y, variant, output):
         axis.set_xlabel("X")
         axis.set_ylabel("Y")
         axis.set_aspect("equal")
-    name = (
-        "Uniform-mean Spatial-msiPL"
-        if variant == "uniform_mean"
-        else "Centre-only VAE"
-    )
+    names = {
+        "central_only": "Centre-only VAE",
+        "uniform_mean": "Uniform-mean Spatial-msiPL",
+        "depthwise": "Depthwise Spatial-msiPL",
+        "attention": "Original-attention Spatial-msiPL",
+        "attention_sqrt_bins": "Corrected-attention Spatial-msiPL",
+    }
+    name = names[variant]
     fig.suptitle(f"{name}: latent GMM target", fontsize=14)
     fig.tight_layout()
     fig.savefig(output, dpi=220, bbox_inches="tight")
@@ -344,9 +360,9 @@ def save_attribution_figure(mz, aggregate, variant, output, top_n=20):
         axis.set_ylabel("m/z")
         axis.set_title(f"GMM component {component}: top {top_n} nonlinear features")
     pathway = (
-        "central and neighbourhood pathways"
-        if variant == "uniform_mean"
-        else "the centre-only pathway"
+        "the centre-only pathway"
+        if variant == "central_only"
+        else "central and neighbourhood pathways"
     )
     fig.suptitle(f"Integrated Gradients through {pathway}", fontsize=14)
     fig.tight_layout()
@@ -636,7 +652,7 @@ def main():
             "attribution_pixels_per_component": args.attribution_per_cluster,
             "central_context_combination": (
                 "per-bin |central IG| + sum over valid neighbour slots of |neighbour IG|"
-                if args.variant == "uniform_mean"
+                if args.variant != "central_only"
                 else "per-bin |central IG|; neighbour contribution is structurally zero"
             ),
             "sampling_seed": sampling_seed,
@@ -656,7 +672,7 @@ def main():
             "method": "L2 norm over hidden units of encoder_dense input columns",
             "combination": (
                 "central L2 + context L2"
-                if args.variant == "uniform_mean"
+                if args.variant != "central_only"
                 else "central L2 only"
             ),
             "interpretation": "linear comparator only; not the primary nonlinear explanation",
