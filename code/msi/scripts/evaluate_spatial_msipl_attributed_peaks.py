@@ -177,18 +177,41 @@ def spatial_image(values, x, y):
     return image
 
 
+def categorical_colormap(class_count):
+    base = ("#2A9D8F", "#E76F51", "#6D597A", "#457B9D", "#E9C46A")
+    if class_count <= len(base):
+        colours = base[:class_count]
+    else:
+        colours = matplotlib.colormaps["tab20"](
+            np.linspace(0, 1, class_count)
+        )
+    result = matplotlib.colors.ListedColormap(colours)
+    result.set_bad("#ECECEC")
+    return result
+
+
 def save_cluster_mapping(mapping, expert, components, posterior, x, y, output):
     mapped = mapping["mapped"]
     fig, axes = plt.subplots(1, 4, figsize=(20, 4.8))
-    categorical = matplotlib.colors.ListedColormap(["#2A9D8F", "#E76F51"])
-    categorical.set_bad("#ECECEC")
+    class_count = len(np.unique(expert))
+    categorical = categorical_colormap(class_count)
     error_cmap = matplotlib.colors.ListedColormap(["#F4F1DE", "#9B2226"])
     error_cmap.set_bad("#ECECEC")
     confidence_cmap = matplotlib.colormaps["viridis"].copy()
     confidence_cmap.set_bad("#ECECEC")
-    axes[0].imshow(spatial_image(expert, x, y), cmap=categorical, vmin=0, vmax=1)
+    axes[0].imshow(
+        spatial_image(expert, x, y),
+        cmap=categorical,
+        vmin=-0.5,
+        vmax=class_count - 0.5,
+    )
     axes[0].set_title("Expert mask")
-    axes[1].imshow(spatial_image(mapped, x, y), cmap=categorical, vmin=0, vmax=1)
+    axes[1].imshow(
+        spatial_image(mapped, x, y),
+        cmap=categorical,
+        vmin=-0.5,
+        vmax=class_count - 0.5,
+    )
     axes[1].set_title("Mapped GMM clusters")
     axes[2].imshow(
         spatial_image((mapped != expert).astype(int), x, y),
@@ -198,7 +221,10 @@ def save_cluster_mapping(mapping, expert, components, posterior, x, y, output):
     )
     axes[2].set_title("Mismatch (dark red)")
     shown = axes[3].imshow(
-        spatial_image(posterior, x, y), cmap=confidence_cmap, vmin=0.5, vmax=1.0
+        spatial_image(posterior, x, y),
+        cmap=confidence_cmap,
+        vmin=1.0 / class_count,
+        vmax=1.0,
     )
     axes[3].set_title("Assigned posterior")
     fig.colorbar(shown, ax=axes[3], fraction=0.046)
@@ -479,7 +505,10 @@ def main():
             "component_to_analysis_label": {
                 str(key): int(value) for key, value in mapping["mapping"].items()
             },
-            "analysis_label_names": {"0": "normal", "1": "tumour"},
+            "analysis_label_names": {
+                str(value): f"class_{value}"
+                for value in sorted(np.unique(expert).tolist())
+            },
             "confusion_rows_components_columns_labels": mapping[
                 "confusion_rows_components_columns_labels"
             ],
