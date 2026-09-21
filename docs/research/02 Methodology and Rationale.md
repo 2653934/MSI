@@ -213,3 +213,28 @@ The centre-only model receives no neighbour signal, so neighbour attributions
 are structurally zero. All other evaluation settings and each section's matched
 peak count are held fixed. This comparison tests the added value of context;
 the spatial model is not assumed to win.
+
+### Decision rule and final interpretation
+
+The neighbourhood claim is evaluated from paired section-level differences,
+not from whichever method has the larger unpaired mean. We report the win/loss
+count, mean and median paired change, and an exact two-sided Wilcoxon test. The
+eight sections are experimental units for this comparison but are not asserted
+to be eight independent patients.
+
+The final GBM control was heterogeneous: spatial IG won five of eight sections,
+but centre-only IG had the higher mean because of two larger wins. The paired
+difference was not supported (`p = 0.9453125`). We therefore separate the
+claims:
+
+- Nonlinear GMM-targeted IG improved matched peak selection over legacy msiPL
+  with either encoder.
+- Uniform neighbourhood context did not consistently improve matched mSCF1
+  over a centre-only encoder.
+- Spatial models had higher mean GMM-to-mask balanced accuracy, which may
+  indicate improved latent tissue organisation, but this did not yield a
+  reliable peak-selection advantage.
+
+This distinction prevents crediting the neighbourhood mechanism for an
+improvement that is more directly explained by the nonlinear attribution
+procedure.

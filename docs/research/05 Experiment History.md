@@ -116,6 +116,16 @@ This chronology records the reasoning chain rather than every shell command.
   legacy msiPL and the spatial first-layer L2 comparator.
 - This experiment isolates the contribution of neighbourhood context from the
   benefit of nonlinear attribution.
+- Completed all eight centre-only sections with valid completeness checks and
+  exact matched peak counts.
+- Centre-only IG averaged 0.4665 mSCF1 and beat legacy msiPL on all eight
+  sections, compared with 0.4562 for spatial IG and 0.3643 for legacy msiPL.
+- Spatial IG won five paired sections and centre-only IG won three, but the
+  mean spatial-minus-centre change was -0.0103 and the paired Wilcoxon result
+  was `p = 0.9453125`.
+- Concluded that nonlinear attribution is the robust peak-selection
+  contribution, while uniform neighbourhood context has no demonstrated
+  consistent mSCF1 advantage on GBM.
 
 ## Why the history matters
 

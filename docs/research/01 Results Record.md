@@ -19,9 +19,10 @@ does not automatically mean the scientific hypothesis was supported.
   was frozen as the simplest method.
 - Across all eight GBM sections, uniform spatial context did **not** consistently
   improve reconstruction over a centre-only VAE.
-- On the development section, nonlinear Integrated Gradients selected markedly
-  better peaks than legacy msiPL and first-layer L2. Whole-GBM validation is in
-  progress and must finish before this becomes a general conclusion.
+- Across all eight GBM sections, nonlinear Integrated Gradients from both the
+  spatial and centre-only VAEs selected better peaks than legacy msiPL.
+- The matched centre-only control found no consistent peak-selection advantage
+  from neighbourhood context; the robust gain comes from nonlinear attribution.
 
 ## Dataset validation
 
@@ -227,28 +228,40 @@ All eight Integrated Gradients completeness checks passed.
 
 ## Matched centre-only attribution control
 
-The same GMM-targeted Integrated Gradients procedure is being applied to the
-already-trained centre-only VAEs. Dataset, seed, 100-epoch training duration,
-hidden and latent dimensions, GMM settings, attribution settings and peak
-budget remain matched. This isolates the contribution of neighbourhood context
-from the contribution of nonlinear explanation.
+The same GMM-targeted Integrated Gradients procedure was applied to the frozen
+100-epoch centre-only VAEs. Section, seed, hidden and latent dimensions, GMM
+settings, attribution settings and peak budget were matched. The intended
+difference was the encoder input: centre spectrum alone versus centre plus
+uniform-mean neighbourhood context.
 
-The `GBM108_negative` canary completed successfully:
+| Method | Mean mSCF1 | Standard deviation | Median |
+|---|---:|---:|---:|
+| **Centre-only IG** | **0.4665** | 0.0820 | 0.4935 |
+| Spatial IG | 0.4562 | 0.0898 | 0.4743 |
+| Legacy msiPL | 0.3643 | 0.0749 | 0.3809 |
+| Spatial first-layer L2 | 0.2139 | 0.1124 | 0.2191 |
 
-| Method | mSCF1 |
-|---|---:|
-| Spatial IG (`uniform_mean`) | **0.5400** |
-| Centre-only IG | **0.5321** |
-| Legacy msiPL | 0.4571 |
-| Centre-only first-layer L2 | 0.1142 |
+Spatial IG won five sections and centre-only IG won three. The mean spatial
+minus centre-only change was -0.0103 mSCF1, while the median change was +0.0067.
+The paired Wilcoxon result was `p = 0.9453125`. The correct conclusion is that
+neighbourhood context did not provide a consistent peak-selection benefit.
+The positive median and 5-3 win count show small spatial gains were common, but
+two larger centre-only wins (`GBM22_2` and `GBM39_2`) reversed the mean.
 
-Spatial context added 0.0079 mSCF1, or approximately 1.5%, beyond centre-only
-IG on this section. Centre-only IG still exceeded legacy msiPL by 0.0750. This
-suggests that nonlinear attribution explains most of the improvement on this
-section, while the neighbourhood provides a smaller increment. It is not yet a
-whole-dataset conclusion.
+Centre-only IG beat legacy msiPL on all eight sections. Its mean improvement
+was 0.1022 mSCF1, approximately 28.1% relative, with paired Wilcoxon
+`p = 0.0078125`. Spatial IG also beat legacy on all eight sections. Together,
+these results identify nonlinear attribution, rather than neighbourhood input,
+as the robust source of improved GBM peak selection.
 
-All 37 tests passed, the centre-only attribution had a structurally zero
-neighbour path, and the IG completeness check passed. The seven remaining
-centre-only sections are queued; dependent summary job `57258` will produce the
-paired aggregate comparison.
+Spatial context may still affect representation structure. Mean GMM balanced
+accuracy was 0.9113 for spatial models versus 0.8676 for centre-only models,
+although the centre-only mean was strongly reduced by `GBM12_1` (0.3214).
+This possible representation-level effect did not translate into a consistent
+mSCF1 advantage.
+
+Every centre-only run used a 100-epoch checkpoint, passed all 37 tests, reported
+`status: valid`, passed IG completeness and produced the exact matched peak
+count. The aggregate summary completed without errors.
+
+![Matched centre-only attribution control](../../code/msi/results/experiments/spatial_msipl_gbm_validation/context_attribution_control/context_attribution_control.png)

@@ -1,6 +1,6 @@
 # Current Status and Next Steps
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 ## Completed
 
@@ -12,6 +12,7 @@ Last updated: 2026-09-20
 - Whole-GBM uniform-mean and centre-only 100-epoch training.
 - Whole-GBM reconstruction comparison: mixed 4-4 MSE split.
 - Whole-GBM nonlinear peak attribution and matched evaluation.
+- Matched centre-only IG control across all eight GBM sections.
 
 ## Whole-GBM attribution result
 
@@ -21,14 +22,12 @@ paired section-level Wilcoxon `p = 0.0078125`. First-layer L2 averaged 0.2139
 and lost to IG on seven of eight sections. Mean GMM balanced accuracy was
 0.9113, and all attribution completeness checks passed.
 
-This supports nonlinear attribution as a peak-ranking method. It does not yet
-isolate whether neighbourhood context adds value because the legacy comparison
-changes both model architecture and explanation method.
+This supports nonlinear attribution as a peak-ranking method. The completed
+centre-only control now separates that gain from the neighbourhood mechanism.
 
-## Running now: matched centre-only IG control
+## Completed decision: neighbourhood context versus nonlinear attribution
 
-Use the frozen 100-epoch centre-only checkpoints. No retraining is required.
-The control holds constant:
+The frozen centre-only control held constant:
 
 - section and preprocessing;
 - seed and trained duration;
@@ -37,37 +36,33 @@ The control holds constant:
 - IG baseline, integration steps and sampled pixels;
 - section-specific matched peak count and PCC evaluation.
 
-The intended difference is only the encoder input: centre spectrum alone versus
-centre plus uniform-mean neighbourhood context.
+The intended difference was only the encoder input. Centre-only IG averaged
+0.4665 mSCF1 versus 0.4562 for spatial IG. Spatial won five sections and
+centre-only won three, but the mean paired change was -0.0103 and the exact
+Wilcoxon result was `p = 0.9453125`. There is no consistent peak-selection
+advantage from neighbourhood context.
 
-The `GBM108_negative` canary completed and passed all 37 tests and IG
-completeness. Centre-only IG achieved mSCF1 0.5321 versus 0.5400 for spatial IG,
-0.4571 for legacy msiPL and 0.1142 for centre-only first-layer L2. Spatial
-context therefore added 0.0079 mSCF1 (1.5%) on this section, while nonlinear IG
-accounted for most of the gain over legacy msiPL.
+Centre-only IG beat legacy msiPL on all eight sections, with mean gain 0.1022
+and paired `p = 0.0078125`. The defensible conclusion is that nonlinear IG is
+the robust peak-selection contribution. Spatial context may still improve
+latent tissue organisation: mean GMM balanced accuracy was 0.9113 for spatial
+models versus 0.8676 for centre-only models. That possible representation
+benefit did not translate into consistently better mSCF1.
 
-The remaining seven controls are submitted as jobs `57245`-`57257`. Summary
-job `57258` waits for their gates and will report spatial IG minus centre-only
-IG, centre-only IG minus legacy msiPL, win/loss counts and paired tests.
+## Current priority: frozen CAC validation
 
-## Decision after the control
+The GBM architecture-versus-explanation question is now closed. The next stage
+is to apply the locked analysis to CAC without retuning the method in response
+to individual sections. This supplies the cross-dataset validation required
+before final synthesis.
 
-- If spatial IG consistently beats centre-only IG, neighbourhood context has
-  evidence of added peak-selection value even though reconstruction was mixed.
-- If the results are tied or heterogeneous, IG is still useful but context is
-  not consistently beneficial for peak selection.
-- If centre-only IG wins, the nonlinear explanation method rather than spatial
-  context is the likely source of improvement.
-
-Do not add a Spatial LearnPeaks adaptation unless the centre-only result leaves
-a specific unresolved question that justifies it.
+Do not add a Spatial LearnPeaks adaptation unless CAC exposes a specific
+unresolved methodological question that justifies it.
 
 ## Remaining sequence
 
 ```text
-centre-only IG canary complete
-  -> seven remaining centre-only IG sections queued
-  -> aggregate context-control result
+GBM centre-only IG control complete
   -> frozen CAC validation
   -> cross-dataset synthesis
   -> dissertation-ready methods, results and discussion
