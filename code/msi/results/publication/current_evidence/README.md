@@ -1,8 +1,8 @@
 # Current publication results
 
 This package summarizes the completed seed-1 model campaign. Section-level
-variation is shown explicitly; training-seed stability remains a planned targeted
-analysis. All primary method comparisons below use matched section-specific peak
+variation is shown explicitly; targeted training-seed stability is reported in a
+separate artifact. All primary method comparisons below use matched section-specific peak
 budgets.
 
 ## Primary result
@@ -35,9 +35,10 @@ does not consistently improve GBM mSCF1, but improves all eight CAC sections.
 
 ## S3PL placement
 
-S3PL is retained as a contextual CAC benchmark, not included in the matched primary
-test. It used its own selected peak counts and a 10-epoch implementation protocol.
-Its mean CAC mSCF1 was 0.5908, versus 0.5595 for uniform-context IG.
+S3PL is retained as a separate CAC architecture benchmark. Its existing checkpoints
+were re-evaluated with the same section-specific peak counts as the primary methods;
+its training protocol remains the reproduced 10-epoch S3PL protocol.
+Its mean CAC mSCF1 was 0.5915, versus 0.5595 for uniform-context IG.
 
 ## Interpretation boundaries
 
@@ -45,8 +46,8 @@ Its mean CAC mSCF1 was 0.5908, versus 0.5595 for uniform-context IG.
   possible learned neighbourhood aggregators.
 - First-layer L2 is an intentionally simple weight-magnitude comparator, not a
   reimplementation of legacy LearnPeaks.
-- Full GBM and CAC validation currently uses one model-training seed. Attribution
-  sampling stability was tested separately; targeted model-seed repeats are pending.
+- Full GBM and CAC section-wide validation uses seed 1. Targeted GBM108-positive
+  training-seed repeats reached 100 epochs and are evaluated separately.
 - The eight sections within a collection are paired section-level units and are not
   asserted to be eight independent patients.
 
@@ -55,4 +56,4 @@ Its mean CAC mSCF1 was 0.5908, versus 0.5595 for uniform-context IG.
 1. `figure_1_primary_peak_quality.png` — matched primary comparison.
 2. `figure_2_context_effect_by_section.png` — section-level context contribution.
 3. `figure_3_explanation_ablation.png` — L2, legacy msiPL, and nonlinear IG.
-4. `figure_s1_s3pl_contextual_cac.png` — separate contextual S3PL comparison.
+4. `figure_s1_s3pl_contextual_cac.png` — matched-count S3PL architecture comparison.
