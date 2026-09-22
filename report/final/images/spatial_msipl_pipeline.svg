@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <style>
+      .title { font: 700 31px Arial, sans-serif; fill: #17212b; }
+      .head { font: 700 22px Arial, sans-serif; fill: #17212b; }
+      .body { font: 18px Arial, sans-serif; fill: #273746; }
+      .small { font: 16px Arial, sans-serif; fill: #34495e; }
+      .stage { fill: #f7f9fb; stroke: #526575; stroke-width: 2.5; rx: 18; }
+      .model { fill: #eef5f8; stroke: #24748a; stroke-width: 2.5; rx: 18; }
+      .eval { fill: #f4f1f8; stroke: #76518f; stroke-width: 2.5; rx: 18; }
+      .mask { fill: #fff5e8; stroke: #b36b18; stroke-width: 2.5; rx: 18; }
+      .arrow { stroke: #425466; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #b36b18; stroke-width: 3; fill: none; stroke-dasharray: 10 8; marker-end: url(#arrowOrange); }
+      .band { fill: #dae8ed; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#425466"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#b36b18"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="white"/>
+  <text x="60" y="55" class="title">Spatial-msiPL: controlled training and label-free nonlinear peak ranking</text>
+
+  <rect x="55" y="110" width="240" height="165" class="stage"/>
+  <text x="175" y="145" text-anchor="middle" class="head">MSI section</text>
+  <text x="175" y="180" text-anchor="middle" class="body">spectrum at each</text>
+  <text x="175" y="207" text-anchor="middle" class="body">measured coordinate</text>
+  <text x="175" y="242" text-anchor="middle" class="small">GBM: 85,062 bins</text>
+  <text x="175" y="264" text-anchor="middle" class="small">CAC: 1,481 bins</text>
+
+  <rect x="350" y="110" width="250" height="165" class="stage"/>
+  <text x="475" y="145" text-anchor="middle" class="head">Preprocess</text>
+  <text x="475" y="182" text-anchor="middle" class="body">TIC normalisation</text>
+  <text x="475" y="211" text-anchor="middle" class="body">measured-coordinate</text>
+  <text x="475" y="238" text-anchor="middle" class="body">neighbour lookup</text>
+  <text x="475" y="264" text-anchor="middle" class="small">no mask labels used</text>
+
+  <rect x="655" y="88" width="295" height="210" class="model"/>
+  <text x="802" y="126" text-anchor="middle" class="head">Controlled input</text>
+  <text x="802" y="164" text-anchor="middle" class="body">central spectrum x</text>
+  <rect x="688" y="188" width="228" height="35" class="band" rx="8"/>
+  <text x="802" y="212" text-anchor="middle" class="small">centre-only: x</text>
+  <rect x="688" y="231" width="228" height="35" class="band" rx="8"/>
+  <text x="802" y="255" text-anchor="middle" class="small">uniform / attention: [x, c]</text>
+  <text x="802" y="286" text-anchor="middle" class="small">c summarises up to 8 neighbours</text>
+
+  <rect x="1010" y="88" width="250" height="210" class="model"/>
+  <text x="1135" y="126" text-anchor="middle" class="head">VAE</text>
+  <text x="1135" y="166" text-anchor="middle" class="body">encoder</text>
+  <text x="1135" y="194" text-anchor="middle" class="small">512 hidden units</text>
+  <text x="1135" y="223" text-anchor="middle" class="body">μ, log σ² → z</text>
+  <text x="1135" y="251" text-anchor="middle" class="small">5 latent dimensions</text>
+  <text x="1135" y="281" text-anchor="middle" class="body">decoder → reconstruct x</text>
+
+  <rect x="1320" y="110" width="225" height="165" class="model"/>
+  <text x="1432" y="145" text-anchor="middle" class="head">Training loss</text>
+  <text x="1432" y="187" text-anchor="middle" class="body">reconstruction</text>
+  <text x="1432" y="216" text-anchor="middle" class="body">+ β · KL</text>
+  <text x="1432" y="253" text-anchor="middle" class="small">100 epochs; fixed seed</text>
+
+  <path d="M295 192 H350" class="arrow"/>
+  <path d="M600 192 H655" class="arrow"/>
+  <path d="M950 192 H1010" class="arrow"/>
+  <path d="M1260 192 H1320" class="arrow"/>
+
+  <rect x="180" y="390" width="250" height="155" class="eval"/>
+  <text x="305" y="429" text-anchor="middle" class="head">Frozen latent means</text>
+  <text x="305" y="469" text-anchor="middle" class="body">μ for every pixel</text>
+  <text x="305" y="504" text-anchor="middle" class="small">training labels remain absent</text>
+
+  <rect x="500" y="390" width="245" height="155" class="eval"/>
+  <text x="622" y="429" text-anchor="middle" class="head">Label-free GMM</text>
+  <text x="622" y="469" text-anchor="middle" class="body">2 components</text>
+  <text x="622" y="504" text-anchor="middle" class="small">posterior target p(k | μ)</text>
+
+  <rect x="815" y="375" width="290" height="185" class="eval"/>
+  <text x="960" y="414" text-anchor="middle" class="head">Integrated Gradients</text>
+  <text x="960" y="453" text-anchor="middle" class="body">attribute GMM posterior</text>
+  <text x="960" y="482" text-anchor="middle" class="body">through the full encoder</text>
+  <text x="960" y="516" text-anchor="middle" class="small">central + contextual paths</text>
+  <text x="960" y="543" text-anchor="middle" class="small">completeness &amp; deletion checks</text>
+
+  <rect x="1175" y="390" width="250" height="155" class="eval"/>
+  <text x="1300" y="429" text-anchor="middle" class="head">Peak ranking</text>
+  <text x="1300" y="469" text-anchor="middle" class="body">aggregate |IG| by m/z</text>
+  <text x="1300" y="504" text-anchor="middle" class="small">matched section-specific budget</text>
+
+  <path d="M1135 298 V335 H305 V390" class="arrow"/>
+  <path d="M430 467 H500" class="arrow"/>
+  <path d="M745 467 H815" class="arrow"/>
+  <path d="M1105 467 H1175" class="arrow"/>
+
+  <rect x="125" y="690" width="300" height="145" class="mask"/>
+  <text x="275" y="729" text-anchor="middle" class="head">Expert tissue mask</text>
+  <text x="275" y="768" text-anchor="middle" class="body">evaluation only</text>
+  <text x="275" y="800" text-anchor="middle" class="small">never used to fit VAE, GMM or IG</text>
+
+  <rect x="540" y="665" width="460" height="190" class="eval"/>
+  <text x="770" y="705" text-anchor="middle" class="head">Spatial peak evaluation</text>
+  <text x="770" y="747" text-anchor="middle" class="body">ion image ↔ class mask Pearson correlation</text>
+  <text x="770" y="782" text-anchor="middle" class="body">F1 at r = 0.3, 0.4, 0.5, 0.6</text>
+  <text x="770" y="818" text-anchor="middle" class="body">mSCF1 = mean of four F1 scores</text>
+
+  <rect x="1115" y="680" width="360" height="160" class="stage"/>
+  <text x="1295" y="719" text-anchor="middle" class="head">Matched comparisons</text>
+  <text x="1295" y="759" text-anchor="middle" class="body">centre-only • legacy msiPL</text>
+  <text x="1295" y="790" text-anchor="middle" class="body">first-layer L2 • S3PL</text>
+  <text x="1295" y="820" text-anchor="middle" class="small">quality, faithfulness, time, memory</text>
+
+  <path d="M1300 545 V620 H770 V665" class="arrow"/>
+  <path d="M425 762 H540" class="dash"/>
+  <path d="M1000 760 H1115" class="arrow"/>
+
+  <text x="60" y="885" class="small">Solid arrows: modelling and evaluation flow. Dashed orange arrow: expert labels enter only after peaks have been selected.</text>
+</svg>

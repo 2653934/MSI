@@ -1,0 +1,41 @@
+\section{Related Work}
+\label{sec:related_work}
+
+\subsection{MSI feature reduction}
+
+MSI combines spectral and image structure, but its scale motivates feature
+reduction before visualisation, classification or biological interpretation.
+Traditional workflows include normalisation, smoothing, baseline correction
+and rule-based peak detection~\citep{gibb2012maldiquant,deininger2011normalization}.
+Sparse and learning-based methods reduce manual threshold dependence, but a
+selected peak is useful for this study only when its ion image also reflects
+annotated tissue structure~\citep{lieb2020sparse,winderbaum2015feature}.
+
+\subsection{Representation and peak learning}
+
+VAEs learn a probabilistic low-dimensional representation by balancing
+reconstruction against regularisation of the latent distribution
+~\citep{kingma2014autoencoding}. msiPL applies this idea to spectra and derives
+peaks through network-weight analysis~\citep{abdelmoula2021peak}. Its small
+network is attractive computationally, but neighbouring pixels do not interact.
+S3PL introduces spatial self-supervision and patch-based convolutions, and also
+provides a correlation-based evaluation that converts ion-image agreement with
+tissue masks into mSCF1~\citep{weigand2026spatial}. These methods motivate a
+lighter controlled test of spatial context inside an msiPL-style VAE.
+
+\subsection{Neural attribution}
+
+A first-layer weight norm measures only the model's initial linear connection
+to each input. It cannot represent batch normalisation, nonlinear hidden
+transformations, latent geometry or the downstream decision surface.
+Integrated Gradients instead integrates the gradient of a chosen output along
+a path from a baseline input to the observed input and satisfies a completeness
+property under standard differentiability assumptions
+~\citep{sundararajan2017axiomatic}. The present work targets a label-free GMM
+posterior rather than a supervised class output. This lets attribution explain
+which $m/z$ bins support structure learned without using expert tissue labels.
+
+The project is therefore positioned as a controlled decomposition rather than
+a claim that a new architecture dominates every baseline: the same VAE and
+attribution procedure are used to isolate neighbourhood value, while matched
+peak budgets isolate ranking quality.

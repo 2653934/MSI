@@ -1,0 +1,51 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Mass spectrometry imaging (MSI) maps molecular measurements directly to tissue
+coordinates, enabling biochemical structure to be studied without preselecting
+one target molecule~\citep{caprioli1997maldi,schwamborn2010molecular}. Each
+pixel nevertheless contains a spectrum with hundreds to tens of thousands of
+mass-to-charge ($m/z$) bins. Many bins are redundant, noisy or unrelated to the
+biological structure of interest, so selecting a compact set of informative
+peaks is an important preprocessing step.
+
+Conventional peak picking uses rules such as intensity and signal-to-noise
+thresholds. These rules are useful but can be sensitive to user choices and may
+discard weak yet spatially coherent ions. Peak learning instead trains a model
+on spectra and derives a ranking from the learned representation. The msiPL
+approach uses a one-dimensional variational autoencoder (VAE), but processes
+each pixel independently~\citep{abdelmoula2021peak}. S3PL explicitly consumes a
+spatial patch~\citep{weigand2026spatial}, although its three-dimensional
+convolutional architecture and released implementation differ substantially
+from msiPL. This leaves two questions entangled: whether local context improves
+the learned representation, and whether a better explanation of a nonlinear
+representation improves the resulting peak list.
+
+This report develops Spatial-msiPL, a controlled VAE study in which the central
+spectrum is compared with the same model supplied with a summary of its Moore
+neighbourhood. Rather than assuming that first-layer weights faithfully explain
+the model, a label-free Gaussian mixture model (GMM) is fitted in latent space
+and its posterior is propagated to input bins with Integrated
+Gradients~\citep{sundararajan2017axiomatic}. Expert masks are used only after
+ranking to quantify spatial peak quality.
+
+The study answers three research questions:
+\begin{enumerate}
+  \item Under matched training, how does eight-neighbour context affect
+  reconstruction, latent tissue separation and matched-count peak quality
+  relative to a centre-only VAE?
+  \item Does nonlinear GMM-targeted Integrated Gradients produce better peak
+  rankings than legacy msiPL and simple first-layer L2 importance?
+  \item What peak-quality, explanation-faithfulness and computational trade-offs
+  arise from learned attention, and are they stable across training seeds?
+\end{enumerate}
+
+The aim is to determine separately when neighbourhood context and nonlinear
+attribution improve lightweight MSI peak learning. The principal contributions
+are: (i) a controlled centre-only/contextual comparison; (ii) a label-free
+GMM-targeted attribution pipeline; (iii) matched-count validation on eight GBM
+and eight CAC sections; and (iv) completeness, deletion-faithfulness, compute
+and training-seed analyses that bound the claims. The remainder of the report
+reviews related peak-learning and attribution methods, defines the controlled
+pipeline, presents the experimental results, and discusses what they do and do
+not establish.

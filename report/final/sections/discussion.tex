@@ -1,0 +1,46 @@
+\section{Discussion}
+\label{sec:discussion}
+
+The clearest result is not that spatial input always improves a VAE. It is that
+the way a learned representation is explained matters strongly for peak
+selection. Both centre-only and contextual GMM-targeted IG exceeded legacy
+msiPL across the complete GBM and CAC evaluations, while first-layer L2 often
+failed. This is consistent with the methodological difference: L2 observes one
+linear transformation, whereas IG follows the full nonlinear path to a
+label-free latent-space decision.
+
+RQ1 has a conditional answer. Uniform context did not consistently improve GBM
+reconstruction or mSCF1, but improved CAC mSCF1 in every paired section. A
+neighbour mean can reduce local noise when adjacent spectra share relevant
+structure, but can also blur boundaries or combine heterogeneous tissue. The
+different spectral resolution, tissue classes, coverage and acquisition
+properties of GBM and CAC plausibly change that balance. The experiments show
+the boundary of the effect; they do not identify one biological cause.
+
+RQ2 is supported more broadly. Nonlinear IG improved matched-count peak quality
+over legacy msiPL across both collections. Completeness and deletion tests add
+important evidence beyond mSCF1: the former checks numerical consistency with
+the explained output, while the latter asks whether removing highly ranked bins
+actually changes that output. Nevertheless, a high mask-correlation score does
+not validate a peak as a biomarker. Independent molecular identification and
+biological validation remain outside this study.
+
+RQ3 shows a trade-off. Corrected attention gave a small but seed-consistent
+mSCF1 improvement on the development section, yet did not improve deletion
+faithfulness and consumed more memory. It should therefore remain an ablation
+until tested across independent sections. Uniform averaging remains the more
+defensible broad-validation model because it is parameter-free and was frozen
+before whole-dataset evaluation.
+
+S3PL is the strongest executable CAC baseline in peak quality. The present
+method should not be described as both more accurate and cheaper than S3PL: its
+matched CAC mSCF1 is lower, and the 10- versus 100-epoch protocols make the
+recorded runtimes non-equivalent. The value of Spatial-msiPL is instead the
+controlled evidence about context and attribution within a VAE framework.
+
+Limitations include seed-1 section-wide validation, three-seed testing on only
+one development section, sections that are not independent patients,
+dataset-specific peak budgets, a GBM S3PL reproduction gap, and variable
+cluster hardware availability. Future work should repeat training across
+patients and sections, constrain attention more efficiently, investigate
+automatic peak-budget selection, and validate selected ions biologically.

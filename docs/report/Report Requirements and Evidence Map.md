@@ -208,20 +208,30 @@ Main tables:
 Detailed per-section values, additional ion images and troubleshooting evidence
 should be moved to supplementary material or the repository if permitted.
 
-## Current gaps before drafting the final report
+## Current gaps while drafting the final report
 
-1. Finalise the report title, exact research questions and contribution wording
-   with the supervisor.
-2. Create one publication-quality pipeline diagram.
-3. Consolidate the bibliography and verify every reference entry and citation.
-4. Produce a compact dataset-characteristics table from the audited JSON files.
-5. Produce a compact hyperparameter and reproducibility table.
-6. Decide whether any remaining experiment can materially change an answer to
+Completed on 2026-09-22:
+
+- a working report title, exact research questions, aim, objectives and bounded
+  contributions were recorded in `Research Questions and Contributions.md`;
+- a publication-quality pipeline diagram was created in SVG and PNG forms;
+- the official report template was copied into a separate working structure in
+  `report/final/`, and a first evidence-grounded draft was written.
+
+Remaining work:
+
+1. Confirm the final research-question and contribution wording with the
+   supervisors.
+2. Consolidate the bibliography and verify every reference entry against its
+   primary publication.
+3. Produce a compact hyperparameter and reproducibility table.
+4. Decide whether any remaining experiment can materially change an answer to
    a research question; avoid experiments that only add volume.
-7. Add the repository or code-availability statement expected by the results
+5. Add the repository or code-availability statement expected by the results
    rubric.
-8. Draft the report in `report/Final/` while preserving the supplied template
-   unchanged in `report/Template/`.
+6. Expand the current six-page framing draft to the required 8--12 pages only
+   after the revised direction is confirmed with Hairong. MiKTeX compilation
+   and page-by-page visual inspection succeeded on 2026-09-22.
 
 ## Rubric-specific final checks
 

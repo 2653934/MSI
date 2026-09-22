@@ -1,0 +1,97 @@
+% Working research-report draft. The supplied template remains unchanged in ../Template/.
+\documentclass[journal,10pt,twoside]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc}
+\usepackage{balance}
+\usepackage{microtype}
+\usepackage{dblfloatfix}
+\usepackage{url}
+\usepackage[bookmarks=true,bookmarksopen=true]{hyperref}
+\usepackage{cleveref}
+\usepackage{natbib}\input{natbib-add}
+\bibliographystyle{apalike}
+\bibpunct{[}{]}{;}{a}{}{}
+
+\setlist[itemize]{noitemsep,nolistsep,leftmargin=*}
+\setlist[enumerate]{noitemsep,nolistsep,leftmargin=*}
+\hypersetup{colorlinks=true,urlcolor=blue,linkcolor=blue,citecolor=blue}
+\crefname{figure}{figure}{figures}
+\Crefname{figure}{Figure}{Figures}
+\crefname{table}{table}{tables}
+\Crefname{table}{Table}{Tables}
+
+\newcommand{\reporttitle}{Spatial Context and Nonlinear Attribution for Peak Learning in Mass Spectrometry Imaging}
+\newcommand{\authorname}{Zayd \textsc{Suliman}}
+\newcommand{\studentnumber}{2653934}
+\newcommand{\supervisorname}{Hairong Bau and Richard Klein}
+\newcommand{\academicyear}{2026}
+
+\begin{document}
+
+\title{%
+  \vspace{4pt}
+  \includegraphics[width=0.12\textwidth]{images/witslogonew.png}\\[6pt]
+  \Large\textbf{\reporttitle}%
+}
+
+\author{%
+  \authorname,~Student~No.~\studentnumber\\
+  \small School of Computer Science and Applied Mathematics,
+         Faculty of Science, University of the Witwatersrand\\
+  \small Supervisors:~\supervisorname \qquad \academicyear
+}
+
+\maketitle
+
+\begin{abstract}
+Mass spectrometry imaging measures a high-dimensional mass spectrum at each
+tissue location, making reliable feature reduction necessary before downstream
+analysis. Existing variational-autoencoder peak learning is computationally
+accessible but spatially blind, whereas spatial convolutional methods use local
+structure at greater architectural complexity. This study separates two
+possible sources of improvement: adding local neighbourhood context to a
+lightweight variational autoencoder and replacing weight-based peak extraction
+with nonlinear attribution. Centre-only and eight-neighbour contextual models
+were trained under matched conditions on eight glioblastoma and eight
+colorectal-adenocarcinoma sections. A label-free two-component Gaussian mixture
+model was fitted to frozen latent means, and its posterior was attributed to
+mass-to-charge bins using Integrated Gradients. At matched peak counts,
+nonlinear attribution outperformed legacy msiPL on every section: mean mSCF1
+increased from 0.3643 to 0.4562 on glioblastoma and from 0.4024 to 0.5595 on
+colorectal adenocarcinoma. Uniform neighbourhood context was not universally
+beneficial; it had no consistent glioblastoma advantage, but improved mSCF1
+over the centre-only control on all eight colorectal sections. Corrected
+attention improved mSCF1 over uniform averaging across three training seeds on
+one development section, but did not improve deletion faithfulness and used
+more memory. The principal result is therefore a robust gain from nonlinear,
+label-free attribution, with spatial context providing a conditional rather
+than universal benefit.
+\end{abstract}
+
+\begin{IEEEkeywords}
+mass spectrometry imaging, peak learning, variational autoencoder, spatial context, Integrated Gradients, explainable artificial intelligence
+\end{IEEEkeywords}
+
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\section*{Acknowledgements}
+The author thanks Hairong Bau and Richard Klein for their supervision and
+guidance, and the University of the Witwatersrand for access to the MSCluster
+computing facility.
+
+\balance
+\bibliography{references}
+\end{document}
