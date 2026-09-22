@@ -1,9 +1,8 @@
 # Current publication results
 
-This package summarizes the completed seed-1 model campaign. Section-level
-variation is shown explicitly; targeted training-seed stability is reported in a
-separate artifact. All primary method comparisons below use matched section-specific peak
-budgets.
+This package summarizes the completed seed-1 section-wide model campaign and
+the targeted three-seed stability experiment. All primary method comparisons
+below use matched section-specific peak budgets.
 
 ## Primary result
 
@@ -40,14 +39,27 @@ were re-evaluated with the same section-specific peak counts as the primary meth
 its training protocol remains the reproduced 10-epoch S3PL protocol.
 Its mean CAC mSCF1 was 0.5915, versus 0.5595 for uniform-context IG.
 
+## Targeted training-seed stability
+
+On GBM108-positive, centre-only, uniform-mean and corrected-attention models
+were independently trained with seeds 1, 2 and 3. Evaluation randomness and
+the 530-peak budget were fixed. Mean mSCF1 was 0.5120 for centre-only, 0.5250
+for uniform mean and 0.5454 for corrected attention.
+
+Corrected attention beat uniform mean in all three seeds and improved mSCF1 by
++0.0204 on average. It nevertheless failed the combined predeclared gate
+because mean deletion faithfulness changed by -0.0045. The result supports a
+small peak-quality benefit on this development section, not a claim of more
+faithful explanations or whole-dataset multi-seed superiority.
+
 ## Interpretation boundaries
 
 - The neighbourhood conclusion currently concerns uniform-mean context, not all
   possible learned neighbourhood aggregators.
 - First-layer L2 is an intentionally simple weight-magnitude comparator, not a
   reimplementation of legacy LearnPeaks.
-- Full GBM and CAC section-wide validation uses seed 1. Targeted GBM108-positive
-  training-seed repeats reached 100 epochs and are evaluated separately.
+- Full GBM and CAC section-wide validation uses seed 1. The three-seed analysis
+  is deliberately restricted to the GBM108-positive development section.
 - The eight sections within a collection are paired section-level units and are not
   asserted to be eight independent patients.
 
@@ -57,3 +69,4 @@ Its mean CAC mSCF1 was 0.5915, versus 0.5595 for uniform-context IG.
 2. `figure_2_context_effect_by_section.png` — section-level context contribution.
 3. `figure_3_explanation_ablation.png` — L2, legacy msiPL, and nonlinear IG.
 4. `figure_s1_s3pl_contextual_cac.png` — matched-count S3PL architecture comparison.
+5. `figure_4_seed_stability.png` — targeted model-training seed stability.

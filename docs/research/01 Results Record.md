@@ -272,14 +272,13 @@ The GBM-selected uniform-mean Spatial-msiPL method was frozen and applied to
 all eight CAC sections without section-by-section retuning. Each spatial model
 was paired with a centre-only model trained for the same 100 epochs, and peak
 selection used the same nonlinear GMM-targeted Integrated Gradients procedure.
-Legacy msiPL and the two IG methods were evaluated at the same section-specific
-peak count. The existing S3PL reproduction is shown as useful context, but its
-peak counts were not matched and therefore it is not a controlled head-to-head
-comparison.
+Legacy msiPL, the two IG methods and S3PL were evaluated at the same
+section-specific peak count. S3PL reused its existing ten-epoch checkpoints;
+only its final evaluation count was changed, so no S3PL retraining was needed.
 
 | Method | Mean CAC mSCF1 |
 |---|---:|
-| S3PL reproduction (unmatched peak count) | 0.5908 |
+| **S3PL reproduction (matched peak count)** | **0.5915** |
 | **Spatial-msiPL IG** | **0.5595** |
 | Centre-only IG | 0.5285 |
 | Legacy msiPL | 0.4024 |
@@ -293,10 +292,12 @@ a mean gain of 0.1572 and the same exact paired `p = 0.0078125`. These are
 strong directionally consistent results, while still being interpreted as
 section-level evidence rather than eight independent-patient replications.
 
-Against S3PL, spatial IG won two of eight sections and averaged 0.0312 lower
-mSCF1 (`p = 0.0546875`). This does not establish inferiority under a matched
-protocol because S3PL selected different numbers of peaks. It does show that
-the local S3PL reproduction remains a demanding contextual benchmark.
+Against matched-count S3PL, spatial IG won two of eight sections and averaged
+0.0320 lower mSCF1. Re-evaluating S3PL at the shared peak counts changed its
+mean only from 0.5908 to 0.5915. The earlier peak-count mismatch therefore did
+not explain the performance gap. S3PL remains the strongest CAC baseline in
+this executable comparison, while its ten-epoch architecture and training
+protocol differ from the 100-epoch VAE experiments.
 
 The context benefit was specific to nonlinear peak ranking. Mean GMM balanced
 accuracy was 0.6690 for spatial models and 0.6845 for centre-only models
@@ -323,3 +324,34 @@ dataset-dependent rather than universal.
 ![CAC context effects](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_context_effects.png)
 
 ![CAC computational comparison](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_computational_comparison.png)
+
+## Targeted training-seed stability
+
+The frozen `GBM108_positive` comparison was repeated with model-training seeds
+2 and 3 for centre-only, uniform-mean and corrected-attention VAEs. Together
+with seed 1, this gives three independently trained models per variant. The GMM
+seed, attribution-pixel sampling seed, evaluation procedure and 530-peak budget
+were fixed at 1 so that only model training changed.
+
+| Variant | mSCF1 mean +/- sample SD | GMM balanced accuracy | IG deletion faithfulness | Peak GPU memory |
+|---|---:|---:|---:|---:|
+| Centre-only | 0.5120 +/- 0.0179 | 0.8745 +/- 0.0039 | 0.1120 +/- 0.0147 | 2.05 GiB |
+| Uniform mean | 0.5250 +/- 0.0132 | 0.8735 +/- 0.0274 | **0.1224 +/- 0.0255** | 2.90 GiB |
+| Corrected attention | **0.5454 +/- 0.0188** | **0.8822 +/- 0.0072** | 0.1179 +/- 0.0099 | 3.20 GiB |
+
+Corrected attention beat uniform mean in all three training seeds. The
+per-seed mSCF1 gains were +0.0347, +0.0120 and +0.0144, giving a mean gain of
++0.0204. This narrowly met the predeclared +0.02 peak-quality requirement.
+Uniform mean beat centre-only in two of three seeds and averaged +0.0130, so
+the simple context benefit was less stable on this development section.
+
+The attention result did not pass the full predeclared gate. Its deletion
+faithfulness was lower than uniform mean in two of three seeds and by 0.0045
+on average. The defensible conclusion is therefore that corrected attention
+produces a small, training-seed-consistent improvement in matched peak mSCF1 on
+`GBM108_positive`, but we do not have evidence that its attribution is more
+faithful. This targeted three-seed result does not replace the eight-section
+seed-1 validation and should not be presented as whole-dataset multi-seed
+replication.
+
+![GBM108-positive training-seed stability](../../code/msi/results/experiments/spatial_msipl_training_seed_stability_summary/gbm108_positive_seed_stability.png)

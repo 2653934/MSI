@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import shutil
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -218,7 +219,7 @@ def markdown_table(rows: list[dict], collection: str) -> list[str]:
     return lines
 
 
-def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> None:
+def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict, seeds: dict) -> None:
     gbm_cmp = gbm["aggregate"]
     cac_cmp = cac["paired_comparisons"]
     lines = [
@@ -269,14 +270,32 @@ def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> Non
         f"Its mean CAC mSCF1 was {cac['method_means']['s3pl_mscf1']:.4f}, versus "
         f"{cac['method_means']['spatial_ig_mscf1']:.4f} for uniform-context IG.",
         "",
+        "## Targeted training-seed stability",
+        "",
+        "On GBM108-positive, centre-only, uniform-mean and corrected-attention models",
+        "were independently trained with seeds 1, 2 and 3. Evaluation randomness and the",
+        "530-peak budget were fixed. Mean mSCF1 values were "
+        f"{seeds['variant_metrics']['central_only']['mscf1']['mean']:.4f} for centre-only, "
+        f"{seeds['variant_metrics']['uniform_mean']['mscf1']['mean']:.4f} for uniform mean "
+        f"and {seeds['variant_metrics']['attention_sqrt_bins']['mscf1']['mean']:.4f} for "
+        "corrected attention.",
+        "",
+        "Corrected attention beat uniform mean in all three seeds and improved mSCF1 by "
+        f"{seeds['paired_differences']['attention_minus_uniform_mscf1']['mean_left_minus_right']:+.4f} "
+        "on average. It nevertheless failed the combined predeclared gate because mean "
+        "deletion faithfulness changed by "
+        f"{seeds['paired_differences']['attention_minus_uniform_faithfulness']['mean_left_minus_right']:+.4f}. "
+        "The result supports a small peak-quality benefit on this development section, not "
+        "a claim of more faithful explanations or whole-dataset multi-seed superiority.",
+        "",
         "## Interpretation boundaries",
         "",
         "- The neighbourhood conclusion currently concerns uniform-mean context, not all",
         "  possible learned neighbourhood aggregators.",
         "- First-layer L2 is an intentionally simple weight-magnitude comparator, not a",
         "  reimplementation of legacy LearnPeaks.",
-        "- Full GBM and CAC section-wide validation uses seed 1. Targeted GBM108-positive",
-        "  training-seed repeats reached 100 epochs and are evaluated separately.",
+        "- Full GBM and CAC section-wide validation uses seed 1. The three-seed analysis is",
+        "  deliberately restricted to the GBM108-positive development section.",
         "- The eight sections within a collection are paired section-level units and are not",
         "  asserted to be eight independent patients.",
         "",
@@ -286,6 +305,7 @@ def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> Non
         "2. `figure_2_context_effect_by_section.png` — section-level context contribution.",
         "3. `figure_3_explanation_ablation.png` — L2, legacy msiPL, and nonlinear IG.",
         "4. `figure_s1_s3pl_contextual_cac.png` — matched-count S3PL architecture comparison.",
+        "5. `figure_4_seed_stability.png` — targeted model-training seed stability.",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -305,13 +325,15 @@ def main() -> None:
     root = args.repo_root.resolve()
     gbm_path = root / "results/experiments/spatial_msipl_gbm_validation/context_attribution_control/summary.json"
     cac_path = root / "results/comparisons/spatial_msipl_cac_validation/comparison.json"
+    seed_path = root / "results/experiments/spatial_msipl_training_seed_stability_summary/summary.json"
     output = root / "results/publication/current_evidence"
     output.mkdir(parents=True, exist_ok=True)
 
     gbm = load_json(gbm_path)
     cac = load_json(cac_path)
-    if gbm.get("status") != "complete" or cac.get("status") != "complete":
-        raise RuntimeError("Both GBM and CAC aggregate inputs must be complete")
+    seeds = load_json(seed_path)
+    if any(item.get("status") != "complete" for item in (gbm, cac, seeds)):
+        raise RuntimeError("GBM, CAC, and training-seed aggregate inputs must be complete")
 
     records = normalise_records(gbm, cac)
     summaries = method_summary(records)
@@ -321,7 +343,13 @@ def main() -> None:
     plot_context_effect(records, output / "figure_2_context_effect_by_section.png")
     plot_explanation_ablation(records, output / "figure_3_explanation_ablation.png")
     plot_s3pl_context(records, output / "figure_s1_s3pl_contextual_cac.png")
-    write_report(output / "README.md", summaries, gbm, cac)
+    shutil.copyfile(
+        root
+        / "results/experiments/spatial_msipl_training_seed_stability_summary"
+        / "gbm108_positive_seed_stability.png",
+        output / "figure_4_seed_stability.png",
+    )
+    write_report(output / "README.md", summaries, gbm, cac, seeds)
     print(f"Saved publication summary to {output}")
 
 
