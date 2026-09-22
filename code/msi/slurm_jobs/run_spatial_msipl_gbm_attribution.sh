@@ -14,14 +14,15 @@
 
 set -eo pipefail
 
-if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage: sbatch $0 DATASET MATCHED_PEAK_COUNT [uniform_mean|central_only|depthwise|attention|attention_sqrt_bins]" >&2
+if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: sbatch $0 DATASET MATCHED_PEAK_COUNT [uniform_mean|central_only|depthwise|attention|attention_sqrt_bins] [TRAINING_SEED]" >&2
     exit 2
 fi
 
 DATASET="$1"
 MATCHED_COUNT="$2"
 VARIANT="${3:-uniform_mean}"
+TRAINING_SEED="${4:-1}"
 case "$DATASET:$MATCHED_COUNT" in
     GBM108_positive:530|GBM108_negative:458|GBM12_1:453|GBM12_2:478|GBM22_1:589|GBM22_2:464|GBM39_1:686|GBM39_2:523) ;;
     *)
@@ -36,27 +37,36 @@ case "$VARIANT" in
         exit 2
         ;;
 esac
+case "$TRAINING_SEED" in
+    1|2|3) ;;
+    *)
+        echo "Training seed must be 1, 2, or 3: $TRAINING_SEED" >&2
+        exit 2
+        ;;
+esac
 
 PROJECT_ROOT="$HOME/msi"
 INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
-if [ "$VARIANT" = "central_only" ]; then
+if [ "$TRAINING_SEED" != "1" ]; then
+    CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/seed_stability/${DATASET}_seed${TRAINING_SEED}/${VARIANT}/checkpoint.pt"
+elif [ "$VARIANT" = "central_only" ]; then
     CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/reconstruction/${DATASET}_seed1/central_only/checkpoint.pt"
 else
     CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/production/${DATASET}_seed1/${VARIANT}/checkpoint.pt"
 fi
-ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/${VARIANT}"
+ATTRIBUTION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed${TRAINING_SEED}/${VARIANT}"
 LEGACY_DIR="$PROJECT_ROOT/results/baselines/msipl/massnet/$DATASET"
-EVALUATION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed1/${VARIANT}"
+EVALUATION_OUTPUT="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed${TRAINING_SEED}/${VARIANT}"
 MAX_CUDA_RETRIES=4
 CUDA_RETRY_COUNT="${CUDA_RETRY_COUNT:-0}"
 CUDA_RETRY_ROOT="${CUDA_RETRY_ROOT:-$SLURM_JOB_ID}"
-FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${VARIANT}-${CUDA_RETRY_ROOT}.failed_nodes"
+FAILED_NODES_FILE="$PROJECT_ROOT/logs/gbm-ig-${VARIANT}-seed${TRAINING_SEED}-${CUDA_RETRY_ROOT}.failed_nodes"
 CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
 
 mkdir -p "$PROJECT_ROOT/logs"
 
 if grep -q '"status": "complete"' "$EVALUATION_OUTPUT/summary.json" 2>/dev/null; then
-    echo "$DATASET already has a complete attribution evaluation; nothing to do."
+    echo "$DATASET seed $TRAINING_SEED $VARIANT already has a complete attribution evaluation; nothing to do."
     exit 0
 fi
 
@@ -133,10 +143,10 @@ then
         --exclude="$combined_excludes" \
         --export="$export_spec" \
         --job-name="${SLURM_JOB_NAME:-gbm-ig}" \
-        --output="logs/gbm-ig-${VARIANT}-%j.out" \
-        --error="logs/gbm-ig-${VARIANT}-%j.err" \
+        --output="logs/gbm-ig-${VARIANT}-seed${TRAINING_SEED}-%j.out" \
+        --error="logs/gbm-ig-${VARIANT}-seed${TRAINING_SEED}-%j.err" \
         "$PROJECT_ROOT/slurm_jobs/run_spatial_msipl_gbm_attribution.sh" \
-        "$DATASET" "$MATCHED_COUNT" "$VARIANT"); then
+        "$DATASET" "$MATCHED_COUNT" "$VARIANT" "$TRAINING_SEED"); then
         echo "Replacement submission failed; rerun manually with the recorded exclusions." >&2
         exit 1
     fi
@@ -159,6 +169,8 @@ fi
 
 cd "$PROJECT_ROOT"
 python -m unittest discover -s src/spatial_msipl/tests -v
+# Keep the GMM, attribution-sampling, and evaluation seeds fixed at 1. This
+# isolates the effect of changing the model's training seed.
 python -u scripts/run_spatial_msipl_gmm_integrated_gradients.py \
     --input "$INPUT" \
     --checkpoint "$CHECKPOINT" \

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Build a publication-facing summary from completed GBM and CAC aggregates.
 
-This script deliberately separates the matched primary comparisons from S3PL,
-whose CAC peak counts and training duration are not matched to Spatial-msiPL.
+This script keeps S3PL in a separate CAC benchmark because its architecture and
+10-epoch training protocol differ, although its evaluation peak counts are now
+matched section by section to Spatial-msiPL.
 It reads existing aggregate artifacts only; it does not recalculate or alter any
 model result.
 """
@@ -195,7 +196,7 @@ def plot_s3pl_context(records: list[dict], output: Path) -> None:
     axis.plot(x, [row["s3pl"] for row in subset], "s--", label="S3PL reproduction")
     axis.set_xticks(x, [row["section"] for row in subset], rotation=28, ha="right")
     axis.set_ylabel("mSCF1")
-    axis.set_title("Contextual CAC benchmark: S3PL peak counts are not matched")
+    axis.set_title("CAC benchmark with section-specific matched peak counts")
     axis.grid(alpha=0.25)
     axis.legend()
     fig.tight_layout()
@@ -224,8 +225,8 @@ def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> Non
         "# Current publication results",
         "",
         "This package summarizes the completed seed-1 model campaign. Section-level",
-        "variation is shown explicitly; training-seed stability remains a planned targeted",
-        "analysis. All primary method comparisons below use matched section-specific peak",
+        "variation is shown explicitly; targeted training-seed stability is reported in a",
+        "separate artifact. All primary method comparisons below use matched section-specific peak",
         "budgets.",
         "",
         "## Primary result",
@@ -262,8 +263,9 @@ def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> Non
         "",
         "## S3PL placement",
         "",
-        "S3PL is retained as a contextual CAC benchmark, not included in the matched primary",
-        "test. It used its own selected peak counts and a 10-epoch implementation protocol.",
+        "S3PL is retained as a separate CAC architecture benchmark. Its existing checkpoints",
+        "were re-evaluated with the same section-specific peak counts as the primary methods;",
+        "its training protocol remains the reproduced 10-epoch S3PL protocol.",
         f"Its mean CAC mSCF1 was {cac['method_means']['s3pl_mscf1']:.4f}, versus "
         f"{cac['method_means']['spatial_ig_mscf1']:.4f} for uniform-context IG.",
         "",
@@ -273,8 +275,8 @@ def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> Non
         "  possible learned neighbourhood aggregators.",
         "- First-layer L2 is an intentionally simple weight-magnitude comparator, not a",
         "  reimplementation of legacy LearnPeaks.",
-        "- Full GBM and CAC validation currently uses one model-training seed. Attribution",
-        "  sampling stability was tested separately; targeted model-seed repeats are pending.",
+        "- Full GBM and CAC section-wide validation uses seed 1. Targeted GBM108-positive",
+        "  training-seed repeats reached 100 epochs and are evaluated separately.",
         "- The eight sections within a collection are paired section-level units and are not",
         "  asserted to be eight independent patients.",
         "",
@@ -283,7 +285,7 @@ def write_report(path: Path, summaries: list[dict], gbm: dict, cac: dict) -> Non
         "1. `figure_1_primary_peak_quality.png` — matched primary comparison.",
         "2. `figure_2_context_effect_by_section.png` — section-level context contribution.",
         "3. `figure_3_explanation_ablation.png` — L2, legacy msiPL, and nonlinear IG.",
-        "4. `figure_s1_s3pl_contextual_cac.png` — separate contextual S3PL comparison.",
+        "4. `figure_s1_s3pl_contextual_cac.png` — matched-count S3PL architecture comparison.",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

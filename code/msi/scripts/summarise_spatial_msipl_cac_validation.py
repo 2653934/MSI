@@ -124,15 +124,21 @@ def collect(project_root):
             / "central_only"
             / "summary.json"
         )
-        s3pl_root = (
+        matched_peak_count = spatial_eval["matched_peak_evaluation"]["count"]
+        s3pl_original_root = (
             project_root
             / "results"
             / "baselines"
             / "s3pl"
             / f"{dataset}_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9"
         )
-        s3pl_metrics = read_json(s3pl_root / "metrics.json")
-        s3pl_runtime = read_json(s3pl_root / "runtime_metrics.json")
+        s3pl_matched_root = Path(
+            f"{s3pl_original_root}_matched_{matched_peak_count}peaks"
+        )
+        s3pl_metrics = read_json(s3pl_matched_root / "metrics.json")
+        # Matched-count evaluation reuses the original trained checkpoint, so
+        # training compute belongs to the original run rather than evaluation.
+        s3pl_runtime = read_json(s3pl_original_root / "runtime_metrics.json")
 
         spatial_methods = spatial_eval["matched_peak_evaluation"]["methods"]
         central_methods = central_eval["matched_peak_evaluation"]["methods"]
@@ -141,7 +147,7 @@ def collect(project_root):
         rows.append(
             {
                 "dataset": dataset,
-                "matched_peak_count": spatial_eval["matched_peak_evaluation"]["count"],
+                "matched_peak_count": matched_peak_count,
                 "s3pl_peak_count": s3pl_metrics["number_picked_peaks"],
                 "spatial_ig_mscf1": spatial_methods["integrated_gradients"]["mSCF1"],
                 "central_ig_mscf1": central_methods["integrated_gradients"]["mSCF1"],
@@ -208,8 +214,8 @@ def save_peak_figure(rows, output):
     axis.text(
         0.01,
         -0.24,
-        "*Spatial IG, centre-only IG, and legacy msiPL use the same section-specific matched count; "
-        "S3PL used its own selected count.",
+        "*All four methods use the same section-specific peak count. S3PL was re-evaluated from "
+        "its existing checkpoint; it was not retrained.",
         transform=axis.transAxes,
         fontsize=9,
     )
@@ -305,7 +311,7 @@ def save_markdown(rows, comparisons, output):
         f"- Spatial IG mean mSCF1: {mean('spatial_ig_mscf1'):.4f}",
         f"- Centre-only IG mean mSCF1: {mean('central_ig_mscf1'):.4f}",
         f"- Legacy msiPL mean mSCF1: {mean('legacy_msipl_mscf1'):.4f}",
-        f"- S3PL reproduction mean mSCF1: {mean('s3pl_mscf1'):.4f} (not peak-count matched)",
+        f"- S3PL reproduction mean mSCF1: {mean('s3pl_mscf1'):.4f} (peak-count matched)",
         f"- Spatial GMM mean balanced accuracy: {mean('spatial_gmm_balanced_accuracy'):.4f}",
         f"- Centre-only GMM mean balanced accuracy: {mean('central_gmm_balanced_accuracy'):.4f}",
         "",
@@ -326,7 +332,7 @@ def save_markdown(rows, comparisons, output):
             "Spatial context consistently improves IG peak-selection mSCF1 over the matched centre-only control,",
             "but it does not consistently improve reconstruction or GMM agreement with expert classes.",
             "Both nonlinear IG methods outperform legacy msiPL. First-layer L2 remains an inadequate peak ranking.",
-            "S3PL has the highest mean mSCF1, but its section-specific peak counts are not matched to the other methods.",
+            "S3PL has the highest mean mSCF1 after using the same section-specific peak counts as the other methods.",
         ]
     )
     (output / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -361,8 +367,8 @@ def main():
         "sections": list(DATASETS),
         "section_count": len(rows),
         "peak_count_note": (
-            "Spatial IG, centre-only IG, first-layer L2, and legacy msiPL are matched within each section. "
-            "S3PL used its own selected count and is contextual rather than a count-matched test."
+            "Spatial IG, centre-only IG, first-layer L2, legacy msiPL, and S3PL use the same "
+            "section-specific count. S3PL was re-evaluated without retraining."
         ),
         "method_means": {
             key: float(np.mean([row[key] for row in rows]))
