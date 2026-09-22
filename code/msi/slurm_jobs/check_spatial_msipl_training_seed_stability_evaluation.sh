@@ -10,8 +10,14 @@ SEEDS=(1 2 3)
 cd "$PROJECT_ROOT"
 
 echo "=== ACTIVE SEED EVALUATION JOBS ==="
-squeue -u "$USER" -o "%.18i %.30j %.2t %.10M %.24R" | \
-    { head -n 1; grep -E 'ig-seed|gbm-ig|JOBID' || true; }
+printf '%-18s %-30s %-2s %-10s %-24s\n' "JOBID" "NAME" "ST" "TIME" "NODELIST(REASON)"
+active_jobs=$(squeue -h -u "$USER" -o "%.18i %.30j %.2t %.10M %.24R" | \
+    grep -E 'ig-seed|gbm-ig' || true)
+if [ -n "$active_jobs" ]; then
+    printf '%s\n' "$active_jobs"
+else
+    echo "No active seed-evaluation jobs."
+fi
 
 echo
 echo "=== ATTRIBUTION AND PEAK-EVALUATION AUDIT ==="
@@ -23,7 +29,7 @@ for variant in "${VARIANTS[@]}"; do
         evaluation="$PROJECT_ROOT/results/experiments/spatial_msipl_attributed_peak_evaluation/${DATASET}_seed${seed}/${variant}/summary.json"
         attr_status="MISSING"
         eval_status="MISSING"
-        if grep -q '"status": "valid"' "$attribution" 2>/dev/null; then
+        if grep -q '"status": "valid' "$attribution" 2>/dev/null; then
             attr_status="COMPLETE"
         fi
         if grep -q '"status": "complete"' "$evaluation" 2>/dev/null; then
