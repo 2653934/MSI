@@ -23,8 +23,15 @@ VARIANTS=(central_only uniform_mean)
 cd "$PROJECT_ROOT"
 
 echo "=== ACTIVE TUNED-COUNT JOBS ==="
-squeue -u "$USER" -o "%.18i %.24j %.2t %.10M %.24R" | \
-    { head -n 1; grep 'gbm-tuned-count' || true; }
+active_jobs=$(squeue -u "$USER" -h -n gbm-tuned-count \
+    -o "%.18i %.24j %.2t %.10M %.24R")
+printf '%18s %24s %2s %10s %24s\n' \
+    "JOBID" "NAME" "ST" "TIME" "NODELIST(REASON)"
+if [ -n "$active_jobs" ]; then
+    printf '%s\n' "$active_jobs"
+else
+    echo "No active gbm-tuned-count job."
+fi
 
 echo
 echo "=== RECENT FATAL MARKERS ==="
