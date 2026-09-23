@@ -65,7 +65,19 @@ PY
     statuses=()
     for variant in "${VARIANTS[@]}"; do
         summary="$RESULT_ROOT/${dataset}_seed1/$variant/summary.json"
-        if grep -q '"status": "complete"' "$summary" 2>/dev/null; then
+        if [ -f "$summary" ]; then
+            result_status=$(python - "$summary" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("status", "missing"))
+PY
+            )
+        else
+            result_status="missing"
+        fi
+        if [ "$result_status" = "complete" ]; then
             statuses+=("COMPLETE")
             complete=$((complete + 1))
         elif [ -f "$summary" ]; then
@@ -80,8 +92,18 @@ done
 
 echo
 echo "Complete evaluations: $complete/16"
-if [ "$complete" -eq 16 ] && \
-   grep -q '"status": "complete"' "$SUMMARY_ROOT/summary.json" 2>/dev/null; then
+aggregate_status="missing"
+if [ -f "$SUMMARY_ROOT/summary.json" ]; then
+    aggregate_status=$(python - "$SUMMARY_ROOT/summary.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("status", "missing"))
+PY
+    )
+fi
+if [ "$complete" -eq 16 ] && [ "$aggregate_status" = "complete" ]; then
     echo "Campaign and aggregate summary are complete."
     echo "Figure: $SUMMARY_ROOT/gbm_tuned_count_comparison.png"
 else
