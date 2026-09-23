@@ -19,6 +19,9 @@
 - [`research/07 Current Status and Next Steps.md`](research/07%20Current%20Status%20and%20Next%20Steps.md)
   — what is complete, active and next.
 
+- [`research/08 Concepts Mathematics and Implementation Guide.md`](research/08%20Concepts%20Mathematics%20and%20Implementation%20Guide.md)
+  — terminology, equations, methodological rationale, code references and result links.
+
 ## Operate the project
 
 - [`operations/cluster_sync.md`](operations/cluster_sync.md) — safe,
@@ -27,6 +30,8 @@
   retention policy, repository findings and phased cleanup plan.
 
 ## Project records
+
+- [`meetings/progress.md`](meetings/progress.md) — current supervisor-facing weekly findings, caveats and decision questions.
 
 - [`meetings/2026-09-14-progress-brief.md`](meetings/2026-09-14-progress-brief.md)
   — supervisor meeting progress brief.

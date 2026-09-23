@@ -1,6 +1,6 @@
 # MSI Research Handbook
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
 
 This folder is the human-readable guide to the MSI research project. The JSON,
 CSV, logs and checkpoints remain the authoritative machine-readable artifacts;
@@ -16,6 +16,8 @@ how the pieces fit together.
 5. [[05 Experiment History]] — chronological account from initial inspection to the current campaign.
 6. [[06 Cluster and Reproducibility]] — environments, Slurm, storage, checkpoints and failure handling.
 7. [[07 Current Status and Next Steps]] — the live decision tree and remaining work.
+
+8. [[08 Concepts Mathematics and Implementation Guide]] — the terminology, equations, rationale, code references and result links in one study guide.
 
 ## Research question
 

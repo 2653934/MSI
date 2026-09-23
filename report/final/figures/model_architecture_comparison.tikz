@@ -1,0 +1,86 @@
+% Compact four-way architecture comparison.
+% The surrounding document must load TikZ with positioning, arrows.meta,
+% fit, backgrounds and calc.
+\begin{tikzpicture}[
+  font=\sffamily,
+  x=1cm,
+  y=1cm,
+  flow/.style={-{Stealth[length=2.1mm]}, line width=0.75pt, draw=black!70},
+  input/.style={draw=blue!65!black, fill=blue!7, rounded corners=2pt,
+    text width=2.70cm, minimum height=1.15cm, align=center, font=\small},
+  model/.style={draw=black!58, fill=black!3, rounded corners=2pt,
+    text width=3.60cm, minimum height=1.15cm, align=center, font=\small},
+  selection/.style={draw=purple!65!black, fill=purple!7, rounded corners=2pt,
+    text width=3.30cm, minimum height=1.15cm, align=center, font=\small},
+  output/.style={draw=orange!75!black, fill=orange!10, rounded corners=2pt,
+    text width=2.15cm, minimum height=1.15cm, align=center, font=\small},
+  rowtitle/.style={font=\small\bfseries, text width=2.55cm, align=left},
+  rowbox/.style={rounded corners=3pt, line width=0.7pt,
+    inner xsep=4mm, inner ysep=3mm},
+  stage/.style={font=\scriptsize\bfseries, text=black!65, align=center}
+]
+
+% Column headings
+\node[stage] at (3.45,1.15) {INPUT};
+\node[stage] at (7.55,1.15) {REPRESENTATION LEARNING};
+\node[stage] at (12.25,1.15) {PEAK EXTRACTION};
+\node[stage] at (16.15,1.15) {OUTPUT};
+
+% Row 1: msiPL
+\node[rowtitle] (t1) at (0,0) {(A) Legacy msiPL};
+\node[input] (i1) at (3.45,0) {single-pixel spectrum\\$x_i$};
+\node[model] (m1) at (7.55,0) {dense VAE\\encode $\rightarrow z_i \rightarrow$ reconstruct $x_i$};
+\node[selection] (s1) at (12.25,0) {LearnPeaks\\post-training weight analysis};
+\node[output] (o1) at (16.15,0) {ranked\\$m/z$ peaks};
+\draw[flow] (i1) -- (m1);
+\draw[flow] (m1) -- (s1);
+\draw[flow] (s1) -- (o1);
+\begin{scope}[on background layer]
+  \node[rowbox, draw=black!28, fill=black!1, fit=(t1)(i1)(m1)(s1)(o1)] {};
+\end{scope}
+
+% Row 2: proposal
+\node[rowtitle] (t2) at (0,-2.25) {(B) Proposed\\Spatial-msiPL};
+\node[input] (i2) at (3.45,-2.25) {centre spectrum $x_i$\\$+$ mean of neighbours};
+\node[model] (m2) at (7.55,-2.25) {dense VAE\\reconstruct centre $x_i$\\spatial loss $+$ Poisson noise};
+\node[selection] (s2) at (12.25,-2.25) {first-layer L2\\weight magnitude};
+\node[output] (o2) at (16.15,-2.25) {ranked\\$m/z$ peaks};
+\draw[flow] (i2) -- (m2);
+\draw[flow] (m2) -- (s2);
+\draw[flow] (s2) -- (o2);
+\begin{scope}[on background layer]
+  \node[rowbox, draw=orange!58!black, fill=orange!3, fit=(t2)(i2)(m2)(s2)(o2)] {};
+\end{scope}
+
+% Row 3: implemented model
+\node[rowtitle] (t3) at (0,-4.50) {(C) Evaluated\\Spatial-msiPL};
+\node[input] (i3) at (3.45,-4.50) {centre $x_i$ + measured\\neighbour spectra};
+\node[model] (m3) at (7.55,-4.50) {matched VAE variants\\centre only / mean / attention};
+\node[selection] (s3) at (12.25,-4.50) {latent GMM posterior\\$+$ Integrated Gradients};
+\node[output] (o3) at (16.15,-4.50) {matched-count\\$m/z$ peaks};
+\draw[flow] (i3) -- (m3);
+\draw[flow] (m3) -- (s3);
+\draw[flow] (s3) -- (o3);
+\begin{scope}[on background layer]
+  \node[rowbox, draw=blue!62!black, fill=blue!3, fit=(t3)(i3)(m3)(s3)(o3)] {};
+\end{scope}
+
+% Row 4: S3PL
+\node[rowtitle] (t4) at (0,-6.75) {(D) S3PL};
+\node[input] (i4) at (3.45,-6.75) {spatial-spectral patch\\$3\!\times\!3\!\times\!D$};
+\node[model] (m4) at (7.55,-6.75) {3D mask encoder\\centre gating $\rightarrow$\\transposed-convolution decoder};
+\node[selection] (s4) at (12.25,-6.75) {aggregate learned\\spectral mask scores};
+\node[output] (o4) at (16.15,-6.75) {ranked\\$m/z$ peaks};
+\draw[flow] (i4) -- (m4);
+\draw[flow] (m4) -- (s4);
+\draw[flow] (s4) -- (o4);
+\begin{scope}[on background layer]
+  \node[rowbox, draw=green!52!black, fill=green!3, fit=(t4)(i4)(m4)(s4)(o4)] {};
+\end{scope}
+
+% Shared evaluation, visually separated from the architectures.
+\node[draw=black!45, fill=black!3, rounded corners=2pt, minimum width=13.2cm,
+  minimum height=0.75cm, align=center, font=\small, below=8mm of m4] (evaluation)
+  {Common evaluation: selected bins $\rightarrow$ ion images $\rightarrow$ PCC with expert masks $\rightarrow$ mSCF1};
+
+\end{tikzpicture}
