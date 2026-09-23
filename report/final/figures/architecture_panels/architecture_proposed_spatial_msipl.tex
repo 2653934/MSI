@@ -1,0 +1,62 @@
+\documentclass[tikz,border=7mm]{standalone}
+\input{architecture_panel_styles.tex}
+\begin{document}
+\begin{tikzpicture}[font=\sffamily]
+  \fill[orange!2, rounded corners=7pt] (-0.6,2.55) rectangle (21.50,-4.10);
+  \draw[orange!68!black, rounded corners=7pt, line width=1.1pt]
+    (-0.6,2.55) rectangle (21.50,-4.10);
+  \node[title] at (-0.15,2.08) {Proposed Spatial-msiPL};
+  \node[subtitle] at (-0.15,1.61)
+    {The original proposal: contextual input, explicit spatial regularisation, and first-layer $L_2$ peak scores};
+
+  % Physical tissue neighbourhood.
+  \foreach \r in {0,1,2}{
+    \foreach \c in {0,1,2}{
+      \pgfmathtruncatemacro{\iscenter}{(\r==1 && \c==1)}
+      \ifnum\iscenter=1
+        \filldraw[draw=blue!70!black, fill=blue!28]
+          ($(0.25,0.72)+(0.43*\c,-0.43*\r)$) rectangle ++(0.43,-0.43);
+      \else
+        \filldraw[draw=orange!72!black, fill=orange!20]
+          ($(0.25,0.72)+(0.43*\c,-0.43*\r)$) rectangle ++(0.43,-0.43);
+      \fi
+    }
+  }
+  \node[label, text width=2.40cm] at (0.90,-1.20)
+    {8-neighbour Moore grid};
+
+  \node[block, fill=blue!6, text width=1.65cm] (centre) at (3.05,0.72)
+    {centre\\spectrum $x_i$};
+  \node[block, fill=orange!7, text width=1.65cm] (mean) at (3.05,-0.82)
+    {mean neighbour\\spectrum $\bar{x}_{\mathcal N(i)}$};
+  \node[block, fill=green!7] (context) at (6.25,0.00)
+    {context vector\\$\tilde{x}_i=[x_i\Vert\bar{x}_{\mathcal N(i)}]$};
+  \node[encoder] (enc) at (9.65,0.00) {Encoder\\MLP};
+  \node[latent, fill=blue!27, minimum size=1.05cm] (z) at (12.70,0.00) {$z_i$};
+  \node[latent, fill=orange!23] (zn) at (12.70,1.08) {$z_j$};
+  \node[decoder] (dec) at (15.65,0.00) {Decoder\\MLP};
+  \node[block, fill=blue!6] (recon) at (19.45,0.00)
+    {reconstruct only\\centre $\hat{x}_i$};
+
+  \draw[flow] (1.55,0.06) -- (centre.west);
+  \draw[flow] (1.55,-0.22) -- (mean.west);
+  \draw[flow] (centre.east) -- (context.west);
+  \draw[flow] (mean.east) -- (context.west);
+  \draw[flow] (context.east) -- (enc.west);
+  \draw[flow] (enc.east) -- (z.west);
+  \draw[flow] (z.east) -- (dec.west);
+  \draw[flow] (dec.east) -- (recon.west);
+  \draw[feedback] (zn) -- node[right, font=\scriptsize,
+    text=red!72!black] {$\lambda\mathcal L_{spatial}$} (z);
+  \node[badge] at (6.25,-1.62) {Poisson noise augmentation};
+
+  \node[peakbox] (weights) at (9.65,-3.02)
+    {first-layer weights\\$W^{(1)}$};
+  \node[peakbox] (score) at (15.15,-3.02)
+    {$L_2$ magnitude\\for each spectral bin};
+  \node[outbox] (peaks) at (19.45,-3.02) {ranked\\$m/z$ peaks};
+  \draw[feedback] (enc.south) -- (weights.north);
+  \draw[flow] (weights) -- (score);
+  \draw[flow] (score) -- (peaks);
+\end{tikzpicture}
+\end{document}

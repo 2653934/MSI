@@ -1,86 +1,194 @@
-% Compact four-way architecture comparison.
-% The surrounding document must load TikZ with positioning, arrows.meta,
-% fit, backgrounds and calc.
+% Visual four-way architecture comparison, styled after the proposal figures.
+% Requires: positioning, arrows.meta, fit, backgrounds, calc, shapes.geometric.
 \begin{tikzpicture}[
   font=\sffamily,
-  x=1cm,
-  y=1cm,
-  flow/.style={-{Stealth[length=2.1mm]}, line width=0.75pt, draw=black!70},
-  input/.style={draw=blue!65!black, fill=blue!7, rounded corners=2pt,
-    text width=2.70cm, minimum height=1.15cm, align=center, font=\small},
-  model/.style={draw=black!58, fill=black!3, rounded corners=2pt,
-    text width=3.60cm, minimum height=1.15cm, align=center, font=\small},
-  selection/.style={draw=purple!65!black, fill=purple!7, rounded corners=2pt,
-    text width=3.30cm, minimum height=1.15cm, align=center, font=\small},
-  output/.style={draw=orange!75!black, fill=orange!10, rounded corners=2pt,
-    text width=2.15cm, minimum height=1.15cm, align=center, font=\small},
-  rowtitle/.style={font=\small\bfseries, text width=2.55cm, align=left},
-  rowbox/.style={rounded corners=3pt, line width=0.7pt,
-    inner xsep=4mm, inner ysep=3mm},
-  stage/.style={font=\scriptsize\bfseries, text=black!65, align=center}
+  >=Stealth,
+  flow/.style={-{Stealth[length=2mm]}, line width=0.75pt, draw=black!68},
+  feedback/.style={-{Stealth[length=2mm]}, line width=0.75pt, dashed, draw=red!72!black},
+  block/.style={draw=black!55, fill=white, rounded corners=2pt,
+    text width=1.18cm, minimum height=1.05cm, align=center,
+    inner xsep=2pt, font=\scriptsize},
+  encoder/.style={trapezium, trapezium left angle=83, trapezium right angle=97,
+    draw=blue!60!black, fill=blue!9, minimum height=1.18cm,
+    text width=1.02cm, align=center, inner xsep=2pt, font=\scriptsize},
+  decoder/.style={trapezium,
+    trapezium left angle=97, trapezium right angle=83,
+    draw=green!55!black, fill=green!9, minimum height=1.18cm,
+    text width=0.88cm, align=center, inner xsep=2pt, font=\scriptsize},
+  latent/.style={circle, draw=blue!65!black, fill=blue!12,
+    minimum size=0.58cm, inner sep=0pt, font=\scriptsize},
+  peakbox/.style={draw=purple!68!black, fill=purple!8, rounded corners=2pt,
+    text width=1.45cm, minimum height=0.72cm, align=center,
+    inner xsep=2pt, font=\scriptsize},
+  outbox/.style={draw=orange!78!black, fill=orange!12, rounded corners=2pt,
+    text width=1.02cm, minimum height=0.72cm, align=center,
+    inner xsep=2pt, font=\scriptsize},
+  badge/.style={draw=black!35, fill=black!4, rounded corners=5pt,
+    inner xsep=4pt, inner ysep=2pt, font=\tiny},
+  paneltitle/.style={font=\small\bfseries, anchor=west},
+  panelsub/.style={font=\tiny, text=black!58, anchor=west},
+  tinylabel/.style={font=\tiny, text=black!62, align=center}
 ]
 
-% Column headings
-\node[stage] at (3.45,1.15) {INPUT};
-\node[stage] at (7.55,1.15) {REPRESENTATION LEARNING};
-\node[stage] at (12.25,1.15) {PEAK EXTRACTION};
-\node[stage] at (16.15,1.15) {OUTPUT};
+% A. Legacy msiPL
+\begin{scope}[shift={(0,0)}]
+  \fill[black!1, rounded corners=5pt] (-0.45,0.95) rectangle (8.80,-3.35);
+  \draw[black!30, rounded corners=5pt, line width=0.8pt]
+    (-0.45,0.95) rectangle (8.80,-3.35);
+  \node[paneltitle] at (-0.18,0.60) {(A) Legacy msiPL};
+  \node[panelsub] at (-0.18,0.28) {spatially blind spectral VAE};
 
-% Row 1: msiPL
-\node[rowtitle] (t1) at (0,0) {(A) Legacy msiPL};
-\node[input] (i1) at (3.45,0) {single-pixel spectrum\\$x_i$};
-\node[model] (m1) at (7.55,0) {dense VAE\\encode $\rightarrow z_i \rightarrow$ reconstruct $x_i$};
-\node[selection] (s1) at (12.25,0) {LearnPeaks\\post-training weight analysis};
-\node[output] (o1) at (16.15,0) {ranked\\$m/z$ peaks};
-\draw[flow] (i1) -- (m1);
-\draw[flow] (m1) -- (s1);
-\draw[flow] (s1) -- (o1);
-\begin{scope}[on background layer]
-  \node[rowbox, draw=black!28, fill=black!1, fit=(t1)(i1)(m1)(s1)(o1)] {};
+  \node[block, fill=blue!6] (a-input) at (0.45,-1.05) {single-pixel\\spectrum $x_i$};
+  \node[encoder] (a-enc) at (2.35,-1.05) {Encoder\\MLP};
+  \node[latent] (a-mu) at (3.72,-0.73) {$\mu$};
+  \node[latent] (a-sig) at (3.72,-1.38) {$\sigma$};
+  \node[latent, fill=blue!24, minimum size=0.72cm] (a-z) at (4.62,-1.05) {$z$};
+  \node[decoder] (a-dec) at (6.15,-1.05) {Decoder\\MLP};
+  \node[block, fill=green!6] (a-recon) at (8.10,-1.05) {output\\spectrum $\hat{x}_i$};
+  \draw[flow] (a-input) -- (a-enc);
+  \draw[flow] (a-enc.east) -- (a-mu.west);
+  \draw[flow] (a-enc.east) -- (a-sig.west);
+  \draw[flow] (a-mu.east) -- (a-z.west);
+  \draw[flow] (a-sig.east) -- (a-z.west);
+  \draw[flow] (a-z) -- (a-dec);
+  \draw[flow] (a-dec) -- (a-recon);
+  \node[peakbox] (a-w) at (2.35,-2.63) {trained weights\\$W^{(1)}$};
+  \node[peakbox] (a-score) at (5.05,-2.63) {LearnPeaks\\weight analysis};
+  \node[outbox] (a-out) at (8.10,-2.63) {ranked\\$m/z$ peaks};
+  \draw[feedback] (a-enc.south) -- (a-w.north);
+  \draw[flow] (a-w) -- (a-score);
+  \draw[flow] (a-score) -- (a-out);
 \end{scope}
 
-% Row 2: proposal
-\node[rowtitle] (t2) at (0,-2.25) {(B) Proposed\\Spatial-msiPL};
-\node[input] (i2) at (3.45,-2.25) {centre spectrum $x_i$\\$+$ mean of neighbours};
-\node[model] (m2) at (7.55,-2.25) {dense VAE\\reconstruct centre $x_i$\\spatial loss $+$ Poisson noise};
-\node[selection] (s2) at (12.25,-2.25) {first-layer L2\\weight magnitude};
-\node[output] (o2) at (16.15,-2.25) {ranked\\$m/z$ peaks};
-\draw[flow] (i2) -- (m2);
-\draw[flow] (m2) -- (s2);
-\draw[flow] (s2) -- (o2);
-\begin{scope}[on background layer]
-  \node[rowbox, draw=orange!58!black, fill=orange!3, fit=(t2)(i2)(m2)(s2)(o2)] {};
+% B. Originally proposed Spatial-msiPL
+\begin{scope}[shift={(9.55,0)}]
+  \fill[orange!2, rounded corners=5pt] (-0.45,0.95) rectangle (8.80,-3.35);
+  \draw[orange!68!black, rounded corners=5pt, line width=0.9pt]
+    (-0.45,0.95) rectangle (8.80,-3.35);
+  \node[paneltitle] at (-0.18,0.60) {(B) Proposed Spatial-msiPL};
+  \node[panelsub] at (-0.18,0.28) {proposal: context plus explicit spatial regularisation};
+  \foreach \r in {0,1,2}{
+    \foreach \c in {0,1,2}{
+      \pgfmathtruncatemacro{\iscenter}{(\r==1 && \c==1)}
+      \ifnum\iscenter=1
+        \filldraw[draw=blue!70!black, fill=blue!25]
+          ($(0.18,-0.70)+(0.29*\c,-0.29*\r)$) rectangle ++(0.29,-0.29);
+      \else
+        \filldraw[draw=orange!70!black, fill=orange!20]
+          ($(0.18,-0.70)+(0.29*\c,-0.29*\r)$) rectangle ++(0.29,-0.29);
+      \fi
+    }
+  }
+  \node[tinylabel] at (0.61,-1.80) {Moore\\neighbourhood};
+  \node[block, fill=green!7, minimum width=1.28cm] (b-context) at (2.05,-1.15)
+    {context vector\\$[x_i\,\Vert\,\bar{x}_{\mathcal N(i)}]$};
+  \node[encoder] (b-enc) at (3.85,-1.15) {Encoder\\MLP};
+  \node[latent, fill=blue!24, minimum size=0.72cm] (b-z) at (5.35,-1.15) {$z_i$};
+  \node[latent, fill=orange!23] (b-nz) at (5.35,-0.16) {$z_j$};
+  \node[decoder] (b-dec) at (6.75,-1.15) {Decoder\\MLP};
+  \node[block, fill=blue!6, minimum width=1.22cm] (b-recon) at (8.15,-1.15)
+    {centre output\\$\hat{x}_i$};
+  \draw[flow] (1.08,-1.15) -- (b-context);
+  \draw[flow] (b-context) -- (b-enc);
+  \draw[flow] (b-enc) -- (b-z);
+  \draw[flow] (b-z) -- (b-dec);
+  \draw[flow] (b-dec) -- (b-recon);
+  \draw[feedback] (b-nz) -- node[right, font=\tiny, text=red!72!black]
+    {$\lambda\mathcal L_{spatial}$} (b-z);
+  \node[badge] at (2.08,-2.06) {Poisson augmentation};
+  \node[peakbox] (b-w) at (3.85,-2.63) {first-layer\\weights $W^{(1)}$};
+  \node[peakbox] (b-score) at (6.15,-2.63) {$L_2$ magnitude\\per spectral bin};
+  \node[outbox] (b-out) at (8.15,-2.63) {ranked\\$m/z$ peaks};
+  \draw[feedback] (b-enc.south) -- (b-w.north);
+  \draw[flow] (b-w) -- (b-score);
+  \draw[flow] (b-score) -- (b-out);
 \end{scope}
 
-% Row 3: implemented model
-\node[rowtitle] (t3) at (0,-4.50) {(C) Evaluated\\Spatial-msiPL};
-\node[input] (i3) at (3.45,-4.50) {centre $x_i$ + measured\\neighbour spectra};
-\node[model] (m3) at (7.55,-4.50) {matched VAE variants\\centre only / mean / attention};
-\node[selection] (s3) at (12.25,-4.50) {latent GMM posterior\\$+$ Integrated Gradients};
-\node[output] (o3) at (16.15,-4.50) {matched-count\\$m/z$ peaks};
-\draw[flow] (i3) -- (m3);
-\draw[flow] (m3) -- (s3);
-\draw[flow] (s3) -- (o3);
-\begin{scope}[on background layer]
-  \node[rowbox, draw=blue!62!black, fill=blue!3, fit=(t3)(i3)(m3)(s3)(o3)] {};
+% C. Implemented and evaluated Spatial-msiPL
+\begin{scope}[shift={(0,-4.85)}]
+  \fill[blue!2, rounded corners=5pt] (-0.45,0.95) rectangle (8.80,-3.55);
+  \draw[blue!70!black, rounded corners=5pt, line width=0.95pt]
+    (-0.45,0.95) rectangle (8.80,-3.55);
+  \node[paneltitle] at (-0.18,0.60) {(C) Evaluated Spatial-msiPL};
+  \node[panelsub] at (-0.18,0.28) {matched VAE ablation with nonlinear attribution};
+  \foreach \r in {0,1,2}{
+    \foreach \c in {0,1,2}{
+      \pgfmathtruncatemacro{\iscenter}{(\r==1 && \c==1)}
+      \ifnum\iscenter=1
+        \filldraw[draw=blue!70!black, fill=blue!28]
+          ($(0.18,-0.70)+(0.29*\c,-0.29*\r)$) rectangle ++(0.29,-0.29);
+      \else
+        \filldraw[draw=blue!45!black, fill=blue!8]
+          ($(0.18,-0.70)+(0.29*\c,-0.29*\r)$) rectangle ++(0.29,-0.29);
+      \fi
+    }
+  }
+  \node[tinylabel] at (0.61,-1.80) {measured\\neighbours};
+  \node[block, fill=blue!5, minimum width=1.43cm] (c-variants) at (2.05,-1.18)
+    {centre only\\uniform mean\\attention};
+  \node[encoder] (c-enc) at (3.85,-1.18) {matched\\Encoder};
+  \node[latent, fill=blue!24, minimum size=0.72cm] (c-z) at (5.35,-1.18) {$z_i$};
+  \node[decoder] (c-dec) at (6.75,-1.18) {matched\\Decoder};
+  \node[block, fill=green!6, minimum width=1.22cm] (c-recon) at (8.15,-1.18)
+    {centre output\\$\hat{x}_i$};
+  \draw[flow] (1.08,-1.18) -- (c-variants);
+  \draw[flow] (c-variants) -- (c-enc);
+  \draw[flow] (c-enc) -- (c-z);
+  \draw[flow] (c-z) -- (c-dec);
+  \draw[flow] (c-dec) -- (c-recon);
+  \node[latent, minimum size=0.40cm, fill=purple!18] (c-g1) at (3.62,-2.62) {};
+  \node[latent, minimum size=0.40cm, fill=orange!20] (c-g2) at (4.02,-2.43) {};
+  \node[latent, minimum size=0.40cm, fill=green!18] (c-g3) at (4.06,-2.84) {};
+  \node[tinylabel, below=1pt of c-g3] {latent GMM};
+  \node[peakbox] (c-ig) at (6.02,-2.63) {Integrated Gradients\\posterior attribution};
+  \node[outbox] (c-out) at (8.15,-2.63) {matched-count\\$m/z$ peaks};
+  \draw[feedback] (c-z.south) to[out=-100,in=70] (c-g2.north);
+  \draw[flow] (c-g2.east) -- (c-ig.west);
+  \draw[flow] (c-ig) -- (c-out);
 \end{scope}
 
-% Row 4: S3PL
-\node[rowtitle] (t4) at (0,-6.75) {(D) S3PL};
-\node[input] (i4) at (3.45,-6.75) {spatial-spectral patch\\$3\!\times\!3\!\times\!D$};
-\node[model] (m4) at (7.55,-6.75) {3D mask encoder\\centre gating $\rightarrow$\\transposed-convolution decoder};
-\node[selection] (s4) at (12.25,-6.75) {aggregate learned\\spectral mask scores};
-\node[output] (o4) at (16.15,-6.75) {ranked\\$m/z$ peaks};
-\draw[flow] (i4) -- (m4);
-\draw[flow] (m4) -- (s4);
-\draw[flow] (s4) -- (o4);
-\begin{scope}[on background layer]
-  \node[rowbox, draw=green!52!black, fill=green!3, fit=(t4)(i4)(m4)(s4)(o4)] {};
+% D. S3PL
+\begin{scope}[shift={(9.55,-4.85)}]
+  \fill[green!2, rounded corners=5pt] (-0.45,0.95) rectangle (8.80,-3.55);
+  \draw[green!55!black, rounded corners=5pt, line width=0.95pt]
+    (-0.45,0.95) rectangle (8.80,-3.55);
+  \node[paneltitle] at (-0.18,0.60) {(D) S3PL};
+  \node[panelsub] at (-0.18,0.28) {spatial-spectral self-supervision with 3D convolutions};
+  \foreach \k in {0,0.12,0.24}{
+    \draw[blue!60!black, fill=blue!8]
+      ($(0.22,-1.48)+(\k,\k)$) rectangle ++(0.92,0.92);
+    \draw[blue!35] ($(0.22,-1.17)+(\k,\k)$) -- ++(0.92,0);
+    \draw[blue!35] ($(0.22,-0.87)+(\k,\k)$) -- ++(0.92,0);
+    \draw[blue!35] ($(0.53,-1.48)+(\k,\k)$) -- ++(0,0.92);
+    \draw[blue!35] ($(0.83,-1.48)+(\k,\k)$) -- ++(0,0.92);
+  }
+  \node[tinylabel] at (0.78,-1.82) {$3\!\times\!3\!\times\!D$ patch};
+  \node[block, fill=green!8, minimum width=1.36cm] (d-maskenc) at (2.40,-1.10)
+    {3D mask\\encoder};
+  \node[block, fill=purple!7, minimum width=1.30cm] (d-mask) at (4.25,-1.10)
+    {spectral mask\\$m_i$};
+  \node[circle, draw=black!55, fill=white, minimum size=0.55cm,
+    inner sep=0pt, font=\small] (d-times) at (5.60,-1.10) {$\times$};
+  \node[decoder] (d-dec) at (6.78,-1.10) {3D transposed\\conv.};
+  \node[block, fill=green!6, minimum width=1.15cm] (d-recon) at (8.20,-1.10)
+    {patch\\output};
+  \draw[flow] (1.20,-1.10) -- (d-maskenc);
+  \draw[flow] (d-maskenc) -- (d-mask);
+  \draw[flow] (d-mask) -- (d-times);
+  \draw[flow] (d-times) -- (d-dec);
+  \draw[flow] (d-dec) -- (d-recon);
+  \node[badge, below=3pt of d-times] {gate centre spectrum};
+  \node[peakbox] (d-agg) at (4.25,-2.67) {aggregate learned\\mask scores};
+  \node[outbox] (d-out) at (8.20,-2.67) {ranked\\$m/z$ peaks};
+  \draw[feedback] (d-mask.south) -- (d-agg.north);
+  \draw[flow] (d-agg) -- (d-out);
 \end{scope}
 
-% Shared evaluation, visually separated from the architectures.
-\node[draw=black!45, fill=black!3, rounded corners=2pt, minimum width=13.2cm,
-  minimum height=0.75cm, align=center, font=\small, below=8mm of m4] (evaluation)
-  {Common evaluation: selected bins $\rightarrow$ ion images $\rightarrow$ PCC with expert masks $\rightarrow$ mSCF1};
+% Shared evaluation ribbon.
+\node[draw=black!40, fill=black!3, rounded corners=3pt,
+  minimum width=16.2cm, minimum height=0.72cm, align=center,
+  font=\small, anchor=north] at (8.95,-9.42)
+  {Shared evaluation: selected $m/z$ bins $\rightarrow$ ion images
+   $\rightarrow$ PCC against expert masks $\rightarrow$ mSCF1};
 
 \end{tikzpicture}
