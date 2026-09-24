@@ -1,6 +1,6 @@
 # Current Status and Next Steps
 
-Last updated: 2026-09-21
+Last updated: 2026-09-24
 
 ## Completed
 
@@ -20,11 +20,12 @@ Last updated: 2026-09-21
 
 ## Whole-GBM attribution result
 
-Spatial-msiPL Integrated Gradients achieved mean mSCF1 0.4562 versus 0.3643
-for legacy msiPL and won on all eight sections. Mean gain was 0.0919 mSCF1;
-paired section-level Wilcoxon `p = 0.0078125`. First-layer L2 averaged 0.2139
-and lost to IG on seven of eight sections. Mean GMM balanced accuracy was
-0.9113, and all attribution completeness checks passed.
+At the tuned, paper-aligned section-specific peak counts, uniform-context
+Integrated Gradients achieved mean mSCF1 0.5111 versus 0.4142 for legacy
+msiPL and won on all eight sections. Mean gain was 0.0969 mSCF1; paired
+section-level Wilcoxon `p = 0.0078125`. Centre-only IG averaged 0.5178 and
+also beat tuned msiPL in all eight sections. Uniform first-layer L2 averaged
+0.2193 and lost to uniform IG on seven of eight sections.
 
 This supports nonlinear attribution as a peak-ranking method. The completed
 centre-only control now separates that gain from the neighbourhood mechanism.
@@ -41,17 +42,17 @@ The frozen centre-only control held constant:
 - section-specific matched peak count and PCC evaluation.
 
 The intended difference was only the encoder input. Centre-only IG averaged
-0.4665 mSCF1 versus 0.4562 for spatial IG. Spatial won five sections and
-centre-only won three, but the mean paired change was -0.0103 and the exact
-Wilcoxon result was `p = 0.9453125`. There is no consistent peak-selection
+0.5178 mSCF1 versus 0.5111 for spatial IG. Spatial won five sections and
+centre-only won three, but the mean paired change was -0.0067 and the exact
+Wilcoxon result was `p = 1.0`. There is no consistent GBM peak-selection
 advantage from neighbourhood context.
 
-Centre-only IG beat legacy msiPL on all eight sections, with mean gain 0.1022
-and paired `p = 0.0078125`. The defensible conclusion is that nonlinear IG is
-the robust peak-selection contribution. Spatial context may still improve
-latent tissue organisation: mean GMM balanced accuracy was 0.9113 for spatial
-models versus 0.8676 for centre-only models. That possible representation
-benefit did not translate into consistently better mSCF1.
+Centre-only IG beat tuned legacy msiPL on all eight sections, with mean gain
+0.1036 and paired `p = 0.0078125`. The defensible conclusion is that nonlinear
+IG is the robust peak-selection contribution. The centre/context peak sets
+shared 73.8% of selected bins on average (mean Jaccard 0.590), so context did
+change a meaningful minority of peak identities without consistently improving
+their GBM mSCF1.
 
 ## Frozen CAC result
 
@@ -63,8 +64,12 @@ eight sections, averaging 0.1572 higher mSCF1 (`p = 0.0078125`).
 The result is specific rather than universal: reconstruction MSE split 4-4,
 and centre-only had slightly higher mean GMM balanced accuracy. Context helped
 the nonlinear peak-ranking objective on CAC, not every representation metric.
-S3PL averaged 0.5908, but its peak counts were not matched, so that comparison
-must remain contextual.
+Centre-only and uniform-context rankings shared 78.6% of selected CAC bins on
+average (mean Jaccard 0.648). Thus the consistent CAC gain came from a targeted
+minority of peak substitutions rather than a wholly different peak list.
+Matched-count S3PL averaged 0.5915 versus 0.5595 for uniform-context IG. S3PL
+remains a secondary architecture benchmark because its model and 10-epoch
+training protocol differ from the 100-epoch dense VAE protocol.
 
 ## Current priority: cross-dataset synthesis and writing
 
