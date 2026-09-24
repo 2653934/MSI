@@ -24,11 +24,17 @@
   }
   \node[label, text width=2.35cm] at (1.00,-0.94) {measured spatial neighbours};
 
-  \node[block, fill=black!3, text width=1.48cm] (central) at (3.05,0.62)
+  % These three alternatives are deliberately separated vertically.  The
+  % shared block style is taller than the old centre spacing, which caused
+  % their outlines and labels to overlap in the rendered panel.
+  \node[block, fill=black!3, text width=1.62cm, minimum height=1.05cm]
+    (central) at (3.10,0.86)
     {centre-only\\control};
-  \node[block, fill=blue!6, text width=1.48cm] (uniform) at (3.05,-0.42)
+  \node[block, fill=blue!6, text width=1.62cm, minimum height=1.05cm]
+    (uniform) at (3.10,-0.42)
     {uniform\\neighbour mean};
-  \node[block, fill=purple!6, text width=1.48cm] (attention) at (3.05,-1.46)
+  \node[block, fill=purple!6, text width=1.62cm, minimum height=1.05cm]
+    (attention) at (3.10,-1.70)
     {learned\\attention};
   \node[circle, draw=black!48, fill=white, minimum size=0.58cm,
     inner sep=0pt] (merge) at (5.55,-0.42) {};
