@@ -9,6 +9,7 @@ for an uninterrupted end-to-end training benchmark.
 
 import argparse
 import json
+import resource
 import statistics
 import time
 from pathlib import Path
@@ -18,7 +19,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
-from spatial_msipl.preprocessing import H5SpatialContextDataset
+from spatial_msipl.preprocessing import CachedH5SpatialContextDataset, H5SpatialContextDataset
 from spatial_msipl.training import latent_spatial_coherence_loss, msipl_vae_loss
 
 
@@ -47,6 +48,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--batches", type=int, default=4)
     parser.add_argument("--device", choices=("cuda", "cpu"), default="cuda")
+    parser.add_argument("--cache-spectra", action="store_true")
     args = parser.parse_args()
     if args.batch_size < 2 or args.batches < 1:
         parser.error("batch-size must be at least 2 and batches must be positive")
@@ -55,7 +57,13 @@ def main():
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA unavailable; no profile was run")
     torch.manual_seed(1)
-    dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
+    dataset_started_at = time.perf_counter()
+    dataset = (
+        CachedH5SpatialContextDataset(args.input, include_neighbourhood=True)
+        if args.cache_spectra
+        else H5SpatialContextDataset(args.input, include_neighbourhood=True)
+    )
+    dataset_load_seconds = time.perf_counter() - dataset_started_at
     try:
         model = (
             CentralOnlyVAE(dataset.n_mz)
@@ -153,6 +161,8 @@ def main():
             "device": str(device),
             "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else "CPU",
             "dataset_size": len(dataset),
+            "data_loader": "cached_float32" if args.cache_spectra else "streaming_hdf5",
+            "dataset_load_seconds": dataset_load_seconds,
             "spectral_bins": dataset.n_mz,
             "batch_size": args.batch_size,
             "profiled_batches": batches,
@@ -175,6 +185,7 @@ def main():
             "peak_gpu_reserved_bytes": (
                 int(torch.cuda.max_memory_reserved(device)) if device.type == "cuda" else None
             ),
+            "host_peak_rss_bytes_linux": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2), encoding="utf-8")
