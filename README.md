@@ -15,6 +15,7 @@ The current research question is:
 - [`docs/operations/cluster_sync.md`](docs/operations/cluster_sync.md) - safe cluster transfer commands
 - [`docs/repository_audit_2026-09-20.md`](docs/repository_audit_2026-09-20.md) - repository audit and cleanup plan
 - [`docs/research/README.md`](docs/research/README.md) - research results and methodology handbook
+- [`results/README.md`](results/README.md) - local visual results gallery; raw cluster outputs stay in `code/msi/results/`
 - [`docs/meetings/2026-09-14-progress-brief.md`](docs/meetings/2026-09-14-progress-brief.md) - current scientific narrative
 - [`RP/proposal.pdf`](RP/proposal.pdf) - approved research proposal
 - [`code/msi/cluster_node_issues.txt`](code/msi/cluster_node_issues.txt) - observed cluster incidents

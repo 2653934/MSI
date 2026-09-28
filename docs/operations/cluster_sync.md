@@ -11,6 +11,12 @@ Run the local commands from `code/msi`, **not** from the outer `MSI`
 repository. The trailing slashes are intentional: they copy the contents of
 one workspace into the other workspace.
 
+The curated visual gallery is at the outer repository's `results/` folder.
+Because this folder is outside `code/msi`, none of the commands below upload
+it. Cluster-generated results remain in `code/msi/results/`. If you ever
+write a new upload command that starts from the outer `MSI` root, add
+`--exclude='/results/'` to keep the gallery local.
+
 `data` is a symbolic link rather than a physical directory in the workspace.
 Its rsync rule is therefore `--exclude='/data'` without a trailing slash. This
 matches the root entry itself whether it is a symlink, file or directory.
