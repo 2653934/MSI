@@ -29,6 +29,7 @@ For individual sections, ion images, and TIC overlays, browse [GBM visualisation
 - [CAC peak selection](model-comparisons/cac_peak_selection_comparison.png) and [CAC computational comparison](model-comparisons/cac_computational_comparison.png).
 - [S3PL GBM runtime diagnostics](model-comparisons/runtime_diagnostics.png). Compare training protocols and input sizes before interpreting a runtime ratio.
 - [CAC S3PL versus IG score by threshold](model-comparisons/cac_s3pl_ig_thresholds.png) and [matched-count selected-peak overlap](model-comparisons/cac_s3pl_ig_peak_overlap.png). These locate the CAC quality gap; they do not explain its cause. [Analysis and caveats](../docs/research/12%20CAC%20S3PL%20Gap%20Diagnostics.md).
+- [CAC method-exclusive ion images: 360TopL](model-comparisons/cac_360TopL_s3pl_ig_exclusive_ions.png) and [520TopL](model-comparisons/cac_520TopL_s3pl_ig_exclusive_ions.png). Illustrative raw images, not a held-out or causal comparison.
 
 Detailed per-run evidence remains in [`code/msi/results/experiments/`](../code/msi/results/experiments/) and [`code/msi/results/comparisons/`](../code/msi/results/comparisons/). Model architecture diagrams are in [`report/final/figures/architecture_panels/`](../report/final/figures/architecture_panels/).
 

@@ -74,7 +74,26 @@ def collect(root):
         for threshold in THRESHOLDS:
             ig_f1 = float(ig_metrics["mixed_f1"][threshold])
             s3pl_f1 = float(s3pl_metrics["mixed_f1"][threshold])
-            thresholds[threshold] = {"ig_f1": ig_f1, "s3pl_f1": s3pl_f1, "s3pl_minus_ig": s3pl_f1 - ig_f1}
+            ig_counts = ig_metrics["threshold_results"][threshold]
+            reference_positives = int(ig_counts["true_bins_mixed"])
+            ig_true_positives = int(ig_counts["mixed_classes"]["true_positive"])
+            # At equal selected counts and a shared reference-positive set,
+            # F1 = 2*TP / (selected_count + reference_positive_count).
+            inferred_s3pl_tp = s3pl_f1 * (count + reference_positives) / 2
+            if abs(inferred_s3pl_tp - round(inferred_s3pl_tp)) > 1e-6:
+                raise ValueError(f"{section}/{threshold}: S3PL F1 is inconsistent with the IG reference-positive count")
+            s3pl_true_positives = int(round(inferred_s3pl_tp))
+            if not 0 <= s3pl_true_positives <= min(count, reference_positives):
+                raise ValueError(f"{section}/{threshold}: inferred S3PL true positives outside valid bounds")
+            thresholds[threshold] = {
+                "ig_f1": ig_f1,
+                "s3pl_f1": s3pl_f1,
+                "s3pl_minus_ig": s3pl_f1 - ig_f1,
+                "reference_positive_bins_from_ig_evaluator": reference_positives,
+                "ig_true_positive_bins": ig_true_positives,
+                "s3pl_true_positive_bins_inferred_same_reference": s3pl_true_positives,
+                "s3pl_minus_ig_true_positive_bins_inferred": s3pl_true_positives - ig_true_positives,
+            }
         records.append({
             "section": section,
             "matched_peaks": count,
