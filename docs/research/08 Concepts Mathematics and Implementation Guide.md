@@ -362,13 +362,15 @@ It was included because it closely reflects the original proposal and provides a
 
 If method A selects 100 peaks and method B selects 500, their precision and recall are affected by selection count even if the rankings have similar quality. The strict comparison therefore selects exactly \(K_s\) peaks from each method for section \(s\).
 
-In CAC, \(K_s\) is set by the tuned legacy msiPL result. In the current frozen GBM comparison, \(K_s\) came from the original legacy run. The later paper-aligned beta-tuned GBM run has different counts and a higher mean mSCF1 (0.4142 rather than 0.3643), so the saved GBM IG rankings should be re-evaluated at those tuned counts before the final cross-collection figure is frozen. This is an evaluation correction, not a model-retraining task.
+In both CAC and the corrected primary GBM comparison, \(K_s\) is set by the tuned legacy msiPL result for section \(s\). The GBM IG and first-layer L2 rankings were re-evaluated at those tuned counts without retraining a model or recomputing attributions. The original-count GBM comparison remains a historical intermediate result; the corrected matched-count comparison is used for the final cross-collection figures.
 
 S3PL originally selected its own counts. We corrected the CAC comparison by re-ranking its saved scores and taking the same \(K_s\), without retraining the model.
 
 **Code:** selection and scoring in [evaluate_spatial_msipl_attributed_peaks.py](../../code/msi/scripts/evaluate_spatial_msipl_attributed_peaks.py), especially lines 110–140 and 363–400.  
 **Result:** [matched CAC comparison](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_peak_selection_comparison.png).  
 **Machine-readable evidence:** [CAC comparison JSON](../../code/msi/results/comparisons/spatial_msipl_cac_validation/comparison.json).
+
+**Corrected GBM evidence:** [tuned-count comparison](../../code/msi/results/comparisons/spatial_msipl_gbm_tuned_counts/gbm_tuned_count_comparison.png) and [summary JSON](../../code/msi/results/comparisons/spatial_msipl_gbm_tuned_counts/summary.json).
 
 ## Pearson correlation (PCC)
 
