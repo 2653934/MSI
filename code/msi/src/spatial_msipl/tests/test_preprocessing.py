@@ -7,7 +7,11 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from spatial_msipl.preprocessing import H5SpatialContextDataset, tic_normalize
+from spatial_msipl.preprocessing import (
+    CachedH5SpatialContextDataset,
+    H5SpatialContextDataset,
+    tic_normalize,
+)
 
 
 class PreprocessingTests(unittest.TestCase):
@@ -66,6 +70,52 @@ class PreprocessingTests(unittest.TestCase):
                 rtol=1e-6,
             )
             neighbourhood_dataset.close()
+
+    def test_cached_loader_exactly_matches_streaming_loader(self):
+        coordinates = [
+            (1, 1), (2, 1), (3, 1),
+            (1, 2),         (3, 2),
+            (1, 3), (2, 3), (3, 3),
+        ]
+        spectra = np.asarray(
+            [[index + 1.25, index + 0.5, 2.75] for index in range(8)],
+            dtype=np.float64,
+        )
+        spectra[4] = 0  # Zero-TIC handling must also remain identical.
+        for mz_first in (True, False):
+            for include_neighbourhood in (True, False):
+                with self.subTest(mz_first=mz_first, neighbourhood=include_neighbourhood):
+                    with tempfile.TemporaryDirectory() as temporary_directory:
+                        path = Path(temporary_directory) / "tiny.h5"
+                        data = spectra.T if mz_first else spectra
+                        with h5py.File(path, "w") as handle:
+                            handle.create_dataset("Data", data=data, chunks=data.shape)
+                            handle.create_dataset("mzArray", data=[100, 101, 102])
+                            handle.create_dataset(
+                                "xLocation", data=[x for x, _ in coordinates]
+                            )
+                            handle.create_dataset(
+                                "yLocation", data=[y for _, y in coordinates]
+                            )
+                        streaming = H5SpatialContextDataset(
+                            path, include_neighbourhood=include_neighbourhood
+                        )
+                        cached = CachedH5SpatialContextDataset(
+                            path, include_neighbourhood=include_neighbourhood
+                        )
+                        try:
+                            for index in range(len(streaming)):
+                                reference = streaming[index]
+                                candidate = cached[index]
+                                self.assertEqual(reference.keys(), candidate.keys())
+                                for key in reference:
+                                    np.testing.assert_array_equal(
+                                        reference[key], candidate[key],
+                                        err_msg=f"index={index}, key={key}",
+                                    )
+                        finally:
+                            streaming.close()
+                            cached.close()
 
 
 if __name__ == "__main__":

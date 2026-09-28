@@ -169,3 +169,24 @@ class H5SpatialContextDataset:
 
     def __del__(self):
         self.close()
+
+
+class CachedH5SpatialContextDataset(H5SpatialContextDataset):
+    """Use the existing sample logic with one in-memory float32 HDF5 read.
+
+    This is opt-in for equivalence and speed testing; production training still
+    uses ``H5SpatialContextDataset`` unless explicitly changed elsewhere.
+    TIC normalization remains in the inherited ``__getitem__`` method so the
+    numerical operation and neighbour construction are unchanged.
+    """
+
+    def __init__(self, path, include_neighbourhood=False):
+        super().__init__(path, include_neighbourhood=include_neighbourhood)
+        with h5py.File(self.path, "r") as handle:
+            raw = handle["Data"][...]
+        oriented = raw.T if self.mz_first else raw
+        self._spectra = np.ascontiguousarray(oriented, dtype=np.float32)
+
+    def _read_spectra(self, indices):
+        # NumPy preserves the requested order, including repeated indices.
+        return self._spectra[np.asarray(indices, dtype=np.int64)]

@@ -57,4 +57,12 @@ Evidence: `code/msi/results/validation/spatial_msipl_runtime_profile/central_onl
 
 ## Decision after the profile
 
-The next controlled test is to load and TIC-normalise each pixel spectrum **once**, keep the resulting float32 `(pixels, m/z)` matrix in host memory, and assemble the *same* centre/neighbour slots from that matrix. Compare several edge, interior and missing-neighbour samples against the existing streaming dataset (array values, neighbour masks and coordinate order) before timing either approach on matched batches. A single float32 matrix is about 0.66 GiB; actual peak memory will be higher during loading and collation. A separate short end-to-end benchmark can then measure whole-epoch speed, memory and loss parity. Do not silently replace the frozen 100-epoch results: any optimised production run needs its own name and reproducibility record.
+The first controlled test now loads raw spectra **once** into a float32 `(pixels, m/z)` matrix in host memory. It still uses the original per-sample TIC normalisation and the *same* centre/neighbour slot construction, so the primary changed variable is repeated HDF5 access. `CachedH5SpatialContextDataset` is opt-in and does not alter existing training. The benchmark compares exact sample arrays (including boundary and missing-neighbour pixels) and then times eight matched, identically ordered batches for each loader. A single float32 matrix is about 0.66 GiB; actual peak memory is higher during loading and collation. Run from `~/msi` after syncing the new source and job script:
+
+```bash
+sbatch slurm_jobs/benchmark_spatial_msipl_cache.sh
+```
+
+This is a CPU-only data-loading benchmark, so a node's CUDA state is irrelevant. It writes `results/validation/spatial_msipl_cache_benchmark/cache-<jobid>.json` and `logs/spatial-cache-<jobid>.{out,err}`. The job runs the small numerical unit tests first and stops if any exact sample comparison fails. No model is trained and no checkpoint is written.
+
+If parity passes and data loading improves materially, the next test is a short end-to-end training comparison with the same initialization, sample order, losses, memory reporting and numerical checks. Only after that should a separately named optimised production run be considered. Do not silently replace the frozen 100-epoch results. Pre-normalising the whole matrix once could save still more time, but that is a **second** optimisation requiring its own equivalence test.
