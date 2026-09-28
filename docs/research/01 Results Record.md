@@ -331,6 +331,17 @@ for uniform mean (streaming versus cached), with exactly equal losses and final
 model tensors within each pair. This establishes a large **one-epoch**
 implementation speedup, not a measured 100-epoch or S3PL-comparable runtime.
 
+Separate cached 100-epoch GBM108-positive validations have now completed.
+Centre-only and uniform mean took 1,309.0 and 1,355.4 seconds of summed epoch
+time, respectively, versus 40,178.6 and 40,608.9 seconds in the frozen
+streaming runs. Every shared per-epoch history field matched the corresponding
+frozen run exactly across all 100 epochs; their initial model-state hashes
+also matched. Script wall time to summary was 25.56 and 27.94 minutes for the
+cached runs, including setup and checkpoints. This is an implementation/data
+pipeline improvement, not a new peak-quality result. The final checkpoint
+tensors still need direct comparison on the cluster before claiming complete
+parameter-level identity.
+
 The cross-dataset conclusion is deliberately nuanced. Neighbourhood context
 did not consistently improve peak selection on GBM, but it improved it on all
 eight CAC sections. Nonlinear Integrated Gradients was the robust contribution
