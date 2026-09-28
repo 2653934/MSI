@@ -65,4 +65,15 @@ sbatch slurm_jobs/benchmark_spatial_msipl_cache.sh
 
 This is a CPU-only data-loading benchmark, so a node's CUDA state is irrelevant. It writes `results/validation/spatial_msipl_cache_benchmark/cache-<jobid>.json` and `logs/spatial-cache-<jobid>.{out,err}`. The job runs the small numerical unit tests first and stops if any exact sample comparison fails. No model is trained and no checkpoint is written.
 
+### Result: job 61464
+
+The three preprocessing unit tests passed. On the real `GBM108_positive` HDF5 section, all fields of 35 selected samples matched exactly, including centre spectra, neighbour spectra, masks, context, coordinates and order. Both loaders used the same first-batch indices.
+
+| Measurement | Streaming HDF5 | In-memory cache |
+|---|---:|---:|
+| Mean batch preparation after the first batch | 24.704 s | 0.724 s |
+| Eight-batch mean | 24.580 s | 0.721 s |
+
+That is a **34.1× speedup in data-loader batch preparation**, not yet a measured 34.1× speedup in total training. Loading the entire float32 cache took 12.8 s and occupied 704,653,608 bytes (about 672 MiB). This strongly supports repeated HDF5 access as the dominant avoidable cost in the existing loader. The result does not prove identical training trajectories or final metrics: the full optimiser loop, GPU transfer, random state, checkpoint/resume and repeated epochs still need an end-to-end equivalence check. Evidence: `code/msi/results/validation/spatial_msipl_cache_benchmark/cache-61464.json` and `code/msi/logs/spatial-cache-61464.{out,err}`.
+
 If parity passes and data loading improves materially, the next test is a short end-to-end training comparison with the same initialization, sample order, losses, memory reporting and numerical checks. Only after that should a separately named optimised production run be considered. Do not silently replace the frozen 100-epoch results. Pre-normalising the whole matrix once could save still more time, but that is a **second** optimisation requiring its own equivalence test.
