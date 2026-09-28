@@ -112,3 +112,16 @@ The preprocessing tests passed and 35 real-section samples again matched exactly
 Peak allocated GPU tensor memory was also **identical within each pair**: 2,197,544,448 bytes for centre-only and 3,112,135,168 bytes for uniform mean. This does not count the cached host-memory matrix (704,653,608 bytes) or its temporary construction overhead. The one-time cache load was about 12.8 seconds in job 61464; it is **outside** the epoch timings above. No checkpoint was written in 61469.
 
 This is much stronger evidence than a data-loader-only microbenchmark: replacing repeated HDF5 reads preserved the measured one-epoch model trajectory exactly on this node while cutting training-loop time by over 30×. It is still a **one-epoch, one-section diagnostic**, not a measured 100-epoch runtime or a cross-model fair-cost comparison. A separately named full-run or multi-epoch checkpoint/resume check is needed before changing production timing claims. Evidence: `code/msi/results/validation/spatial_msipl_cache_training/61469/summary.json` and `code/msi/logs/spatial-cache-train-61469.{out,err}`.
+
+## Next gate: resume test and separately named 100-epoch measurement
+
+The production training command now accepts an **opt-in** `--cache-spectra` flag. Without that flag, its original streaming-loader behaviour is unchanged. A small synthetic-data test interrupts cached training immediately after a periodic checkpoint, resumes it, and compares its losses and final tensors with uninterrupted streaming training under the same seed and settings. The Slurm job runs this test before the full experiment; it is not yet a measured pass until the cluster test log confirms it.
+
+The full run uses `GBM108_positive`, seed 1, 100 epochs, batch size 128, and otherwise frozen production model settings. It writes to `results/validation/spatial_msipl_cached_full/GBM108_positive_seed1/<variant>/` with checkpoints under `/datasets/zsuliman/msi_checkpoints/spatial_msipl/cache_validation/...`, **not** the historical model directories. It records both summed epoch time and the separate cache construction time; the script-level wall timer includes model setup and checkpoint saving for that allocation. If a run is resumed in another allocation, that session timer is not the campaign total. Submit the two independent variants from `~/msi` after uploading these new code changes:
+
+```bash
+sbatch slurm_jobs/run_spatial_msipl_cached_full.sh central_only
+sbatch slurm_jobs/run_spatial_msipl_cached_full.sh uniform_mean
+```
+
+Do not replace historical runtimes with these new timings. After completion, compare all 100 per-epoch losses and metrics against the original runs, account for cache/setup/checkpoint and host RAM, and clearly label streaming versus cached implementations. The result is a pipeline optimisation, not a new model or proof of S3PL-equivalent computational efficiency.

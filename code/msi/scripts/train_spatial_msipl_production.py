@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import time
 from pathlib import Path
 
 import torch
@@ -11,7 +12,10 @@ from torch.utils.data import DataLoader, Subset
 
 from check_spatial_attention_scaling import measure
 from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
-from spatial_msipl.preprocessing import H5SpatialContextDataset
+from spatial_msipl.preprocessing import (
+    CachedH5SpatialContextDataset,
+    H5SpatialContextDataset,
+)
 from spatial_msipl.training import set_random_seed, train_vae
 
 
@@ -62,6 +66,11 @@ def main():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--checkpoint-interval", type=int, default=5)
     parser.add_argument("--resume-checkpoint", type=Path)
+    parser.add_argument(
+        "--cache-spectra",
+        action="store_true",
+        help="Opt in to one in-memory float32 HDF5 read; default remains streaming.",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -70,7 +79,12 @@ def main():
             "Resubmit the failed variant."
         )
 
-    dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
+    script_started_at = time.perf_counter()
+    dataset_type = (
+        CachedH5SpatialContextDataset if args.cache_spectra else H5SpatialContextDataset
+    )
+    dataset = dataset_type(args.input, include_neighbourhood=True)
+    dataset_load_seconds = time.perf_counter() - script_started_at
     try:
         spatial_loss_scale = (
             dataset.n_mz if args.spatial_loss_scale == "spectral_bins" else 1.0
@@ -126,7 +140,11 @@ def main():
             seed=args.seed,
             device="cuda",
             experiment_metadata={
-                "purpose": "production neighbourhood baseline",
+                "purpose": (
+                    "cached full-run runtime/equivalence validation, not frozen baseline"
+                    if args.cache_spectra
+                    else "production neighbourhood baseline"
+                ),
                 "neighbourhood_variant": args.variant,
                 "spatial_lambda": args.spatial_lambda,
                 "spatial_loss_scale_name": args.spatial_loss_scale,
@@ -135,6 +153,7 @@ def main():
                 "poisson_effective_count": args.poisson_effective_count,
                 "initial_vae_sha256": initial_vae_hash,
                 "attention_input_scale": args.attention_input_scale,
+                "data_loader": "cached_float32" if args.cache_spectra else "streaming_hdf5",
             },
             checkpoint_interval=args.checkpoint_interval,
             resume_checkpoint=args.resume_checkpoint,
@@ -179,10 +198,16 @@ def main():
             "poisson_augmentation": args.poisson_effective_count is not None,
             "poisson_effective_count": args.poisson_effective_count,
             "full_dataset": True,
+            "data_loader": "cached_float32" if args.cache_spectra else "streaming_hdf5",
         },
         "samples_per_epoch": metadata["samples_per_epoch"],
         "dataset_size": metadata["dataset_size"],
         "training_seconds": metadata["training_seconds"],
+        "dataset_load_seconds": dataset_load_seconds,
+        "script_wall_seconds_to_summary": time.perf_counter() - script_started_at,
+        "cached_host_matrix_bytes": (
+            int(dataset._spectra.nbytes) if args.cache_spectra else None
+        ),
         "resumed_from_checkpoint": metadata["resumed_from_checkpoint"],
         "resumed_from_epoch": metadata["resumed_from_epoch"],
         "peak_gpu_memory_allocated_bytes": metadata[
@@ -200,6 +225,10 @@ def main():
         } if args.variant == "attention" else None,
         "status": "complete",
     }
+    if args.cache_spectra:
+        summary["purpose"] = (
+            "cached full-run runtime/equivalence validation, not frozen baseline"
+        )
     args.output.mkdir(parents=True, exist_ok=True)
     summary_path = args.output / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")

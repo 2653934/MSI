@@ -5,14 +5,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import h5py
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from spatial_msipl.model import CentralOnlyVAE, SpatialVAE
+from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE, SpatialVAE
+from spatial_msipl.preprocessing import CachedH5SpatialContextDataset, H5SpatialContextDataset
 from spatial_msipl.training import (
     _atomic_torch_save,
     latent_spatial_coherence_loss,
     msipl_vae_loss,
+    set_random_seed,
     train_vae,
 )
 
@@ -204,6 +208,92 @@ class SpatialVAETests(unittest.TestCase):
             self.assertEqual([record["epoch"] for record in history], [1, 2, 3])
             self.assertTrue((checkpoint_directory / "checkpoint.pt").is_file())
             self.assertFalse(latest.exists())
+
+    def test_cached_loader_checkpoint_resume_matches_uninterrupted_streaming(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            path = root / "tiny.h5"
+            spectra = (np.arange(8 * 6, dtype=np.float64) + 1).reshape(8, 6)
+            with h5py.File(path, "w") as handle:
+                handle.create_dataset("Data", data=spectra.T, chunks=spectra.T.shape)
+                handle.create_dataset("mzArray", data=np.arange(100, 106))
+                handle.create_dataset("xLocation", data=[1, 2, 3, 4] * 2)
+                handle.create_dataset("yLocation", data=[1] * 4 + [2] * 4)
+
+            streaming = H5SpatialContextDataset(path, include_neighbourhood=True)
+            cached = CachedH5SpatialContextDataset(path, include_neighbourhood=True)
+            try:
+                def model():
+                    return NeighbourhoodSpatialVAE(
+                        spectral_dim=6, neighbourhood="uniform_mean",
+                        hidden_dim=8, latent_dim=2,
+                    )
+
+                options = {
+                    "epochs": 3,
+                    "batch_size": 4,
+                    "seed": 1,
+                    "device": "cpu",
+                    "checkpoint_interval": 1,
+                }
+                set_random_seed(1)
+                reference_model = model()
+                _, reference_history = train_vae(
+                    model=reference_model,
+                    dataset=streaming,
+                    output_directory=root / "reference",
+                    save_checkpoint=False,
+                    **options,
+                )
+
+                set_random_seed(1)
+                interrupted_model = model()
+                checkpoint_directory = root / "cached-checkpoints"
+
+                def save_then_interrupt(value, destination):
+                    _atomic_torch_save(value, destination)
+                    raise RuntimeError("simulated interruption after cached epoch")
+
+                with patch(
+                    "spatial_msipl.training._atomic_torch_save",
+                    side_effect=save_then_interrupt,
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "simulated interruption"):
+                        train_vae(
+                            model=interrupted_model,
+                            dataset=cached,
+                            output_directory=root / "interrupted",
+                            checkpoint_directory=checkpoint_directory,
+                            **options,
+                        )
+
+                latest = checkpoint_directory / "checkpoint_latest.pt"
+                self.assertTrue(latest.is_file())
+                set_random_seed(999)  # Resume must restore checkpoint RNG state.
+                resumed_model = model()
+                resumed_metadata, resumed_history = train_vae(
+                    model=resumed_model,
+                    dataset=cached,
+                    output_directory=root / "resumed",
+                    checkpoint_directory=checkpoint_directory,
+                    resume_checkpoint=latest,
+                    **options,
+                )
+                self.assertEqual(resumed_metadata["resumed_from_epoch"], 1)
+                self.assertEqual(len(resumed_history), len(reference_history))
+                for expected, actual in zip(reference_history, resumed_history):
+                    for key in (
+                        "epoch", "total_loss", "reconstruction_loss",
+                        "kl_loss", "samples_seen", "spatial_pairs",
+                    ):
+                        self.assertEqual(expected[key], actual[key], key)
+                for name, tensor in reference_model.state_dict().items():
+                    self.assertTrue(
+                        torch.equal(tensor, resumed_model.state_dict()[name]), name
+                    )
+            finally:
+                streaming.close()
+                cached.close()
 
 
 if __name__ == "__main__":
