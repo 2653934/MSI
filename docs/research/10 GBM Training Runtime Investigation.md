@@ -17,6 +17,22 @@ Sources: `code/msi/results/baselines/msipl/massnet/GBM108_positive/results.json`
 
 The **centre-only and uniform-mean times differ by only about 1%**. Therefore, the neighbourhood arithmetic and its extra parameters do not explain most of the eleven hours. S3PL's 10-epoch total is not an equal-work comparison with our 100 epochs; even per-epoch comparison is confounded by architecture, input handling and loss. The 100-epoch legacy msiPL comparison is more revealing, although its TensorFlow/Keras implementation and experimental settings are not identical.
 
+## What a runtime comparison actually measures
+
+There are two legitimate but different questions: **How costly is the model on an already-prepared batch?** and **How long does the complete research workflow take?** The first concerns forward/backward computation and device memory; the second includes loading, normalisation, transfers, checkpoints, attribution and evaluation. Neither should silently stand in for the other. A fixed number of epochs or steps is not equal computational work across different architectures, spectra, losses and batch sizes. Report the number of measured pixels, spectral bins, examples and optimiser steps alongside time.
+
+The saved `training_seconds` fields do not even have identical timing boundaries:
+
+| Implementation | What its saved training time includes | Major exclusions |
+|---|---|---|
+| Legacy msiPL GBM | Keras `model.fit` on a spectrum array already loaded into memory | Initial HDF5 loading/normalisation and weight saving |
+| S3PL | Its epoch loop, including patch fetching/normalisation, GPU transfer and model steps | Initial dataset/model setup, subsequent weight saving and evaluation |
+| Spatial-msiPL VAE | Sum of epoch timers, including repeated HDF5 sample construction, transfer and model steps | Dataset initialization, final checkpoint write and later IG/evaluation |
+
+Therefore the historical 11-hour VAE number is a valid observed **training-loop time for that implementation**, but it is **not** eleven hours of VAE arithmetic and must not be divided by another method's saved time to claim an architectural speed ratio. The cache benchmark isolates an avoidable data-pipeline cost; it does not erase the historical observation. If the cache passes full training-equivalence checks, we will retain the old measurement as the streaming-loader version and label any new time as a separately measured cached-loader version.
+
+For the final computational comparison, show at least: (1) model-step or phase timing on ready batches, (2) data/preprocessing and one-time cache setup, (3) complete training wall time including setup/checkpoints, and (4) peak selection/attribution/evaluation time and total workflow time. Keep Slurm queue wait and node failures separate. Report parameter count, peak **allocated GPU tensor memory**, and peak **host RAM** separately: the cache is about 672 MiB of host data before temporary arrays, not free memory. Use matched hardware and repeated measurements where practical. Compare released/reproduced protocols as *practical workflows* and an explicit equal-budget diagnostic for efficiency; do not call the existing S3PL 10-epoch and VAE 100-epoch totals a fair model-efficiency test.
+
 ## Investigated explanation: repeated HDF5 access
 
 Legacy msiPL loads and TIC-normalises the whole HDF5 spectrum matrix once, then calls `model.fit` on the in-memory array. Our `H5SpatialContextDataset.__getitem__` reads the centre and up to eight neighbours from HDF5, TIC-normalises those spectra and constructs both the contextual input and the full eight-neighbour tensor **for every pixel in every epoch**. Training uses a single-process loader (`num_workers=0`). The centre-only model still requests and transfers the neighbour tensor, although its forward method ignores it.
@@ -76,4 +92,10 @@ The three preprocessing unit tests passed. On the real `GBM108_positive` HDF5 se
 
 That is a **34.1× speedup in data-loader batch preparation**, not yet a measured 34.1× speedup in total training. Loading the entire float32 cache took 12.8 s and occupied 704,653,608 bytes (about 672 MiB). This strongly supports repeated HDF5 access as the dominant avoidable cost in the existing loader. The result does not prove identical training trajectories or final metrics: the full optimiser loop, GPU transfer, random state, checkpoint/resume and repeated epochs still need an end-to-end equivalence check. Evidence: `code/msi/results/validation/spatial_msipl_cache_benchmark/cache-61464.json` and `code/msi/logs/spatial-cache-61464.{out,err}`.
 
-If parity passes and data loading improves materially, the next test is a short end-to-end training comparison with the same initialization, sample order, losses, memory reporting and numerical checks. Only after that should a separately named optimised production run be considered. Do not silently replace the frozen 100-epoch results. Pre-normalising the whole matrix once could save still more time, but that is a **second** optimisation requiring its own equivalence test.
+Since parity passed and data loading improved materially, the next test is a one-epoch end-to-end training comparison on all 2,071 GBM108-positive pixels. The new `compare_spatial_msipl_cache_training.py` runs the **existing `train_vae` loop** for centre-only and uniform-mean models with each loader, matching seed, initialization, batch order and production model size. It reports epoch time, training loss, final parameter differences and peak GPU memory. The separate Slurm job uses CUDA, so it retains the production CUDA-node quarantine. It disables checkpoints and writes only under a new `results/validation/spatial_msipl_cache_training/<jobid>/` directory:
+
+```bash
+sbatch slurm_jobs/compare_spatial_msipl_cache_training.sh
+```
+
+Its stdout/stderr are `logs/spatial-cache-train-<jobid>.out` and `.err`. A `matched` summary means the predeclared loss and weight tolerances passed for this one-epoch diagnostic; `needs_review` means inspect the numeric differences before drawing a conclusion. Neither status substitutes for a 100-epoch scientific replication. Only after this end-to-end check should a separately named optimised production run be considered. Do not silently replace the frozen 100-epoch results. Pre-normalising the whole matrix once could save still more time, but that is a **second** optimisation requiring its own equivalence test.
