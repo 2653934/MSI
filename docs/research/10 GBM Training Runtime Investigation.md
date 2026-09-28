@@ -1,6 +1,6 @@
 # GBM training runtime investigation
 
-Status: phase profile (61461), cache batch benchmark (61464), one-epoch training comparison (61469), and separate 100-epoch cached full runs (61483/61484) completed. The resume unit test passed, and all shared 100-epoch training-history fields match the frozen streaming runs exactly. Final checkpoint tensor equality has not yet been checked directly.
+Status: phase profile (61461), cache batch benchmark (61464), one-epoch training comparison (61469), separate 100-epoch cached full runs (61483/61484), and final model-checkpoint comparison (61491) completed. The two GBM108-positive cached runs matched the frozen streaming runs in all shared training-history fields and every final model tensor.
 
 ## What the existing records actually show
 
@@ -137,12 +137,18 @@ Both jobs completed and ran 13 unit tests successfully, including the new synthe
 
 The cached script-wall figures include cache construction, model setup, epochs and periodic/final checkpoint writes up to summary creation; they exclude Slurm queue wait, Conda/job-shell startup, test execution before the Python script, and later peak attribution/evaluation. The historical streaming figures in the table are **summed epoch time**, not matching script-wall measurements; do not compute a wall-time speed ratio between those columns. Peak allocated GPU memory changed by only 1,536 bytes within each old/new pair (effectively the same), but caching additionally stores a 704,653,608-byte float32 matrix in host RAM; peak host RSS was not measured. The difference between script wall and summed epochs must not be attributed solely to checkpoint I/O without phase timing.
 
-This establishes a roughly 30× faster **measured training-loop implementation** for this section and configuration, with identical saved loss histories. It does not make S3PL and the VAE equal-work comparisons, nor does it retroactively change the historical experiments. Remaining checks before a definitive scientific-equivalence statement: compare final checkpoint model tensors on the cluster and, if the cached implementation is adopted for further runs, report its distinct loader, host-memory requirement and timing boundary. Evidence: `code/msi/results/validation/spatial_msipl_cached_full/GBM108_positive_seed1/{central_only,uniform_mean}/` and `code/msi/logs/spatial-cached-full-{61483,61484}.{out,err}`.
+This establishes a roughly 30× faster **measured training-loop implementation** for this section and configuration, with identical saved loss histories. It does not make S3PL and the VAE equal-work comparisons, nor does it retroactively change the historical experiments. The final-tensor audit below completed the parameter-equivalence check for these two runs. If the cached implementation is adopted for further runs, report its distinct loader, host-memory requirement and timing boundary. Evidence: `code/msi/results/validation/spatial_msipl_cached_full/GBM108_positive_seed1/{central_only,uniform_mean}/` and `code/msi/logs/spatial-cached-full-{61483,61484}.{out,err}`.
 
-The final checkpoint comparison is prepared as a **read-only CPU job**. It loads the frozen and cached `checkpoint.pt` files for each variant, checks tensor names, shapes, dtypes and exact values, and writes compact reports under the cached validation result tree. It does not modify either checkpoint. After uploading the two comparison scripts, run:
+The final checkpoint comparison used a **read-only CPU job**. It loads the frozen and cached `checkpoint.pt` files for each variant, checks tensor names, shapes, dtypes and exact values, and writes compact reports under the cached validation result tree. It does not modify either checkpoint. The command used was:
 
 ```bash
 sbatch slurm_jobs/compare_spatial_msipl_cache_checkpoints.sh
 ```
 
-Then sync the new JSON reports back. An `exact` status would establish final *model-parameter* equality; optimizer state and downstream IG/peak-evaluation artifacts are outside this check.
+An `exact` status establishes final *model-parameter* equality; optimizer state and downstream IG/peak-evaluation artifacts are outside this check.
+
+### Result: job 61491
+
+Both reports returned `status: exact`. For centre-only and uniform mean, the frozen and cached checkpoints each recorded 100 completed epochs, had equal model configurations, and matched **all 20 model-state tensors exactly** (zero differing tensors; maximum absolute difference 0). Together with the identical initialization hashes and 100-epoch loss histories, this establishes that the cache changed the *implementation runtime* without changing the final trained models for these two GBM108-positive runs. Therefore, their existing peak evaluations need not be rerun merely because the loader became faster: they refer to the same model tensors. This is not proof for every other section, neighbourhood variant or hardware, and the audit did not compare optimizer state or downstream evaluation randomness. Evidence: `code/msi/results/validation/spatial_msipl_cached_full/GBM108_positive_seed1/checkpoint_equivalence/{central_only,uniform_mean}.json` and `code/msi/logs/spatial-cache-verify-61491.{out,err}`.
+
+The remaining computational question is comparative, not whether this cache works on GBM108-positive. We should benchmark S3PL, legacy msiPL, and the cached VAE with explicit, consistent timing boundaries and report model-step compute separately from data preparation and practical full-workflow time. The historical streaming timings remain valid as implementation history, but should not be presented as intrinsic VAE computation.

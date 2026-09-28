@@ -319,17 +319,18 @@ whereas the legacy msiPL GBM timer starts after loading an in-memory spectrum
 matrix; the timing boundaries and the S3PL protocol differ too. A GBM108-positive
 phase profile found data preparation dominated the VAE loop, and an opt-in
 cache reduced measured batch preparation from 24.704 to 0.724 seconds without
-changing checked sample arrays. This does not retroactively change the CAC
-runtimes above or establish a full-training speedup. See the
+changing checked sample arrays. That initial batch-only result did not, by
+itself, establish a full-training speedup; the later full-run result below did.
+The historical CAC runtimes above remain unchanged. See the
 [runtime investigation](10%20GBM%20Training%20Runtime%20Investigation.md) for
-timing boundaries and the planned matched-cost comparison. GPU tensor memory
-must also be reported separately from the extra host RAM used by caching.
+timing boundaries and the still-needed cross-method cost comparison. GPU tensor
+memory must also be reported separately from the extra host RAM used by caching.
 
 A subsequent one-epoch GBM108-positive check using the actual VAE training loop
 found 402.1 versus 12.7 seconds for centre-only and 400.8 versus 12.4 seconds
 for uniform mean (streaming versus cached), with exactly equal losses and final
-model tensors within each pair. This establishes a large **one-epoch**
-implementation speedup, not a measured 100-epoch or S3PL-comparable runtime.
+model tensors within each pair. That established the first **one-epoch**
+implementation speedup; the 100-epoch test followed.
 
 Separate cached 100-epoch GBM108-positive validations have now completed.
 Centre-only and uniform mean took 1,309.0 and 1,355.4 seconds of summed epoch
@@ -338,9 +339,13 @@ streaming runs. Every shared per-epoch history field matched the corresponding
 frozen run exactly across all 100 epochs; their initial model-state hashes
 also matched. Script wall time to summary was 25.56 and 27.94 minutes for the
 cached runs, including setup and checkpoints. This is an implementation/data
-pipeline improvement, not a new peak-quality result. The final checkpoint
-tensors still need direct comparison on the cluster before claiming complete
-parameter-level identity.
+pipeline improvement, not a new peak-quality result.
+
+The read-only cluster checkpoint audit subsequently found exact equality for
+all 20 final model-state tensors in **both** centre-only and uniform-mean
+GBM108-positive runs (job 61491). This closes the parameter-equivalence check
+for those two cached-versus-streaming pairs. It does not, by itself, extend
+the timing or equivalence result to the other GBM or CAC sections.
 
 The cross-dataset conclusion is deliberately nuanced. Neighbourhood context
 did not consistently improve peak selection on GBM, but it improved it on all
