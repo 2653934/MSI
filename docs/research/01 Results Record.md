@@ -313,6 +313,18 @@ so those raw times must not be presented as per-epoch-equivalent. Mean reported
 GPU allocation was 68.7 MiB for spatial, 53.3 MiB for centre-only and 97.0 MiB
 for S3PL; this is allocated tensor memory, not total device occupancy.
 
+These are the **historical implementation runtimes**, not isolated neural-network
+compute costs. Our VAE epoch timer includes HDF5 reads and TIC normalisation,
+whereas the legacy msiPL GBM timer starts after loading an in-memory spectrum
+matrix; the timing boundaries and the S3PL protocol differ too. A GBM108-positive
+phase profile found data preparation dominated the VAE loop, and an opt-in
+cache reduced measured batch preparation from 24.704 to 0.724 seconds without
+changing checked sample arrays. This does not retroactively change the CAC
+runtimes above or establish a full-training speedup. See the
+[runtime investigation](10%20GBM%20Training%20Runtime%20Investigation.md) for
+timing boundaries and the planned matched-cost comparison. GPU tensor memory
+must also be reported separately from the extra host RAM used by caching.
+
 The cross-dataset conclusion is deliberately nuanced. Neighbourhood context
 did not consistently improve peak selection on GBM, but it improved it on all
 eight CAC sections. Nonlinear Integrated Gradients was the robust contribution

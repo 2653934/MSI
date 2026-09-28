@@ -37,6 +37,12 @@ method should not be described as both more accurate and cheaper than S3PL: its
 matched CAC mSCF1 is lower, and the 10- versus 100-epoch protocols make the
 recorded runtimes non-equivalent. The value of Spatial-msiPL is instead the
 controlled evidence about context and attribution within a VAE framework.
+The existing VAE training-loop time also includes repeated HDF5 sample
+construction, whereas the legacy msiPL timer begins after its spectra have
+been loaded into memory. These timings describe the measured implementations,
+not isolated model computation; GPU tensor memory and host-memory requirements
+must likewise be distinguished. We therefore reserve architectural efficiency
+claims for a phase-level, hardware-matched benchmark.
 
 Limitations include seed-1 section-wide validation, three-seed testing on only
 one development section, sections that are not independent patients,
