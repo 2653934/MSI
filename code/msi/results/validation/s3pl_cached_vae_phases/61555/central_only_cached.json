@@ -1,0 +1,126 @@
+{
+  "purpose": "diagnostic only; fresh weights, no production checkpoint",
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "variant": "central_only",
+  "device": "cuda",
+  "device_name": "NVIDIA GeForce RTX 3090",
+  "dataset_size": 2071,
+  "data_loader": "cached_float32",
+  "dataset_load_seconds": 13.475356943905354,
+  "spectral_bins": 85062,
+  "batch_size": 128,
+  "profiled_batches": 4,
+  "full_epoch_batches": 17,
+  "profiled_samples": 512,
+  "h5_layout": {
+    "shape": [
+      85062,
+      2071
+    ],
+    "dtype": "float64",
+    "chunks": [
+      85062,
+      2071
+    ],
+    "compression": null
+  },
+  "parameters_by_tensor": {
+    "vae.encoder_dense.weight": 43551744,
+    "vae.encoder_dense.bias": 512,
+    "vae.encoder_batchnorm.weight": 512,
+    "vae.encoder_batchnorm.bias": 512,
+    "vae.z_mean.weight": 2560,
+    "vae.z_mean.bias": 5,
+    "vae.z_log_var.weight": 2560,
+    "vae.z_log_var.bias": 5,
+    "vae.decoder_dense.weight": 2560,
+    "vae.decoder_dense.bias": 512,
+    "vae.decoder_batchnorm.weight": 512,
+    "vae.decoder_batchnorm.bias": 512,
+    "vae.decoder_output.weight": 43551744,
+    "vae.decoder_output.bias": 85062
+  },
+  "parameter_count": 87199312,
+  "approx_float32_batch_payload_mib": 373.8076171875,
+  "timing_note": "Each GPU phase is synchronized; timings include synchronization overhead and only sampled batches.",
+  "phase_timings": {
+    "h5_read_normalize_collate": {
+      "mean_seconds": 0.8054691604338586,
+      "median_seconds": 0.8144591203890741,
+      "mean_after_first_seconds": 0.8000540149708589,
+      "per_batch_seconds": [
+        0.8217145968228579,
+        0.8268195907585323,
+        0.8072036439552903,
+        0.7661388101987541
+      ],
+      "samples": 4
+    },
+    "cpu_to_device": {
+      "mean_seconds": 0.05021556559950113,
+      "median_seconds": 0.05022471584379673,
+      "mean_after_first_seconds": 0.05012937821447849,
+      "per_batch_seconds": [
+        0.050474127754569054,
+        0.050482929684221745,
+        0.049975303933024406,
+        0.04992990102618933
+      ],
+      "samples": 4
+    },
+    "forward": {
+      "mean_seconds": 0.23336389707401395,
+      "median_seconds": 0.001681675435975194,
+      "mean_after_first_seconds": 0.0016792591971655686,
+      "per_batch_seconds": [
+        0.9284178107045591,
+        0.001674426719546318,
+        0.0016881898045539856,
+        0.0016751610673964024
+      ],
+      "samples": 4
+    },
+    "loss_and_spatial_pair_check": {
+      "mean_seconds": 0.216230929014273,
+      "median_seconds": 0.0010797989089041948,
+      "mean_after_first_seconds": 0.001075145633270343,
+      "per_batch_seconds": [
+        0.8616982791572809,
+        0.0010893307626247406,
+        0.0010658390820026398,
+        0.001070267055183649
+      ],
+      "samples": 4
+    },
+    "backward_and_optimizer": {
+      "mean_seconds": 0.2831066589569673,
+      "median_seconds": 0.012010866543278098,
+      "mean_after_first_seconds": 0.011981440397600332,
+      "per_batch_seconds": [
+        1.0964823146350682,
+        0.012025221716612577,
+        0.011996511369943619,
+        0.011922588106244802
+      ],
+      "samples": 4
+    },
+    "scalar_logging": {
+      "mean_seconds": 0.00034414883702993393,
+      "median_seconds": 2.8144102543592453e-05,
+      "mean_after_first_seconds": 2.7775454024473827e-05,
+      "per_batch_seconds": [
+        0.0012932689860463142,
+        2.7038156986236572e-05,
+        2.756994217634201e-05,
+        2.8718262910842896e-05
+      ],
+      "samples": 4
+    }
+  },
+  "summed_profiled_phase_seconds": 6.354921439662576,
+  "observed_profiled_samples_per_second": 80.5674790571739,
+  "last_diagnostic_loss": 922372.25,
+  "peak_gpu_allocated_bytes": 2197542912,
+  "peak_gpu_reserved_bytes": 2795503616,
+  "host_peak_rss_bytes_linux": 3786362880
+}
