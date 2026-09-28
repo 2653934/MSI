@@ -1,0 +1,107 @@
+{
+  "purpose": "one-epoch cache diagnostic; not scientific model evaluation",
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "dataset_size": 2071,
+  "spectral_bins": 85062,
+  "device_name": "NVIDIA GeForce RTX 3090",
+  "cache_bytes": 704653608,
+  "exact_sample_parity_pixels": 35,
+  "controls": {
+    "epochs": 1,
+    "batch_size": 128,
+    "hidden_dim": 512,
+    "latent_dim": 5,
+    "learning_rate": 0.001,
+    "seed": 1,
+    "full_section": true,
+    "same_training_function": true,
+    "checkpoints_saved": false
+  },
+  "variants": {
+    "central_only": {
+      "initial_state_sha256": "23fa6dba14a83189cee5b0550f32e597eb4fbfb68cb4a469ccf57b017dbee422",
+      "same_selected_pixels": true,
+      "same_samples_seen": true,
+      "streaming_epoch_seconds": 402.0721963690594,
+      "cached_epoch_seconds": 12.726360403932631,
+      "epoch_speedup": 31.59365157101894,
+      "streaming_peak_gpu_bytes": 2197544448,
+      "cached_peak_gpu_bytes": 2197544448,
+      "losses": {
+        "total_loss": {
+          "streaming": 855905.7562771608,
+          "cached": 855905.7562771608,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        },
+        "vae_loss": {
+          "streaming": 855905.7562771608,
+          "cached": 855905.7562771608,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        },
+        "reconstruction_loss": {
+          "streaming": 855901.2403428295,
+          "cached": 855901.2403428295,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        },
+        "kl_loss": {
+          "streaming": 4.516199620808455,
+          "cached": 4.516199620808455,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        }
+      },
+      "final_state": {
+        "all_tensors_exact": true,
+        "all_tensors_close_rtol_1e-5_atol_1e-6": true,
+        "max_absolute_tensor_difference": 0.0
+      },
+      "status": "matched"
+    },
+    "uniform_mean": {
+      "initial_state_sha256": "c45fb2d29326acb0730d8f244bb90a49df9a6577c7755fb7cd9d77d4c272a3ad",
+      "same_selected_pixels": true,
+      "same_samples_seen": true,
+      "streaming_epoch_seconds": 400.84019432310015,
+      "cached_epoch_seconds": 12.372869215905666,
+      "epoch_speedup": 32.396705026818594,
+      "streaming_peak_gpu_bytes": 3112135168,
+      "cached_peak_gpu_bytes": 3112135168,
+      "losses": {
+        "total_loss": {
+          "streaming": 852621.0174130854,
+          "cached": 852621.0174130854,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        },
+        "vae_loss": {
+          "streaming": 852621.0174130854,
+          "cached": 852621.0174130854,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        },
+        "reconstruction_loss": {
+          "streaming": 852612.0700144857,
+          "cached": 852612.0700144857,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        },
+        "kl_loss": {
+          "streaming": 8.95025500494003,
+          "cached": 8.95025500494003,
+          "absolute_difference": 0.0,
+          "relative_difference": 0.0
+        }
+      },
+      "final_state": {
+        "all_tensors_exact": true,
+        "all_tensors_close_rtol_1e-5_atol_1e-6": true,
+        "max_absolute_tensor_difference": 0.0
+      },
+      "status": "matched"
+    }
+  },
+  "status": "matched"
+}

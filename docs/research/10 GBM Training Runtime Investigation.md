@@ -1,6 +1,6 @@
 # GBM training runtime investigation
 
-Status: four-batch phase profile completed on job 61461, 28 September 2026. The dominant phase is measured; the proposed optimisation has not yet been tested for scientific equivalence.
+Status: phase profile (61461), cache batch benchmark (61464), and one-epoch full-section training comparison (61469) completed. One-epoch outputs match exactly; 100-epoch runtime and checkpoint/resume equivalence remain unmeasured.
 
 ## What the existing records actually show
 
@@ -99,3 +99,16 @@ sbatch slurm_jobs/compare_spatial_msipl_cache_training.sh
 ```
 
 Its stdout/stderr are `logs/spatial-cache-train-<jobid>.out` and `.err`. A `matched` summary means the predeclared loss and weight tolerances passed for this one-epoch diagnostic; `needs_review` means inspect the numeric differences before drawing a conclusion. Neither status substitutes for a 100-epoch scientific replication. Only after this end-to-end check should a separately named optimised production run be considered. Do not silently replace the frozen 100-epoch results. Pre-normalising the whole matrix once could save still more time, but that is a **second** optimisation requiring its own equivalence test.
+
+### Result: job 61469
+
+The preprocessing tests passed and 35 real-section samples again matched exactly. The four runs used the full 2,071-pixel section, batch size 128, seed 1, the existing training loop and an RTX 3090. For each model, streaming and cached runs started from the same model-state hash and selected the same pixels.
+
+| Model | Streaming epoch | Cached epoch | Epoch speedup | Losses and final state |
+|---|---:|---:|---:|---|
+| Centre-only | 402.072 s | 12.726 s | 31.59× | Exact equality |
+| Uniform mean | 400.840 s | 12.373 s | 32.40× | Exact equality |
+
+Peak allocated GPU tensor memory was also **identical within each pair**: 2,197,544,448 bytes for centre-only and 3,112,135,168 bytes for uniform mean. This does not count the cached host-memory matrix (704,653,608 bytes) or its temporary construction overhead. The one-time cache load was about 12.8 seconds in job 61464; it is **outside** the epoch timings above. No checkpoint was written in 61469.
+
+This is much stronger evidence than a data-loader-only microbenchmark: replacing repeated HDF5 reads preserved the measured one-epoch model trajectory exactly on this node while cutting training-loop time by over 30×. It is still a **one-epoch, one-section diagnostic**, not a measured 100-epoch runtime or a cross-model fair-cost comparison. A separately named full-run or multi-epoch checkpoint/resume check is needed before changing production timing claims. Evidence: `code/msi/results/validation/spatial_msipl_cache_training/61469/summary.json` and `code/msi/logs/spatial-cache-train-61469.{out,err}`.

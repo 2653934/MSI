@@ -1,5 +1,8 @@
 # Cluster sync commands
 
+In this project, "I synced" means a **cluster-to-local** download unless a
+direction is explicitly stated. Uploading new source code is a separate step.
+
 These commands map the local executable workspace to the cluster workspace:
 
 ```text

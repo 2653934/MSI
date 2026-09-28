@@ -325,6 +325,12 @@ runtimes above or establish a full-training speedup. See the
 timing boundaries and the planned matched-cost comparison. GPU tensor memory
 must also be reported separately from the extra host RAM used by caching.
 
+A subsequent one-epoch GBM108-positive check using the actual VAE training loop
+found 402.1 versus 12.7 seconds for centre-only and 400.8 versus 12.4 seconds
+for uniform mean (streaming versus cached), with exactly equal losses and final
+model tensors within each pair. This establishes a large **one-epoch**
+implementation speedup, not a measured 100-epoch or S3PL-comparable runtime.
+
 The cross-dataset conclusion is deliberately nuanced. Neighbourhood context
 did not consistently improve peak selection on GBM, but it improved it on all
 eight CAC sections. Nonlinear Integrated Gradients was the robust contribution
