@@ -85,15 +85,15 @@ Those questions must not be collapsed into one. Centre-only IG can improve peak 
 
 An MSI section can be written as a matrix
 
-\[
+$$
 X \in \mathbb{R}_{\ge 0}^{N \times D},
-\]
+$$
 
-where \(N\) is the number of measured tissue pixels and \(D\) is the number of aligned m/z bins. Row \(x_i\) is the spectrum at spatial coordinate \((u_i,v_i)\). Column \(X_{:k}\) contains the intensities of m/z bin \(k\) over the tissue.
+where $N$ is the number of measured tissue pixels and $D$ is the number of aligned m/z bins. Row $x_i$ is the spectrum at spatial coordinate $(u_i,v_i)$. Column $X_{:k}$ contains the intensities of m/z bin $k$ over the tissue.
 
 The GBM HDF5 files have 85,062 m/z bins. The CAC continuous-imzML sections have 1,481 aligned bins. The large difference in dimensionality is one reason the dense GBM models are expensive.
 
-**Why it matters:** ordinary tabular methods see \(X\), but MSI also has a coordinate map. The research asks whether that spatial information improves feature/peak selection.
+**Why it matters:** ordinary tabular methods see $X$, but MSI also has a coordinate map. The research asks whether that spatial information improves feature/peak selection.
 
 **Read more:** [Datasets and preprocessing](03%20Datasets%20and%20Preprocessing.md).  
 **Code:** [HDF5 spatial dataset](../../code/msi/src/spatial_msipl/preprocessing.py), class `H5SpatialContextDataset` beginning at line 67.  
@@ -101,7 +101,7 @@ The GBM HDF5 files have 85,062 m/z bins. The CAC continuous-imzML sections have 
 
 ## Ion images and masks
 
-For m/z bin \(k\), its ion image is formed by placing \(X_{ik}\) at each measured coordinate \((u_i,v_i)\). An expert mask assigns a tissue class to the same coordinates. The ion image is continuous; a class mask is binary when evaluating one class against the rest.
+For m/z bin $k$, its ion image is formed by placing $X_{ik}$ at each measured coordinate $(u_i,v_i)$. An expert mask assigns a tissue class to the same coordinates. The ion image is continuous; a class mask is binary when evaluating one class against the rest.
 
 The masks are **evaluation data**, not VAE training targets. Training remains label-free. This distinction is essential to the self-supervised/unsupervised claim.
 
@@ -112,10 +112,10 @@ The masks are **evaluation data**, not VAE training targets. Training remains la
 
 Total ion current (TIC) normalisation removes overall intensity scale from each spectrum:
 
-\[
+$$
 \operatorname{TIC}(x_i)=\sum_{k=1}^{D}x_{ik}, \qquad
 \tilde{x}_{ik}=\frac{x_{ik}}{\operatorname{TIC}(x_i)}.
-\]
+$$
 
 Each valid normalised spectrum sums approximately to one. The model therefore focuses more on the relative spectral distribution than on total signal magnitude.
 
@@ -129,11 +129,11 @@ Each valid normalised spectrum sums approximately to one. The model therefore fo
 
 ## Neighbourhood construction
 
-For a centre coordinate \((u,v)\), the Moore neighbourhood is
+For a centre coordinate $(u,v)$, the Moore neighbourhood is
 
-\[
+$$
 \mathcal{N}(u,v)=\{(u+a,v+b):a,b\in\{-1,0,1\},\;(a,b)\ne(0,0)\}.
-\]
+$$
 
 There are at most eight neighbours. Missing grid positions and unmeasured pixels are masked rather than treated as real zero-intensity tissue.
 
@@ -141,20 +141,20 @@ We evaluated three aggregators:
 
 ### Uniform mean
 
-\[
+$$
 c_i=\frac{1}{|\mathcal{N}(i)|}\sum_{j\in\mathcal{N}(i)}\tilde{x}_j.
-\]
+$$
 
 Every available neighbour receives equal weight. This is the simplest and most interpretable spatial input.
 
 ### Depthwise weighting
 
-For each spectral bin \(k\), the model learns a separate distribution over the eight relative neighbour positions:
+For each spectral bin $k$, the model learns a separate distribution over the eight relative neighbour positions:
 
-\[
+$$
 c_{ik}=\sum_{s=1}^{8}a_{sk}\tilde{x}_{isk},
 \qquad \sum_s a_{sk}=1.
-\]
+$$
 
 This can learn, for example, that an upper-left neighbour matters differently from a lower-right neighbour for a particular bin, but it does not make weights depend on the current spectrum.
 
@@ -162,14 +162,14 @@ This can learn, for example, that an upper-left neighbour matters differently fr
 
 The centre and neighbour spectra are projected into smaller embeddings. Similarity scores are scaled and normalised over valid neighbours:
 
-\[
+$$
 e_{ij}=\frac{q_i^T k_{ij}}{\sqrt{d_a}}, \qquad
 \alpha_{ij}=\frac{\exp(e_{ij})}{\sum_{r\in\mathcal{N}(i)}\exp(e_{ir})},
 \qquad
 c_i=\sum_j\alpha_{ij}\tilde{x}_j.
-\]
+$$
 
-The corrected development variant multiplies the tiny TIC-normalised inputs by \(\sqrt{D}\) before projection. This gives the projection a usable numerical scale without applying the stronger \(D\)-fold scaling that was also tested.
+The corrected development variant multiplies the tiny TIC-normalised inputs by $\sqrt{D}$ before projection. This gives the projection a usable numerical scale without applying the stronger $D$-fold scaling that was also tested.
 
 **Code:** [neighbourhood.py](../../code/msi/src/spatial_msipl/neighbourhood.py): validation line 9, uniform mean line 38, depthwise line 54, attention line 86.  
 **Tests:** [test_neighbourhood.py](../../code/msi/src/spatial_msipl/tests/test_neighbourhood.py) and [test_attention_scaling.py](../../code/msi/src/spatial_msipl/tests/test_attention_scaling.py).  
@@ -177,7 +177,7 @@ The corrected development variant multiplies the tiny TIC-normalised inputs by \
 
 ## Centre-only control
 
-The centre-only VAE receives only \(\tilde{x}_i\). The contextual model receives the centre plus an aggregated neighbourhood representation. Both reconstruct the same centre spectrum.
+The centre-only VAE receives only $\tilde{x}_i$. The contextual model receives the centre plus an aggregated neighbourhood representation. Both reconstruct the same centre spectrum.
 
 This is the causal logic of the architectural ablation: if the matched models differ, the intended changed factor is access to context. Without this control, a strong spatial model result would not tell us whether context helped or whether the underlying VAE/explanation method was already sufficient.
 
@@ -188,49 +188,49 @@ This is the causal logic of the architectural ablation: if the matched models di
 
 ### Encoder and reparameterisation
 
-The encoder maps an input \(z_i^{\text{in}}\) to a Gaussian latent distribution:
+The encoder maps an input $z_i^{\text{in}}$ to a Gaussian latent distribution:
 
-\[
+$$
 q_\phi(h_i\mid z_i^{\text{in}})
 =\mathcal{N}\!\left(\mu_i,\operatorname{diag}(\sigma_i^2)\right).
-\]
+$$
 
 During training, a latent sample is produced with the reparameterisation trick:
 
-\[
+$$
 h_i=\mu_i+\sigma_i\odot\epsilon,
 \qquad \epsilon\sim\mathcal{N}(0,I).
-\]
+$$
 
-The decoder maps \(h_i\) back to a reconstruction of the **central** TIC-normalised spectrum.
+The decoder maps $h_i$ back to a reconstruction of the **central** TIC-normalised spectrum.
 
 ### Reconstruction term
 
 The code uses a scaled categorical cross-entropy for non-negative, TIC-normalised spectra:
 
-\[
+$$
 \mathcal{L}_{\text{recon}}
 =-D\sum_{k=1}^{D}\tilde{x}_{ik}\log(\hat{x}_{ik}+\varepsilon).
-\]
+$$
 
-The factor \(D\) keeps the magnitude useful as spectral dimensionality changes.
+The factor $D$ keeps the magnitude useful as spectral dimensionality changes.
 
 ### KL term
 
 The Gaussian KL divergence to a unit-normal prior is
 
-\[
+$$
 \mathcal{L}_{\text{KL}}
 =-\frac{1}{2}\sum_{r}
 \left(1+\log\sigma_{ir}^{2}-\mu_{ir}^{2}-\sigma_{ir}^{2}\right).
-\]
+$$
 
 The total loss is
 
-\[
+$$
 \mathcal{L}_{\text{VAE}}
 =\mathcal{L}_{\text{recon}}+\beta\mathcal{L}_{\text{KL}}.
-\]
+$$
 
 Beta controls the reconstruction–regularisation trade-off. It is a training hyperparameter: changing it after training cannot retroactively change the representation.
 
@@ -242,19 +242,19 @@ Beta controls the reconstruction–regularisation trade-off. It is a training hy
 
 The proposed extra penalty encourages adjacent pixels to have similar latent means:
 
-\[
+$$
 \mathcal{L}_{\text{spatial}}
 =\frac{1}{|E|L}\sum_{(i,j)\in E}\sum_{r=1}^{L}
 (\mu_{ir}-\mu_{jr})^2,
-\]
+$$
 
 with total objective
 
-\[
+$$
 \mathcal{L}=\mathcal{L}_{\text{VAE}}+\lambda\mathcal{L}_{\text{spatial}}.
-\]
+$$
 
-where \(L\) is the number of latent dimensions and \(E\) contains unique adjacent pairs in the training batch. This encodes the prior belief that nearby tissue tends to be molecularly similar. The risk is oversmoothing real boundaries, so a lower spatial loss is not automatically a better scientific model.
+where $L$ is the number of latent dimensions and $E$ contains unique adjacent pairs in the training batch. This encodes the prior belief that nearby tissue tends to be molecularly similar. The risk is oversmoothing real boundaries, so a lower spatial loss is not automatically a better scientific model.
 
 Our pilots showed that the penalty could force smoothness, but worsened reconstruction and did not consistently improve the held-out spatial probe. It was therefore retained as an informative negative ablation rather than promoted.
 
@@ -263,12 +263,12 @@ Our pilots showed that the penalty could force smoothness, but worsened reconstr
 
 ## Poisson augmentation
 
-For a TIC-normalised spectrum \(x\) and effective count \(C\), the augmentation approximates ion-counting noise by
+For a TIC-normalised spectrum $x$ and effective count $C$, the augmentation approximates ion-counting noise by
 
-\[
+$$
 n_k\sim\operatorname{Poisson}(Cx_k), \qquad
 x_k'=\frac{n_k}{\sum_r n_r}.
-\]
+$$
 
 The central and measured-neighbour spectra are perturbed independently during training. The target remains clean.
 
@@ -279,13 +279,13 @@ The implementation worked, but the noisy-input MSE improvement was only about 0.
 
 ## Deterministic evaluation
 
-Training samples \(h\) from the latent distribution. Evaluation instead uses \(\mu\), the latent mean, so repeated evaluation of the same model and pixel does not change because of latent sampling.
+Training samples $h$ from the latent distribution. Evaluation instead uses $\mu$, the latent mean, so repeated evaluation of the same model and pixel does not change because of latent sampling.
 
 For reconstruction, the code computes
 
-\[
+$$
 \hat{x}_i=\operatorname{decoder}(\mu_i)
-\]
+$$
 
 and then TIC-normalises the decoder output before comparing it with the target.
 
@@ -294,13 +294,13 @@ and then TIC-normalises the decoder output before comparing it with the target.
 
 ## Latent GMM
 
-A two-component full-covariance Gaussian mixture is fitted to the deterministic latent means. For component \(c\),
+A two-component full-covariance Gaussian mixture is fitted to the deterministic latent means. For component $c$,
 
-\[
+$$
 p(c\mid h)=
 \frac{\pi_c\,\mathcal{N}(h\mid\mu_c,\Sigma_c)}
 {\sum_j \pi_j\,\mathcal{N}(h\mid\mu_j,\Sigma_j)}.
-\]
+$$
 
 The GMM is useful for two reasons:
 
@@ -313,25 +313,25 @@ The GMM components are arbitrary labels such as 0 and 1. For evaluation, the cod
 
 ## Integrated Gradients
 
-For model output \(F_c(x)\), input \(x\), and baseline \(x'\), Integrated Gradients for feature \(k\) is
+For model output $F_c(x)$, input $x$, and baseline $x'$, Integrated Gradients for feature $k$ is
 
-\[
+$$
 \operatorname{IG}_k(x)=
 (x_k-x_k')
 \int_0^1
 \frac{\partial F_c\left(x'+\alpha(x-x')\right)}{\partial x_k}
 \,d\alpha.
-\]
+$$
 
-Our \(F_c\) is the posterior probability of the spectrum’s selected GMM component. The baseline is the section-wide mean TIC-normalised spectrum for the centre and each valid neighbour; missing neighbour positions stay zero and masked. Numerically, the integral is approximated over interpolation steps.
+Our $F_c$ is the posterior probability of the spectrum’s selected GMM component. The baseline is the section-wide mean TIC-normalised spectrum for the centre and each valid neighbour; missing neighbour positions stay zero and masked. Numerically, the integral is approximated over interpolation steps.
 
 For contextual models, the per-bin combined score is
 
-\[
+$$
 s_k=|\operatorname{IG}^{\text{centre}}_k|
 +\sum_{j\in\mathcal{N}(i)}
 |\operatorname{IG}^{\text{neighbour }j}_k|,
-\]
+$$
 
 aggregated over sampled spectra and GMM components. Component-balanced round-robin selection stops a larger/easier component from taking the complete peak budget.
 
@@ -345,11 +345,11 @@ IG answers: “Along the path from the reference spectrum to this input, which b
 
 ## First-layer L2
 
-For input bin \(k\) and first-layer weight matrix \(W\), the simple importance score is
+For input bin $k$ and first-layer weight matrix $W$, the simple importance score is
 
-\[
+$$
 s_k^{L2}=\sqrt{\sum_h W_{hk}^2}.
-\]
+$$
 
 For a contextual model, centre and context pathway norms are combined. This measures the magnitude of the direct first-layer connections, not the feature’s effect after nonlinear layers, and not its contribution to a particular output or cluster.
 
@@ -360,11 +360,11 @@ It was included because it closely reflects the original proposal and provides a
 
 ## Matched peak budgets
 
-If method A selects 100 peaks and method B selects 500, their precision and recall are affected by selection count even if the rankings have similar quality. The strict comparison therefore selects exactly \(K_s\) peaks from each method for section \(s\).
+If method A selects 100 peaks and method B selects 500, their precision and recall are affected by selection count even if the rankings have similar quality. The strict comparison therefore selects exactly $K_s$ peaks from each method for section $s$.
 
-In both CAC and the corrected primary GBM comparison, \(K_s\) is set by the tuned legacy msiPL result for section \(s\). The GBM IG and first-layer L2 rankings were re-evaluated at those tuned counts without retraining a model or recomputing attributions. The original-count GBM comparison remains a historical intermediate result; the corrected matched-count comparison is used for the final cross-collection figures.
+In both CAC and the corrected primary GBM comparison, $K_s$ is set by the tuned legacy msiPL result for section $s$. The GBM IG and first-layer L2 rankings were re-evaluated at those tuned counts without retraining a model or recomputing attributions. The original-count GBM comparison remains a historical intermediate result; the corrected matched-count comparison is used for the final cross-collection figures.
 
-S3PL originally selected its own counts. We corrected the CAC comparison by re-ranking its saved scores and taking the same \(K_s\), without retraining the model.
+S3PL originally selected its own counts. We corrected the CAC comparison by re-ranking its saved scores and taking the same $K_s$, without retraining the model.
 
 **Code:** selection and scoring in [evaluate_spatial_msipl_attributed_peaks.py](../../code/msi/scripts/evaluate_spatial_msipl_attributed_peaks.py), especially lines 110–140 and 363–400.  
 **Result:** [matched CAC comparison](../../code/msi/results/comparisons/spatial_msipl_cac_validation/cac_peak_selection_comparison.png).  
@@ -374,13 +374,13 @@ S3PL originally selected its own counts. We corrected the CAC comparison by re-r
 
 ## Pearson correlation (PCC)
 
-For flattened ion image \(a\) and binary class mask \(b\),
+For flattened ion image $a$ and binary class mask $b$,
 
-\[
-$r(a,b)=
+$$
+r(a,b)=
 \frac{\sum_i(a_i-\bar a)(b_i-\bar b)}
-{\sqrt{\sum_i(a_i-\bar a)^2}\sqrt{\sum_i(b_i-\bar b)^2}}.$
-\]
+{\sqrt{\sum_i(a_i-\bar a)^2}\sqrt{\sum_i(b_i-\bar b)^2}}.
+$$
 
 PCC lies between −1 and 1. A large positive value means high ion intensity tends to occur inside the mask; a negative value means it tends to occur outside; a value near zero means weak linear spatial agreement.
 
@@ -393,25 +393,25 @@ If an ion image is constant, its standard deviation is zero and PCC is undefined
 
 ## F1 and mSCF1
 
-For a PCC threshold \(t\), a bin is a spatially positive reference peak if its correlation with at least one expert structure is at least \(t\). For the method’s selected set:
+For a PCC threshold $t$, a bin is a spatially positive reference peak if its correlation with at least one expert structure is at least $t$. For the method’s selected set:
 
-\[
+$$
 \operatorname{Precision}_t=\frac{TP_t}{TP_t+FP_t},
 \qquad
 \operatorname{Recall}_t=\frac{TP_t}{TP_t+FN_t},
-\]
+$$
 
-\[
+$$
 F1_t=\frac{2\operatorname{Precision}_t\operatorname{Recall}_t}
 {\operatorname{Precision}_t+\operatorname{Recall}_t}.
-\]
+$$
 
 The mean Spatial Correlation F1 is
 
-\[
+$$
 \operatorname{mSCF1}
 =\frac{1}{4}\sum_{t\in\{0.3,0.4,0.5,0.6\}}F1_t.
-\]
+$$
 
 The multiple thresholds prevent the conclusion from depending on one arbitrary PCC cutoff. mSCF1 measures whether the selected bins have spatial patterns aligned with the supplied masks. It is not a molecule-identification metric.
 
@@ -420,30 +420,30 @@ The multiple thresholds prevent the conclusion from depending on one arbitrary P
 
 ## Reconstruction metrics
 
-The deterministic reconstruction evaluation reports several views of \(x_i\) versus \(\hat{x}_i\):
+The deterministic reconstruction evaluation reports several views of $x_i$ versus $\hat{x}_i$:
 
 ### Mean squared error
 
-\[
+$$
 \operatorname{MSE}=\frac{1}{ND}\sum_{i,k}(x_{ik}-\hat{x}_{ik})^2.
-\]
+$$
 
 It heavily penalises larger pointwise errors. Lower is better.
 
 ### Mean absolute error
 
-\[
+$$
 \operatorname{MAE}=\frac{1}{ND}\sum_{i,k}|x_{ik}-\hat{x}_{ik}|.
-\]
+$$
 
 It is less sensitive than MSE to a small number of large errors. Lower is better.
 
 ### Cosine similarity
 
-\[
+$$
 \cos(x_i,\hat{x}_i)=
 \frac{x_i^T\hat{x}_i}{\|x_i\|_2\|\hat{x}_i\|_2}.
-\]
+$$
 
 This measures similarity of spectral direction/shape. Higher is better.
 
@@ -458,12 +458,12 @@ This is the same reconstruction form used during training and is defined in [VAE
 
 ### Balanced accuracy
 
-For \(C\) expert classes,
+For $C$ expert classes,
 
-\[
+$$
 \operatorname{BA}=\frac{1}{C}\sum_{c=1}^{C}
 \frac{TP_c}{TP_c+FN_c}.
-\]
+$$
 
 It gives each class equal weight even when class sizes differ. We use it after optimally mapping arbitrary GMM component IDs to expert class IDs.
 
@@ -479,11 +479,11 @@ For each latent point, silhouette compares its average distance within its assig
 
 Moran’s I measures spatial autocorrelation:
 
-\[
+$$
 I=\frac{N}{W}
 \frac{\sum_i\sum_j w_{ij}(z_i-\bar z)(z_j-\bar z)}
 {\sum_i(z_i-\bar z)^2}.
-\]
+$$
 
 Positive values indicate that neighbouring pixels tend to have similar values. More spatial autocorrelation is not always better: excessive smoothing can erase real boundaries.
 
@@ -492,11 +492,11 @@ Positive values indicate that neighbouring pixels tend to have similar values. M
 
 ## Deletion faithfulness
 
-Deletion faithfulness checks whether the bins ranked as important actually influence the explained model output. Let \(S_K\) be the top \(K\) bins and \(x_{\setminus S_K}\) be the input after replacing those bins with section-mean values. We measure
+Deletion faithfulness checks whether the bins ranked as important actually influence the explained model output. Let $S_K$ be the top $K$ bins and $x_{\setminus S_K}$ be the input after replacing those bins with section-mean values. We measure
 
-\[
+$$
 \Delta_K=F_c(x)-F_c(x_{\setminus S_K}).
-\]
+$$
 
 A larger positive drop means deleting the selected bins reduces the target GMM posterior more strongly, which supports the claim that the ranking reflects model behaviour.
 
@@ -513,9 +513,9 @@ Faithfulness is about the model’s internal dependence, not biological truth. A
 
 Methods are evaluated on the same tissue sections, so differences must be paired:
 
-\[
+$$
 d_s=m_{A,s}-m_{B,s}.
-\]
+$$
 
 The exact two-sided Wilcoxon signed-rank test evaluates whether the signed paired differences are centred around zero without assuming normally distributed differences. With only eight sections, the test has limited resolution; effect sizes, win counts, and the individual section values must accompany the p-value.
 
