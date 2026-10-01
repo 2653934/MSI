@@ -24,7 +24,7 @@ from spatial_msipl.attribution import (
     integrated_gradients_cluster_posterior,
 )
 from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
-from spatial_msipl.preprocessing import H5SpatialContextDataset
+from spatial_msipl.preprocessing import H5SpatialContextDataset, checkpoint_input_spec
 
 
 CLUSTER_COLOURS = ("#457B9D", "#E76F51", "#6D597A", "#2A9D8F")
@@ -43,6 +43,8 @@ def parse_arguments():
             "depthwise",
             "attention",
             "attention_sqrt_bins",
+            "zero_context",
+            "shuffled_uniform",
         ),
         default="uniform_mean",
     )
@@ -77,8 +79,9 @@ def state_sha256(model):
     return digest.hexdigest()
 
 
-def load_model(path, spectral_dim, variant, device):
-    checkpoint = torch.load(path, map_location="cpu")
+def load_model(path, spectral_dim, variant, device, checkpoint=None):
+    if checkpoint is None:
+        checkpoint = torch.load(path, map_location="cpu")
     if int(checkpoint.get("completed_epochs", 0)) != 100:
         raise ValueError("attribution requires the complete 100-epoch checkpoint")
     configuration = checkpoint["model_configuration"]
@@ -94,11 +97,19 @@ def load_model(path, spectral_dim, variant, device):
         )
     else:
         neighbourhood = configuration.get("neighbourhood", {})
-        expected_name = "attention" if variant == "attention_sqrt_bins" else variant
+        expected_name = {
+            "attention_sqrt_bins": "attention",
+            "shuffled_uniform": "uniform_mean",
+        }.get(variant, variant)
         if neighbourhood.get("name") != expected_name:
             raise ValueError(
                 f"{variant} attribution requires a matching {expected_name} checkpoint"
             )
+        input_spec = checkpoint_input_spec(checkpoint)
+        if variant == "shuffled_uniform" and input_spec["context_mode"] != "shuffled":
+            raise ValueError("shuffled_uniform requires a shuffled-context checkpoint")
+        if variant == "uniform_mean" and input_spec["context_mode"] != "measured":
+            raise ValueError("uniform_mean requires measured-context training")
         model = NeighbourhoodSpatialVAE(
             spectral_dim=spectral_dim,
             neighbourhood=expected_name,
@@ -108,6 +119,7 @@ def load_model(path, spectral_dim, variant, device):
             attention_input_scale=neighbourhood.get(
                 "input_scale_name", "spectral_bins"
             ),
+            window_size=input_spec["window_size"],
         )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
@@ -337,6 +349,8 @@ def save_gmm_figure(labels, confidence, x, y, variant, output):
         "depthwise": "Depthwise Spatial-msiPL",
         "attention": "Original-attention Spatial-msiPL",
         "attention_sqrt_bins": "Corrected-attention Spatial-msiPL",
+        "zero_context": "Zero-context VAE (2D input)",
+        "shuffled_uniform": "Shuffled-context Spatial-msiPL",
     }
     name = names[variant]
     fig.suptitle(f"{name}: latent GMM target", fontsize=14)
@@ -361,7 +375,7 @@ def save_attribution_figure(mz, aggregate, variant, output, top_n=20):
         axis.set_title(f"GMM component {component}: top {top_n} nonlinear features")
     pathway = (
         "the centre-only pathway"
-        if variant == "central_only"
+        if variant in ("central_only", "zero_context")
         else "central and neighbourhood pathways"
     )
     fig.suptitle(f"Integrated Gradients through {pathway}", fontsize=14)
@@ -406,9 +420,19 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
 
-    dataset = H5SpatialContextDataset(args.input, include_neighbourhood=True)
+    checkpoint = torch.load(args.checkpoint, map_location="cpu")
+    input_spec = checkpoint_input_spec(checkpoint)
+    dataset = H5SpatialContextDataset(
+        args.input, include_neighbourhood=True,
+        window_size=input_spec["window_size"],
+        context_mode=input_spec["context_mode"],
+        context_seed=input_spec["context_seed"],
+    )
+    if (input_spec["context_mode"] == "shuffled" and
+            input_spec["context_permutation_sha256"] != dataset.context_permutation_sha256):
+        raise ValueError("checkpoint and evaluation context permutations differ")
     model, checkpoint = load_model(
-        args.checkpoint, dataset.n_mz, args.variant, device
+        args.checkpoint, dataset.n_mz, args.variant, device, checkpoint=checkpoint
     )
     latent, mean_spectrum_np = encode_all(model, dataset, args.batch_size, device)
     scaler = StandardScaler().fit(latent)
@@ -629,6 +653,7 @@ def main():
         "model_state_sha256": state_sha256(model),
         "completed_training_epochs": int(checkpoint["completed_epochs"]),
         "model_configuration": checkpoint["model_configuration"],
+        "input_specification": input_spec,
         "pixels": int(len(dataset)),
         "spectral_bins": int(dataset.n_mz),
         "gmm": {
@@ -652,7 +677,7 @@ def main():
             "attribution_pixels_per_component": args.attribution_per_cluster,
             "central_context_combination": (
                 "per-bin |central IG| + sum over valid neighbour slots of |neighbour IG|"
-                if args.variant != "central_only"
+                if args.variant not in ("central_only", "zero_context")
                 else "per-bin |central IG|; neighbour contribution is structurally zero"
             ),
             "sampling_seed": sampling_seed,
@@ -672,7 +697,7 @@ def main():
             "method": "L2 norm over hidden units of encoder_dense input columns",
             "combination": (
                 "central L2 + context L2"
-                if args.variant != "central_only"
+                if args.variant not in ("central_only", "zero_context")
                 else "central L2 only"
             ),
             "interpretation": "linear comparator only; not the primary nonlinear explanation",

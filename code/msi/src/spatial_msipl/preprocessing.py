@@ -1,5 +1,6 @@
 """TIC normalization and measured-neighbour context for Spatial-msiPL."""
 
+import hashlib
 from pathlib import Path
 
 import h5py
@@ -22,6 +23,27 @@ def square_neighbour_offsets(window_size=3):
 
 
 MOORE_OFFSETS = square_neighbour_offsets(3)
+
+
+def checkpoint_input_spec(checkpoint):
+    """Recover the exact dataset inputs required by a saved model run."""
+    configuration = checkpoint["model_configuration"]
+    signature = checkpoint.get("resume_signature", {})
+    window_size = int(signature.get("dataset_window_size", configuration.get("window_size", 3)))
+    square_neighbour_offsets(window_size)
+    if "neighbourhood" in configuration and int(configuration.get("window_size", 3)) != window_size:
+        raise ValueError("checkpoint model and dataset window sizes disagree")
+    context_mode = signature.get("context_mode", "measured")
+    if context_mode not in ("measured", "shuffled"):
+        raise ValueError(f"unsupported checkpoint context mode: {context_mode}")
+    if context_mode == "shuffled" and "context_seed" not in signature:
+        raise ValueError("shuffled checkpoint lacks its context seed")
+    return {
+        "window_size": window_size,
+        "context_mode": context_mode,
+        "context_seed": signature.get("context_seed"),
+        "context_permutation_sha256": signature.get("context_permutation_sha256"),
+    }
 
 
 def tic_normalize(spectra):
@@ -83,10 +105,18 @@ def build_moore_neighbours(x_coordinates, y_coordinates):
 class H5SpatialContextDataset:
     """Stream central spectra and their mean measured-neighbour contexts from HDF5."""
 
-    def __init__(self, path, include_neighbourhood=False, window_size=3):
+    def __init__(self, path, include_neighbourhood=False, window_size=3,
+                 context_mode="measured", context_seed=None):
         self.path = Path(path).expanduser().resolve()
         self.offsets = square_neighbour_offsets(window_size)
         self.window_size = int(window_size)
+        if context_mode not in ("measured", "shuffled"):
+            raise ValueError("context_mode must be measured or shuffled")
+        if context_mode == "shuffled" and (isinstance(context_seed, bool) or
+                                             not isinstance(context_seed, (int, np.integer))):
+            raise ValueError("shuffled context requires an integer context_seed")
+        self.context_mode = context_mode
+        self.context_seed = int(context_seed) if context_mode == "shuffled" else None
         self.include_neighbourhood = bool(include_neighbourhood)
         self._handle = None
         self._data = None
@@ -103,6 +133,15 @@ class H5SpatialContextDataset:
 
         self.n_pixels = len(self.x)
         self.n_mz = len(self.mz_values)
+        self.context_permutation = None
+        self.context_permutation_sha256 = None
+        if self.context_mode == "shuffled":
+            # Map every measured index to another measured index. A cyclic shift
+            # of a seeded random ordering has no fixed points when N > 1.
+            order = np.random.default_rng(self.context_seed).permutation(self.n_pixels)
+            mapping = np.empty(self.n_pixels, dtype=np.int64)
+            mapping[order] = np.roll(order, 1)
+            self.context_permutation = mapping
         if self.data_shape == (self.n_mz, self.n_pixels):
             self.mz_first = True
         elif self.data_shape == (self.n_pixels, self.n_mz):
@@ -119,6 +158,24 @@ class H5SpatialContextDataset:
         self.neighbour_indices = tuple(
             row[row >= 0] for row in self.neighbour_slots
         )
+        self.context_source_slots = None
+        if self.context_mode == "shuffled":
+            sources = self.neighbour_slots.copy()
+            for index, row in enumerate(self.neighbour_slots):
+                forbidden = set(row[row >= 0].tolist()) | {index}
+                if len(forbidden) == self.n_pixels and np.any(row >= 0):
+                    raise ValueError("shuffled context needs a measured pixel outside every local window")
+                for slot, neighbour in enumerate(row):
+                    if neighbour < 0:
+                        continue
+                    candidate = self.context_permutation[neighbour]
+                    while candidate in forbidden:
+                        candidate = self.context_permutation[candidate]
+                    sources[index, slot] = candidate
+            self.context_source_slots = sources
+            self.context_permutation_sha256 = hashlib.sha256(
+                sources.astype("<i8", copy=False).tobytes()
+            ).hexdigest()
 
     def __len__(self):
         return self.n_pixels
@@ -129,17 +186,25 @@ class H5SpatialContextDataset:
             self._data = self._handle["Data"]
 
     def _read_spectra(self, indices):
-        """Read arbitrary pixel indices while satisfying h5py's sorted-index rule."""
+        """Read arbitrary indices, including repeated shuffled sources, in order."""
         self._ensure_open()
         indices = np.asarray(indices, dtype=np.int64)
-        order = np.argsort(indices)
-        sorted_indices = indices[order]
+        if self.context_mode == "measured":
+            # Keep the historical 3x3/5x5 read path unchanged. Measured slots
+            # are unique, whereas shuffled slots may repeat a source index.
+            order = np.argsort(indices)
+            sorted_indices = indices[order]
+            if self.mz_first:
+                sorted_spectra = np.asarray(self._data[:, sorted_indices], dtype=np.float32).T
+            else:
+                sorted_spectra = np.asarray(self._data[sorted_indices, :], dtype=np.float32)
+            return sorted_spectra[np.argsort(order)]
+        unique_indices, reconstruction = np.unique(indices, return_inverse=True)
         if self.mz_first:
-            sorted_spectra = np.asarray(self._data[:, sorted_indices], dtype=np.float32).T
+            unique_spectra = np.asarray(self._data[:, unique_indices], dtype=np.float32).T
         else:
-            sorted_spectra = np.asarray(self._data[sorted_indices, :], dtype=np.float32)
-        inverse_order = np.argsort(order)
-        return sorted_spectra[inverse_order]
+            unique_spectra = np.asarray(self._data[unique_indices, :], dtype=np.float32)
+        return unique_spectra[reconstruction]
 
     def __getitem__(self, index):
         if not 0 <= index < self.n_pixels:
@@ -147,7 +212,11 @@ class H5SpatialContextDataset:
         slots = self.neighbour_slots[index]
         valid_mask = slots >= 0
         neighbours = slots[valid_mask]
-        requested = np.concatenate(([index], neighbours))
+        source_neighbours = (
+            self.context_source_slots[index][valid_mask]
+            if self.context_mode == "shuffled" else neighbours
+        )
+        requested = np.concatenate(([index], source_neighbours))
         normalized = tic_normalize(self._read_spectra(requested))
         central = normalized[0]
         if len(neighbours):
@@ -198,8 +267,11 @@ class CachedH5SpatialContextDataset(H5SpatialContextDataset):
     numerical operation and neighbour construction are unchanged.
     """
 
-    def __init__(self, path, include_neighbourhood=False, window_size=3):
-        super().__init__(path, include_neighbourhood=include_neighbourhood, window_size=window_size)
+    def __init__(self, path, include_neighbourhood=False, window_size=3,
+                 context_mode="measured", context_seed=None):
+        super().__init__(path, include_neighbourhood=include_neighbourhood,
+                         window_size=window_size, context_mode=context_mode,
+                         context_seed=context_seed)
         with h5py.File(self.path, "r") as handle:
             raw = handle["Data"][...]
         oriented = raw.T if self.mz_first else raw

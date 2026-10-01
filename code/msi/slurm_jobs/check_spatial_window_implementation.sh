@@ -18,5 +18,5 @@ export OMP_NUM_THREADS=2
 export MKL_NUM_THREADS=2
 echo "CPU-only window implementation checks; no dataset or production checkpoint is changed."
 date -u
-python -m unittest -v spatial_msipl.tests.test_preprocessing spatial_msipl.tests.test_neighbourhood spatial_msipl.tests.test_windows
+python -m unittest -v spatial_msipl.tests.test_preprocessing spatial_msipl.tests.test_neighbourhood spatial_msipl.tests.test_windows spatial_msipl.tests.test_attribution
 echo "WINDOW IMPLEMENTATION TESTS PASSED"

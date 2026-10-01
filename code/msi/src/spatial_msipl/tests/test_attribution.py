@@ -10,7 +10,7 @@ from spatial_msipl.attribution import (
     gmm_posterior,
     integrated_gradients_cluster_posterior,
 )
-from spatial_msipl.model import CentralOnlyVAE
+from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
 
 
 class TinyContextEncoder(nn.Module):
@@ -47,6 +47,12 @@ def tiny_gmm_parameters():
 
 
 class AttributionTests(unittest.TestCase):
+    def test_zero_context_first_layer_has_zero_effective_context_importance(self):
+        model = NeighbourhoodSpatialVAE(6, "zero_context", hidden_dim=4, latent_dim=2)
+        central, context = first_layer_l2_importance(model)
+        self.assertEqual(tuple(central.shape), (6,))
+        torch.testing.assert_close(context, torch.zeros_like(context))
+
     def test_central_only_first_layer_has_zero_context_importance(self):
         model = CentralOnlyVAE(spectral_dim=6, hidden_dim=4, latent_dim=2)
         central, context = first_layer_l2_importance(model)

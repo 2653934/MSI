@@ -19,7 +19,7 @@ from spatial_msipl.preprocessing import (
 from spatial_msipl.training import set_random_seed, train_vae
 
 
-VARIANTS = ("central_only", "zero_context", "uniform_mean", "depthwise", "attention")
+VARIANTS = ("central_only", "zero_context", "uniform_mean", "shuffled_uniform", "depthwise", "attention")
 
 
 def state_sha256(module):
@@ -65,6 +65,8 @@ def main():
         ),
     )
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--context-seed", type=int, default=1,
+                        help="Global measured-pixel permutation seed for shuffled_uniform.")
     parser.add_argument("--checkpoint-interval", type=int, default=5)
     parser.add_argument("--resume-checkpoint", type=Path)
     parser.add_argument(
@@ -86,7 +88,12 @@ def main():
     dataset_type = (
         CachedH5SpatialContextDataset if args.cache_spectra else H5SpatialContextDataset
     )
-    dataset = dataset_type(args.input, include_neighbourhood=True, window_size=args.window_size)
+    context_mode = "shuffled" if args.variant == "shuffled_uniform" else "measured"
+    dataset = dataset_type(
+        args.input, include_neighbourhood=True, window_size=args.window_size,
+        context_mode=context_mode,
+        context_seed=args.context_seed if context_mode == "shuffled" else None,
+    )
     dataset_load_seconds = time.perf_counter() - script_started_at
     try:
         spatial_loss_scale = (
@@ -102,7 +109,7 @@ def main():
         else:
             model = NeighbourhoodSpatialVAE(
                 spectral_dim=dataset.n_mz,
-                neighbourhood=args.variant,
+                neighbourhood="uniform_mean" if args.variant == "shuffled_uniform" else args.variant,
                 hidden_dim=args.hidden_dim,
                 latent_dim=args.latent_dim,
                 attention_dim=args.attention_dim,
@@ -146,13 +153,16 @@ def main():
             experiment_metadata={
                 "purpose": (
                     "window/control implementation experiment, not frozen baseline"
-                    if args.window_size != 3 or args.variant == "zero_context"
+                    if args.window_size != 3 or args.variant in ("zero_context", "shuffled_uniform")
                     else "cached full-run runtime/equivalence validation, not frozen baseline"
                     if args.cache_spectra
                     else "production neighbourhood baseline"
                 ),
                 "neighbourhood_variant": args.variant,
                 "window_size": args.window_size,
+                "context_mode": context_mode,
+                "context_seed": dataset.context_seed,
+                "context_permutation_sha256": dataset.context_permutation_sha256,
                 "spatial_lambda": args.spatial_lambda,
                 "spatial_loss_scale_name": args.spatial_loss_scale,
                 "spatial_loss_scale": spatial_loss_scale,
@@ -190,6 +200,10 @@ def main():
             )
         ),
         "variant": args.variant,
+        "window_size": args.window_size,
+        "context_mode": context_mode,
+        "context_seed": dataset.context_seed,
+        "context_permutation_sha256": dataset.context_permutation_sha256,
         "initial_vae_sha256": initial_vae_hash,
         "controls": {
             "seed": args.seed,
@@ -205,6 +219,10 @@ def main():
             "poisson_augmentation": args.poisson_effective_count is not None,
             "poisson_effective_count": args.poisson_effective_count,
             "full_dataset": True,
+            "window_size": args.window_size,
+            "context_mode": context_mode,
+            "context_seed": dataset.context_seed,
+            "context_permutation_sha256": dataset.context_permutation_sha256,
             "data_loader": "cached_float32" if args.cache_spectra else "streaming_hdf5",
         },
         "samples_per_epoch": metadata["samples_per_epoch"],
@@ -232,7 +250,9 @@ def main():
         } if args.variant == "attention" else None,
         "status": "complete",
     }
-    if args.cache_spectra:
+    if args.window_size != 3 or args.variant in ("zero_context", "shuffled_uniform"):
+        summary["purpose"] = "window/control implementation experiment, not frozen baseline"
+    elif args.cache_spectra:
         summary["purpose"] = (
             "cached full-run runtime/equivalence validation, not frozen baseline"
         )

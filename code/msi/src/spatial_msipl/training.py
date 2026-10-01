@@ -269,6 +269,10 @@ def train_vae(
     # augmentation, while making augmented checkpoints scale-specific.
     if getattr(dataset, "window_size", 3) != 3:
         resume_signature["dataset_window_size"] = dataset.window_size
+    if getattr(dataset, "context_mode", "measured") == "shuffled":
+        resume_signature["context_mode"] = "shuffled"
+        resume_signature["context_seed"] = dataset.context_seed
+        resume_signature["context_permutation_sha256"] = dataset.context_permutation_sha256
     if poisson_effective_count is not None:
         resume_signature["poisson_effective_count"] = float(
             poisson_effective_count

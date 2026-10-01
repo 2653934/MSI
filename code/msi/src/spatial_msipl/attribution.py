@@ -152,6 +152,11 @@ def first_layer_l2_importance(model):
         )
     if weight.shape[1] != 2 * spectral_dim:
         raise ValueError("unexpected first-layer input dimension")
+    if getattr(getattr(model, "aggregator", None), "name", None) == "zero_context":
+        return (
+            torch.linalg.vector_norm(weight[:, :spectral_dim], dim=0),
+            torch.zeros(spectral_dim, dtype=weight.dtype, device=weight.device),
+        )
     return (
         torch.linalg.vector_norm(weight[:, :spectral_dim], dim=0),
         torch.linalg.vector_norm(weight[:, spectral_dim:], dim=0),

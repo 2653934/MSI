@@ -2,6 +2,7 @@
 
 import tempfile
 import unittest
+import importlib.util
 from pathlib import Path
 
 import h5py
@@ -10,14 +11,120 @@ import torch
 
 from spatial_msipl.model import NeighbourhoodSpatialVAE
 from spatial_msipl.neighbourhood import UniformMeanNeighbourhood
+from spatial_msipl.training import train_vae
 from spatial_msipl.preprocessing import (
     MOORE_OFFSETS, build_moore_neighbour_slots, build_square_neighbour_slots,
     square_neighbour_offsets, H5SpatialContextDataset, CachedH5SpatialContextDataset,
-    tic_normalize,
+    tic_normalize, checkpoint_input_spec,
 )
 
 
 class WindowTests(unittest.TestCase):
+    def test_shuffled_context_is_seeded_nonlocal_and_cache_equivalent(self):
+        coordinates = [(x, y) for y in range(1, 8) for x in range(1, 8)
+                       if (x, y) != (3, 4)]
+        spectra = np.asarray([[i + 1, 2, 3] for i in range(len(coordinates))], dtype=np.float64)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "shuffled.h5"
+            with h5py.File(path, "w") as handle:
+                handle["Data"] = spectra.T
+                handle["mzArray"] = [100, 101, 102]
+                handle["xLocation"] = [x for x, _ in coordinates]
+                handle["yLocation"] = [y for _, y in coordinates]
+            first = H5SpatialContextDataset(path, True, 5, "shuffled", 17)
+            same = CachedH5SpatialContextDataset(path, True, 5, "shuffled", 17)
+            other = H5SpatialContextDataset(path, True, 5, "shuffled", 18)
+            measured = H5SpatialContextDataset(path, True, 5)
+            try:
+                self.assertEqual(first.context_permutation_sha256, same.context_permutation_sha256)
+                self.assertNotEqual(first.context_permutation_sha256, other.context_permutation_sha256)
+                for i in range(len(first)):
+                    forbidden = set(first.neighbour_indices[i].tolist()) | {i}
+                    sources = first.context_source_slots[i][first.neighbour_slots[i] >= 0]
+                    self.assertTrue(all(int(source) not in forbidden for source in sources))
+                    sample = first[i]
+                    for key, value in sample.items():
+                        np.testing.assert_array_equal(value, same[i][key])
+                    np.testing.assert_array_equal(sample["target"], measured[i]["target"])
+                    expected = tic_normalize(spectra[sources]).mean(0) if len(sources) else np.zeros(3)
+                    np.testing.assert_allclose(sample["context"], expected, rtol=1e-6)
+                    np.testing.assert_array_equal(sample["neighbour_mask"], measured[i]["neighbour_mask"])
+            finally:
+                for dataset in (first, same, other, measured):
+                    dataset.close()
+
+    def test_checkpoint_inputs_keep_historical_defaults_and_reject_mismatch(self):
+        historical = {"model_configuration": {"spectral_dim": 3,
+                                             "neighbourhood": {"name": "uniform_mean"}}}
+        self.assertEqual(checkpoint_input_spec(historical)["window_size"], 3)
+        self.assertEqual(checkpoint_input_spec(historical)["context_mode"], "measured")
+        new = {"model_configuration": {"spectral_dim": 3, "window_size": 5,
+                                        "neighbourhood": {"name": "uniform_mean"}},
+               "resume_signature": {"dataset_window_size": 5, "context_mode": "shuffled",
+                                    "context_seed": 17, "context_permutation_sha256": "example"}}
+        self.assertEqual(checkpoint_input_spec(new)["context_seed"], 17)
+        new["resume_signature"]["dataset_window_size"] = 3
+        with self.assertRaises(ValueError):
+            checkpoint_input_spec(new)
+
+    def test_training_checkpoint_binds_shuffle_seed_and_window(self):
+        coordinates = [(x, y) for y in range(1, 8) for x in range(1, 8)]
+        spectra = np.asarray([[i + 1, 2, 3] for i in range(len(coordinates))], dtype=np.float32)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.h5"
+            with h5py.File(path, "w") as handle:
+                handle["Data"] = spectra.T
+                handle["mzArray"] = [100, 101, 102]
+                handle["xLocation"] = [x for x, _ in coordinates]
+                handle["yLocation"] = [y for _, y in coordinates]
+            dataset = CachedH5SpatialContextDataset(path, True, 5, "shuffled", 17)
+            output = Path(directory) / "first"
+            model = NeighbourhoodSpatialVAE(3, "uniform_mean", hidden_dim=4,
+                                            latent_dim=2, window_size=5)
+            try:
+                train_vae(model, dataset, output, epochs=1, batch_size=7,
+                          seed=1, checkpoint_interval=1)
+                checkpoint = torch.load(output / "checkpoint.pt", map_location="cpu")
+                spec = checkpoint_input_spec(checkpoint)
+                self.assertEqual(spec["window_size"], 5)
+                self.assertEqual(spec["context_seed"], 17)
+                self.assertEqual(spec["context_permutation_sha256"],
+                                 dataset.context_permutation_sha256)
+                changed = CachedH5SpatialContextDataset(path, True, 5, "shuffled", 18)
+                try:
+                    with self.assertRaisesRegex(ValueError, "configuration does not match"):
+                        train_vae(NeighbourhoodSpatialVAE(3, "uniform_mean", hidden_dim=4,
+                                                          latent_dim=2, window_size=5),
+                                  changed, Path(directory) / "second", epochs=1,
+                                  batch_size=7, seed=1,
+                                  resume_checkpoint=output / "checkpoint.pt")
+                finally:
+                    changed.close()
+            finally:
+                dataset.close()
+
+    def test_attribution_reconstructs_new_variant_without_using_old_defaults(self):
+        script_path = Path(__file__).resolve().parents[3] / "scripts" / "run_spatial_msipl_gmm_integrated_gradients.py"
+        module_spec = importlib.util.spec_from_file_location("window_attribution_entry", script_path)
+        entry = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(entry)
+        model = NeighbourhoodSpatialVAE(3, "uniform_mean", hidden_dim=4,
+                                        latent_dim=2, window_size=5)
+        checkpoint = {"completed_epochs": 100,
+                      "model_configuration": model.configuration(),
+                      "model_state_dict": model.state_dict(),
+                      "resume_signature": {"dataset_window_size": 5,
+                                           "context_mode": "shuffled",
+                                           "context_seed": 17,
+                                           "context_permutation_sha256": "example"}}
+        reconstructed, _ = entry.load_model("unused", 3, "shuffled_uniform", "cpu",
+                                             checkpoint=checkpoint)
+        self.assertEqual(reconstructed.neighbour_slots, 24)
+        with self.assertRaisesRegex(ValueError, "measured-context"):
+            entry.load_model("unused", 3, "uniform_mean", "cpu", checkpoint=checkpoint)
+        with self.assertRaises(ValueError):
+            entry.load_model("unused", 4, "shuffled_uniform", "cpu", checkpoint=checkpoint)
+
     def test_legacy_order_and_invalid_sizes(self):
         self.assertEqual(MOORE_OFFSETS, ((-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)))
         for size in (0, -1, 2, 4, 3.5, True):
