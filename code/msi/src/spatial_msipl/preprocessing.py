@@ -6,12 +6,22 @@ import h5py
 import numpy as np
 
 
-MOORE_OFFSETS = tuple(
-    (dx, dy)
-    for dy in (-1, 0, 1)
-    for dx in (-1, 0, 1)
-    if not (dx == 0 and dy == 0)
-)
+def square_neighbour_offsets(window_size=3):
+    """Row-major odd square window, excluding the centre (1 gives no slots)."""
+    if isinstance(window_size, bool) or not isinstance(window_size, (int, np.integer)):
+        raise ValueError("window_size must be a positive odd integer")
+    if window_size < 1 or window_size % 2 != 1:
+        raise ValueError("window_size must be a positive odd integer")
+    radius = int(window_size) // 2
+    return tuple(
+        (dx, dy)
+        for dy in range(-radius, radius + 1)
+        for dx in range(-radius, radius + 1)
+        if not (dx == 0 and dy == 0)
+    )
+
+
+MOORE_OFFSETS = square_neighbour_offsets(3)
 
 
 def tic_normalize(spectra):
@@ -33,8 +43,9 @@ def tic_normalize(spectra):
     return normalized[0] if one_spectrum else normalized
 
 
-def build_moore_neighbour_slots(x_coordinates, y_coordinates):
-    """Return an ``(pixels, 8)`` index array, using -1 for missing positions."""
+def build_square_neighbour_slots(x_coordinates, y_coordinates, window_size=3):
+    """Return measured indices in an odd window; -1 denotes a missing position."""
+    offsets = square_neighbour_offsets(window_size)
     x = np.asarray(x_coordinates, dtype=np.int64).reshape(-1)
     y = np.asarray(y_coordinates, dtype=np.int64).reshape(-1)
     if len(x) == 0 or len(x) != len(y):
@@ -48,14 +59,19 @@ def build_moore_neighbour_slots(x_coordinates, y_coordinates):
             raise ValueError(f"duplicate measured coordinate: {coordinate}")
         coordinate_to_index[coordinate] = index
 
-    slots = np.full((len(x), len(MOORE_OFFSETS)), -1, dtype=np.int64)
+    slots = np.full((len(x), len(offsets)), -1, dtype=np.int64)
     for centre_x, centre_y in zip(x.tolist(), y.tolist()):
         centre_index = coordinate_to_index[(centre_x, centre_y)]
-        for slot, (dx, dy) in enumerate(MOORE_OFFSETS):
+        for slot, (dx, dy) in enumerate(offsets):
             slots[centre_index, slot] = coordinate_to_index.get(
                 (centre_x + dx, centre_y + dy), -1
             )
     return slots
+
+
+def build_moore_neighbour_slots(x_coordinates, y_coordinates):
+    """Backward-compatible eight-slot 3x3 interface."""
+    return build_square_neighbour_slots(x_coordinates, y_coordinates, 3)
 
 
 def build_moore_neighbours(x_coordinates, y_coordinates):
@@ -67,8 +83,10 @@ def build_moore_neighbours(x_coordinates, y_coordinates):
 class H5SpatialContextDataset:
     """Stream central spectra and their mean measured-neighbour contexts from HDF5."""
 
-    def __init__(self, path, include_neighbourhood=False):
+    def __init__(self, path, include_neighbourhood=False, window_size=3):
         self.path = Path(path).expanduser().resolve()
+        self.offsets = square_neighbour_offsets(window_size)
+        self.window_size = int(window_size)
         self.include_neighbourhood = bool(include_neighbourhood)
         self._handle = None
         self._data = None
@@ -97,7 +115,7 @@ class H5SpatialContextDataset:
         if np.any(np.diff(self.mz_values) <= 0):
             raise ValueError("m/z values must be strictly increasing")
 
-        self.neighbour_slots = build_moore_neighbour_slots(self.x, self.y)
+        self.neighbour_slots = build_square_neighbour_slots(self.x, self.y, self.window_size)
         self.neighbour_indices = tuple(
             row[row >= 0] for row in self.neighbour_slots
         )
@@ -148,7 +166,7 @@ class H5SpatialContextDataset:
         }
         if self.include_neighbourhood:
             neighbour_spectra = np.zeros(
-                (len(MOORE_OFFSETS), self.n_mz), dtype=np.float32
+                (len(self.offsets), self.n_mz), dtype=np.float32
             )
             neighbour_spectra[valid_mask] = normalized[1:]
             sample["neighbours"] = neighbour_spectra
@@ -180,8 +198,8 @@ class CachedH5SpatialContextDataset(H5SpatialContextDataset):
     numerical operation and neighbour construction are unchanged.
     """
 
-    def __init__(self, path, include_neighbourhood=False):
-        super().__init__(path, include_neighbourhood=include_neighbourhood)
+    def __init__(self, path, include_neighbourhood=False, window_size=3):
+        super().__init__(path, include_neighbourhood=include_neighbourhood, window_size=window_size)
         with h5py.File(self.path, "r") as handle:
             raw = handle["Data"][...]
         oriented = raw.T if self.mz_first else raw

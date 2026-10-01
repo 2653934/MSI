@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from .neighbourhood import create_neighbourhood_aggregator
+from .preprocessing import square_neighbour_offsets
 
 
 class SpatialVAE(nn.Module):
@@ -127,8 +128,13 @@ class NeighbourhoodSpatialVAE(nn.Module):
         latent_dim=5,
         attention_dim=8,
         attention_input_scale="spectral_bins",
+        window_size=3,
     ):
         super().__init__()
+        self.window_size = int(window_size)
+        self.neighbour_slots = len(square_neighbour_offsets(window_size))
+        if neighbourhood == "depthwise" and window_size != 3:
+            raise ValueError("depthwise currently supports only window_size=3")
         # Build the VAE first. With the seed reset before each variant, this makes
         # its initial weights identical even when an aggregator has random weights.
         self.vae = SpatialVAE(spectral_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
@@ -140,6 +146,8 @@ class NeighbourhoodSpatialVAE(nn.Module):
         )
 
     def build_contextual_input(self, central, neighbours, neighbour_mask):
+        if neighbours.ndim != 3 or neighbours.shape[1] != self.neighbour_slots:
+            raise ValueError(f"expected {self.neighbour_slots} neighbour slots")
         context, weights = self.aggregator(central, neighbours, neighbour_mask)
         return torch.cat((central, context), dim=1), context, weights
 
@@ -161,4 +169,7 @@ class NeighbourhoodSpatialVAE(nn.Module):
     def configuration(self):
         configuration = self.vae.configuration()
         configuration["neighbourhood"] = self.aggregator.configuration()
+        # Default remains compatible with historical checkpoint signatures.
+        if self.window_size != 3:
+            configuration["window_size"] = self.window_size
         return configuration

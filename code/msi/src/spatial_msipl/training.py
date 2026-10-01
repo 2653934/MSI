@@ -267,6 +267,8 @@ def train_vae(
     }
     # Keep the historical signature byte-for-byte compatible for runs without
     # augmentation, while making augmented checkpoints scale-specific.
+    if getattr(dataset, "window_size", 3) != 3:
+        resume_signature["dataset_window_size"] = dataset.window_size
     if poisson_effective_count is not None:
         resume_signature["poisson_effective_count"] = float(
             poisson_effective_count

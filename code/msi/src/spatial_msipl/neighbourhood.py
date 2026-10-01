@@ -9,10 +9,10 @@ from torch import nn
 def _validate_neighbourhood(central, neighbours, neighbour_mask):
     if central.ndim != 2:
         raise ValueError("central must have shape (batch, m/z)")
-    if neighbours.ndim != 3 or neighbours.shape[1] != 8:
-        raise ValueError("neighbours must have shape (batch, 8, m/z)")
-    if neighbour_mask.ndim != 2 or neighbour_mask.shape[1] != 8:
-        raise ValueError("neighbour_mask must have shape (batch, 8)")
+    if neighbours.ndim != 3:
+        raise ValueError("neighbours must have shape (batch, slots, m/z)")
+    if neighbour_mask.ndim != 2 or neighbour_mask.shape[1] != neighbours.shape[1]:
+        raise ValueError("neighbour_mask must have shape (batch, slots)")
     if neighbours.shape[0] != central.shape[0] or neighbours.shape[2] != central.shape[1]:
         raise ValueError("central and neighbours have incompatible dimensions")
     if neighbour_mask.shape[0] != central.shape[0]:
@@ -22,6 +22,8 @@ def _validate_neighbourhood(central, neighbours, neighbour_mask):
 def _masked_softmax(logits, mask, dimension):
     """Softmax over valid entries; return zero weights when every entry is absent."""
     boolean_mask = mask.to(dtype=torch.bool)
+    if logits.shape[dimension] == 0:
+        return torch.zeros_like(logits)
     minimum = torch.finfo(logits.dtype).min
     masked_logits = torch.where(boolean_mask, logits, minimum)
     maximum = masked_logits.max(dim=dimension, keepdim=True).values
@@ -51,6 +53,19 @@ class UniformMeanNeighbourhood(nn.Module):
         return {"name": self.name, "learnable_parameters": 0, "orientation_free": True}
 
 
+class ZeroContextNeighbourhood(nn.Module):
+    """Same 2D encoder input width, but no access to neighbour information."""
+
+    name = "zero_context"
+
+    def forward(self, central, neighbours, neighbour_mask):
+        _validate_neighbourhood(central, neighbours, neighbour_mask)
+        return torch.zeros_like(central), torch.zeros_like(neighbour_mask, dtype=central.dtype)
+
+    def configuration(self):
+        return {"name": self.name, "learnable_parameters": 0, "orientation_free": True}
+
+
 class DepthwiseNeighbourhood(nn.Module):
     """Learn eight position weights independently for every m/z channel."""
 
@@ -66,6 +81,8 @@ class DepthwiseNeighbourhood(nn.Module):
 
     def forward(self, central, neighbours, neighbour_mask):
         _validate_neighbourhood(central, neighbours, neighbour_mask)
+        if neighbours.shape[1] != 8:
+            raise ValueError("depthwise currently requires the historical eight slots")
         if central.shape[1] != self.spectral_dim:
             raise ValueError(f"expected {self.spectral_dim} m/z bins")
         logits = self.position_logits.unsqueeze(0).expand(central.shape[0], -1, -1)
@@ -147,6 +164,8 @@ def create_neighbourhood_aggregator(
     normalized_name = name.lower().replace("-", "_")
     if normalized_name in {"uniform", "uniform_mean"}:
         return UniformMeanNeighbourhood()
+    if normalized_name == "zero_context":
+        return ZeroContextNeighbourhood()
     if normalized_name == "depthwise":
         return DepthwiseNeighbourhood(spectral_dim)
     if normalized_name == "attention":

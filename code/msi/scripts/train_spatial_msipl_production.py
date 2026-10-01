@@ -19,7 +19,7 @@ from spatial_msipl.preprocessing import (
 from spatial_msipl.training import set_random_seed, train_vae
 
 
-VARIANTS = ("central_only", "uniform_mean", "depthwise", "attention")
+VARIANTS = ("central_only", "zero_context", "uniform_mean", "depthwise", "attention")
 
 
 def state_sha256(module):
@@ -38,6 +38,7 @@ def main():
     parser.add_argument("--checkpoint-output", required=True, type=Path)
     parser.add_argument("--variant", required=True, choices=VARIANTS)
     parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--window-size", type=int, choices=(1, 3, 5), default=3)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--hidden-dim", type=int, default=512)
     parser.add_argument("--latent-dim", type=int, default=5)
@@ -72,6 +73,8 @@ def main():
         help="Opt in to one in-memory float32 HDF5 read; default remains streaming.",
     )
     args = parser.parse_args()
+    if args.variant == "depthwise" and args.window_size != 3:
+        parser.error("depthwise currently supports only the historical 3x3 window")
 
     if not torch.cuda.is_available():
         raise RuntimeError(
@@ -83,7 +86,7 @@ def main():
     dataset_type = (
         CachedH5SpatialContextDataset if args.cache_spectra else H5SpatialContextDataset
     )
-    dataset = dataset_type(args.input, include_neighbourhood=True)
+    dataset = dataset_type(args.input, include_neighbourhood=True, window_size=args.window_size)
     dataset_load_seconds = time.perf_counter() - script_started_at
     try:
         spatial_loss_scale = (
@@ -104,6 +107,7 @@ def main():
                 latent_dim=args.latent_dim,
                 attention_dim=args.attention_dim,
                 attention_input_scale=args.attention_input_scale,
+                window_size=args.window_size,
             )
         initial_vae_hash = state_sha256(model.vae)
         attention_diagnostics_before = None
@@ -141,11 +145,14 @@ def main():
             device="cuda",
             experiment_metadata={
                 "purpose": (
-                    "cached full-run runtime/equivalence validation, not frozen baseline"
+                    "window/control implementation experiment, not frozen baseline"
+                    if args.window_size != 3 or args.variant == "zero_context"
+                    else "cached full-run runtime/equivalence validation, not frozen baseline"
                     if args.cache_spectra
                     else "production neighbourhood baseline"
                 ),
                 "neighbourhood_variant": args.variant,
+                "window_size": args.window_size,
                 "spatial_lambda": args.spatial_lambda,
                 "spatial_loss_scale_name": args.spatial_loss_scale,
                 "spatial_loss_scale": spatial_loss_scale,
