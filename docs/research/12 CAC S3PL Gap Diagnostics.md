@@ -1,6 +1,6 @@
 # Where does the matched-count CAC S3PL quality gap occur?
 
-Status: all-eight-section frozen-result diagnostic and representative raw ion-image job **61557 completed**. This extends the [S3PL architecture and runtime audit](11%20S3PL%20Architecture%20and%20Runtime%20Audit.md). No model was retrained or re-evaluated.
+Status: all-eight-section frozen-result diagnostic, representative raw ion-image job **61557**, and reference-set audit **61566** completed. This extends the [S3PL architecture and runtime audit](11%20S3PL%20Architecture%20and%20Runtime%20Audit.md). No model was retrained or re-evaluated.
 
 ## What was compared
 
@@ -19,9 +19,9 @@ The four mixed-class F1 values are indexed by PCC threshold $t \in \{0.3,0.4,0.5
 
 The mean matched-count mSCF1 difference is about +0.032 for S3PL, with wins on six of eight sections. The largest S3PL lead is **360TopL (+0.078)**; the largest IG lead is **520TopL (+0.012 in IG's direction)**. In 360TopL, S3PL's advantage is especially visible at 0.3 and 0.4 (+0.101 and +0.122). At 520TopL, the two methods tie at 0.3/0.4 but IG leads at 0.5/0.6. Thus S3PL's aggregate advantage is **not uniform across PCC thresholds**. These are descriptive paired observations, not evidence of a causal mechanism or a new significance test.
 
-The two matched-size selected lists share **69.9%–84.6%** of their m/z values by section (mean of section fractions: **79.4%**). For example, 360TopL shares 187 of 247 peaks (75.7% of each list), whereas 520TopL shares 191 of 232 (82.3%). The published F1 calculation ignores the order of selected peaks. **If both evaluators use the same reference-positive bin set**, the shared peaks contribute identically and the F1 difference comes entirely from the method-exclusive choices. That reference-set identity is expected from the two code paths, but should be checked directly before making it an unconditional claim.
+The two matched-size selected lists share **69.9%–84.6%** of their m/z values by section (mean of section fractions: **79.4%**). For example, 360TopL shares 187 of 247 peaks (75.7% of each list), whereas 520TopL shares 191 of 232 (82.3%). The published F1 calculation ignores the order of selected peaks. The direct audit below confirms that both evaluators use **exactly the same reference-positive bin sets**. Therefore, at a fixed count, shared selected peaks contribute identically and each F1 difference comes from the method-exclusive selections.
 
-At matched selected count $N$ and reference-positive count $T$, $F1=2TP/(N+T)$. Using the IG evaluator's saved $T$ and S3PL's full-precision F1, the inferred S3PL $TP$ is an exact integer for **all 32 section-threshold combinations**. This is a strong numerical consistency check, not proof that the underlying reference *sets* are identical. On 360TopL, the inferred S3PL-minus-IG true-positive differences are **+24, +25, +12, +3** across thresholds 0.3–0.6. On 520TopL they are **0, 0, −3, −5**. The script records these derived values with the shared-reference assumption in their field names. A direct reference-bin-set audit remains the next gate for a definitive decomposition.
+At matched selected count $N$ and reference-positive count $T$, $F1=2TP/(N+T)$. Using the IG evaluator's saved $T$ and S3PL's full-precision F1, the inferred S3PL $TP$ is an exact integer for **all 32 section-threshold combinations**. On 360TopL, S3PL-minus-IG true-positive differences are **+24, +25, +12, +3** across thresholds 0.3–0.6. On 520TopL they are **0, 0, −3, −5**. The direct reference-set audit now validates the shared-reference assumption used in this calculation. These counts identify the set-level source of the F1 difference; they do not identify which modelling choice caused the different selections.
 
 ![Matched-count S3PL versus uniform IG score by section and threshold](../../results/model-comparisons/cac_s3pl_ig_thresholds.png)
 
@@ -52,11 +52,11 @@ Visually, 360TopL's first S3PL-only ion (m/z 337.319) has a clear within-tissue 
 
 This analysis identifies **where** S3PL's score lead occurs, not **why**. Plausible contributors include its different patch-reconstruction objective, reference normalisation, learned spatial convolution, per-pixel attention aggregation, and ranking strategy. The next controlled comparison should change one factor at a time while freezing the section, peak budget and evaluator. In particular, the normalisation difference documented in the preceding audit is testable without claiming beforehand that it causes the observed pattern.
 
-Before asserting that method-exclusive peaks fully account for each F1 difference, run the new **read-only direct reference-set audit**. It compares S3PL's stored class PCC rankings with PCC independently recomputed from the existing CAC HDF5 adapters, then compares each class and mixed reference-positive *bin set* at all four thresholds. It saves symmetric-difference counts even if they are nonzero. It does not train, change the labels, or rewrite any model result. After syncing the [audit script](../../code/msi/scripts/audit_s3pl_cac_reference_sets.py) and [CPU job](../../code/msi/slurm_jobs/audit_s3pl_cac_reference_sets.sh):
+The **read-only direct reference-set audit** completed as job 61566 on `mscluster49`, with an empty error log. It compared S3PL's stored class PCC rankings with PCC independently recomputed from the existing CAC HDF5 adapters, then compared each class and mixed reference-positive *bin set* at all four thresholds. The [audit report](../../code/msi/results/comparisons/s3pl_cac_gap_diagnostics/reference_set_audit.json) records `exact_reference_set_match`: **zero symmetric-difference bins in every one of the 32 section-threshold comparisons**. The maximum PCC difference reported for each class was also zero. It did not train, change the labels, or rewrite any model result. The [job output](../../code/msi/logs/cac-ref-audit-61566.out) lists all eight sections. The submitted command was:
 
 ```bash
 cd ~/msi
 sbatch slurm_jobs/audit_s3pl_cac_reference_sets.sh
 ```
 
-Review `logs/cac-ref-audit-<jobid>.{out,err}` and sync back `results/comparisons/s3pl_cac_gap_diagnostics/reference_set_audit.json`. Only an exact zero-difference result licenses the definitive equal-reference F1 decomposition; if any set differs, inspect the class, section and threshold before interpreting cross-method F1 deltas.
+This removes the reference-definition caveat from the matched-count CAC F1 comparison. It does **not** make S3PL and the VAE/IG pipelines architecturally or computationally matched, nor does it explain why their exclusive peaks differ.
