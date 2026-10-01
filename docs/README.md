@@ -21,6 +21,14 @@
 
 - [`research/08 Concepts Mathematics and Implementation Guide.md`](research/08%20Concepts%20Mathematics%20and%20Implementation%20Guide.md)
   — terminology, equations, methodological rationale, code references and result links.
+- [`research/09 Two-Week Spatial Model Investigation Plan.md`](research/09%20Two-Week%20Spatial%20Model%20Investigation%20Plan.md)
+  — current investigation plan and outstanding checks.
+- [`research/investigations/`](research/investigations/)
+  — detailed runtime and CAC quality audits supporting the main results record.
+
+The local [results gallery](../results/README.md) is the visual starting point.
+Cluster-generated JSON, CSV and logs remain under `code/msi/`; new findings are
+summarised in the results record after they matter to the research conclusion.
 
 ## Operate the project
 

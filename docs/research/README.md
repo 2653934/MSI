@@ -1,6 +1,6 @@
 # MSI Research Handbook
 
-Last updated: 2026-09-22
+Last updated: 2026-10-01
 
 This folder is the human-readable guide to the MSI research project. The JSON,
 CSV, logs and checkpoints remain the authoritative machine-readable artifacts;
@@ -18,6 +18,13 @@ how the pieces fit together.
 7. [[07 Current Status and Next Steps]] — the live decision tree and remaining work.
 
 8. [[08 Concepts Mathematics and Implementation Guide]] — the terminology, equations, rationale, code references and result links in one study guide.
+
+The [current two-week plan](09%20Two-Week%20Spatial%20Model%20Investigation%20Plan.md)
+tracks upcoming experiments. The [local visual results gallery](../../results/README.md)
+keeps selected figures together, while detailed runtime and CAC score audits
+are grouped under [investigations](investigations/). New routine test or job
+status does not need a new research note; the main results record is updated
+when a finding changes our interpretation.
 
 ## Research question
 

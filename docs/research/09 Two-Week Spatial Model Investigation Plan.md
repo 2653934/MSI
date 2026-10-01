@@ -21,7 +21,7 @@ The current evidence is the starting point, **not the conclusion**: at tuned, ma
 
 ## Workstream A — Verify the implementation (highest priority)
 
-The current neighbour builder and aggregators assume exactly eight slots: [preprocessing.py](../../code/msi/src/spatial_msipl/preprocessing.py), [neighbourhood.py](../../code/msi/src/spatial_msipl/neighbourhood.py), and [model.py](../../code/msi/src/spatial_msipl/model.py). The contextual model also has a wider first encoder layer than the centre-only model. Both facts affect the interpretation of prior comparisons.
+The original neighbour builder and aggregators assumed exactly eight slots; the current implementation now supports 1×1, 3×3 and 5×5 uniform windows in [preprocessing.py](../../code/msi/src/spatial_msipl/preprocessing.py), [neighbourhood.py](../../code/msi/src/spatial_msipl/neighbourhood.py), and [model.py](../../code/msi/src/spatial_msipl/model.py). The contextual model also has a wider first encoder layer than the centre-only model. Both facts affect the interpretation of prior comparisons.
 
 ### A1. Data and spatial mapping audit
 
@@ -56,7 +56,9 @@ The current neighbour builder and aggregators assume exactly eight slots: [prepr
 - Parameterise an odd square window instead of assuming eight slots. Compare **1×1** (centre-only), **3×3** (eight possible neighbours; existing frozen reference), and **5×5** (24 possible neighbours). A 7×7 window is optional only if the 5×5 pilot is informative and fits the resource budget.
 - Keep the **uniform aggregate output at one spectrum of length D**, so the 3×3 and 5×5 contextual VAEs have the same encoder shape and parameter count. Retain the existing narrower centre-only model, and add a **zero-context 2D-input control** to separate access to neighbour data from the extra first-layer capacity.
 - Add a spatial-specificity control that shuffles or swaps neighbour spectra while preserving the input shape and approximate intensity distribution. Apply it only under a clearly specified, reproducible rule; do not let evaluation masks drive the shuffle.
-- Extend edge, missing-pixel, checkpoint-configuration, resume, and attribution tests for variable slot counts before any cluster submission.
+- Extend edge, missing-pixel, checkpoint-configuration, resume, and attribution tests for variable slot counts before model-training submission.
+
+**Implementation checkpoint (1 October):** the configurable windows and 2D-wide zero-context control are in the code. Cluster job 62270 passed all 20 existing/new preprocessing and model tests; the CUDA warning in its stderr did not fail this CPU test. The new zero-context model has the same *stored parameter count* as uniform context, but weights attached to constant-zero context cannot learn from data. Shuffled-context control, non-default checkpoint/resume and downstream attribution reconstruction still need checks before a production window run. The [test log](../../code/msi/logs/window-tests-62270.err) is the operational record; no research quality result has been produced by these tests.
 
 ### B2. Diagnose what the window contains
 

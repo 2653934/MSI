@@ -23,15 +23,15 @@ The two matched-size selected lists share **69.9%–84.6%** of their m/z values 
 
 At matched selected count $N$ and reference-positive count $T$, $F1=2TP/(N+T)$. Using the IG evaluator's saved $T$ and S3PL's full-precision F1, the inferred S3PL $TP$ is an exact integer for **all 32 section-threshold combinations**. On 360TopL, S3PL-minus-IG true-positive differences are **+24, +25, +12, +3** across thresholds 0.3–0.6. On 520TopL they are **0, 0, −3, −5**. The direct reference-set audit now validates the shared-reference assumption used in this calculation. These counts identify the set-level source of the F1 difference; they do not identify which modelling choice caused the different selections.
 
-![Matched-count S3PL versus uniform IG score by section and threshold](../../results/model-comparisons/cac_s3pl_ig_thresholds.png)
+![Matched-count S3PL versus uniform IG score by section and threshold](../../../results/model-comparisons/cac_s3pl_ig_thresholds.png)
 
-![Matched-count selected m/z overlap](../../results/model-comparisons/cac_s3pl_ig_peak_overlap.png)
+![Matched-count selected m/z overlap](../../../results/model-comparisons/cac_s3pl_ig_peak_overlap.png)
 
-Machine-readable [diagnostics JSON](../../code/msi/results/comparisons/s3pl_cac_gap_diagnostics/diagnostics.json) includes every section's score difference, threshold differences, shared counts, Jaccard values, and rank-ordered method-exclusive m/z lists. The reproducible [analysis script](../../code/msi/scripts/analyse_s3pl_cac_gap.py) reads the frozen files and writes these figures; it does not use expert masks to choose or train peaks.
+Machine-readable [diagnostics JSON](../../../code/msi/results/comparisons/s3pl_cac_gap_diagnostics/diagnostics.json) includes every section's score difference, threshold differences, shared counts, Jaccard values, and rank-ordered method-exclusive m/z lists. The reproducible [analysis script](../../../code/msi/scripts/analyse_s3pl_cac_gap.py) reads the frozen files and writes these figures; it does not use expert masks to choose or train peaks.
 
 ## Raw ion-image check (job 61557)
 
-The CPU-only [cluster job](../../code/msi/slurm_jobs/visualise_s3pl_cac_gap_ions.sh) completed with an empty error log on `mscluster49`. It read the existing CAC HDF5 adapters, not checkpoints. It drew expert-class maps and raw log-intensity ion images for the **first three highest-ranked peaks unique to each method** on 360TopL (largest S3PL lead) and 520TopL (largest IG lead). Choosing sections by observed outcomes makes this an **exploratory illustration**, not a held-out validation. Choosing images by rank rather than PCC avoids picking visually favourable ions from each list. The mask is displayed only after selection and never enters training or ranking.
+The CPU-only [cluster job](../../../code/msi/slurm_jobs/visualise_s3pl_cac_gap_ions.sh) completed with an empty error log on `mscluster49`. It read the existing CAC HDF5 adapters, not checkpoints. It drew expert-class maps and raw log-intensity ion images for the **first three highest-ranked peaks unique to each method** on 360TopL (largest S3PL lead) and 520TopL (largest IG lead). Choosing sections by observed outcomes makes this an **exploratory illustration**, not a held-out validation. Choosing images by rank rather than PCC avoids picking visually favourable ions from each list. The mask is displayed only after selection and never enters training or ranking.
 
 The submitted command was:
 
@@ -40,11 +40,11 @@ cd ~/msi
 sbatch slurm_jobs/visualise_s3pl_cac_gap_ions.sh
 ```
 
-The figures are [360TopL](../../results/model-comparisons/cac_360TopL_s3pl_ig_exclusive_ions.png) and [520TopL](../../results/model-comparisons/cac_520TopL_s3pl_ig_exclusive_ions.png); the [job log](../../code/msi/logs/cac-gap-ions-61557.out) records the allocation. The panels use **individual colour scales** and show spatial pattern, not directly comparable absolute intensity. Missing grid locations are grey; the class map is post-hoc reference context.
+The figures are [360TopL](../../../results/model-comparisons/cac_360TopL_s3pl_ig_exclusive_ions.png) and [520TopL](../../../results/model-comparisons/cac_520TopL_s3pl_ig_exclusive_ions.png); the [job log](../../../code/msi/logs/cac-gap-ions-61557.out) records the allocation. The panels use **individual colour scales** and show spatial pattern, not directly comparable absolute intensity. Missing grid locations are grey; the class map is post-hoc reference context.
 
-![Highest-ranked exclusive S3PL and IG ion images on 360TopL](../../results/model-comparisons/cac_360TopL_s3pl_ig_exclusive_ions.png)
+![Highest-ranked exclusive S3PL and IG ion images on 360TopL](../../../results/model-comparisons/cac_360TopL_s3pl_ig_exclusive_ions.png)
 
-![Highest-ranked exclusive S3PL and IG ion images on 520TopL](../../results/model-comparisons/cac_520TopL_s3pl_ig_exclusive_ions.png)
+![Highest-ranked exclusive S3PL and IG ion images on 520TopL](../../../results/model-comparisons/cac_520TopL_s3pl_ig_exclusive_ions.png)
 
 Visually, 360TopL's first S3PL-only ion (m/z 337.319) has a clear within-tissue spatial pattern, while two of the first IG-only examples (m/z 533.474 and 291.020) are most prominent around the tissue perimeter. On 520TopL, S3PL-only m/z 309.196 is relatively diffuse, while IG-only m/z 322.015 highlights a spatially concentrated region. These are **descriptions of six selected examples per section**, not a quantitative explanation of the mSCF1 difference. Different per-image intensity scales, raw rather than model-normalised values, tissue boundaries and the outcome-based choice of sections all limit what can be inferred from appearance.
 
@@ -52,7 +52,7 @@ Visually, 360TopL's first S3PL-only ion (m/z 337.319) has a clear within-tissue 
 
 This analysis identifies **where** S3PL's score lead occurs, not **why**. Plausible contributors include its different patch-reconstruction objective, reference normalisation, learned spatial convolution, per-pixel attention aggregation, and ranking strategy. The next controlled comparison should change one factor at a time while freezing the section, peak budget and evaluator. In particular, the normalisation difference documented in the preceding audit is testable without claiming beforehand that it causes the observed pattern.
 
-The **read-only direct reference-set audit** completed as job 61566 on `mscluster49`, with an empty error log. It compared S3PL's stored class PCC rankings with PCC independently recomputed from the existing CAC HDF5 adapters, then compared each class and mixed reference-positive *bin set* at all four thresholds. The [audit report](../../code/msi/results/comparisons/s3pl_cac_gap_diagnostics/reference_set_audit.json) records `exact_reference_set_match`: **zero symmetric-difference bins in every one of the 32 section-threshold comparisons**. The maximum PCC difference reported for each class was also zero. It did not train, change the labels, or rewrite any model result. The [job output](../../code/msi/logs/cac-ref-audit-61566.out) lists all eight sections. The submitted command was:
+The **read-only direct reference-set audit** completed as job 61566 on `mscluster49`, with an empty error log. It compared S3PL's stored class PCC rankings with PCC independently recomputed from the existing CAC HDF5 adapters, then compared each class and mixed reference-positive *bin set* at all four thresholds. The [audit report](../../../code/msi/results/comparisons/s3pl_cac_gap_diagnostics/reference_set_audit.json) records `exact_reference_set_match`: **zero symmetric-difference bins in every one of the 32 section-threshold comparisons**. The maximum PCC difference reported for each class was also zero. It did not train, change the labels, or rewrite any model result. The [job output](../../../code/msi/logs/cac-ref-audit-61566.out) lists all eight sections. The submitted command was:
 
 ```bash
 cd ~/msi

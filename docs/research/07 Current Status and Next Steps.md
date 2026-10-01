@@ -1,6 +1,16 @@
 # Current Status and Next Steps
 
-Last updated: 2026-09-28
+Last updated: 2026-10-01
+
+The [main results record](01%20Results%20Record.md) now includes the cached
+GBM training result, the S3PL versus cached-VAE phase probe, and the CAC
+reference-set/selected-peak diagnosis. Their figures are collected in the
+[local results gallery](../../results/README.md). The current work is the
+[two-week spatial investigation](09%20Two-Week%20Spatial%20Model%20Investigation%20Plan.md):
+1×1/3×3/5×5 window support and the zero-context control passed 20 CPU-side
+cluster tests in job 62270. Shuffled context, checkpoint/resume and evaluation
+support for new configurations remain to be checked before the pilot. No new
+window-model quality result exists yet.
 
 ## Direction after Hairong's 28 September meeting
 

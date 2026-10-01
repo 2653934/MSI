@@ -1,6 +1,6 @@
 # Results Record
 
-Last updated: 2026-09-20
+Last updated: 2026-10-01
 
 This is the main results ledger. Values are copied from the committed JSON and
 CSV outputs. “Complete” means the planned computation and audit finished; it
@@ -322,7 +322,7 @@ cache reduced measured batch preparation from 24.704 to 0.724 seconds without
 changing checked sample arrays. That initial batch-only result did not, by
 itself, establish a full-training speedup; the later full-run result below did.
 The historical CAC runtimes above remain unchanged. See the
-[runtime investigation](10%20GBM%20Training%20Runtime%20Investigation.md) for
+[runtime investigation](investigations/10%20GBM%20Training%20Runtime%20Investigation.md) for
 timing boundaries and the still-needed cross-method cost comparison. GPU tensor
 memory must also be reported separately from the extra host RAM used by caching.
 
@@ -346,6 +346,43 @@ all 20 final model-state tensors in **both** centre-only and uniform-mean
 GBM108-positive runs (job 61491). This closes the parameter-equivalence check
 for those two cached-versus-streaming pairs. It does not, by itself, extend
 the timing or equivalence result to the other GBM or CAC sections.
+
+### S3PL and cached VAE phase probe
+
+On one RTX 3090 node (`mscluster49`), job 61555 compared S3PL at its 16-pixel
+batch size with the cached VAEs at their 128-pixel batch size on
+`GBM108_positive`. Steady throughput was 42.1 pixels/s for S3PL and
+148.0/149.7 pixels/s for centre-only/uniform VAE. Data preparation occupied
+85.9%/92.5%/91.6% of the sampled batch time. Peak allocated GPU memory was
+0.238/2.047/2.857 GiB, respectively. These are short training-batch probes,
+not whole-workflow measurements; batch sizes and training objectives differ.
+S3PL's shorter observed training total on this section uses 10 epochs versus
+100 for the VAE. GMM, IG, peak selection and evaluation still need
+consistently bounded end-to-end timing. See the
+[architecture and timing audit](investigations/11%20S3PL%20Architecture%20and%20Runtime%20Audit.md)
+and its [machine-readable phase results](../../code/msi/results/validation/s3pl_cached_vae_phases/61555/).
+
+### Where the matched CAC S3PL lead occurs
+
+At matched peak counts S3PL leads uniform-context IG in mean CAC mSCF1 by
+about 0.032 and wins six of eight sections. The mean mixed-F1 lead is 0.0476,
+0.0460, 0.0294 and 0.0048 at PCC thresholds 0.3, 0.4, 0.5 and 0.6.
+The selected lists share 69.9%–84.6% of their m/z values by section
+(mean 79.4%). A direct audit of the stored S3PL labels and independently
+recomputed PCC references found *exactly the same* reference-positive bins
+for all 32 section–threshold unions and all 96 class comparisons. At a fixed
+count, the score difference therefore comes from peaks selected by only one
+method. This identifies the set-level source of the gap; it does not identify
+which architecture or training choice produced those selections.
+
+![CAC S3PL versus IG F1 by threshold](../../results/model-comparisons/cac_s3pl_ig_thresholds.png)
+
+![CAC selected-peak overlap](../../results/model-comparisons/cac_s3pl_ig_peak_overlap.png)
+
+The [detailed CAC diagnostic](investigations/12%20CAC%20S3PL%20Gap%20Diagnostics.md)
+links the [reference-set audit](../../code/msi/results/comparisons/s3pl_cac_gap_diagnostics/reference_set_audit.json)
+and exploratory exclusive-ion images. The GBM S3PL paper-reproduction gap is
+a separate unresolved question.
 
 The cross-dataset conclusion is deliberately nuanced. Neighbourhood context
 did not consistently improve peak selection on GBM, but it improved it on all
