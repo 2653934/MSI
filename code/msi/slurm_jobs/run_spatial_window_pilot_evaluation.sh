@@ -14,26 +14,40 @@
 set -eo pipefail
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: sbatch $0 {GBM108_positive|40TopL} {uniform_p5|zero_p3|shuffled_p3}" >&2
+    echo "Usage: sbatch $0 DATASET {uniform_p5|zero_p3|shuffled_p3}" >&2
     exit 2
 fi
 
 DATASET="$1"
 ARM="$2"
 case "$DATASET" in
-    GBM108_positive)
+    GBM108_positive|GBM108_negative|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
         INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
         LEGACY_DIR="$HOME/msi/results/baselines/msipl/massnet/$DATASET"
-        MATCHED_COUNT=530
-        GMM_COMPONENTS=2
-        ;;
-    40TopL)
+        GMM_COMPONENTS=2 ;;
+    40TopL|160TopL|200TopL|240TopL|280TopL|360TopL|400TopL|520TopL)
         INPUT="/datasets/zsuliman/msi_data/cac_msipl/${DATASET}.h5"
         LEGACY_DIR="$HOME/msi/results/baselines/msipl/cac/$DATASET"
-        MATCHED_COUNT=315
-        GMM_COMPONENTS=3
-        ;;
-    *) echo "Unknown pilot dataset: $DATASET" >&2; exit 2 ;;
+        GMM_COMPONENTS=3 ;;
+    *) echo "Unknown window-study dataset: $DATASET" >&2; exit 2 ;;
+esac
+case "$DATASET" in
+    GBM108_positive) MATCHED_COUNT=530 ;;
+    GBM108_negative) MATCHED_COUNT=458 ;;
+    GBM12_1) MATCHED_COUNT=453 ;;
+    GBM12_2) MATCHED_COUNT=478 ;;
+    GBM22_1) MATCHED_COUNT=589 ;;
+    GBM22_2) MATCHED_COUNT=464 ;;
+    GBM39_1) MATCHED_COUNT=686 ;;
+    GBM39_2) MATCHED_COUNT=523 ;;
+    40TopL) MATCHED_COUNT=315 ;;
+    160TopL) MATCHED_COUNT=210 ;;
+    200TopL) MATCHED_COUNT=221 ;;
+    240TopL) MATCHED_COUNT=255 ;;
+    280TopL) MATCHED_COUNT=245 ;;
+    360TopL) MATCHED_COUNT=247 ;;
+    400TopL) MATCHED_COUNT=133 ;;
+    520TopL) MATCHED_COUNT=232 ;;
 esac
 case "$ARM" in
     uniform_p5) VARIANT=uniform_mean ;;

@@ -14,16 +14,20 @@
 set -eo pipefail
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: sbatch $0 {GBM108_positive|40TopL} {uniform_p5|zero_p3|shuffled_p3}" >&2
+    echo "Usage: sbatch $0 DATASET {uniform_p5|zero_p3|shuffled_p3}" >&2
     exit 2
 fi
 
 DATASET="$1"
 ARM="$2"
 case "$DATASET" in
-    GBM108_positive) INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5" ;;
-    40TopL) INPUT="/datasets/zsuliman/msi_data/cac_msipl/${DATASET}.h5" ;;
-    *) echo "Unknown pilot dataset: $DATASET" >&2; exit 2 ;;
+    GBM108_positive|GBM108_negative|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
+        INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
+        CACHE_SPECTRA=1 ;;
+    40TopL|160TopL|200TopL|240TopL|280TopL|360TopL|400TopL|520TopL)
+        INPUT="/datasets/zsuliman/msi_data/cac_msipl/${DATASET}.h5"
+        CACHE_SPECTRA=0 ;;
+    *) echo "Unknown window-study dataset: $DATASET" >&2; exit 2 ;;
 esac
 case "$ARM" in
     uniform_p5) VARIANT=uniform_mean; WINDOW_SIZE=5 ;;
@@ -43,8 +47,12 @@ if [ ! -f "$INPUT" ]; then
     exit 1
 fi
 if [ -f "$FINAL_CHECKPOINT" ]; then
-    echo "Final checkpoint exists; refusing to overwrite: $FINAL_CHECKPOINT"
-    exit 0
+    if grep -q '"status": "complete"' "$OUTPUT/summary.json" 2>/dev/null; then
+        echo "Completed checkpoint and summary exist; nothing to do: $FINAL_CHECKPOINT"
+        exit 0
+    fi
+    echo "Final checkpoint exists but complete summary is missing; inspect before rerunning: $FINAL_CHECKPOINT" >&2
+    exit 1
 fi
 
 cd "$PROJECT_ROOT"
@@ -72,6 +80,14 @@ else
     echo "Starting $DATASET $ARM"
 fi
 
+CACHE_ARGUMENTS=()
+if [ "$CACHE_SPECTRA" -eq 1 ]; then
+    # This checks real section spectra, including the 5x5 and shuffled inputs,
+    # before switching GBM training to the previously benchmarked fast loader.
+    python -u scripts/validate_spatial_window_cache.py --input "$INPUT" --window-size "$WINDOW_SIZE" --variant "$VARIANT"
+    CACHE_ARGUMENTS=(--cache-spectra)
+fi
+
 python -u scripts/train_spatial_msipl_production.py \
     --input "$INPUT" \
     --output "$OUTPUT" \
@@ -87,4 +103,5 @@ python -u scripts/train_spatial_msipl_production.py \
     --spatial-lambda 0 \
     --seed 1 \
     --checkpoint-interval 5 \
+    "${CACHE_ARGUMENTS[@]}" \
     "${RESUME_ARGUMENTS[@]}"
