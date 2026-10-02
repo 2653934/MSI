@@ -55,6 +55,11 @@ if [ -f "$FINAL_CHECKPOINT" ]; then
     exit 1
 fi
 
+# Sibling arms of one section can begin simultaneously. Create their output
+# and checkpoint paths with mkdir -p before Python's recursive Path.mkdir,
+# which can race on a newly-created shared parent directory.
+mkdir -p "$OUTPUT" "$CHECKPOINT_OUTPUT"
+
 cd "$PROJECT_ROOT"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env

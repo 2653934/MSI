@@ -40,6 +40,15 @@ if [ "${#missing[@]}" -eq 0 ]; then
     echo "All 45 confirmation training configurations are complete; nothing to submit."
     exit 0
 fi
+# Create sibling-arm directories serially before the array starts. Otherwise
+# simultaneous tasks can race while Python recursively creates a new parent.
+for index in "${missing[@]}"; do
+    dataset="${DATASETS[index / 3]}"
+    arm="${ARMS[index % 3]}"
+    mkdir -p \
+        "/datasets/zsuliman/msi_checkpoints/spatial_msipl/window_pilot/${dataset}_seed1/$arm" \
+        "$HOME/msi/results/experiments/spatial_msipl_window_pilot/${dataset}_seed1/$arm"
+done
 array_indices=$(IFS=,; echo "${missing[*]}")
 submission=$(sbatch --array="${array_indices}%3" slurm_jobs/run_spatial_window_campaign_array.sh)
 echo "$submission"
