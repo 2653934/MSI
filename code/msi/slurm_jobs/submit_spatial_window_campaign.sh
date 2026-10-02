@@ -23,9 +23,27 @@ if squeue -h -u "$USER" -n spatial-window-all | grep -q .; then
     exit 1
 fi
 
-submission=$(sbatch --array=3-47%3 slurm_jobs/run_spatial_window_campaign_array.sh)
+DATASETS=(40TopL 160TopL 200TopL 240TopL 280TopL 360TopL 400TopL 520TopL
+          GBM108_positive GBM108_negative GBM12_1 GBM12_2 GBM22_1 GBM22_2 GBM39_1 GBM39_2)
+ARMS=(uniform_p5 zero_p3 shuffled_p3)
+missing=()
+for ((index=3; index<48; index++)); do
+    dataset="${DATASETS[index / 3]}"
+    arm="${ARMS[index % 3]}"
+    checkpoint="/datasets/zsuliman/msi_checkpoints/spatial_msipl/window_pilot/${dataset}_seed1/$arm/checkpoint.pt"
+    summary="$HOME/msi/results/experiments/spatial_msipl_window_pilot/${dataset}_seed1/$arm/summary.json"
+    if [ ! -f "$checkpoint" ] || ! grep -q '"status": "complete"' "$summary" 2>/dev/null; then
+        missing+=("$index")
+    fi
+done
+if [ "${#missing[@]}" -eq 0 ]; then
+    echo "All 45 confirmation training configurations are complete; nothing to submit."
+    exit 0
+fi
+array_indices=$(IFS=,; echo "${missing[*]}")
+submission=$(sbatch --array="${array_indices}%3" slurm_jobs/run_spatial_window_campaign_array.sh)
 echo "$submission"
-echo "45 configurations: 15 remaining sections x 3 arms; at most 3 simultaneously."
-echo "The completed 40TopL pilot is excluded."
+echo "Submitted ${#missing[@]} incomplete training configurations; at most 3 simultaneously."
+echo "Array indices: $array_indices"
 echo 'Monitor with: squeue -u "$USER" -o "%.18i %.24j %.2t %.10M %.24R"'
 echo 'Audit with: bash slurm_jobs/check_spatial_window_campaign.sh'

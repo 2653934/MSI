@@ -84,7 +84,7 @@ CACHE_ARGUMENTS=()
 if [ "$CACHE_SPECTRA" -eq 1 ]; then
     # This checks real section spectra, including the 5x5 and shuffled inputs,
     # before switching GBM training to the previously benchmarked fast loader.
-    python -u scripts/validate_spatial_window_cache.py --input "$INPUT" --window-size "$WINDOW_SIZE" --variant "$VARIANT"
+    python -u scripts/validate_spatial_window_cache.py --input "$INPUT" --window-size "$WINDOW_SIZE" --variant "$ARM"
     CACHE_ARGUMENTS=(--cache-spectra)
 fi
 
