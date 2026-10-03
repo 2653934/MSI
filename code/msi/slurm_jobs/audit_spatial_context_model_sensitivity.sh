@@ -11,7 +11,9 @@
 #SBATCH --output=logs/context-response-%j.out
 #SBATCH --error=logs/context-response-%j.err
 
-set -euo pipefail
+# Conda's activation hooks reference variables that may be unset.
+# Keep strict error/pipe handling, but do not enable nounset before activation.
+set -eo pipefail
 
 if [ "$#" -ne 1 ]; then
     echo "Usage: sbatch $0 {160TopL|GBM22_2}" >&2
