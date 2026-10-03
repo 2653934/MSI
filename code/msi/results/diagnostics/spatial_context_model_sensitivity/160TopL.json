@@ -1,0 +1,83 @@
+{
+  "status": "valid",
+  "dataset": "160TopL",
+  "source_h5": "/datasets/zsuliman/msi_data/cac_msipl/160TopL.h5",
+  "input_audit": "results/diagnostics/spatial_context_information/160TopL_pixels.csv",
+  "checkpoints": {
+    "real": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/cac/production/160TopL_seed1/uniform_mean/checkpoint.pt",
+    "shuffled": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/window_pilot/160TopL_seed1/shuffled_p3/checkpoint.pt"
+  },
+  "shuffled_context_seed": 1701,
+  "shuffled_context_permutation_sha256": "52933a64618ca8eab2e9fd76181d5b11b48610fa38651125ffdd9bee9b213763",
+  "sampled_pixels": 384,
+  "device": "cuda",
+  "evaluation": "frozen, deterministic encoder-mean reconstruction on training sections",
+  "cross_entropy": "scaled categorical cross-entropy; lower is better",
+  "limitation": "Context swaps are out-of-training-distribution interventions; they test response, not whether context improves held-out peak picking. Expert labels only define post-hoc groups.",
+  "summary": {
+    "real": {
+      "all": {
+        "pixels": 384,
+        "mean_real_cross_entropy": 5961.354646682739,
+        "mean_shuffled_cross_entropy": 5994.242626190186,
+        "mean_zero_cross_entropy": 5996.669665018718,
+        "mean_shuffled_minus_real_cross_entropy": 32.88797950744629,
+        "mean_zero_minus_real_cross_entropy": 35.31501833597819,
+        "mean_real_shuffled_latent_l2": 0.43872729163073626,
+        "mean_real_zero_latent_l2": 0.4828390774394696
+      },
+      "boundary": {
+        "pixels": 192,
+        "mean_real_cross_entropy": 5986.977882385254,
+        "mean_shuffled_cross_entropy": 6016.525179545085,
+        "mean_zero_cross_entropy": 6019.500661214192,
+        "mean_shuffled_minus_real_cross_entropy": 29.54729715983073,
+        "mean_zero_minus_real_cross_entropy": 32.522778828938804,
+        "mean_real_shuffled_latent_l2": 0.4057305324434613,
+        "mean_real_zero_latent_l2": 0.4545129526716967
+      },
+      "interior": {
+        "pixels": 192,
+        "mean_real_cross_entropy": 5935.731410980225,
+        "mean_shuffled_cross_entropy": 5971.960072835286,
+        "mean_zero_cross_entropy": 5973.838668823242,
+        "mean_shuffled_minus_real_cross_entropy": 36.22866185506185,
+        "mean_zero_minus_real_cross_entropy": 38.10725784301758,
+        "mean_real_shuffled_latent_l2": 0.47172405081801116,
+        "mean_real_zero_latent_l2": 0.5111652022072425
+      }
+    },
+    "shuffled": {
+      "all": {
+        "pixels": 384,
+        "mean_real_cross_entropy": 5968.62983640035,
+        "mean_shuffled_cross_entropy": 5962.102410634358,
+        "mean_zero_cross_entropy": 5974.129301071167,
+        "mean_shuffled_minus_real_cross_entropy": -6.527425765991211,
+        "mean_zero_minus_real_cross_entropy": 5.499464670817058,
+        "mean_real_shuffled_latent_l2": 0.21545802126153527,
+        "mean_real_zero_latent_l2": 0.26026632817229256
+      },
+      "boundary": {
+        "pixels": 192,
+        "mean_real_cross_entropy": 5995.671058654785,
+        "mean_shuffled_cross_entropy": 5989.271708170573,
+        "mean_zero_cross_entropy": 6001.308705647786,
+        "mean_shuffled_minus_real_cross_entropy": -6.399350484212239,
+        "mean_zero_minus_real_cross_entropy": 5.637646993001302,
+        "mean_real_shuffled_latent_l2": 0.20421079397783615,
+        "mean_real_zero_latent_l2": 0.25713218135448795
+      },
+      "interior": {
+        "pixels": 192,
+        "mean_real_cross_entropy": 5941.588614145915,
+        "mean_shuffled_cross_entropy": 5934.9331130981445,
+        "mean_zero_cross_entropy": 5946.949896494548,
+        "mean_shuffled_minus_real_cross_entropy": -6.655501047770183,
+        "mean_zero_minus_real_cross_entropy": 5.3612823486328125,
+        "mean_real_shuffled_latent_l2": 0.2267052485452344,
+        "mean_real_zero_latent_l2": 0.26340047499009717
+      }
+    }
+  }
+}
