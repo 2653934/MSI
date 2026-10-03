@@ -38,7 +38,9 @@ checks establish which model claims survive.
 - Legacy msiPL reproduction on both collections.
 - S3PL CAC runs and documented MassNet GBM reproduction gap.
 - Spatial-msiPL preprocessing, model and tests.
-- Uniform mean frozen as the neighbourhood method.
+- Uniform mean frozen as the simple neighbourhood *baseline/control* for the
+  initial comparison; the 48-arm campaign did not establish it as the final
+  spatial method.
 - Whole-GBM uniform-mean and centre-only 100-epoch training.
 - Whole-GBM reconstruction comparison: mixed 4-4 MSE split.
 - Whole-GBM nonlinear peak attribution and matched evaluation.
@@ -54,17 +56,22 @@ checks establish which model claims survive.
   two GBM sections, plus frozen-model context-swap sensitivity checks on
   `160TopL` and `GBM22_2`; see the
   [results record](01%20Results%20Record.md#what-the-shuffled-input-changes-and-whether-frozen-models-respond).
+- Saved-latent separability audit on `160TopL` and `GBM22_2`: expert-class
+  information is accessible to a post-hoc label-trained probe in both real
+  and shuffled models, while the label-free GMM gives different partitions;
+  see the [results record](01%20Results%20Record.md#saved-latent-information-versus-the-fitted-gmm).
 
 ## Immediate next step
 
-Compare saved latent separability with fitted GMM behaviour, then inspect
-section-level peak-ranking and attribution differences. The input audit shows
+Run one bounded covariance/KMeans check on the same frozen latents, without
+retraining or selecting by expert labels, then return to learned-neighbourhood
+mechanisms and section-level peak-ranking differences. The input audit shows
 that shuffling changes local information, and frozen models respond in
-training-section reconstruction, but the context swaps are out of the
-training distribution and do not explain the near-tied mSCF1. Keep the S3PL
-protocol and runtime gap investigation separate. If a spatial-specific claim
-survives these checks, confirm it with targeted additional training seeds
-rather than another full single-seed campaign.
+training-section reconstruction; the latent audit shows that accessible
+class information and the GMM's chosen partition are different questions.
+None explains the near-tied mSCF1 by itself. Keep the S3PL protocol and
+runtime gap investigation separate. If a spatial-specific claim survives,
+confirm it with targeted additional training seeds.
 
 ## Whole-GBM attribution result
 

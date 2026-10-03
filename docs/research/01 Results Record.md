@@ -1,6 +1,6 @@
 # Results Record
 
-Last updated: 2026-10-01
+Last updated: 2026-10-03
 
 This is the main results ledger. Values are copied from the committed JSON and
 CSV outputs. “Complete” means the planned computation and audit finished; it
@@ -16,7 +16,8 @@ does not automatically mean the scientific hypothesis was supported.
   normalisation checks; this gap is documented rather than hidden.
 - Three spatial neighbourhood mechanisms were tested. Their development-section
   representation scores were very similar, so the parameter-free uniform mean
-  was frozen as the simplest method.
+  was frozen as the simplest *baseline* for the initial validation, not
+  established as the best spatial method.
 - Across all eight GBM sections, uniform spatial context did **not** consistently
   improve reconstruction over a centre-only VAE.
 - Across all eight GBM sections, nonlinear Integrated Gradients from both the
@@ -482,3 +483,30 @@ interventions on training sections, not held-out performance or causal tests.
 The next diagnostic is to compare saved latent separability with the fitted
 GMM's behaviour, keeping representation, clustering and peak-ranking effects
 distinct.
+
+### Saved latent information versus the fitted GMM
+
+A label-free GMM was refitted five times to each saved five-dimensional latent
+representation, then its components were compared with expert classes *post
+hoc*. On `GBM22_2`, the saved real-context model's GMM had class ARI 0.165,
+versus 0.888 for the shuffled-context model; the five refits stayed near
+those values. Yet both saved representations had about 0.985 balanced accuracy
+under a label-trained linear probe, and about 0.978 same-class ten-nearest-
+neighbour purity. Thus expert-class information is accessible in both GBM
+latents, while this particular unsupervised GMM partitions them very
+differently. On `160TopL`, real/shuffled GMM ARI was 0.474/0.383, linear-probe
+balanced accuracy 0.752/0.747, and ten-neighbour purity 0.760/0.762. See the
+[latent-separability records](../../code/msi/results/diagnostics/spatial_latent_separability/)
+for the saved-model hashes, counts and refit seeds.
+
+The probe uses expert labels and five random pixel folds within the *same
+training section*. Nearby pixels and the same patient/section can occur in
+both train and test folds, so its accuracy is not patient-independent
+validation and is **not** an unsupervised result. ARI and neighbour purity
+also use labels only for post-hoc assessment; none of these diagnostics is a
+peak-picking score or a causal explanation for mSCF1. A bounded next check
+will inspect covariance and KMeans on the same frozen latents, without
+retraining or choosing a clustering method by the expert mask. The completed
+48-arm window campaign does not support promoting fixed uniform averaging
+as the final spatial method; it remains a useful control while learned
+neighbourhood mechanisms are investigated.
