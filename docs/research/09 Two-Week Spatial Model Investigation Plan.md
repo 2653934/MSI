@@ -81,6 +81,8 @@ The original neighbour builder and aggregators assumed exactly eight slots; the 
 
 Cluster sequence from `~/msi`: submit training with `bash slurm_jobs/submit_spatial_window_campaign.sh` and monitor with `bash slurm_jobs/check_spatial_window_campaign.sh`. Evaluation can now start for any completed, unevaluated arms using `bash slurm_jobs/submit_spatial_window_campaign_evaluation.sh`; this permits CAC evaluation while GBM training continues. Rerunning that launcher later selects newly trained GBM arms without duplicating completed CAC evaluations. Both arrays use the same fixed index mapping; failed individual indices can be resubmitted with `sbatch --array=INDEX slurm_jobs/run_spatial_window_campaign_array.sh` (or its evaluation counterpart) after checking that no copy is still active. No jobs are launched by editing these files locally: code must first be synced to `~/msi` on the cluster.
 
+**Outcome checkpoint (3 October):** all 48 new-arm local artifact sets are complete, including training, reconstruction, valid attribution and matched-count peak evaluation. Across the seven confirmation sections per collection, real 5x5 did not outperform frozen real 3x3 on mean mSCF1, while shuffled 3x3 was approximately tied with real 3x3. See the [results record](01%20Results%20Record.md#spatial-window-and-context-controls-3-october-2026) for the four-arm values and limits. Workstream B's next task is to inspect section-level and tissue-boundary diagnostics, then decide whether any spatial-specific effect warrants targeted multi-seed confirmation. The finished seed-1 campaign is not a mechanism explanation by itself.
+
 ## Workstream C — Explain the S3PL gap and runtime
 
 ### C1. Code and protocol comparison

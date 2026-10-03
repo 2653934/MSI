@@ -426,3 +426,33 @@ seed-1 validation and should not be presented as whole-dataset multi-seed
 replication.
 
 ![GBM108-positive training-seed stability](../../code/msi/results/experiments/spatial_msipl_training_seed_stability_summary/gbm108_positive_seed_stability.png)
+
+## Spatial window and context controls (3 October 2026)
+
+The seed-1 window campaign has complete local training, reconstruction,
+attribution and peak-evaluation artifacts for all 48 configurations: 16
+sections (eight CAC, eight MassNet GBM) times three new arms. The arms are a
+real 5x5 uniform neighbourhood (`uniform_p5`), zeroed 3x3 context
+(`zero_p3`), and a seeded nonlocal shuffled 3x3 context (`shuffled_p3`). Each
+is compared with the previously frozen real 3x3 uniform model, using the
+same section-specific matched peak count. The two development sections are
+`40TopL` and `GBM108_positive`; the seven remaining sections in each
+collection form the confirmation sets.
+
+| Confirmation set, mean IG mSCF1 | Real 3x3 | Real 5x5 | Zero 3x3 | Shuffled 3x3 |
+|---|---:|---:|---:|---:|
+| Seven CAC sections | 0.5419 | 0.5352 | 0.5235 | 0.5425 |
+| Seven MassNet GBM sections | 0.4460 | 0.4334 | 0.4594 | 0.4430 |
+
+On CAC, the real 3x3 ranking exceeds zero context by 0.0184 mSCF1 on
+average, but is essentially tied with shuffled context (-0.0006). On GBM,
+real 5x5 is 0.0126 below real 3x3; zero context is 0.0134 above it, while
+shuffled context is 0.0030 below it. The section-level results are mixed, so
+these means do **not** show a robust spatial-specificity gain or that more
+neighbours help. Equally, they do not prove spatial information is useless:
+the controls perturb the input and are only one seed. In particular, the
+strong earlier CAC real-3x3 versus centre-only result and the present
+real-3x3 versus shuffled near-tie answer different questions and should both
+be reported.
+
+Source artifacts: [new window-arm evaluations](../../code/msi/results/experiments/spatial_msipl_window_pilot/), [frozen CAC real-3x3 evaluations](../../code/msi/results/experiments/spatial_msipl_cac_attributed_peak_evaluation/), and [frozen GBM real-3x3 evaluations](../../code/msi/results/experiments/spatial_msipl_attributed_peak_evaluation/). The local completion audit checks each arm's training `summary.json` (`complete`), attribution `summary.json` (`valid`), peak-evaluation `summary.json` (`complete`), and reconstruction JSON; cluster checkpoints were not synced locally. These are seed-1 descriptive comparisons, not a significance or multi-seed claim.

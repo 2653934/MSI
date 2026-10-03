@@ -1,16 +1,22 @@
 # Current Status and Next Steps
 
-Last updated: 2026-10-01
+Last updated: 2026-10-03
 
 The [main results record](01%20Results%20Record.md) now includes the cached
 GBM training result, the S3PL versus cached-VAE phase probe, and the CAC
 reference-set/selected-peak diagnosis. Their figures are collected in the
 [local results gallery](../../results/README.md). The current work is the
-[two-week spatial investigation](09%20Two-Week%20Spatial%20Model%20Investigation%20Plan.md):
-1×1/3×3/5×5 window support and the zero-context control passed 20 CPU-side
-cluster tests in job 62270. Shuffled context, checkpoint/resume and evaluation
-support for new configurations remain to be checked before the pilot. No new
-window-model quality result exists yet.
+[two-week spatial investigation](09%20Two-Week%20Spatial%20Model%20Investigation%20Plan.md).
+The 1x1/3x3/5x5 window implementation and context-control tests passed; the
+seed-1 window campaign now has complete local training and evaluation
+artifacts for all 48 new configurations. The [results record](01%20Results%20Record.md#spatial-window-and-context-controls-3-october-2026)
+compares the real 5x5, zero-context 3x3 and shuffled-context 3x3 arms with
+the frozen real 3x3 reference. Across the seven GBM confirmation sections,
+the respective mean IG mSCF1 values are 0.4334, 0.4594, 0.4430 and 0.4460;
+across the seven CAC confirmation sections they are 0.5352, 0.5235, 0.5425
+and 0.5419. The larger window does not restore a consistent spatial gain,
+and real versus shuffled context is close on average. These are descriptive
+seed-1 results, not a final mechanism explanation.
 
 ## Direction after Hairong's 28 September meeting
 
@@ -41,6 +47,18 @@ checks establish which model claims survive.
   sections.
 - Frozen CAC reconstruction, clustering, Integrated Gradients, L2 and
   matched-count peak evaluation.
+- Complete seed-1 CAC and GBM 5x5/zero/shuffled window campaign (48/48
+  configurations), with local training, reconstruction, attribution and
+  matched-count peak-evaluation artifacts audited.
+
+## Immediate next step
+
+Inspect section-level real-versus-shuffled and real-versus-zero differences,
+window/tissue-boundary diagnostics and attribution checks before attributing
+the mixed quality results to a specific mechanism. Keep the S3PL protocol
+and runtime gap investigation separate. If a spatial-specific claim is still
+promising, confirm it with targeted additional training seeds rather than
+expanding another full single-seed campaign.
 
 ## Whole-GBM attribution result
 
