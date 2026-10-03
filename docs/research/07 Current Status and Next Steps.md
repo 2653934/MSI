@@ -50,15 +50,21 @@ checks establish which model claims survive.
 - Complete seed-1 CAC and GBM 5x5/zero/shuffled window campaign (48/48
   configurations), with local training, reconstruction, attribution and
   matched-count peak-evaluation artifacts audited.
+- Valid post-hoc real-versus-shuffled input-information audits on two CAC and
+  two GBM sections, plus frozen-model context-swap sensitivity checks on
+  `160TopL` and `GBM22_2`; see the
+  [results record](01%20Results%20Record.md#what-the-shuffled-input-changes-and-whether-frozen-models-respond).
 
 ## Immediate next step
 
-Inspect section-level real-versus-shuffled and real-versus-zero differences,
-window/tissue-boundary diagnostics and attribution checks before attributing
-the mixed quality results to a specific mechanism. Keep the S3PL protocol
-and runtime gap investigation separate. If a spatial-specific claim is still
-promising, confirm it with targeted additional training seeds rather than
-expanding another full single-seed campaign.
+Compare saved latent separability with fitted GMM behaviour, then inspect
+section-level peak-ranking and attribution differences. The input audit shows
+that shuffling changes local information, and frozen models respond in
+training-section reconstruction, but the context swaps are out of the
+training distribution and do not explain the near-tied mSCF1. Keep the S3PL
+protocol and runtime gap investigation separate. If a spatial-specific claim
+survives these checks, confirm it with targeted additional training seeds
+rather than another full single-seed campaign.
 
 ## Whole-GBM attribution result
 

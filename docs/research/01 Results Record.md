@@ -456,3 +456,29 @@ real-3x3 versus shuffled near-tie answer different questions and should both
 be reported.
 
 Source artifacts: [new window-arm evaluations](../../code/msi/results/experiments/spatial_msipl_window_pilot/), [frozen CAC real-3x3 evaluations](../../code/msi/results/experiments/spatial_msipl_cac_attributed_peak_evaluation/), and [frozen GBM real-3x3 evaluations](../../code/msi/results/experiments/spatial_msipl_attributed_peak_evaluation/). The local completion audit checks each arm's training `summary.json` (`complete`), attribution `summary.json` (`valid`), peak-evaluation `summary.json` (`complete`), and reconstruction JSON; cluster checkpoints were not synced locally. These are seed-1 descriptive comparisons, not a significance or multi-seed claim.
+
+### What the shuffled input changes, and whether frozen models respond
+
+A post-hoc, class-balanced input audit found that shuffled context is not
+equivalent to real local context. For sampled centres classified post hoc as
+interior from their real neighbours, the fraction of neighbours sharing the
+centre's expert class was 1.000 for real context by construction
+versus 0.317 for shuffled context on `160TopL`, and 1.000 versus 0.514 on
+`GBM22_2`. The [input-information records](../../code/msi/results/diagnostics/spatial_context_information/)
+also cover `200TopL` and `GBM39_2`; all four report `valid`. Expert classes
+defined these diagnostic groups *after* the label-free context construction.
+
+In a separate frozen-model intervention, the already trained real-context
+models reconstructed their sampled training-section pixels worse when fed
+shuffled instead of real context: mean scaled cross-entropy increased by 32.89
+on `160TopL` and 7,713.04 on `GBM22_2`. The corresponding shuffled-trained
+models favoured shuffled input by 6.53 and 421.48, respectively, on the same
+cross-entropy scale. The [frozen-model records](../../code/msi/results/diagnostics/spatial_context_model_sensitivity/)
+show the same direction separately for boundary and interior groups. These
+results establish that the sampled inputs carry different local information
+and that the saved models respond to it; they do **not** show that real context
+improves peak selection. The swaps are out-of-training-distribution
+interventions on training sections, not held-out performance or causal tests.
+The next diagnostic is to compare saved latent separability with the fitted
+GMM's behaviour, keeping representation, clustering and peak-ranking effects
+distinct.
