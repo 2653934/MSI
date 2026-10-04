@@ -44,10 +44,6 @@ if ! command -v Rscript >/dev/null 2>&1; then
 fi
 echo "Rscript: $(command -v Rscript)"
 Rscript --version
-if ! Rscript -e 'quit(status=if (requireNamespace("Cardinal", quietly=TRUE)) 0 else 1)'; then
-    echo "R is present but the Cardinal package is unavailable. Dataset-content audit not run." >&2
-    exit 2
-fi
 
 mkdir -p "$OUTPUT"
 cd "$PROJECT_ROOT"

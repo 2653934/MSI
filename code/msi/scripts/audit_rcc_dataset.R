@@ -9,11 +9,6 @@ if (length(args) != 2L) {
 archive <- args[[1L]]
 output_dir <- args[[2L]]
 if (!file.exists(archive)) stop("Archive does not exist: ", archive)
-if (!requireNamespace("Cardinal", quietly = TRUE)) {
-  stop("Cardinal is required to interpret the RCC MSImageSet object")
-}
-suppressPackageStartupMessages(library(Cardinal))
-
 main <- function() {
 scratch <- tempfile("rcc-audit-")
 dir.create(scratch)
@@ -26,22 +21,44 @@ if (!file.exists(data_file)) stop("RCC data member could not be extracted")
 env <- new.env(parent = globalenv())
 loaded <- load(data_file, envir = env)
 if (!("rcc" %in% loaded)) stop("rcc object is not present in rcc.rda")
-data <- as(env$rcc, "MSImagingExperiment")
-coordinates <- as.data.frame(Cardinal::coord(data))
-if (!all(c("x", "y") %in% names(coordinates))) {
-  stop("Cardinal coordinates do not have x and y columns")
+if (requireNamespace("Cardinal", quietly = TRUE)) {
+  suppressPackageStartupMessages(library(Cardinal))
+  data <- as(env$rcc, "MSImagingExperiment")
+  coordinates <- as.data.frame(Cardinal::coord(data))
+  runs <- as.character(Cardinal::run(data))
+  diagnosis <- as.character(data$diagnosis)
+  size <- dim(data)
+  mz_values <- as.numeric(Cardinal::mz(data))
+  extraction_mode <- "Cardinal MSImagingExperiment"
+} else {
+  # The archive stores a legacy MSImageSet. Its AnnotatedDataFrame metadata
+  # slots can be read without constructing or converting a Cardinal model.
+  cat("Cardinal is unavailable; reading serialized metadata slots only.\n")
+  pixel_data <- methods::slot(methods::slot(env$rcc, "pixelData"), "data")
+  feature_data <- methods::slot(methods::slot(env$rcc, "featureData"), "data")
+  required_pixel <- c("x", "y", "run", "diagnosis")
+  if (!all(required_pixel %in% names(pixel_data))) {
+    stop("Missing pixel metadata columns. Available: ", paste(names(pixel_data), collapse = ", "))
+  }
+  if (!("mz" %in% names(feature_data))) {
+    stop("Missing m/z metadata column. Available: ", paste(names(feature_data), collapse = ", "))
+  }
+  coordinates <- pixel_data[c("x", "y")]
+  runs <- as.character(pixel_data$run)
+  diagnosis <- as.character(pixel_data$diagnosis)
+  size <- c(nrow(feature_data), nrow(pixel_data))
+  mz_values <- as.numeric(feature_data$mz)
+  extraction_mode <- "legacy MSImageSet metadata slots (no Cardinal)"
 }
-runs <- as.character(Cardinal::run(data))
-diagnosis <- as.character(data$diagnosis)
+if (!all(c("x", "y") %in% names(coordinates))) {
+  stop("Coordinates do not have x and y columns")
+}
 if (nrow(coordinates) != length(runs) || length(runs) != length(diagnosis)) {
   stop("Spectrum, coordinate, run, and diagnosis counts differ")
 }
-
-size <- dim(data)
 if (length(size) != 2L || size[[2L]] != nrow(coordinates)) {
-  stop("Unexpected Cardinal feature-by-spectrum dimensions")
+  stop("Unexpected feature-by-spectrum dimensions")
 }
-mz_values <- as.numeric(Cardinal::mz(data))
 if (length(mz_values) != size[[1L]] || anyNA(mz_values)) {
   stop("Unexpected or missing m/z axis")
 }
@@ -101,6 +118,7 @@ write.csv(run_summary, file.path(output_dir, "run_summary.csv"), row.names = FAL
 write.csv(label_summary, file.path(output_dir, "label_region_summary.csv"), row.names = FALSE)
 
 cat("Cardinal RCC audit\n")
+cat("Extraction mode:", extraction_mode, "\n")
 cat("Features (m/z values):", size[[1L]], "\n")
 cat("m/z range:", min(mz_values), "to", max(mz_values), "\n")
 cat("Spectra:", size[[2L]], "\n")
