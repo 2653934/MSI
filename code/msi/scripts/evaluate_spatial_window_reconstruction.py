@@ -18,7 +18,7 @@ def main():
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--variant", required=True,
-                        choices=("uniform_mean", "zero_context", "shuffled_uniform"))
+                        choices=("uniform_mean", "zero_context", "shuffled_uniform", "attention", "attention_shuffled"))
     parser.add_argument("--batch-size", type=int, default=64)
     args = parser.parse_args()
     if args.batch_size < 1:

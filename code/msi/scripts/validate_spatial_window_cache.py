@@ -17,9 +17,10 @@ def main():
     parser.add_argument("--input", required=True)
     parser.add_argument("--window-size", required=True, type=int, choices=(3, 5))
     parser.add_argument("--variant", required=True,
-                        choices=("uniform_p5", "zero_p3", "shuffled_p3"))
+                        choices=("uniform_p5", "zero_p3", "shuffled_p3",
+                                 "attention_real", "attention_shuffled"))
     args = parser.parse_args()
-    context_mode = "shuffled" if args.variant == "shuffled_p3" else "measured"
+    context_mode = "shuffled" if args.variant in ("shuffled_p3", "attention_shuffled") else "measured"
     kwargs = dict(include_neighbourhood=True, window_size=args.window_size,
                   context_mode=context_mode,
                   context_seed=1701 if context_mode == "shuffled" else None)

@@ -19,7 +19,18 @@ from spatial_msipl.preprocessing import (
 from spatial_msipl.training import set_random_seed, train_vae
 
 
-VARIANTS = ("central_only", "zero_context", "uniform_mean", "shuffled_uniform", "depthwise", "attention")
+VARIANTS = (
+    "central_only", "zero_context", "uniform_mean", "shuffled_uniform",
+    "depthwise", "attention", "attention_shuffled",
+)
+
+
+def variant_input_spec(variant):
+    """Keep model type and neighbour assignment explicit for control runs."""
+    return (
+        {"shuffled_uniform": "uniform_mean", "attention_shuffled": "attention"}.get(variant, variant),
+        "shuffled" if variant in ("shuffled_uniform", "attention_shuffled") else "measured",
+    )
 
 
 def state_sha256(module):
@@ -66,7 +77,7 @@ def main():
     )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--context-seed", type=int, default=1,
-                        help="Global measured-pixel permutation seed for shuffled_uniform.")
+                        help="Global measured-pixel permutation seed for shuffled context arms.")
     parser.add_argument("--checkpoint-interval", type=int, default=5)
     parser.add_argument("--resume-checkpoint", type=Path)
     parser.add_argument(
@@ -88,7 +99,7 @@ def main():
     dataset_type = (
         CachedH5SpatialContextDataset if args.cache_spectra else H5SpatialContextDataset
     )
-    context_mode = "shuffled" if args.variant == "shuffled_uniform" else "measured"
+    neighbourhood_name, context_mode = variant_input_spec(args.variant)
     dataset = dataset_type(
         args.input, include_neighbourhood=True, window_size=args.window_size,
         context_mode=context_mode,
@@ -109,7 +120,7 @@ def main():
         else:
             model = NeighbourhoodSpatialVAE(
                 spectral_dim=dataset.n_mz,
-                neighbourhood="uniform_mean" if args.variant == "shuffled_uniform" else args.variant,
+                neighbourhood=neighbourhood_name,
                 hidden_dim=args.hidden_dim,
                 latent_dim=args.latent_dim,
                 attention_dim=args.attention_dim,
@@ -119,7 +130,7 @@ def main():
         initial_vae_hash = state_sha256(model.vae)
         attention_diagnostics_before = None
         diagnostic_indices = None
-        if args.variant == "attention":
+        if args.variant in ("attention", "attention_shuffled"):
             diagnostic_indices = sorted(
                 torch.randperm(
                     len(dataset),
@@ -153,7 +164,7 @@ def main():
             experiment_metadata={
                 "purpose": (
                     "window/control implementation experiment, not frozen baseline"
-                    if args.window_size != 3 or args.variant in ("zero_context", "shuffled_uniform")
+                    if args.window_size != 3 or args.variant in ("zero_context", "shuffled_uniform", "attention_shuffled")
                     else "cached full-run runtime/equivalence validation, not frozen baseline"
                     if args.cache_spectra
                     else "production neighbourhood baseline"
@@ -176,7 +187,7 @@ def main():
             resume_checkpoint=args.resume_checkpoint,
         )
         attention_diagnostics_after = None
-        if args.variant == "attention":
+        if args.variant in ("attention", "attention_shuffled"):
             with torch.no_grad():
                 attention_diagnostics_after = measure(model, diagnostic_batch)
     finally:
@@ -247,10 +258,10 @@ def main():
             "indices": diagnostic_indices,
             "before_training": attention_diagnostics_before,
             "after_training": attention_diagnostics_after,
-        } if args.variant == "attention" else None,
+        } if args.variant in ("attention", "attention_shuffled") else None,
         "status": "complete",
     }
-    if args.window_size != 3 or args.variant in ("zero_context", "shuffled_uniform"):
+    if args.window_size != 3 or args.variant in ("zero_context", "shuffled_uniform", "attention_shuffled"):
         summary["purpose"] = "window/control implementation experiment, not frozen baseline"
     elif args.cache_spectra:
         summary["purpose"] = (

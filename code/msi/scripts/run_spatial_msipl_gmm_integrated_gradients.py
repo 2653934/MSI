@@ -43,6 +43,7 @@ def parse_arguments():
             "depthwise",
             "attention",
             "attention_sqrt_bins",
+            "attention_shuffled",
             "zero_context",
             "shuffled_uniform",
         ),
@@ -99,6 +100,7 @@ def load_model(path, spectral_dim, variant, device, checkpoint=None):
         neighbourhood = configuration.get("neighbourhood", {})
         expected_name = {
             "attention_sqrt_bins": "attention",
+            "attention_shuffled": "attention",
             "shuffled_uniform": "uniform_mean",
         }.get(variant, variant)
         if neighbourhood.get("name") != expected_name:
@@ -106,8 +108,10 @@ def load_model(path, spectral_dim, variant, device, checkpoint=None):
                 f"{variant} attribution requires a matching {expected_name} checkpoint"
             )
         input_spec = checkpoint_input_spec(checkpoint)
-        if variant == "shuffled_uniform" and input_spec["context_mode"] != "shuffled":
-            raise ValueError("shuffled_uniform requires a shuffled-context checkpoint")
+        if variant in ("shuffled_uniform", "attention_shuffled") and input_spec["context_mode"] != "shuffled":
+            raise ValueError(f"{variant} requires a shuffled-context checkpoint")
+        if variant in ("attention", "attention_sqrt_bins") and input_spec["context_mode"] != "measured":
+            raise ValueError(f"{variant} requires a measured-context checkpoint")
         if variant == "uniform_mean" and input_spec["context_mode"] != "measured":
             raise ValueError("uniform_mean requires measured-context training")
         model = NeighbourhoodSpatialVAE(
@@ -347,8 +351,9 @@ def save_gmm_figure(labels, confidence, x, y, variant, output):
         "central_only": "Centre-only VAE",
         "uniform_mean": "Uniform-mean Spatial-msiPL",
         "depthwise": "Depthwise Spatial-msiPL",
-        "attention": "Original-attention Spatial-msiPL",
+        "attention": "Attention Spatial-msiPL",
         "attention_sqrt_bins": "Corrected-attention Spatial-msiPL",
+        "attention_shuffled": "Shuffled-context attention Spatial-msiPL",
         "zero_context": "Zero-context VAE (2D input)",
         "shuffled_uniform": "Shuffled-context Spatial-msiPL",
     }
