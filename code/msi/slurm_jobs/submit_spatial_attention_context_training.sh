@@ -20,6 +20,7 @@ for dataset in 160TopL GBM22_2; do
             printf '%-10s %-19s %s\n' "$dataset" "$arm" COMPLETE
             continue
         fi
+        mkdir -p "${output%/summary.json}" "${checkpoint%/checkpoint.pt}"
         submission=$(sbatch slurm_jobs/run_spatial_attention_context_training.sh "$dataset" "$arm")
         printf '%-10s %-19s %s\n' "$dataset" "$arm" "$submission"
     done

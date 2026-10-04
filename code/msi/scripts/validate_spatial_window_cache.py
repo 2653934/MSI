@@ -12,15 +12,25 @@ from spatial_msipl.preprocessing import (
 )
 
 
+CACHE_VARIANTS = (
+    "uniform_p5", "zero_p3", "shuffled_p3",
+    "real_attention", "shuffled_attention",
+)
+
+
+def cache_context_mode(variant):
+    if variant not in CACHE_VARIANTS:
+        raise ValueError(f"unknown cache-validation variant: {variant}")
+    return "shuffled" if variant in ("shuffled_p3", "shuffled_attention") else "measured"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True)
     parser.add_argument("--window-size", required=True, type=int, choices=(3, 5))
-    parser.add_argument("--variant", required=True,
-                        choices=("uniform_p5", "zero_p3", "shuffled_p3",
-                                 "attention_real", "attention_shuffled"))
+    parser.add_argument("--variant", required=True, choices=CACHE_VARIANTS)
     args = parser.parse_args()
-    context_mode = "shuffled" if args.variant in ("shuffled_p3", "attention_shuffled") else "measured"
+    context_mode = cache_context_mode(args.variant)
     kwargs = dict(include_neighbourhood=True, window_size=args.window_size,
                   context_mode=context_mode,
                   context_seed=1701 if context_mode == "shuffled" else None)

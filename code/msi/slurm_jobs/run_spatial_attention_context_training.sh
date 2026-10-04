@@ -50,7 +50,14 @@ if [ -f "$FINAL_CHECKPOINT" ]; then
     exit 1
 fi
 
-mkdir -p "$OUTPUT" "$CHECKPOINT_OUTPUT"
+if ! mkdir -p "$OUTPUT" "$CHECKPOINT_OUTPUT"; then
+    # On the shared filesystem, simultaneous sibling directory creation can
+    # return EEXIST even when both requested directories now exist.
+    if [ ! -d "$OUTPUT" ] || [ ! -d "$CHECKPOINT_OUTPUT" ]; then
+        echo "Could not prepare both output directories for $DATASET $ARM" >&2
+        exit 1
+    fi
+fi
 cd "$PROJECT_ROOT"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env

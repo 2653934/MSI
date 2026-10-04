@@ -11,6 +11,7 @@ from spatial_msipl.model import NeighbourhoodSpatialVAE
 from spatial_msipl.neighbourhood import AttentionNeighbourhood
 from spatial_msipl.preprocessing import checkpoint_input_spec
 from train_spatial_msipl_production import variant_input_spec
+from validate_spatial_window_cache import cache_context_mode
 
 
 class AttentionContextControlTests(unittest.TestCase):
@@ -19,6 +20,8 @@ class AttentionContextControlTests(unittest.TestCase):
         self.assertEqual(
             variant_input_spec("attention_shuffled"), ("attention", "shuffled")
         )
+        self.assertEqual(cache_context_mode("real_attention"), "measured")
+        self.assertEqual(cache_context_mode("shuffled_attention"), "shuffled")
 
     def test_attention_weights_depend_on_the_central_spectrum(self):
         module = AttentionNeighbourhood(4, attention_dim=2, input_scale="sqrt_bins")
