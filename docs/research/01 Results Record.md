@@ -1,6 +1,6 @@
 # Results Record
 
-Last updated: 2026-10-03
+Last updated: 2026-10-04
 
 This is the main results ledger. Values are copied from the committed JSON and
 CSV outputs. “Complete” means the planned computation and audit finished; it
@@ -480,9 +480,8 @@ results establish that the sampled inputs carry different local information
 and that the saved models respond to it; they do **not** show that real context
 improves peak selection. The swaps are out-of-training-distribution
 interventions on training sections, not held-out performance or causal tests.
-The next diagnostic is to compare saved latent separability with the fitted
-GMM's behaviour, keeping representation, clustering and peak-ranking effects
-distinct.
+The saved-latent audit below separates representation, clustering and
+peak-ranking effects.
 
 ### Saved latent information versus the fitted GMM
 
@@ -504,9 +503,41 @@ training section*. Nearby pixels and the same patient/section can occur in
 both train and test folds, so its accuracy is not patient-independent
 validation and is **not** an unsupervised result. ARI and neighbour purity
 also use labels only for post-hoc assessment; none of these diagnostics is a
-peak-picking score or a causal explanation for mSCF1. A bounded next check
-will inspect covariance and KMeans on the same frozen latents, without
-retraining or choosing a clustering method by the expert mask. The completed
+peak-picking score or a causal explanation for mSCF1. A subsequent
+[frozen-latent clusterer audit](../../code/msi/results/diagnostics/spatial_unsupervised_clusterers/)
+compared covariance structures and KMeans without retraining or selecting by
+expert labels. Full-covariance GMM still had the lowest BIC on both tested
+sections; on `GBM22_2` real context, a tied-covariance GMM had much higher
+post-hoc class ARI (0.899 versus 0.165) but substantially worse BIC. Thus
+changing the clusterer solely to improve agreement with the expert mask would
+be label-guided method selection, not an unsupervised correction. The completed
 48-arm window campaign does not support promoting fixed uniform averaging
 as the final spatial method; it remains a useful control while learned
 neighbourhood mechanisms are investigated.
+
+### Targeted learned-attention context check (4 October 2026)
+
+Matched real-context and seeded nonlocal shuffled-context attention models
+were trained for 100 epochs at seed 1 on `160TopL` and `GBM22_2`. All four
+local training, reconstruction, attribution and peak-evaluation summaries
+report complete or valid status. At the frozen section peak count, Integrated
+Gradients gave:
+
+| Section | Peaks | Real attention mSCF1 | Shuffled attention mSCF1 |
+|---|---:|---:|---:|
+| `160TopL` | 210 | 0.4662 | 0.4618 |
+| `GBM22_2` | 464 | 0.4364 | 0.4422 |
+
+The real-minus-shuffled differences are +0.0044 and -0.0058 respectively;
+these two single-seed sections do not establish a consistent spatial-specific
+peak-selection advantage for learned attention. On `GBM22_2`, post-hoc GMM
+class ARI was 0.147 for real attention and 0.204 for shuffled attention, so
+the earlier uniform-mean model's large shuffled-GMM advantage does not simply
+carry over to this learned aggregator. See the
+[four attention result sets](../../code/msi/results/experiments/spatial_attention_context/).
+The next frozen-model ablation will rank peak bins from centre-only,
+neighbour-only and combined Integrated Gradients contributions on these same
+four saved models, using the same section-matched peak count and no
+retraining. It tests which input branch supplies the selected signal; it is
+not a new independent validation set. Target-choice and input-swap controls
+remain possible follow-ups rather than results of this run.

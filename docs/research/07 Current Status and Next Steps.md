@@ -1,6 +1,6 @@
 # Current Status and Next Steps
 
-Last updated: 2026-10-03
+Last updated: 2026-10-04
 
 The [main results record](01%20Results%20Record.md) now includes the cached
 GBM training result, the S3PL versus cached-VAE phase probe, and the CAC
@@ -60,18 +60,34 @@ checks establish which model claims survive.
   information is accessible to a post-hoc label-trained probe in both real
   and shuffled models, while the label-free GMM gives different partitions;
   see the [results record](01%20Results%20Record.md#saved-latent-information-versus-the-fitted-gmm).
+- Frozen-latent covariance/KMeans audit completed without expert-label
+  selection; full GMM remained the BIC choice, while a different covariance
+  assumption could change post-hoc class agreement.
+- Real-versus-shuffled learned-attention training and matched-count evaluation
+  completed on `160TopL` and `GBM22_2`. The mSCF1 differences are small and
+  opposite in sign; see the
+  [results record](01%20Results%20Record.md#targeted-learned-attention-context-check-4-october-2026).
 
 ## Immediate next step
 
-Run one bounded covariance/KMeans check on the same frozen latents, without
-retraining or selecting by expert labels, then return to learned-neighbourhood
-mechanisms and section-level peak-ranking differences. The input audit shows
-that shuffling changes local information, and frozen models respond in
-training-section reconstruction; the latent audit shows that accessible
-class information and the GMM's chosen partition are different questions.
-None explains the near-tied mSCF1 by itself. Keep the S3PL protocol and
-runtime gap investigation separate. If a spatial-specific claim survives,
-confirm it with targeted additional training seeds.
+Run the bounded frozen Integrated Gradients contribution-ranking ablation on
+the four completed attention models: rank bins from centre-only,
+neighbour-only and combined contributions at the same section-matched peak
+count, with no retraining. This asks whether the selected peaks depend on the
+neighbour branch even when total mSCF1 is near-tied. Target-choice and
+input-swap controls are subsequent options. The input, latent and clusterer
+audits establish different pieces of the pipeline but do not explain the
+near-tied peak scores by themselves. Keep the S3PL protocol/runtime gap
+investigation separate; any promising spatial-specific claim needs targeted
+training-seed confirmation.
+
+The RCC third-dataset option is intentionally parked. The cluster archive was
+transferred, SHA-256 verified and found to contain `rcc.rda`, but the
+[archive-audit log](../../code/msi/logs/rcc-audit-63930.out) shows Cardinal is
+not available on the compute node, so the dataset-content audit did not run.
+Its available labels are coarse for the current section-level peak-scoring
+protocol. Do not treat RCC as a ready validation cohort or divert the present
+attention diagnostic to an unvalidated third-dataset run.
 
 ## Whole-GBM attribution result
 
