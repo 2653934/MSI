@@ -7,7 +7,7 @@
 #SBATCH --mem=48G
 #SBATCH --time=16:00:00
 #SBATCH --exclusive
-#SBATCH --exclude=mscluster44,mscluster45,mscluster48,mscluster50,mscluster51,mscluster57,mscluster62,mscluster65,mscluster74,mscluster75,mscluster76,mscluster83
+#SBATCH --exclude=mscluster44,mscluster45,mscluster48,mscluster50,mscluster51,mscluster57,mscluster59,mscluster62,mscluster65,mscluster74,mscluster75,mscluster76,mscluster83
 #SBATCH --output=logs/attention-swap-all-%A_%a.out
 #SBATCH --error=logs/attention-swap-all-%A_%a.err
 
