@@ -67,19 +67,21 @@ checks establish which model claims survive.
   completed on `160TopL` and `GBM22_2`. The mSCF1 differences are small and
   opposite in sign; see the
   [results record](01%20Results%20Record.md#targeted-learned-attention-context-check-4-october-2026).
+- Frozen attention IG contribution-ranking ablation completed on both
+  sections: combined-score reproduction passed, and real-neighbour-only
+  rankings beat shuffled-neighbour-only rankings, but combined scores remain
+  mixed. See the
+  [results record](01%20Results%20Record.md#frozen-attention-integrated-gradients-contribution-ablation).
 
 ## Immediate next step
 
-Run the bounded frozen Integrated Gradients contribution-ranking ablation on
-the four completed attention models: rank bins from centre-only,
-neighbour-only and combined contributions at the same section-matched peak
-count, with no retraining. This asks whether the selected peaks depend on the
-neighbour branch even when total mSCF1 is near-tied. Target-choice and
-input-swap controls are subsequent options. The input, latent and clusterer
-audits establish different pieces of the pipeline but do not explain the
-near-tied peak scores by themselves. Keep the S3PL protocol/runtime gap
-investigation separate; any promising spatial-specific claim needs targeted
-training-seed confirmation.
+Design a bounded same-checkpoint input-swap/topology counterfactual before
+claiming spatial specificity. The completed centre/neighbour ranking ablation
+shows that real-neighbour contributions can rank peaks better, but its real
+and shuffled models and GMMs differ; it does not isolate topology causally.
+Target-choice controls may follow if that distinction remains unresolved.
+Keep the S3PL protocol/runtime gap investigation separate; any promising
+spatial-specific claim needs targeted training-seed confirmation.
 
 The RCC third-dataset option is intentionally parked. The cluster archive was
 transferred, SHA-256 verified and found to contain `rcc.rda`, but the

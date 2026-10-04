@@ -535,9 +535,33 @@ class ARI was 0.147 for real attention and 0.204 for shuffled attention, so
 the earlier uniform-mean model's large shuffled-GMM advantage does not simply
 carry over to this learned aggregator. See the
 [four attention result sets](../../code/msi/results/experiments/spatial_attention_context/).
-The next frozen-model ablation will rank peak bins from centre-only,
-neighbour-only and combined Integrated Gradients contributions on these same
-four saved models, using the same section-matched peak count and no
-retraining. It tests which input branch supplies the selected signal; it is
-not a new independent validation set. Target-choice and input-swap controls
-remain possible follow-ups rather than results of this run.
+The following frozen-model ablation separates the Integrated Gradients
+contributions of the centre and neighbour input branches without retraining.
+
+### Frozen attention Integrated Gradients contribution ablation
+
+For each saved attention model, only the *ranking score* changed: combined,
+centre contribution alone, or neighbour contribution alone. The model,
+fitted GMM, IG target and sampled pixels stayed fixed within an arm. Both
+[ablation summaries](../../code/msi/results/diagnostics/spatial_ig_component_ablation/)
+are valid and reproduce the original combined ranking exactly.
+
+| Section and context | Matched bins | Combined mSCF1 | Centre-only mSCF1 | Neighbour-only mSCF1 |
+|---|---:|---:|---:|---:|
+| `160TopL` real | 210 | 0.4662 | 0.4593 | 0.4507 |
+| `160TopL` shuffled | 210 | 0.4618 | 0.4593 | 0.4232 |
+| `GBM22_2` real | 464 | 0.4364 | 0.4306 | 0.4252 |
+| `GBM22_2` shuffled | 464 | 0.4422 | 0.4545 | 0.3122 |
+
+Real-neighbour-only rankings beat shuffled-neighbour-only rankings on both
+sections, by 0.0275 and 0.1130 mSCF1. Yet the combined real-versus-shuffled
+comparison remains mixed. Central input also accounts for the larger share
+of absolute IG magnitude in every GMM component: 0.598-0.703 in real and
+0.739-0.755 in shuffled `160TopL` models; 0.532-0.576 in real and
+0.702-0.742 in shuffled `GBM22_2` models. These are contributions within
+*jointly trained contextual models*, not scores from separately trained
+centre-only and neighbour-only models. The real and shuffled arms have their
+own trained weights and GMMs, so their component-ranking difference is not
+causal proof that spatial topology improves peak selection. A bounded
+same-checkpoint input-swap or topology counterfactual is the next logical
+test before asserting spatial specificity.
