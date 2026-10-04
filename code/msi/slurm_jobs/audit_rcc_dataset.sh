@@ -28,10 +28,22 @@ tar -tzf "$ARCHIVE" CardinalWorkflows/data/rcc.rda >/dev/null
 echo "rcc.rda exists inside the archive"
 
 if ! command -v Rscript >/dev/null 2>&1; then
-    echo "Rscript is unavailable on this compute node. Dataset-content audit not run." >&2
-    echo "Check 'module avail R' or an existing R environment; do not install packages on the login node." >&2
+    if ! type module >/dev/null 2>&1 && [ -f /etc/profile.d/lmod.sh ]; then
+        # Batch shells may not initialize Lmod even when login shells do.
+        source /etc/profile.d/lmod.sh
+    fi
+    if ! type module >/dev/null 2>&1; then
+        echo "Lmod is unavailable in this batch shell; cannot load the cluster R module." >&2
+        exit 2
+    fi
+    module load R/r-ubuntu-26.04-all-packages-00
+fi
+if ! command -v Rscript >/dev/null 2>&1; then
+    echo "Rscript is still unavailable after loading the R module. Dataset-content audit not run." >&2
     exit 2
 fi
+echo "Rscript: $(command -v Rscript)"
+Rscript --version
 if ! Rscript -e 'quit(status=if (requireNamespace("Cardinal", quietly=TRUE)) 0 else 1)'; then
     echo "R is present but the Cardinal package is unavailable. Dataset-content audit not run." >&2
     exit 2
