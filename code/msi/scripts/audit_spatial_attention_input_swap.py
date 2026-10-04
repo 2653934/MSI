@@ -17,7 +17,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from run_spatial_msipl_gmm_integrated_gradients import load_model, state_sha256
+from run_spatial_msipl_gmm_integrated_gradients import (
+    encode_all, load_model, state_sha256, torch_gmm_parameters,
+)
 from spatial_msipl.attribution import gmm_posterior
 from spatial_msipl.preprocessing import CachedH5SpatialContextDataset, checkpoint_input_spec
 
@@ -167,13 +169,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
-    parser.add_argument("--attribution-dir", required=True, type=Path)
+    gmm_source = parser.add_mutually_exclusive_group(required=True)
+    gmm_source.add_argument("--attribution-dir", type=Path)
+    gmm_source.add_argument("--fit-gmm-components", type=int, choices=(2, 3))
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--shuffle-seed", type=int, default=1701)
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--gmm-seed", type=int, default=1)
+    parser.add_argument("--gmm-n-init", type=int, default=20)
     args = parser.parse_args()
     if args.batch_size < 1:
         parser.error("batch size must be positive")
+    if args.gmm_n_init < 1:
+        parser.error("gmm-n-init must be positive")
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA unavailable; input-swap audit stopped before loading model")
     checkpoint = torch.load(args.checkpoint, map_location="cpu")
@@ -182,10 +190,12 @@ def main():
         raise ValueError("audit requires a measured-context 3x3 checkpoint")
     if checkpoint["model_configuration"]["neighbourhood"].get("input_scale_name") != "sqrt_bins":
         raise ValueError("audit requires corrected attention scaling")
-    with (args.attribution_dir / "summary.json").open(encoding="utf-8") as handle:
-        attribution_summary = json.load(handle)
-    if attribution_summary["status"] != "valid":
-        raise ValueError("original attribution must be valid")
+    attribution_summary = None
+    if args.attribution_dir is not None:
+        with (args.attribution_dir / "summary.json").open(encoding="utf-8") as handle:
+            attribution_summary = json.load(handle)
+        if attribution_summary["status"] != "valid":
+            raise ValueError("original attribution must be valid")
     # The inherited sample path performs exactly the usual TIC normalization;
     # caching avoids two passes of random HDF5 reads over every neighbour slot.
     real = CachedH5SpatialContextDataset(
@@ -199,28 +209,68 @@ def main():
         device = torch.device("cuda")
         model, _ = load_model(args.checkpoint, real.n_mz, "attention", device, checkpoint)
         checkpoint_sha = state_sha256(model)
-        if attribution_summary["model_state_sha256"] != checkpoint_sha:
-            raise ValueError("attribution and intervention model weights differ")
-        if Path(attribution_summary["dataset"]).name != args.input.name:
-            raise ValueError("attribution and intervention sections differ")
-        gmm = fixed_gmm_parameters(args.attribution_dir / "gmm_parameters.npz", device)
-        with np.load(args.attribution_dir / "coordinates_and_gmm.npz") as saved:
-            if not np.array_equal(saved["x"], real.x) or not np.array_equal(saved["y"], real.y):
-                raise ValueError("saved GMM pixel coordinates do not match input")
-            labels = saved["component"].copy()
-            confidence = saved["assigned_posterior"].copy()
-        latent = np.load(args.attribution_dir / "latent_mean.npy")
+        if attribution_summary is not None:
+            if attribution_summary["model_state_sha256"] != checkpoint_sha:
+                raise ValueError("attribution and intervention model weights differ")
+            if Path(attribution_summary["dataset"]).name != args.input.name:
+                raise ValueError("attribution and intervention sections differ")
+            parameters_path = args.attribution_dir / "gmm_parameters.npz"
+            gmm = fixed_gmm_parameters(parameters_path, device)
+            with np.load(args.attribution_dir / "coordinates_and_gmm.npz") as saved:
+                if not np.array_equal(saved["x"], real.x) or not np.array_equal(saved["y"], real.y):
+                    raise ValueError("saved GMM pixel coordinates do not match input")
+                labels = saved["component"].copy()
+                confidence = saved["assigned_posterior"].copy()
+            latent = np.load(args.attribution_dir / "latent_mean.npy")
+            gmm_provenance = {
+                "source": "pre-existing real-input attribution",
+                "parameters": str(parameters_path),
+                "components": attribution_summary["gmm"]["components"],
+            }
+        else:
+            # Fit once on the unperturbed latent vectors; never refit after the
+            # neighbour swap. This avoids running costly IG on 14 new sections.
+            from sklearn.mixture import GaussianMixture
+            from sklearn.preprocessing import StandardScaler
+
+            latent, _ = encode_all(model, real, args.batch_size, device)
+            scaler = StandardScaler().fit(latent)
+            mixture = GaussianMixture(
+                n_components=args.fit_gmm_components, covariance_type="full",
+                n_init=args.gmm_n_init, random_state=args.gmm_seed,
+            ).fit(scaler.transform(latent))
+            labels = mixture.predict(scaler.transform(latent))
+            posterior = mixture.predict_proba(scaler.transform(latent))
+            confidence = posterior[np.arange(len(real)), labels]
+            gmm = torch_gmm_parameters(scaler, mixture, device)
+            args.output.mkdir(parents=True, exist_ok=True)
+            parameters_path = args.output / "fixed_real_input_gmm.npz"
+            np.savez(
+                parameters_path,
+                scaler_mean=scaler.mean_, scaler_scale=scaler.scale_,
+                mixture_weights=mixture.weights_, component_means=mixture.means_,
+                precision_cholesky=mixture.precisions_cholesky_,
+                original_component=labels, original_confidence=confidence,
+                original_latent=latent, x=real.x, y=real.y,
+            )
+            gmm_provenance = {
+                "source": "fit once on real-input latent vectors",
+                "parameters": str(parameters_path),
+                "components": args.fit_gmm_components,
+                "n_init": args.gmm_n_init,
+                "seed": args.gmm_seed,
+            }
         metrics = evaluate_pair(
             model, real, shuffled, gmm, args.batch_size, device, labels, latent, confidence
         )
         result = {
             "status": "valid",
-            "scope": "in-sample same-checkpoint neighbour-input intervention; no retraining, GMM refit or peak evaluation",
+            "scope": "in-sample same-checkpoint neighbour-input intervention; GMM fixed between conditions; no retraining or peak evaluation",
             "section": args.input.stem,
             "input": str(args.input),
             "checkpoint": str(args.checkpoint),
             "checkpoint_state_sha256": checkpoint_sha,
-            "fixed_gmm": str(args.attribution_dir / "gmm_parameters.npz"),
+            "fixed_gmm": gmm_provenance,
             "window_size": 3,
             "spectra_io": "cached float32 HDF5 read, original per-sample TIC normalization",
             "shuffle_seed": args.shuffle_seed,

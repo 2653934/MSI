@@ -14,15 +14,17 @@
 set -eo pipefail
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: sbatch $0 {160TopL|GBM22_2} {real_attention|shuffled_attention}" >&2
+    echo "Usage: sbatch $0 SECTION {real_attention|shuffled_attention}" >&2
     exit 2
 fi
 
 DATASET="$1"
 ARM="$2"
 case "$DATASET" in
-    160TopL) INPUT=/datasets/zsuliman/msi_data/cac_msipl/160TopL.h5 ;;
-    GBM22_2) INPUT=/datasets/zsuliman/msi_data/gbm_massnet/GBM22_2.h5 ;;
+    40TopL|160TopL|200TopL|240TopL|280TopL|360TopL|400TopL|520TopL)
+        INPUT="/datasets/zsuliman/msi_data/cac_msipl/${DATASET}.h5" ;;
+    GBM108_positive|GBM108_negative|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
+        INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5" ;;
     *) echo "Unsupported attention-context dataset: $DATASET" >&2; exit 2 ;;
 esac
 case "$ARM" in

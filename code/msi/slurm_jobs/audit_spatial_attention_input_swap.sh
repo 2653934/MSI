@@ -14,12 +14,16 @@
 set -eo pipefail
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: sbatch $0 {160TopL|GBM22_2}" >&2
+    echo "Usage: sbatch $0 SECTION" >&2
     exit 2
 fi
 case "$1" in
-    160TopL) INPUT=/datasets/zsuliman/msi_data/cac_msipl/160TopL.h5 ;;
-    GBM22_2) INPUT=/datasets/zsuliman/msi_data/gbm_massnet/GBM22_2.h5 ;;
+    40TopL|160TopL|200TopL|240TopL|280TopL|360TopL|400TopL|520TopL)
+        INPUT="/datasets/zsuliman/msi_data/cac_msipl/${1}.h5"
+        GMM_COMPONENTS=3 ;;
+    GBM108_positive|GBM108_negative|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
+        INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${1}.h5"
+        GMM_COMPONENTS=2 ;;
     *) echo "Unsupported section: $1" >&2; exit 2 ;;
 esac
 
@@ -27,8 +31,8 @@ PROJECT_ROOT="$HOME/msi"
 CHECKPOINT="/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/${1}_seed1/real_attention/checkpoint.pt"
 ATTRIBUTION="$PROJECT_ROOT/results/experiments/spatial_attention_context/${1}_seed1/real_attention/attribution"
 OUTPUT="$PROJECT_ROOT/results/diagnostics/spatial_attention_input_swap/$1"
-if [ ! -f "$INPUT" ] || [ ! -f "$CHECKPOINT" ] || [ ! -f "$ATTRIBUTION/gmm_parameters.npz" ]; then
-    echo "Missing input, trained checkpoint or frozen attribution/GMM for $1" >&2
+if [ ! -f "$INPUT" ] || [ ! -f "$CHECKPOINT" ]; then
+    echo "Missing input or trained checkpoint for $1" >&2
     exit 1
 fi
 if grep -q '"status": "valid"' "$OUTPUT/summary.json" 2>/dev/null; then
@@ -56,9 +60,19 @@ PY
 
 python -m unittest discover -s src/spatial_msipl/tests -p test_attention_input_swap.py
 
+GMM_ARGS=(--fit-gmm-components "$GMM_COMPONENTS")
+if [ -d "$ATTRIBUTION" ]; then
+    if ! grep -q '"status": "valid"' "$ATTRIBUTION/summary.json" 2>/dev/null || \
+       [ ! -f "$ATTRIBUTION/gmm_parameters.npz" ]; then
+        echo "Existing attention attribution is incomplete for $1; refusing to fit a different GMM" >&2
+        exit 1
+    fi
+    GMM_ARGS=(--attribution-dir "$ATTRIBUTION")
+fi
+
 python -u scripts/audit_spatial_attention_input_swap.py \
     --input "$INPUT" \
     --checkpoint "$CHECKPOINT" \
-    --attribution-dir "$ATTRIBUTION" \
+    "${GMM_ARGS[@]}" \
     --output "$OUTPUT" \
     --shuffle-seed 1701 --batch-size 64
