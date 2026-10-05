@@ -586,3 +586,31 @@ spatial topology improves selected peaks: no Integrated Gradients ranking,
 matched-count mSCF1, or molecular interpretation was recomputed in this
 diagnostic. The separately trained real-versus-shuffled attention pilots and
 the component-ranking ablation above remain mixed on peak quality.
+
+### Frozen attention peak-ranking input swap (5 October 2026)
+
+The [two ranking-swap summaries](../../code/msi/results/diagnostics/spatial_attention_frozen_ranking_swap/)
+report `valid`. Each test reused one real-neighbour-trained attention
+checkpoint, its real-input GMM, the same attribution pixels and component
+targets, and the same section-specific peak budget. Only the neighbour spectra
+were shuffled when recomputing Integrated Gradients. The original real-input
+peak order and mSCF1 were reproduced exactly before scoring the shuffled
+ranking. These are *same-model input interventions*, unlike the separately
+trained real-versus-shuffled comparison above.
+
+| Development section | Matched bins | Real-input mSCF1 | Shuffled-input mSCF1 | Shared selected bins |
+|---|---:|---:|---:|---:|
+| `160TopL` | 210 | 0.4662 | 0.4843 | 179 |
+| `GBM22_2` | 464 | 0.4364 | 0.4678 | 411 |
+
+At PCC thresholds 0.3, 0.4, 0.5 and 0.6, the shuffled ranking added
+**9, 4, 0, 0** matched true-positive bins on `160TopL` and
+**13, 19, 23, 23** on `GBM22_2`, respectively, compared with the frozen
+real ranking. Integrated Gradients completeness passed in both sections.
+Neighbour input therefore changes some peak choices, but the observed changes
+do not favour *real* neighbours on either of these development sections.
+Because the checkpoint was trained on real neighbours, shuffled inputs may be
+out of distribution. Two sections and one seed cannot establish a
+collection-wide negative spatial effect; the next diagnostic is to inspect
+the gained and lost bins and their tissue maps before proposing a broader
+claim or another training campaign.

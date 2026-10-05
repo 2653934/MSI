@@ -40,56 +40,44 @@ pwd
 If using WSL, the equivalent path normally starts with
 `/mnt/c/Users/zayds/...`.
 
-## Recommended: collect only cluster artifacts
+## Recommended: one quiet cluster-to-local artifact pull
 
-This is the safest normal download. It brings back results, logs and
-reproducibility records without replacing local source code.
+Use this for ordinary downloads. It takes one SSH connection and brings back
+only `results/`, `logs/` and `reproducibility/`; it cannot replace local source
+code. It preserves file modification times for efficient incremental copies,
+but not directory times, Unix ownership or permissions, which create noisy
+metadata updates on the Windows-backed local folder. The exclude rules precede
+the includes deliberately, so large binary artifacts stay on the cluster.
 
-Preview the result transfer:
-
-```bash
-rsync -avzn --itemize-changes \
-  --exclude='__pycache__/' \
-  --exclude='*.py[cod]' \
-  --exclude='*.pt' \
-  --exclude='*.pth' \
-  --exclude='*.ckpt' \
-  zsuliman@146.141.21.100:/home-mscluster/zsuliman/msi/results/ \
-  ./results/
-```
-
-Collect all three artifact directories:
+From the local `code/msi` directory, preview by adding `-n --itemize-changes`
+after `rsync`, then run the same command without those preview options:
 
 ```bash
-rsync -avz --progress \
+rsync -azO --no-perms --no-owner --no-group --info=name1,stats1 \
+  --exclude='.git/' \
   --exclude='__pycache__/' \
   --exclude='*.py[cod]' \
   --exclude='*.pt' \
   --exclude='*.pth' \
   --exclude='*.ckpt' \
-  zsuliman@146.141.21.100:/home-mscluster/zsuliman/msi/results/ \
-  ./results/
-
-rsync -avz --progress \
-  --exclude='__pycache__/' \
-  --exclude='*.py[cod]' \
-  zsuliman@146.141.21.100:/home-mscluster/zsuliman/msi/logs/ \
-  ./logs/
-
-rsync -avz --progress \
-  --exclude='__pycache__/' \
-  --exclude='*.py[cod]' \
-  --exclude='*.pt' \
-  --exclude='*.pth' \
-  --exclude='*.ckpt' \
-  zsuliman@146.141.21.100:/home-mscluster/zsuliman/msi/reproducibility/ \
-  ./reproducibility/
+  --exclude='*.h5' \
+  --exclude='*.imzML' \
+  --exclude='*.ibd' \
+  --exclude='*.zip' \
+  --exclude='*.7z' \
+  --include='/results/***' \
+  --include='/logs/***' \
+  --include='/reproducibility/***' \
+  --exclude='*' \
+  zsuliman@146.141.21.100:/home-mscluster/zsuliman/msi/ \
+  ./
 ```
 
-These commands do not use `--delete`. A locally deleted file can therefore
-reappear if it still exists on the cluster. That is deliberate protection
-against accidentally deleting cluster evidence. Remove confirmed obsolete
-paths on both sides only after current jobs have finished.
+There is no `--delete`: locally removed files can still reappear if they remain
+on the cluster. That is deliberate protection against losing research evidence.
+
+Remove confirmed obsolete paths on both sides only after current jobs have
+finished.
 
 ## Upload source changes to the cluster
 

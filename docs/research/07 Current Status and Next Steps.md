@@ -78,16 +78,22 @@ checks establish which model claims survive.
   flips were 4.27% CAC and 8.48% GBM. This shows input sensitivity, not
   improved peak selection; no IG or mSCF1 was recomputed. See the
   [results record](01%20Results%20Record.md#frozen-learned-attention-neighbour-input-swap-5-october-2026).
+- Frozen attention peak-ranking input swap passed on `160TopL` and `GBM22_2`:
+  with checkpoint, real-input GMM, attribution pixels, component targets and
+  peak count fixed, shuffled neighbours changed 31/210 and 53/464 selected
+  bins and increased mSCF1 by 0.0181 and 0.0313. This is a bounded
+  same-model diagnostic, not evidence that shuffling helps in deployment.
+  See the [results record](01%20Results%20Record.md#frozen-attention-peak-ranking-input-swap-5-october-2026).
 
 ## Immediate next step
 
-Interpret the completed same-checkpoint swap alongside the centre/neighbour
-IG ablation: neighbour input affects reconstruction and fitted components,
-but the swap does not test peak-ranking benefit and may be out of
-distribution. Before making a spatial-specific peak-quality claim, run a
-bounded topology or ranking counterfactual with a predeclared comparison;
-target-choice controls may follow if that remains unresolved. Keep the S3PL
-protocol/runtime gap investigation separate. Any promising peak-quality gain
+Inspect which bins entered and left the two frozen peak lists, how their
+mask-correlation reference values differ, and whether their ion images track
+tissue or boundaries. This is the smallest next check on why shuffled input
+improved the development-section mSCF1 despite worsening reconstruction.
+Do not expand to another training campaign or claim a negative spatial effect
+from these two out-of-distribution input interventions. Keep the S3PL
+protocol/runtime gap investigation separate; any promising peak-quality gain
 still needs targeted training-seed confirmation.
 
 The RCC third-dataset option is intentionally parked. The cluster archive was
