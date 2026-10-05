@@ -1,0 +1,58 @@
+{
+  "status": "valid",
+  "scope": "same-checkpoint, same-GMM, same-pixel and component-target input-swap peak-ranking diagnostic",
+  "section": "160TopL",
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/160TopL_seed1/real_attention/checkpoint.pt",
+  "checkpoint_state_sha256": "de15905ea9ba87120c8d220e4f02df636b2b41ee9bd53f0ff5f3eb4952bf1300",
+  "original_attribution": "/home-mscluster/zsuliman/msi/results/experiments/spatial_attention_context/160TopL_seed1/real_attention/attribution",
+  "input_swap_audit": "/home-mscluster/zsuliman/msi/results/diagnostics/spatial_attention_input_swap/160TopL/summary.json",
+  "matched_count": 210,
+  "sampling": {
+    "pixels_per_component": 12,
+    "components": [
+      0,
+      1,
+      2
+    ],
+    "ig_steps": 64
+  },
+  "pcc_thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6
+  ],
+  "real": {
+    "mSCF1": 0.46617107007992364,
+    "mixed_f1": {
+      "0.3": 0.7165775401069518,
+      "0.4": 0.6422018348623854,
+      "0.5": 0.3893129770992366,
+      "0.6": 0.11659192825112108
+    }
+  },
+  "shuffled": {
+    "mSCF1": 0.4843193635924913,
+    "mixed_f1": {
+      "0.3": 0.7647058823529411,
+      "0.4": 0.6666666666666666,
+      "0.5": 0.3893129770992366,
+      "0.6": 0.11659192825112108
+    }
+  },
+  "shuffled_minus_real_mSCF1": 0.018148293512567637,
+  "matched_peak_overlap": 179,
+  "shuffled_ig_completeness": {
+    "passed": true,
+    "median_normalized_residual": 0.0003867633356266091,
+    "percentile_95_normalized_residual": 0.005845612337336225,
+    "maximum_absolute_residual": 0.0037203431129455566
+  },
+  "runtime_seconds": 8.173114422010258,
+  "limitations": [
+    "The model was trained with real neighbours; shuffled inputs may be out of distribution.",
+    "The original real-input GMM targets and attribution pixels are held fixed.",
+    "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
+    "One seed and two development sections cannot establish collection-wide benefit or generalisation."
+  ]
+}

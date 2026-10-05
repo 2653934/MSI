@@ -10,6 +10,7 @@ mechanism diagnostic, not an estimate of generalisation performance.
 import argparse
 import csv
 import json
+import resource
 import time
 from pathlib import Path
 
@@ -260,6 +261,8 @@ def main():
             "shuffled_minus_real_mSCF1": shuffled_score["mSCF1"] - real_score["mSCF1"],
             "matched_peak_overlap": overlap,
             "shuffled_ig_completeness": completeness,
+            "peak_process_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
+            "peak_pytorch_gpu_allocated_bytes": torch.cuda.max_memory_allocated(device),
             "runtime_seconds": time.perf_counter() - started,
             "limitations": [
                 "The model was trained with real neighbours; shuffled inputs may be out of distribution.",
