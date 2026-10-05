@@ -1,0 +1,59 @@
+{
+  "status": "valid",
+  "scope": "same-checkpoint, same-GMM, same-pixel and component-target input-swap peak-ranking diagnostic",
+  "section": "GBM22_2",
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/GBM22_2_seed1/real_attention/checkpoint.pt",
+  "checkpoint_state_sha256": "7e0b5eaf05453c79ed925417d862f19c86659316d863c5bbce27b45879c65b94",
+  "original_attribution": "/home-mscluster/zsuliman/msi/results/experiments/spatial_attention_context/GBM22_2_seed1/real_attention/attribution",
+  "input_swap_audit": "/home-mscluster/zsuliman/msi/results/diagnostics/spatial_attention_input_swap/GBM22_2/summary.json",
+  "matched_count": 464,
+  "sampling": {
+    "pixels_per_component": 12,
+    "components": [
+      0,
+      1
+    ],
+    "ig_steps": 64
+  },
+  "pcc_thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6
+  ],
+  "real": {
+    "mSCF1": 0.43644709993897235,
+    "mixed_f1": {
+      "0.3": 0.3957559681697613,
+      "0.4": 0.428958051420839,
+      "0.5": 0.45,
+      "0.6": 0.47107438016528924
+    }
+  },
+  "shuffled": {
+    "mSCF1": 0.46778647929507877,
+    "mixed_f1": {
+      "0.3": 0.4095490716180371,
+      "0.4": 0.4546684709066306,
+      "0.5": 0.48833333333333334,
+      "0.6": 0.518595041322314
+    }
+  },
+  "shuffled_minus_real_mSCF1": 0.03133937935610642,
+  "matched_peak_overlap": 411,
+  "shuffled_ig_completeness": {
+    "passed": true,
+    "median_normalized_residual": 0.0019122822526706535,
+    "percentile_95_normalized_residual": 0.026896742186872317,
+    "maximum_absolute_residual": 0.001035153865814209
+  },
+  "peak_process_rss_bytes": 8260018176,
+  "peak_pytorch_gpu_allocated_bytes": 685192192,
+  "runtime_seconds": 106.77147912210785,
+  "limitations": [
+    "The model was trained with real neighbours; shuffled inputs may be out of distribution.",
+    "The original real-input GMM targets and attribution pixels are held fixed.",
+    "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
+    "One seed and two development sections cannot establish collection-wide benefit or generalisation."
+  ]
+}
