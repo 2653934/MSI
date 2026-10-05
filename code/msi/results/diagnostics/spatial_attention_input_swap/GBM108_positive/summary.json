@@ -1,0 +1,40 @@
+{
+  "status": "valid",
+  "scope": "in-sample same-checkpoint neighbour-input intervention; GMM fixed between conditions; no retraining or peak evaluation",
+  "section": "GBM108_positive",
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM108_positive.h5",
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/GBM108_positive_seed1/real_attention/checkpoint.pt",
+  "checkpoint_state_sha256": "dd8910b0a6625645aefda81d81f42f6fbdeccd9e27d681bd1f0a382aec589de6",
+  "fixed_gmm": {
+    "source": "fit once on real-input latent vectors",
+    "parameters": "/home-mscluster/zsuliman/msi/results/diagnostics/spatial_attention_input_swap/GBM108_positive/fixed_real_input_gmm.npz",
+    "components": 2,
+    "n_init": 20,
+    "seed": 1
+  },
+  "window_size": 3,
+  "spectra_io": "cached float32 HDF5 read, original per-sample TIC normalization",
+  "shuffle_seed": 1701,
+  "shuffle_source_slots_sha256": "6955467d1e201516cc2a40f7e5b870b5b83a0682639bdca21cab12163967d3f1",
+  "metrics": {
+    "pixels": 2071,
+    "real_reconstruction_mse": 6.603703030164668e-09,
+    "shuffled_reconstruction_mse": 8.98819585351429e-09,
+    "shuffled_minus_real_mse": 2.384492823349621e-09,
+    "real_scaled_cross_entropy": 571120.6610484066,
+    "shuffled_scaled_cross_entropy": 574790.3583112023,
+    "shuffled_minus_real_scaled_cross_entropy": 3669.6972627957507,
+    "mean_latent_l2_change": 1.8390114637912902,
+    "mean_gmm_posterior_total_variation": 0.07611085766924999,
+    "mean_original_component_posterior_drop": 0.06424770088716154,
+    "fixed_gmm_label_flip_fraction": 0.07822308063737325,
+    "changed_context_fraction": 1.0,
+    "baseline_latent_max_absolute_error": 0.0,
+    "baseline_confidence_max_absolute_error": 7.152557373046875e-07
+  },
+  "limitations": [
+    "The model was trained on real neighbours, so shuffled inputs may be out of distribution.",
+    "One fixed seed and section do not establish reproducibility.",
+    "No Integrated Gradients or mSCF1 ranking is recomputed here."
+  ]
+}

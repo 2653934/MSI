@@ -1,0 +1,40 @@
+{
+  "status": "valid",
+  "scope": "in-sample same-checkpoint neighbour-input intervention; GMM fixed between conditions; no retraining or peak evaluation",
+  "section": "GBM39_1",
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM39_1.h5",
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/GBM39_1_seed1/real_attention/checkpoint.pt",
+  "checkpoint_state_sha256": "2633dad2f18ca0324532f23c9ef37cb1b5b4316f7dd186d2bb05fc73e461c274",
+  "fixed_gmm": {
+    "source": "fit once on real-input latent vectors",
+    "parameters": "/home-mscluster/zsuliman/msi/results/diagnostics/spatial_attention_input_swap/GBM39_1/fixed_real_input_gmm.npz",
+    "components": 2,
+    "n_init": 20,
+    "seed": 1
+  },
+  "window_size": 3,
+  "spectra_io": "cached float32 HDF5 read, original per-sample TIC normalization",
+  "shuffle_seed": 1701,
+  "shuffle_source_slots_sha256": "50afb549e3cf96e0dc774c2acc6e6eca99aa1e7e917b1e9b1eb0b0bd30c5162c",
+  "metrics": {
+    "pixels": 4015,
+    "real_reconstruction_mse": 2.301663464705522e-09,
+    "shuffled_reconstruction_mse": 7.272722220052875e-09,
+    "shuffled_minus_real_mse": 4.971058755347352e-09,
+    "real_scaled_cross_entropy": 569315.5509262142,
+    "shuffled_scaled_cross_entropy": 576604.5870641345,
+    "shuffled_minus_real_scaled_cross_entropy": 7289.036137920299,
+    "mean_latent_l2_change": 2.046747043572951,
+    "mean_gmm_posterior_total_variation": 0.08974575520860843,
+    "mean_original_component_posterior_drop": 0.060365295358197034,
+    "fixed_gmm_label_flip_fraction": 0.09190535491905355,
+    "changed_context_fraction": 1.0,
+    "baseline_latent_max_absolute_error": 0.0,
+    "baseline_confidence_max_absolute_error": 7.748603820800781e-07
+  },
+  "limitations": [
+    "The model was trained on real neighbours, so shuffled inputs may be out of distribution.",
+    "One fixed seed and section do not establish reproducibility.",
+    "No Integrated Gradients or mSCF1 ranking is recomputed here."
+  ]
+}
