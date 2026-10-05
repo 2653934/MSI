@@ -288,7 +288,7 @@ def main():
                 "The original real-input GMM targets and attribution pixels are held fixed.",
                 "For sections where the earlier reconstruction audit fitted its own GMM, its GMM is not the ranking GMM.",
                 "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
-                "One seed and two development sections cannot establish collection-wide benefit or generalisation.",
+                "One training seed per section cannot establish seed-level reproducibility or independent-patient generalisation.",
             ],
         }
         args.output.mkdir(parents=True, exist_ok=True)

@@ -5,6 +5,17 @@ PROJECT_ROOT="$HOME/msi"
 cd "$PROJECT_ROOT"
 DATASETS=(40TopL 160TopL 200TopL 240TopL 280TopL 360TopL 400TopL 520TopL
           GBM108_positive GBM108_negative GBM12_1 GBM12_2 GBM22_1 GBM22_2 GBM39_1 GBM39_2)
+CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
+if [ ! -f "$CUDA_QUARANTINE_FILE" ]; then
+    echo "Missing CUDA quarantine list: $CUDA_QUARANTINE_FILE" >&2
+    exit 1
+fi
+EXCLUDES=$(sed -e 's/\r$//' -e 's/#.*$//' -e '/^[[:space:]]*$/d' \
+    "$CUDA_QUARANTINE_FILE" | sort -u | paste -sd, -)
+if [ -z "$EXCLUDES" ]; then
+    echo "CUDA quarantine list is empty; review it before submitting." >&2
+    exit 1
+fi
 
 active_jobs=$(squeue -u "$USER" -h -n attention-rank-all)
 if [ -n "$active_jobs" ]; then
@@ -39,8 +50,10 @@ if [ "${#missing[@]}" -eq 0 ]; then
     exit 0
 fi
 indices=$(IFS=,; echo "${missing[*]}")
-sbatch --array="${indices}%2" slurm_jobs/run_spatial_attention_frozen_ranking_campaign_array.sh
+sbatch --exclude="$EXCLUDES" --array="${indices}%2" \
+    slurm_jobs/run_spatial_attention_frozen_ranking_campaign_array.sh
 echo "Submitted ${#missing[@]} missing sections; at most two allocations run together."
 echo "Array indices: $indices"
+echo "Excluded nodes with directly observed CUDA failures: $EXCLUDES"
 echo 'Monitor with: squeue -u "$USER" -o "%.18i %.24j %.2t %.10M %.24R"'
 echo "Audit with: bash slurm_jobs/check_spatial_attention_frozen_ranking_campaign.sh"
