@@ -1,6 +1,8 @@
 """Small non-GPU checks for the frozen attention ranking intervention."""
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 
@@ -8,6 +10,7 @@ from evaluate_spatial_attention_frozen_ranking_swap import (
     completeness_summary,
     component_rankings,
     selected_pixel_indices,
+    validate_gmm_provenance,
 )
 
 
@@ -36,6 +39,29 @@ class FrozenRankingSwapTests(unittest.TestCase):
         self.assertTrue(completeness_summary(checks)["passed"])
         checks[0] = {"completeness_residual": 0.1, "score_delta": 0.1}
         self.assertFalse(completeness_summary(checks)["passed"])
+
+    def test_input_swap_gmm_provenance_is_explicit(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            attribution = root / "attribution"
+            attribution.mkdir()
+            original = attribution / "gmm_parameters.npz"
+            original.touch()
+            separate = root / "fixed_real_input_gmm.npz"
+            separate.touch()
+            self.assertTrue(validate_gmm_provenance(
+                {"source": "pre-existing real-input attribution", "parameters": str(original)},
+                attribution,
+            ))
+            self.assertFalse(validate_gmm_provenance(
+                {"source": "fit once on real-input latent vectors", "parameters": str(separate)},
+                attribution,
+            ))
+            with self.assertRaisesRegex(ValueError, "different attribution GMM"):
+                validate_gmm_provenance(
+                    {"source": "pre-existing real-input attribution", "parameters": str(separate)},
+                    attribution,
+                )
 
 
 if __name__ == "__main__":

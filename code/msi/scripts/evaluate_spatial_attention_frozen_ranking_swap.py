@@ -91,6 +91,28 @@ def completeness_summary(diagnostics):
     }
 
 
+def validate_gmm_provenance(fixed_gmm, attribution_dir):
+    """Identify whether the earlier reconstruction audit used the same GMM.
+
+    The ranking comparison itself always freezes the original real-input
+    attribution GMM. For sections audited before attribution existed, the
+    reconstruction audit fitted its own real-input GMM; that provenance is
+    recorded, not silently presented as an identical GMM.
+    """
+    source = fixed_gmm.get("source")
+    if source == "pre-existing real-input attribution":
+        if Path(fixed_gmm.get("parameters", "")).resolve() != (
+            attribution_dir / "gmm_parameters.npz"
+        ).resolve():
+            raise ValueError("the input-swap audit used a different attribution GMM")
+        return True
+    if source == "fit once on real-input latent vectors":
+        if not Path(fixed_gmm.get("parameters", "")).is_file():
+            raise ValueError("the earlier input-swap GMM parameters are missing")
+        return False
+    raise ValueError("unrecognised input-swap GMM provenance")
+
+
 def save_plot(result, path):
     thresholds = result["pcc_thresholds"]
     real = result["real"]["mixed_f1"]
@@ -141,12 +163,7 @@ def main():
     if swap_summary.get("section") != section:
         raise ValueError("the input-swap audit refers to another section")
     fixed_gmm = swap_summary.get("fixed_gmm", {})
-    if fixed_gmm.get("source") != "pre-existing real-input attribution":
-        raise ValueError("the input-swap audit did not freeze the original real-input GMM")
-    if Path(fixed_gmm.get("parameters", "")).resolve() != (
-        args.attribution_dir / "gmm_parameters.npz"
-    ).resolve():
-        raise ValueError("the input-swap audit used a different GMM")
+    reconstruction_audit_gmm_aligned = validate_gmm_provenance(fixed_gmm, args.attribution_dir)
     if int(evaluation_summary["matched_peak_evaluation"]["count"]) != args.matched_count:
         raise ValueError("matched count differs from the original peak evaluation")
     if int(real_summary["integrated_gradients"]["steps"]) != args.ig_steps:
@@ -252,6 +269,8 @@ def main():
             "checkpoint_state_sha256": model_sha,
             "original_attribution": str(args.attribution_dir),
             "input_swap_audit": str(args.input_swap_summary),
+            "ranking_gmm": str(args.attribution_dir / "gmm_parameters.npz"),
+            "reconstruction_audit_gmm_aligned": reconstruction_audit_gmm_aligned,
             "matched_count": args.matched_count,
             "sampling": {"pixels_per_component": len(next(iter(selected.values()))),
                          "components": components, "ig_steps": args.ig_steps},
@@ -267,6 +286,7 @@ def main():
             "limitations": [
                 "The model was trained with real neighbours; shuffled inputs may be out of distribution.",
                 "The original real-input GMM targets and attribution pixels are held fixed.",
+                "For sections where the earlier reconstruction audit fitted its own GMM, its GMM is not the ranking GMM.",
                 "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
                 "One seed and two development sections cannot establish collection-wide benefit or generalisation.",
             ],

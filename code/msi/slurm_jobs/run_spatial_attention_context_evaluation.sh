@@ -14,24 +14,40 @@
 set -eo pipefail
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: sbatch $0 {160TopL|GBM22_2} {real_attention|shuffled_attention}" >&2
+    echo "Usage: sbatch $0 SECTION {real_attention|shuffled_attention}" >&2
     exit 2
 fi
 
 DATASET="$1"
 ARM="$2"
 case "$DATASET" in
-    160TopL)
-        INPUT=/datasets/zsuliman/msi_data/cac_msipl/160TopL.h5
-        LEGACY_DIR="$HOME/msi/results/baselines/msipl/cac/160TopL"
-        GMM_COMPONENTS=3
-        MATCHED_COUNT=210 ;;
-    GBM22_2)
-        INPUT=/datasets/zsuliman/msi_data/gbm_massnet/GBM22_2.h5
-        LEGACY_DIR="$HOME/msi/results/baselines/msipl/massnet/GBM22_2"
-        GMM_COMPONENTS=2
-        MATCHED_COUNT=464 ;;
+    40TopL|160TopL|200TopL|240TopL|280TopL|360TopL|400TopL|520TopL)
+        INPUT="/datasets/zsuliman/msi_data/cac_msipl/${DATASET}.h5"
+        LEGACY_DIR="$HOME/msi/results/baselines/msipl/cac/$DATASET"
+        GMM_COMPONENTS=3 ;;
+    GBM108_positive|GBM108_negative|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
+        INPUT="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
+        LEGACY_DIR="$HOME/msi/results/baselines/msipl/massnet/$DATASET"
+        GMM_COMPONENTS=2 ;;
     *) echo "Unsupported attention-context dataset: $DATASET" >&2; exit 2 ;;
+esac
+case "$DATASET" in
+    40TopL) MATCHED_COUNT=315 ;;
+    160TopL) MATCHED_COUNT=210 ;;
+    200TopL) MATCHED_COUNT=221 ;;
+    240TopL) MATCHED_COUNT=255 ;;
+    280TopL) MATCHED_COUNT=245 ;;
+    360TopL) MATCHED_COUNT=247 ;;
+    400TopL) MATCHED_COUNT=133 ;;
+    520TopL) MATCHED_COUNT=232 ;;
+    GBM108_positive) MATCHED_COUNT=530 ;;
+    GBM108_negative) MATCHED_COUNT=458 ;;
+    GBM12_1) MATCHED_COUNT=453 ;;
+    GBM12_2) MATCHED_COUNT=478 ;;
+    GBM22_1) MATCHED_COUNT=589 ;;
+    GBM22_2) MATCHED_COUNT=464 ;;
+    GBM39_1) MATCHED_COUNT=686 ;;
+    GBM39_2) MATCHED_COUNT=523 ;;
 esac
 case "$ARM" in
     real_attention) VARIANT=attention ;;
