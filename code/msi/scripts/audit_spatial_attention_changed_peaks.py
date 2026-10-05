@@ -210,7 +210,10 @@ def main():
             }
             for threshold, gain, loss in zip(THRESHOLDS, gained_hits, lost_hits)
         },
-        "interpretation_limit": "Post-hoc two-section, one-seed diagnostic; shuffled input may be out of distribution.",
+        "interpretation_limit": (
+            "Post-hoc, one-seed section-level diagnostic; shuffled input may be "
+            "out of distribution, and sections from one patient are not independent."
+        ),
     }
     (args.output / "summary.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, indent=2), flush=True)
