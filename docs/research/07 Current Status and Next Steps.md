@@ -84,16 +84,24 @@ checks establish which model claims survive.
   bins and increased mSCF1 by 0.0181 and 0.0313. This is a bounded
   same-model diagnostic, not evidence that shuffling helps in deployment.
   See the [results record](01%20Results%20Record.md#frozen-attention-peak-ranking-input-swap-5-october-2026).
+- Changed-peak audit passed on both sections. It reproduced both mSCF1 scores
+  and showed that shuffling added more reference-positive peaks than it
+  removed: net +9/+4/0/0 at PCC 0.3/0.4/0.5/0.6 on `160TopL`, and
+  +13/+19/+23/+23 on `GBM22_2`. The ion images provide qualitative examples,
+  not a causal account of why the IG ranking shifted. See the
+  [results record](01%20Results%20Record.md#changed-peak-audit-of-the-frozen-attention-ranking-swap-5-october-2026).
 
 ## Immediate next step
 
-Inspect which bins entered and left the two frozen peak lists, how their
-mask-correlation reference values differ, and whether their ion images track
-tissue or boundaries. This is the smallest next check on why shuffled input
-improved the development-section mSCF1 despite worsening reconstruction.
-Do not expand to another training campaign or claim a negative spatial effect
-from these two out-of-distribution input interventions. Keep the S3PL
-protocol/runtime gap investigation separate; any promising peak-quality gain
+Apply the *same frozen-checkpoint, frozen-GMM ranking-swap protocol* to the
+remaining sections with completed real-attention artifacts. This tests whether
+the two development-section peak-quality gains are common, mixed or exceptional
+without retraining or changing the scoring rule. The changed-bin audit has
+established how the two mSCF1 gains arise arithmetically, but not why shuffled
+input causes the IG ranking to favour those bins. Do not claim that shuffling
+improves the model or that real spatial context is harmful; it may be an
+out-of-distribution intervention. Keep the S3PL protocol/runtime gap
+investigation separate; any promising collection-wide peak-quality effect
 still needs targeted training-seed confirmation.
 
 The RCC third-dataset option is intentionally parked. The cluster archive was

@@ -614,3 +614,31 @@ out of distribution. Two sections and one seed cannot establish a
 collection-wide negative spatial effect; the next diagnostic is to inspect
 the gained and lost bins and their tissue maps before proposing a broader
 claim or another training campaign.
+
+### Changed-peak audit of the frozen attention ranking swap (5 October 2026)
+
+The [two CPU-only changed-peak audits](../../code/msi/results/diagnostics/spatial_attention_changed_peaks/)
+passed their tests and reproduced both frozen mSCF1 scores exactly. The
+`changed_bins.csv` files identify every bin entering or leaving the selected
+list, its m/z, per-class PCC and status under the existing four-threshold
+reference rule. The figures show all changed-bin PCC distributions and the
+highest-ranked three entering and three leaving ion images per section;
+individual ion maps are scaled separately and are qualitative illustrations.
+
+| Section | Entering / leaving bins | Reference-positive entering versus leaving at PCC 0.3, 0.4, 0.5, 0.6 |
+|---|---:|---|
+| `160TopL` | 31 / 31 | 13:4, 6:2, 0:0, 0:0 |
+| `GBM22_2` | 53 / 53 | 44:31, 39:20, 33:10, 28:5 |
+
+Thus the score gains are arithmetically explained by the changed bins:
+`160TopL` gains reference-positive peaks only at the lower two thresholds;
+`GBM22_2` gains them at all four. Two of the highest-ranked GBM entering ion
+maps (m/z 541.904 and 399.971) visibly concentrate in the expert tumour
+region and have positive tumour-class PCCs of 0.789 and 0.763. This is
+post-hoc evidence of better mask alignment for these selected ions, **not**
+proof of their molecular identities or that shuffling improves the trained
+model. The cause of the ranking shift remains unresolved: the intervention
+may be out of distribution, and two selected sections cannot establish a
+collection-wide spatial-context effect. The next low-cost validation is to
+repeat the same frozen-ranking test across the other available sections,
+without retraining or changing the evaluator.
