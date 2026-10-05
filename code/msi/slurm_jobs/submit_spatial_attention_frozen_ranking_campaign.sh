@@ -3,6 +3,11 @@ set -euo pipefail
 
 PROJECT_ROOT="$HOME/msi"
 cd "$PROJECT_ROOT"
+MAX_CONCURRENT="${1:-4}"
+if [ "$#" -gt 1 ] || ! [[ "$MAX_CONCURRENT" =~ ^[1-6]$ ]]; then
+    echo "Usage: bash $0 [MAX_CONCURRENT: 1-6, default 4]" >&2
+    exit 2
+fi
 DATASETS=(40TopL 160TopL 200TopL 240TopL 280TopL 360TopL 400TopL 520TopL
           GBM108_positive GBM108_negative GBM12_1 GBM12_2 GBM22_1 GBM22_2 GBM39_1 GBM39_2)
 CUDA_QUARANTINE_FILE="$PROJECT_ROOT/slurm_jobs/gpu_cuda_quarantine.txt"
@@ -50,9 +55,9 @@ if [ "${#missing[@]}" -eq 0 ]; then
     exit 0
 fi
 indices=$(IFS=,; echo "${missing[*]}")
-sbatch --exclude="$EXCLUDES" --array="${indices}%2" \
+sbatch --exclude="$EXCLUDES" --array="${indices}%${MAX_CONCURRENT}" \
     slurm_jobs/run_spatial_attention_frozen_ranking_campaign_array.sh
-echo "Submitted ${#missing[@]} missing sections; at most two allocations run together."
+echo "Submitted ${#missing[@]} missing sections; at most $MAX_CONCURRENT exclusive-node allocations run together."
 echo "Array indices: $indices"
 echo "Excluded nodes with directly observed CUDA failures: $EXCLUDES"
 echo 'Monitor with: squeue -u "$USER" -o "%.18i %.24j %.2t %.10M %.24R"'

@@ -6,6 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
 #SBATCH --time=04:00:00
+#SBATCH --exclusive
 #SBATCH --output=logs/attention-rank-all-%A_%a.out
 #SBATCH --error=logs/attention-rank-all-%A_%a.err
 
