@@ -1,0 +1,63 @@
+{
+  "status": "valid",
+  "scope": "same-checkpoint, same-GMM, same-pixel and component-target input-swap peak-ranking diagnostic",
+  "section": "520TopL",
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/520TopL_seed1/real_attention/checkpoint.pt",
+  "checkpoint_state_sha256": "cb3caef8e6e7caac98fbaa011fe3b510c33f3c1b4f79abfc3e232373a0d29cff",
+  "original_attribution": "/home-mscluster/zsuliman/msi/results/experiments/spatial_attention_context/520TopL_seed1/real_attention/attribution",
+  "input_swap_audit": "/home-mscluster/zsuliman/msi/results/diagnostics/spatial_attention_input_swap/520TopL/summary.json",
+  "ranking_gmm": "/home-mscluster/zsuliman/msi/results/experiments/spatial_attention_context/520TopL_seed1/real_attention/attribution/gmm_parameters.npz",
+  "reconstruction_audit_gmm_aligned": false,
+  "matched_count": 232,
+  "sampling": {
+    "pixels_per_component": 12,
+    "components": [
+      0,
+      1,
+      2
+    ],
+    "ig_steps": 64
+  },
+  "pcc_thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6
+  ],
+  "real": {
+    "mSCF1": 0.6988368033408403,
+    "mixed_f1": {
+      "0.3": 0.7628865979381443,
+      "0.4": 0.7175925925925926,
+      "0.5": 0.7012987012987013,
+      "0.6": 0.6135693215339233
+    }
+  },
+  "shuffled": {
+    "mSCF1": 0.6968246930533674,
+    "mixed_f1": {
+      "0.3": 0.7587628865979381,
+      "0.4": 0.7129629629629629,
+      "0.5": 0.6961038961038961,
+      "0.6": 0.6194690265486725
+    }
+  },
+  "shuffled_minus_real_mSCF1": -0.0020121102874729457,
+  "matched_peak_overlap": 217,
+  "shuffled_ig_completeness": {
+    "passed": true,
+    "median_normalized_residual": 0.0013005232936361398,
+    "percentile_95_normalized_residual": 0.029627538820477077,
+    "maximum_absolute_residual": 0.003737032413482666
+  },
+  "peak_process_rss_bytes": 1240436736,
+  "peak_pytorch_gpu_allocated_bytes": 29512192,
+  "runtime_seconds": 1.468919404083863,
+  "limitations": [
+    "The model was trained with real neighbours; shuffled inputs may be out of distribution.",
+    "The original real-input GMM targets and attribution pixels are held fixed.",
+    "For sections where the earlier reconstruction audit fitted its own GMM, its GMM is not the ranking GMM.",
+    "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
+    "One training seed per section cannot establish seed-level reproducibility or independent-patient generalisation."
+  ]
+}
