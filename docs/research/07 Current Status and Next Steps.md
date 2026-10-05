@@ -1,6 +1,6 @@
 # Current Status and Next Steps
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 The [main results record](01%20Results%20Record.md) now includes the cached
 GBM training result, the S3PL versus cached-VAE phase probe, and the CAC
@@ -72,16 +72,23 @@ checks establish which model claims survive.
   rankings beat shuffled-neighbour-only rankings, but combined scores remain
   mixed. See the
   [results record](01%20Results%20Record.md#frozen-attention-integrated-gradients-contribution-ablation).
+- Frozen same-checkpoint learned-attention input swap completed on all 16
+  sections with a fixed real-input GMM: reconstruction MSE increased after
+  shuffling in every section (1.36–3.38 times), and mean fixed-GMM label
+  flips were 4.27% CAC and 8.48% GBM. This shows input sensitivity, not
+  improved peak selection; no IG or mSCF1 was recomputed. See the
+  [results record](01%20Results%20Record.md#frozen-learned-attention-neighbour-input-swap-5-october-2026).
 
 ## Immediate next step
 
-Design a bounded same-checkpoint input-swap/topology counterfactual before
-claiming spatial specificity. The completed centre/neighbour ranking ablation
-shows that real-neighbour contributions can rank peaks better, but its real
-and shuffled models and GMMs differ; it does not isolate topology causally.
-Target-choice controls may follow if that distinction remains unresolved.
-Keep the S3PL protocol/runtime gap investigation separate; any promising
-spatial-specific claim needs targeted training-seed confirmation.
+Interpret the completed same-checkpoint swap alongside the centre/neighbour
+IG ablation: neighbour input affects reconstruction and fitted components,
+but the swap does not test peak-ranking benefit and may be out of
+distribution. Before making a spatial-specific peak-quality claim, run a
+bounded topology or ranking counterfactual with a predeclared comparison;
+target-choice controls may follow if that remains unresolved. Keep the S3PL
+protocol/runtime gap investigation separate. Any promising peak-quality gain
+still needs targeted training-seed confirmation.
 
 The RCC third-dataset option is intentionally parked. The cluster archive was
 transferred, SHA-256 verified and found to contain `rcc.rda`, but the

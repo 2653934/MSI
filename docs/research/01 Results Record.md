@@ -565,3 +565,24 @@ own trained weights and GMMs, so their component-ranking difference is not
 causal proof that spatial topology improves peak selection. A bounded
 same-checkpoint input-swap or topology counterfactual is the next logical
 test before asserting spatial specificity.
+
+### Frozen learned-attention neighbour-input swap (5 October 2026)
+
+The [16 section summaries](../../code/msi/results/diagnostics/spatial_attention_input_swap/)
+all report `valid` (eight CAC, eight MassNet GBM), with complete saved
+real-attention training summaries. For each section, the diagnostic held the
+trained real-attention checkpoint and a GMM fitted once on its real-input
+latents fixed, then replaced the neighbour slots with the seeded nonlocal
+shuffle. It did not retrain either model or refit the GMM between conditions.
+
+Shuffled-input reconstruction MSE was higher in **all 16 sections**:
+**1.36–3.38 times** the real-input MSE. The fixed GMM changed its assigned
+component for a mean **4.27% of CAC pixels** and **8.48% of GBM pixels**
+(unweighted section means). Thus the learned-attention model responds to
+neighbour inputs even when its parameters and clusterer are held constant.
+This is an in-sample response to an intervention that may be outside the
+real-neighbour training distribution. It is **not** a demonstration that
+spatial topology improves selected peaks: no Integrated Gradients ranking,
+matched-count mSCF1, or molecular interpretation was recomputed in this
+diagnostic. The separately trained real-versus-shuffled attention pilots and
+the component-ranking ablation above remain mixed on peak quality.
