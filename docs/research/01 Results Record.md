@@ -646,3 +646,29 @@ may be out of distribution, and the 16 sections represent one training seed
 per section (with multiple GBM sections from the same patients). The
 [local comparison figures](../../results/README.md) show the collection-level
 pattern; they do not turn this post-hoc audit into a deployment comparison.
+
+### Centre–context distribution screen for the frozen shuffle (6 October 2026)
+
+The [CPU-only screen](../../code/msi/results/diagnostics/spatial_attention_context_shift/)
+recreated the exact seed-1701 shuffle used above (saved source-slot hashes
+matched). It sampled 512 measured centres in each of the two earlier
+exploratory sections, with no zero-spectrum exclusions, masks, model, GMM,
+IG or peak evaluation. The cosine compares the *spectral pattern* of each
+centre with its mean context; half-L1 measures their absolute difference.
+
+| Section | Median cosine, real → shuffled | Shuffled cosine below real 5th percentile | Median half-L1, real → shuffled | Shuffled half-L1 above real 95th percentile |
+|---|---:|---:|---:|---:|
+| `160TopL` | 0.984 → 0.811 | 81.1% | 0.164 → 0.420 | 92.0% |
+| `GBM22_2` | 0.979 → 0.889 | 66.2% | 0.212 → 0.346 | 70.9% |
+
+Both sampled sections show a substantial shift in the centre–context
+relationship under this nonlocal shuffle. This strengthens the
+**out-of-distribution warning** for feeding shuffled neighbours into a
+real-neighbour-trained checkpoint: the frozen ranking-swap gains cannot be
+interpreted as evidence that realistic shuffled deployment or real spatial
+context is harmful. This screen measures only two simple input statistics,
+on outcome-known sections with spatially dependent sampled pixels; it does
+not prove the full model input is out of distribution or identify why IG
+rankings changed. The separately trained real-versus-shuffled attention
+comparison above is the relevant, though still single-seed, peak-quality
+control.

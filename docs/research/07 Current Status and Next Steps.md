@@ -91,18 +91,23 @@ checks establish which model claims survive.
   gained reference-positive bins and others lost them; this accounts for the
   score changes, not why IG changed its ranking. See the
   [results record](01%20Results%20Record.md#changed-peak-audit-of-the-frozen-attention-ranking-swap-5-october-2026).
+- A label-free screen on `160TopL` and `GBM22_2` found a large shift in
+  centre–context spectral similarity under the exact nonlocal shuffle.
+  Respectively 81.1% and 66.2% of shuffled cosine values fell below the
+  real-input 5th percentile. This reinforces the frozen-swap distribution
+  caveat, not a conclusion about peak quality. See the
+  [results record](01%20Results%20Record.md#centrecontext-distribution-screen-for-the-frozen-shuffle-6-october-2026).
 
 ## Immediate next step
 
-Synthesize the completed 16-section input-swap, ranking-swap and changed-peak
-audits into a claim-to-evidence account for the meeting/report. The input
-swap shows that the trained model reacts to neighbours, while the ranking
-swap shows that this sensitivity does not consistently improve peak selection
-with real context. The changed-bin audit explains score arithmetic, not the
-mechanism. Check the out-of-distribution limitation and training-seed
-uncertainty before making a stronger claim. Keep the S3PL protocol/runtime
-gap investigation separate. No additional cluster run has been selected from
-these audits alone.
+The frozen shuffle is a sensitivity test, not a fair effectiveness comparison
+with real-trained inputs. A bounded real-trained versus shuffled-trained
+attention repeat is prepared for seeds 2 and 3 on the two already-inspected
+sections, with all other scientific settings held fixed. Its purpose is to
+bound the small, opposite-sign seed-1 effects, not to select a better seed or
+claim held-out confirmation. Review the complete paired evaluations before
+deciding whether any wider spatial claim is warranted. Keep the separate S3PL
+quality/runtime and full scoring audits open.
 
 The bounded [spatial-context claim–evidence ledger](investigations/13%20Spatial%20Context%20Claim-Evidence%20Ledger.md)
 now separates input sensitivity, peak-quality effect, score arithmetic and
