@@ -78,31 +78,35 @@ checks establish which model claims survive.
   flips were 4.27% CAC and 8.48% GBM. This shows input sensitivity, not
   improved peak selection; no IG or mSCF1 was recomputed. See the
   [results record](01%20Results%20Record.md#frozen-learned-attention-neighbour-input-swap-5-october-2026).
-- Frozen attention peak-ranking input swap passed on `160TopL` and `GBM22_2`:
-  with checkpoint, real-input GMM, attribution pixels, component targets and
-  peak count fixed, shuffled neighbours changed 31/210 and 53/464 selected
-  bins and increased mSCF1 by 0.0181 and 0.0313. This is a bounded
+- Frozen attention peak-ranking input swap passed on all 16 sections. With
+  checkpoint, real-input GMM, attribution pixels, component targets and peak
+  count fixed, real rankings were better on 4/8 CAC and 1/8 GBM sections;
+  shuffled rankings were better on 4/8 CAC and 7/8 GBM. Mean
+  shuffled-minus-real mSCF1 was +0.0049 CAC and +0.0183 GBM. This is a
   same-model diagnostic, not evidence that shuffling helps in deployment.
   See the [results record](01%20Results%20Record.md#frozen-attention-peak-ranking-input-swap-5-october-2026).
-- Changed-peak audit passed on both sections. It reproduced both mSCF1 scores
-  and showed that shuffling added more reference-positive peaks than it
-  removed: net +9/+4/0/0 at PCC 0.3/0.4/0.5/0.6 on `160TopL`, and
-  +13/+19/+23/+23 on `GBM22_2`. The ion images provide qualitative examples,
-  not a causal account of why the IG ranking shifted. See the
+- Changed-peak audit passed on all 16 sections and reproduced both mSCF1
+  scores for each. It records each entering/leaving m/z bin, its reference
+  status across PCC thresholds, and illustrative ion images. Some sections
+  gained reference-positive bins and others lost them; this accounts for the
+  score changes, not why IG changed its ranking. See the
   [results record](01%20Results%20Record.md#changed-peak-audit-of-the-frozen-attention-ranking-swap-5-october-2026).
 
 ## Immediate next step
 
-Apply the *same frozen-checkpoint, frozen-GMM ranking-swap protocol* to the
-remaining sections with completed real-attention artifacts. This tests whether
-the two development-section peak-quality gains are common, mixed or exceptional
-without retraining or changing the scoring rule. The changed-bin audit has
-established how the two mSCF1 gains arise arithmetically, but not why shuffled
-input causes the IG ranking to favour those bins. Do not claim that shuffling
-improves the model or that real spatial context is harmful; it may be an
-out-of-distribution intervention. Keep the S3PL protocol/runtime gap
-investigation separate; any promising collection-wide peak-quality effect
-still needs targeted training-seed confirmation.
+Synthesize the completed 16-section input-swap, ranking-swap and changed-peak
+audits into a claim-to-evidence account for the meeting/report. The input
+swap shows that the trained model reacts to neighbours, while the ranking
+swap shows that this sensitivity does not consistently improve peak selection
+with real context. The changed-bin audit explains score arithmetic, not the
+mechanism. Check the out-of-distribution limitation and training-seed
+uncertainty before making a stronger claim. Keep the S3PL protocol/runtime
+gap investigation separate. No additional cluster run has been selected from
+these audits alone.
+
+The bounded [spatial-context claim–evidence ledger](investigations/13%20Spatial%20Context%20Claim-Evidence%20Ledger.md)
+now separates input sensitivity, peak-quality effect, score arithmetic and
+unresolved mechanism. It is not the full project-wide scoring sign-off.
 
 The RCC third-dataset option is intentionally parked. The cluster archive was
 transferred, SHA-256 verified and found to contain `rcc.rda`, but the

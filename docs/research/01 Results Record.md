@@ -589,7 +589,7 @@ the component-ranking ablation above remain mixed on peak quality.
 
 ### Frozen attention peak-ranking input swap (5 October 2026)
 
-The [two ranking-swap summaries](../../code/msi/results/diagnostics/spatial_attention_frozen_ranking_swap/)
+The [16 ranking-swap summaries](../../code/msi/results/diagnostics/spatial_attention_frozen_ranking_swap/)
 report `valid`. Each test reused one real-neighbour-trained attention
 checkpoint, its real-input GMM, the same attribution pixels and component
 targets, and the same section-specific peak budget. Only the neighbour spectra
@@ -607,38 +607,42 @@ At PCC thresholds 0.3, 0.4, 0.5 and 0.6, the shuffled ranking added
 **9, 4, 0, 0** matched true-positive bins on `160TopL` and
 **13, 19, 23, 23** on `GBM22_2`, respectively, compared with the frozen
 real ranking. Integrated Gradients completeness passed in both sections.
-Neighbour input therefore changes some peak choices, but the observed changes
-do not favour *real* neighbours on either of these development sections.
-Because the checkpoint was trained on real neighbours, shuffled inputs may be
-out of distribution. Two sections and one seed cannot establish a
-collection-wide negative spatial effect; the next diagnostic is to inspect
-the gained and lost bins and their tissue maps before proposing a broader
-claim or another training campaign.
+Across all 16 sections, the real ranking was better on 4/8 CAC and 1/8 GBM
+sections; the shuffled ranking was better on 4/8 CAC and 7/8 GBM sections.
+The mean shuffled-minus-real mSCF1 difference was +0.0049 on CAC and +0.0183
+on GBM. Neighbour input changes some peak choices, but the effect is mixed on
+CAC and usually does not favour *real* neighbours on GBM. Because the
+checkpoint was trained on real neighbours, shuffled inputs may be out of
+distribution. These are seed-1 section-level observations, not a causal
+demonstration that shuffling improves the method.
 
 ### Changed-peak audit of the frozen attention ranking swap (5 October 2026)
 
-The [two CPU-only changed-peak audits](../../code/msi/results/diagnostics/spatial_attention_changed_peaks/)
-passed their tests and reproduced both frozen mSCF1 scores exactly. The
+The [16 CPU-only changed-peak audits](../../code/msi/results/diagnostics/spatial_attention_changed_peaks/)
+report `valid` and reproduced both frozen mSCF1 scores for every section. The
 `changed_bins.csv` files identify every bin entering or leaving the selected
 list, its m/z, per-class PCC and status under the existing four-threshold
 reference rule. The figures show all changed-bin PCC distributions and the
 highest-ranked three entering and three leaving ion images per section;
 individual ion maps are scaled separately and are qualitative illustrations.
 
-| Section | Entering / leaving bins | Reference-positive entering versus leaving at PCC 0.3, 0.4, 0.5, 0.6 |
+| Example section | Entering / leaving bins | Net reference-positive entering minus leaving at PCC 0.3, 0.4, 0.5, 0.6 |
 |---|---:|---|
-| `160TopL` | 31 / 31 | 13:4, 6:2, 0:0, 0:0 |
-| `GBM22_2` | 53 / 53 | 44:31, 39:20, 33:10, 28:5 |
+| `160TopL` | 31 / 31 | +9, +4, 0, 0 |
+| `240TopL` | 37 / 37 | −10, −11, −9, −3 |
+| `400TopL` | 28 / 28 | +13, +6, +3, 0 |
+| `GBM12_2` | 53 / 53 | +30, +34, +35, +26 |
+| `GBM22_2` | 53 / 53 | +13, +19, +23, +23 |
 
-Thus the score gains are arithmetically explained by the changed bins:
-`160TopL` gains reference-positive peaks only at the lower two thresholds;
-`GBM22_2` gains them at all four. Two of the highest-ranked GBM entering ion
-maps (m/z 541.904 and 399.971) visibly concentrate in the expert tumour
+The changed reference-positive counts explain the score differences under
+the existing four-threshold rule: some sections gain and others lose when the
+ranking is recomputed with shuffled neighbours. Two of the highest-ranked
+`GBM22_2` entering ion maps (m/z 541.904 and 399.971) visibly concentrate in the expert tumour
 region and have positive tumour-class PCCs of 0.789 and 0.763. This is
 post-hoc evidence of better mask alignment for these selected ions, **not**
 proof of their molecular identities or that shuffling improves the trained
 model. The cause of the ranking shift remains unresolved: the intervention
-may be out of distribution, and two selected sections cannot establish a
-collection-wide spatial-context effect. The next low-cost validation is to
-repeat the same frozen-ranking test across the other available sections,
-without retraining or changing the evaluator.
+may be out of distribution, and the 16 sections represent one training seed
+per section (with multiple GBM sections from the same patients). The
+[local comparison figures](../../results/README.md) show the collection-level
+pattern; they do not turn this post-hoc audit into a deployment comparison.
