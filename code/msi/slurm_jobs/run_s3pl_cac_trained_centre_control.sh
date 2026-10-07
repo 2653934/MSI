@@ -48,9 +48,12 @@ matched = (
     "number_classes", "evaluate_peak_picking", "peaks_per_spectral_patch",
     "spectral_patch_size", "kernel_depth_d1", "kernel_depth_d2",
     "n_epochs", "batch_size", "learning_rate", "dropout", "random_seed",
-    "normalization",
 )
 different = [key for key in matched if source.get(key) != current.get(key)]
+if source.get("normalization", "reference_spatial_max") != current.get(
+    "normalization", "reference_spatial_max"
+):
+    different.append("normalization")
 if different:
     raise SystemExit(f"Source S3PL training settings changed: {different}")
 print("Source S3PL training settings match the frozen baseline", flush=True)
