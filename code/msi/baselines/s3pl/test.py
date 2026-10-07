@@ -24,11 +24,26 @@ def ablate_patch_context(batch, mode):
     """Change only noncentral patch positions after the saved normalisation."""
     if mode == "none":
         return batch
-    if mode not in ("zero_noncentral", "tile_centre"):
+    if mode not in ("zero_noncentral", "tile_centre", "rotate_90", "permute_within_rings"):
         raise ValueError(f"Unknown frozen input ablation: {mode}")
     if batch.ndim != 5 or batch.shape[-1] != batch.shape[-2] or batch.shape[-1] % 2 != 1:
         raise ValueError("S3PL batch must have shape (batch, channel, mz, odd_y, odd_x)")
     centre = batch.shape[-1] // 2
+    if mode == "rotate_90":
+        return torch.rot90(batch, 1, dims=(-2, -1))
+    if mode == "permute_within_rings":
+        permuted = batch.clone()
+        for radius in range(1, centre + 1):
+            ring = [
+                (row, column)
+                for row in range(centre - radius, centre + radius + 1)
+                for column in range(centre - radius, centre + radius + 1)
+                if max(abs(row - centre), abs(column - centre)) == radius
+            ]
+            rows, columns = zip(*ring)
+            source_rows, source_columns = zip(*(ring[1:] + ring[:1]))
+            permuted[..., rows, columns] = batch[..., source_rows, source_columns]
+        return permuted
     if mode == "tile_centre":
         return batch[..., centre : centre + 1, centre : centre + 1].expand_as(batch).clone()
     ablated = torch.zeros_like(batch)
@@ -42,7 +57,7 @@ def test(
     result_suffix="",
     input_ablation="none",
 ):
-    if input_ablation not in ("none", "zero_noncentral", "tile_centre"):
+    if input_ablation not in ("none", "zero_noncentral", "tile_centre", "rotate_90", "permute_within_rings"):
         raise ValueError(f"Unknown frozen input ablation: {input_ablation}")
     training_name = config["training_name"]
     directory_name = os.path.dirname(__file__)

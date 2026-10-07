@@ -33,6 +33,30 @@ class FrozenPatchContextTests(unittest.TestCase):
                 self.assertTrue(torch.equal(tiled[..., row, column], patch[..., 1, 1]))
         self.assertTrue(torch.equal(patch, torch.arange(36, dtype=torch.float32).reshape(1, 1, 4, 3, 3)))
 
+    def test_rotation_preserves_centre_and_all_values(self):
+        patch = torch.arange(25, dtype=torch.float32).reshape(1, 1, 1, 5, 5)
+        rotated = ablate_patch_context(patch, "rotate_90")
+        self.assertTrue(torch.equal(rotated[..., 2, 2], patch[..., 2, 2]))
+        self.assertEqual(sorted(rotated.flatten().tolist()), sorted(patch.flatten().tolist()))
+        self.assertTrue(torch.equal(patch, torch.arange(25, dtype=torch.float32).reshape(1, 1, 1, 5, 5)))
+
+    def test_ring_permutation_preserves_centre_and_each_ring_multiset(self):
+        patch = torch.arange(25, dtype=torch.float32).reshape(1, 1, 1, 5, 5)
+        changed = ablate_patch_context(patch, "permute_within_rings")
+        self.assertTrue(torch.equal(changed[..., 2, 2], patch[..., 2, 2]))
+        self.assertFalse(torch.equal(changed, patch))
+        for radius in (1, 2):
+            positions = [
+                (row, column)
+                for row in range(5)
+                for column in range(5)
+                if max(abs(row - 2), abs(column - 2)) == radius
+            ]
+            before = sorted(float(patch[..., row, col].item()) for row, col in positions)
+            after = sorted(float(changed[..., row, col].item()) for row, col in positions)
+            self.assertEqual(after, before)
+        self.assertTrue(torch.equal(patch, torch.arange(25, dtype=torch.float32).reshape(1, 1, 1, 5, 5)))
+
     def test_invalid_input_is_rejected(self):
         with self.assertRaises(ValueError):
             ablate_patch_context(torch.ones(1, 1, 2, 4, 4), "zero_noncentral")
