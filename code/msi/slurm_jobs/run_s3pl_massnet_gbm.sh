@@ -18,6 +18,7 @@ EVALUATE="${3:-true}"
 PATCH_SIZE="${4:-3}"
 ARTIFACT_ROOT="${5:-$PROJECT_ROOT}"
 NORMALIZATION="${6:-reference_spatial_max}"
+RANDOM_SEED="${7:-1}"
 
 case "$DATASET" in
     GBM108_negative|GBM108_positive|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
@@ -69,13 +70,18 @@ case "$NORMALIZATION" in
         ;;
 esac
 
+if ! [[ "$RANDOM_SEED" =~ ^[0-9]+$ ]]; then
+    echo "Random seed must be a nonnegative integer: $RANDOM_SEED" >&2
+    exit 2
+fi
+
 S3PL_ROOT="$PROJECT_ROOT/baselines/s3pl"
 DATA_PATH="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
 
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env
 
-python -c 'import sys, torch; sys.exit(0 if torch.cuda.is_available() else "CUDA is unavailable on this node; refusing to run S3PL on CPU.")'
+python -c 'import sys, torch; sys.exit(0 if torch.cuda.is_available() and torch.ones(1, device="cuda").item() == 1.0 else "CUDA is unavailable on this node; refusing to run S3PL on CPU.")'
 
 cd "$S3PL_ROOT"
 python main.py \
@@ -84,5 +90,13 @@ python main.py \
     --number_classes 2 \
     --n_epochs "$EPOCHS" \
     --spectral_patch_size "$PATCH_SIZE" \
+    --peaks_per_spectral_patch 256 \
+    --batch_size 16 \
+    --learning_rate 0.01 \
+    --kernel_depth_d1 51 \
+    --kernel_depth_d2 1 \
+    --dropout 0 \
     --normalization "$NORMALIZATION" \
+    --input-context-mode none \
+    --random_seed "$RANDOM_SEED" \
     "$EVAL_FLAG"

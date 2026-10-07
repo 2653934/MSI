@@ -57,3 +57,9 @@ The threshold-level F1 changes were at most 0.011. Both imzML results decreased 
 - Keep the paper value 0.496 as the **unreproduced published reference**.
 - Do not launch an eight-section imzML sweep; the two-section gate failed its expansion criterion.
 - Treat the released-code result as a valid executable baseline and clearly document the unresolved difference from the published aggregate rather than tuning sections individually.
+
+## Predeclared training-seed sensitivity probe (7 October 2026)
+
+Before attributing the reproduction gap to undocumented implementation details, test whether the released-code p=3 result is unusually sensitive to seed 1. Hold the HDF5 input, released-code spatial-max normalisation, architecture, 10 epochs, batch size 16, learning rate 0.01, 256 spectral peaks, masks and scoring fixed. Run seeds **2 and 3** on both `GBM108_positive` (seed-1 mSCF1 0.033) and `GBM108_negative` (seed-1 mSCF1 0.664), each in a separate artifact root. Do not select the best seed or mix configurations by section.
+
+The positive/negative contrast is a diagnostic gate, **not** an eight-section reproduction. If both sections are stable across seeds, random initialisation is less plausible as an explanation for those two results; it cannot rule out seed sensitivity on the other six. If scores vary substantially, extend the same predeclared seed comparison across all eight before drawing an aggregate conclusion. Compare peak counts and selected-bin overlaps as well as mSCF1 after the jobs complete. Submission: `bash slurm_jobs/submit_s3pl_gbm_p3_seed_probe.sh`. Audit: `bash slurm_jobs/check_s3pl_gbm_p3_seed_probe.sh`.
