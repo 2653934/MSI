@@ -1,0 +1,79 @@
+{
+  "status": "valid",
+  "scope": "same-checkpoint, same-GMM, same-pixel and component-target peak-ranking diagnostic",
+  "section": "160TopL",
+  "intervention": "uniform_weights",
+  "reconstruction": {
+    "learned": {
+      "scaled_categorical_cross_entropy": 5700.044556356333,
+      "mean_squared_error": 9.58875494055526e-07,
+      "mean_absolute_error": 0.00018464039892429276,
+      "cosine_similarity": 0.9893397467648675
+    },
+    "uniform_weights": {
+      "scaled_categorical_cross_entropy": 5700.6518654169295,
+      "mean_squared_error": 9.68312676231016e-07,
+      "mean_absolute_error": 0.00018494707385320245,
+      "cosine_similarity": 0.9892886573841181
+    },
+    "pixels": 4761
+  },
+  "checkpoint": "/datasets/zsuliman/msi_checkpoints/spatial_msipl/attention_context/160TopL_seed1/real_attention/checkpoint.pt",
+  "checkpoint_state_sha256": "de15905ea9ba87120c8d220e4f02df636b2b41ee9bd53f0ff5f3eb4952bf1300",
+  "original_attribution": "/home-mscluster/zsuliman/msi/results/experiments/spatial_attention_context/160TopL_seed1/real_attention/attribution",
+  "input_swap_audit": "/home-mscluster/zsuliman/msi/results/diagnostics/spatial_attention_input_swap/160TopL/summary.json",
+  "ranking_gmm": "/home-mscluster/zsuliman/msi/results/experiments/spatial_attention_context/160TopL_seed1/real_attention/attribution/gmm_parameters.npz",
+  "reconstruction_audit_gmm_aligned": true,
+  "matched_count": 210,
+  "sampling": {
+    "pixels_per_component": 12,
+    "components": [
+      0,
+      1,
+      2
+    ],
+    "ig_steps": 64
+  },
+  "pcc_thresholds": [
+    0.3,
+    0.4,
+    0.5,
+    0.6
+  ],
+  "real": {
+    "mSCF1": 0.46617107007992364,
+    "mixed_f1": {
+      "0.3": 0.7165775401069518,
+      "0.4": 0.6422018348623854,
+      "0.5": 0.3893129770992366,
+      "0.6": 0.11659192825112108
+    }
+  },
+  "uniform_weights": {
+    "mSCF1": 0.4761058196261141,
+    "mixed_f1": {
+      "0.3": 0.7379679144385026,
+      "0.4": 0.6605504587155964,
+      "0.5": 0.3893129770992366,
+      "0.6": 0.11659192825112108
+    }
+  },
+  "uniform_weights_minus_real_mSCF1": 0.009934749546190447,
+  "matched_peak_overlap": 202,
+  "uniform_weights_ig_completeness": {
+    "passed": true,
+    "median_normalized_residual": 0.00010008467491359722,
+    "percentile_95_normalized_residual": 0.0031458239391213283,
+    "maximum_absolute_residual": 0.00031876564025878906
+  },
+  "peak_process_rss_bytes": 1320529920,
+  "peak_pytorch_gpu_allocated_bytes": 29127168,
+  "runtime_seconds": 7.048813525820151,
+  "limitations": [
+    "Uniform weighting is an inference-time intervention on a model trained with learned attention; it is not a retrained uniform model.",
+    "The original real-input GMM targets and attribution pixels are held fixed.",
+    "For sections where the earlier reconstruction audit fitted its own GMM, its GMM is not the ranking GMM.",
+    "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
+    "One training seed per section cannot establish seed-level reproducibility or independent-patient generalisation."
+  ]
+}
