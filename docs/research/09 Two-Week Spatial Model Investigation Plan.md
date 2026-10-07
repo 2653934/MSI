@@ -147,9 +147,10 @@ Cluster scheduling is uncertain. If it consumes the buffer, prioritise **audit �
 
 ## Claim–evidence ledger required for the final memo
 
-The first bounded entry is the [spatial-context claim–evidence ledger](investigations/13%20Spatial%20Context%20Claim-Evidence%20Ledger.md),
-covering the completed 16-section frozen attention interventions. The wider
-GBM/CAC scoring and S3PL claims below remain to be reconciled.
+The [spatial-context claim–evidence ledger](investigations/13%20Spatial%20Context%20Claim-Evidence%20Ledger.md)
+covers the completed attention interventions. The [primary-results claim–evidence ledger](investigations/14%20Primary%20Results%20Claim-Evidence%20Ledger.md)
+maps the GBM/CAC scores, implementation audits, S3PL comparison and runtime
+claims to their saved artifacts and explicitly records unresolved limitations.
 
 For every substantive sentence in the results/discussion, record: **claim; precise comparison; section/seed count; raw result path; script and code revision; metric definition; uncertainty; alternative explanation; status** (`supported`, `mixed`, `refuted`, or `not tested`). Include at least these claims:
 
