@@ -24,6 +24,15 @@ class FrozenPatchContextTests(unittest.TestCase):
         patch = torch.ones(1, 1, 2, 5, 5)
         self.assertIs(ablate_patch_context(patch, "none"), patch)
 
+    def test_tiling_preserves_centre_and_fills_all_slots(self):
+        patch = torch.arange(1 * 1 * 4 * 3 * 3, dtype=torch.float32).reshape(1, 1, 4, 3, 3)
+        tiled = ablate_patch_context(patch, "tile_centre")
+        self.assertTrue(torch.equal(tiled[..., 1, 1], patch[..., 1, 1]))
+        for row in range(3):
+            for column in range(3):
+                self.assertTrue(torch.equal(tiled[..., row, column], patch[..., 1, 1]))
+        self.assertTrue(torch.equal(patch, torch.arange(36, dtype=torch.float32).reshape(1, 1, 4, 3, 3)))
+
     def test_invalid_input_is_rejected(self):
         with self.assertRaises(ValueError):
             ablate_patch_context(torch.ones(1, 1, 2, 4, 4), "zero_noncentral")

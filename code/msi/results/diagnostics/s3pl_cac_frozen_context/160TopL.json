@@ -1,0 +1,49 @@
+{
+  "status": "valid",
+  "section": "160TopL",
+  "training_name": "160TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9",
+  "training_repeated": false,
+  "checkpoint": "/home-mscluster/zsuliman/msi/checkpoints/baselines/s3pl/160TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9.pt",
+  "checkpoint_sha256": "90843b8c9906d3f6a31c6021f217a380d1abfd53038f3168e332f0c373c8dd53",
+  "config_sha256": "ebd1a14a6e1e6fc91b6c27616d894fe13664f910ea19b174857f72514a4fc928",
+  "matched_peaks": 210,
+  "normalization": "reference_spatial_max",
+  "intervention": "zero noncentral patch positions after original normalisation, before frozen model inference",
+  "baseline_matches_prior_selected_set_and_mixed_f1": true,
+  "baseline_peak_order_matches_prior": false,
+  "baseline_changed_rank_positions": 69,
+  "real_mscf1": 0.495,
+  "zero_noncentral_mscf1": 0.015,
+  "real_minus_zero_mscf1": 0.48,
+  "real_mscf1_unrounded": 0.4950177652815705,
+  "zero_noncentral_mscf1_unrounded": 0.014709096876244847,
+  "real_minus_zero_mscf1_unrounded": 0.48030866840532566,
+  "shared_selected_peaks": 16,
+  "entering_and_leaving_peaks": 194,
+  "thresholds": {
+    "0.3": {
+      "real_f1": 0.7754010695187166,
+      "zero_noncentral_f1": 0.026737967914438502,
+      "real_minus_zero_f1": 0.7486631016042781
+    },
+    "0.4": {
+      "real_f1": 0.691131498470948,
+      "zero_noncentral_f1": 0.024464831804281346,
+      "real_minus_zero_f1": 0.6666666666666666
+    },
+    "0.5": {
+      "real_f1": 0.3969465648854962,
+      "zero_noncentral_f1": 0.007633587786259542,
+      "real_minus_zero_f1": 0.3893129770992366
+    },
+    "0.6": {
+      "real_f1": 0.11659192825112108,
+      "zero_noncentral_f1": 0.0,
+      "real_minus_zero_f1": 0.11659192825112108
+    }
+  },
+  "source_matched_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/160TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_matched_210peaks/metrics.json",
+  "real_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/160TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_real_210peaks/metrics.json",
+  "zero_noncentral_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/160TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_zero_noncentral_210peaks/metrics.json",
+  "limitation": "Frozen input intervention is out of training distribution; sensitivity or F1 change is not a causal training benefit and does not isolate the S3PL-versus-VAE architecture gap. The original spatial-maximum normalisation is applied before slot-zeroing, so the unchanged central values can still encode neighbour-dependent scaling."
+}

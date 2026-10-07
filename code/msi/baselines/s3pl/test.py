@@ -24,11 +24,13 @@ def ablate_patch_context(batch, mode):
     """Change only noncentral patch positions after the saved normalisation."""
     if mode == "none":
         return batch
-    if mode != "zero_noncentral":
+    if mode not in ("zero_noncentral", "tile_centre"):
         raise ValueError(f"Unknown frozen input ablation: {mode}")
     if batch.ndim != 5 or batch.shape[-1] != batch.shape[-2] or batch.shape[-1] % 2 != 1:
         raise ValueError("S3PL batch must have shape (batch, channel, mz, odd_y, odd_x)")
     centre = batch.shape[-1] // 2
+    if mode == "tile_centre":
+        return batch[..., centre : centre + 1, centre : centre + 1].expand_as(batch).clone()
     ablated = torch.zeros_like(batch)
     ablated[..., centre, centre] = batch[..., centre, centre]
     return ablated
@@ -40,7 +42,7 @@ def test(
     result_suffix="",
     input_ablation="none",
 ):
-    if input_ablation not in ("none", "zero_noncentral"):
+    if input_ablation not in ("none", "zero_noncentral", "tile_centre"):
         raise ValueError(f"Unknown frozen input ablation: {input_ablation}")
     training_name = config["training_name"]
     directory_name = os.path.dirname(__file__)
