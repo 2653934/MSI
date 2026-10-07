@@ -57,6 +57,10 @@ These are strong **synthetic and code-path** checks, not a proof that the real-d
 
 **Pass condition:** an audit report links each claim to raw results and a test or independent recomputation; all differences are explained or flagged.
 
+**A3 scoring checkpoint (7 October):** Cluster job 65226 reran the existing [independent PCC/F1/mSCF1 scorer](../../code/msi/scripts/audit_window_peak_scoring.py) against all 16 sections' raw HDF5 spectra and 98 saved IG peak lists. All 16 [section reports](../../code/msi/results/diagnostics/spatial_score_foundation) returned `valid`; the two synthetic scorer tests passed in every array task. Recomputed threshold reference-set sizes, TP/FP/FN/TN, four F1 values and mSCF1 matched the reported values exactly within the audit tolerance, and the largest checked selected-bin PCC difference was approximately 5.1×10⁻¹⁴. This extends the earlier single-section `GBM22_2` audit across both collections and the existing centre-only, uniform, 5×5, zero, shuffled, and available trained-attention arms.
+
+This independently supports **arithmetic consistency of saved peak evaluation**, not the biological validity of the PCC-threshold reference rule, the correctness of the upstream GMM/IG rankings, or any paper-level aggregate claim. Those remain separate checks. In particular, the same peak count and score formula do not make two different training or preprocessing protocols otherwise equivalent.
+
 ## Workstream B — Test the spatial hypothesis at more than one scale
 
 ### B1. Generalise the window safely
