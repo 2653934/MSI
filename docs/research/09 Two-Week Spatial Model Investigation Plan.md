@@ -45,6 +45,10 @@ This is **bounded support for the selected data paths, not proof of a flawless p
 
 **Pass condition:** tests and a signed audit note identify no unresolved result-changing defect. If one is found, log affected artifacts and rerun only those after the fix.
 
+**A2 checkpoint (7 October):** Cluster job 65224 passed four new independent [model-foundation checks](../../code/msi/src/spatial_msipl/tests/test_model_foundation_audit.py) and ten existing [model/training regression checks](../../code/msi/src/spatial_msipl/tests/test_model.py); see the [job log](../../code/msi/logs/spatial-model-audit-65224.err). The new checks recomputed categorical reconstruction and KL loss with NumPy, compared an autograd derivative to a finite difference, verified centre-only versus contextual parameter-count formulae, and showed that changing masked-out neighbour spectra neither changes the uniform/attention contextual input nor gives invalid slots a gradient. A label-free eight-sample learning test reduced five-epoch mean reconstruction loss from approximately 5.42 initially to 3.99 at the end. The older tests include exact cached-versus-streaming checkpoint/resume equality on a synthetic dataset and retention of a multi-sample final batch.
+
+These are strong **synthetic and code-path** checks, not a proof that the real-data model optimises well or that every saved historical run used the intended settings. The easy eight-sample learning test is not a proxy for GBM/CAC peak quality. Historical checkpoint/configuration provenance and final scoring still require separate audit; a failure in either would still affect report claims.
+
 ### A3. Attribution and scoring audit
 
 - Recalculate a tiny GMM posterior and Integrated Gradients result independently; check component mapping, IG completeness tolerance, baseline choice, aggregation over central/neighbour paths, ranking, ties, and matched peak-count truncation.
