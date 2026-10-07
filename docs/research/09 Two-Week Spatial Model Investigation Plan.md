@@ -32,6 +32,10 @@ The original neighbour builder and aggregators assumed exactly eight slots; the 
 
 **Pass condition:** automated edge/coverage/orientation tests and a manual visual spot-check agree for the selected sections; no training labels enter preprocessing.
 
+**A1 checkpoint (7 October):** The independent [data-contract audit](../../code/msi/scripts/audit_spatial_msipl_data_contract.py) returned `valid` for `40TopL`, partial-coverage `280TopL`, `GBM108_positive`, and `GBM22_2` (job 65196; [saved section summaries and spot-checks](../../code/msi/results/diagnostics/spatial_msipl_data_contract)). Each array task passed three synthetic controls. All measured-pixel HDF5 labels matched the corresponding mask; all 3×3 and 5×5 neighbour slots matched an independently built coordinate lookup; sampled spectra, TIC normalisation and neighbour values matched the production loader. The CAC adapter matched original imzML coordinates in order and sampled intensities exactly. All raw HDF5 spectra in these four sections were finite and nonnegative, with no zero-TIC spectra. Visual spot-checks were inspected for `280TopL` and `GBM22_2`; they are consistent with the masks and measured coverage.
+
+This is **bounded support for the selected data paths, not proof of a flawless pipeline**. The GBM HDF5 spectra already have TIC approximately 1, while the audited CAC adapter spectra have non-unit TIC; the production loader normalises both. We did not independently compare the GBM files to original source spectra, exhaustively compare CAC imzML intensities beyond sampled pixels, verify the original histology annotations, or check the final ion-image scoring alignment here. Those questions, S3PL preprocessing comparison, and A2/A3 remain open. Neither this audit nor its expert-label spot-check supplies labels to training.
+
 ### A2. Model, loss, and training audit
 
 - Check tensor dimensions and parameter counts for centre-only, capacity-matched zero-context, 3×3 uniform, and 5×5 uniform inputs. Verify that the decoder always reconstructs the central spectrum and that invalid neighbours cannot affect output or gradients.
