@@ -31,3 +31,15 @@ bash slurm_jobs/check_s3pl_cac_frozen_topology.sh
 ```
 
 If a campaign is incomplete, inspect `sacct -X -j <job-id> --format=JobID,State,Elapsed,NodeList,ExitCode` and that job's `.out`/`.err` files before any resubmission. The frozen audit can be rerun safely when a report is missing; it skips already valid reports with the same checkpoint and config hashes. Do not compare partial campaigns as if they were eight-section results.
+
+## First synced outcome (partial)
+
+Jobs 65413_1, 65414_0 and 65414_2 completed the retrained control and wrote matched-count metrics. Their original real-patch versus retrained centre-input mSCF1 values are: 160TopL **0.495 vs 0.130**, 40TopL **0.715 vs 0.177**, and 200TopL **0.665 vs 0.356**. Counts match within each section (210, 315 and 221 respectively). This is a large preliminary difference, **not** yet an eight-section result. Because the centre-only input was still trained to reconstruct a real neighbourhood, the loss target contains information unavailable from that input; the gap may partly reflect this harder reconstruction task rather than only useful peak-discriminative spatial structure.
+
+The five other allocations, 65414_3 through 65414_7, failed the CUDA warm-up **before model or data load**. No failure in their training or scoring code has been observed. Identify their nodes with `sacct` and retry only these five indices with the failing node(s) excluded. No frozen-topology result files were present in the first local sync; confirm whether that separate array was submitted before interpreting its status.
+
+The follow-up `sacct` check identified **mscluster82 for all five CUDA failures**. It has been added to the production CUDA quarantine list. The appropriate recovery is an array containing only indices 3–7; do not rerun the three completed controls.
+
+The topology checker later reported three valid section reports: 40TopL real/rotated/ring-shift mSCF1 **0.715/0.715/0.714**, 160TopL **0.495/0.494/0.495**, and 200TopL **0.665/0.662/0.665**. After the JSON reports arrived locally, selected-m/z overlaps with fresh real were **311/315 and 311/315** for 40TopL, **208/210 and 209/210** for 160TopL, and **220/221 and 221/221** for 200TopL (rotation and ring shift respectively). The 40TopL fresh real set differs from its historical matched-count set by two selected peaks, flagged by the checker. Thus the first three frozen checkpoints' rankings are largely insensitive to these particular position rearrangements; neither the remaining five sections nor the training effect are settled. Do not infer general position invariance or spatial irrelevance.
+
+The synced logs show topology array 65422_3 through 65422_7 also stopped at CUDA warm-up, before model or data load; 65422_0 and 65422_2 completed. Check their nodes with `sacct`, then retry only indices 3–7 using the updated quarantine. The six patch-invariant unit tests passed in each topology allocation before the CUDA check.
