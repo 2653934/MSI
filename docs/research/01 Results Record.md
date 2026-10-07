@@ -672,3 +672,67 @@ not prove the full model input is out of distribution or identify why IG
 rankings changed. The separately trained real-versus-shuffled attention
 comparison above is the relevant, though still single-seed, peak-quality
 control.
+
+### Matched learned-attention training-seed repeat (7 October 2026)
+
+The [seed-2/3 result sets](../../code/msi/results/experiments/spatial_attention_context_seed_stability/)
+are complete for both exploratory sections and both arms (8/8). They extend
+the already completed seed-1 pilot. Each pair used the same initial VAE state
+within its training seed, 100 epochs, corrected 3×3 attention, and the same
+section-specific peak count. The shuffled-context source map remained fixed
+at seed 1701 and its saved hash matched across training seeds; downstream
+GMM/IG sampling seeds remained fixed. All twelve training, attribution and
+peak-evaluation summaries report complete/valid/complete, and all twelve IG
+completeness checks passed. The first seed-2 `160TopL` shuffled allocation
+stopped at concurrent shared-folder creation; its single-index retry completed
+without changing the scientific settings.
+
+| Section | Training seed | Real mSCF1 | Separately trained shuffled mSCF1 | Real − shuffled |
+|---|---:|---:|---:|---:|
+| `160TopL` | 1 | 0.4662 | 0.4618 | +0.0044 |
+| `160TopL` | 2 | 0.4843 | 0.4906 | −0.0063 |
+| `160TopL` | 3 | 0.4834 | 0.4748 | +0.0086 |
+| `GBM22_2` | 1 | 0.4364 | 0.4422 | −0.0058 |
+| `GBM22_2` | 2 | 0.4176 | 0.4492 | −0.0316 |
+| `GBM22_2` | 3 | 0.4617 | 0.4833 | −0.0217 |
+
+The constituent mixed-class F1 scores make clear which PCC thresholds drove
+the mean (real/shuffled shown in each cell):
+
+| Section | Seed | PCC 0.3 | PCC 0.4 | PCC 0.5 | PCC 0.6 |
+|---|---:|---:|---:|---:|---:|
+| `160TopL` | 1 | .7166/.7112 | .6422/.6300 | .3893/.3893 | .1166/.1166 |
+| `160TopL` | 2 | .7647/.7701 | .6667/.6789 | .3893/.3969 | .1166/.1166 |
+| `160TopL` | 3 | .7594/.7326 | .6606/.6606 | .3969/.3893 | .1166/.1166 |
+| `GBM22_2` | 1 | .3958/.4021 | .4290/.4303 | .4500/.4633 | .4711/.4731 |
+| `GBM22_2` | 2 | .3851/.4011 | .4005/.4493 | .4300/.4733 | .4545/.4731 |
+| `GBM22_2` | 3 | .4064/.4233 | .4520/.4817 | .4883/.5117 | .5000/.5165 |
+
+Mean paired real-minus-shuffled change was +0.0022 mSCF1 on `160TopL`
+(range −0.0063 to +0.0086) and −0.0197 on `GBM22_2` (range −0.0316 to
+−0.0058). Thus real context did **not** meet the predeclared +0.02 practical
+promotion signal on either section. CAC changes sign with the seed; on this
+GBM section shuffled training won all three, but the two sections were
+outcome-known exploratory choices, not independent validation. GBM within-arm
+seed ranges were also material (real 0.4176–0.4617, shuffled 0.4422–0.4833).
+Unrounded scores and the confusion counts remain in each linked
+`peak_evaluation/summary.json`.
+
+The reconstruction MSE did not track a consistent real-context benefit:
+`160TopL` real/shuffled pairs were 9.589/9.675, 9.671/9.534 and 9.315/9.636
+×10⁻⁷ for seeds 1–3; `GBM22_2` pairs were 1.864/2.005, 2.913/2.873 and
+2.882/2.897 ×10⁻⁹. IG completeness is a numerical consistency check, not
+proof that every peak ranking is faithful: at a 128-bin deletion budget, IG
+exceeded the random posterior-drop control for only 2/3 CAC components in
+each arm/seed; GBM was usually 1/2 components (shuffled seed 2 was 2/2).
+The shuffled GBM attribution stage took about 32–33 minutes per seed versus
+17–18 minutes for real context, despite similar ~42–44-minute training times.
+GPU peak allocation was about 3.20 GiB for GBM and 0.07 GiB for CAC; these
+are **not** peak host-RAM measurements and do not justify the 32-GB Slurm
+request by themselves. Node hardware and queue wait differ, so this is not a
+matched-hardware runtime benchmark.
+
+The bounded repeat resolves the seed-1 ambiguity only for these two tested
+configurations: no reproducible real-neighbour peak-quality advantage appears
+here. It does not prove that spatial context is generally useless, explain
+the CAC–GBM difference, or validate shuffled context as a deployment method.

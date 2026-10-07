@@ -61,13 +61,19 @@ for required in "$INPUT" "$LEGACY_DIR/learned_peaks.csv" "$LEGACY_DIR/peak_metri
         exit 1
     fi
 done
-if ! mkdir -p "$RESULT_ROOT" "$CHECKPOINT_ROOT"; then
-    # Concurrent sibling creation can report EEXIST on the shared filesystem.
-    if [ ! -d "$RESULT_ROOT" ] || [ ! -d "$CHECKPOINT_ROOT" ]; then
+# Concurrent sibling creation on this shared filesystem can briefly report
+# EEXIST before the new directory is visible to a second node.
+for attempt in 1 2 3 4 5; do
+    mkdir -p "$RESULT_ROOT" "$CHECKPOINT_ROOT" 2>/dev/null || true
+    if [ -d "$RESULT_ROOT" ] && [ -d "$CHECKPOINT_ROOT" ]; then
+        break
+    fi
+    if [ "$attempt" -eq 5 ]; then
         echo "Could not prepare both output directories for $DATASET $ARM seed $SEED" >&2
         exit 1
     fi
-fi
+    sleep 1
+done
 cd "$PROJECT_ROOT"
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env

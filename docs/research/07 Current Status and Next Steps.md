@@ -1,6 +1,6 @@
 # Current Status and Next Steps
 
-Last updated: 2026-10-05
+Last updated: 2026-10-07
 
 The [main results record](01%20Results%20Record.md) now includes the cached
 GBM training result, the S3PL versus cached-VAE phase probe, and the CAC
@@ -97,17 +97,25 @@ checks establish which model claims survive.
   real-input 5th percentile. This reinforces the frozen-swap distribution
   caveat, not a conclusion about peak quality. See the
   [results record](01%20Results%20Record.md#centrecontext-distribution-screen-for-the-frozen-shuffle-6-october-2026).
+- The matched real-versus-shuffled attention training-seed repeat is complete:
+  both arms reached 100 epochs and valid peak evaluation at seeds 1–3 on
+  `160TopL` and `GBM22_2`. Paired real-minus-shuffled mSCF1 ranged from
+  −0.0063 to +0.0086 on CAC and −0.0316 to −0.0058 on GBM. These
+  outcome-known sections do not support a reproducible +0.02 real-context
+  gain. See the [seed-repeat record](01%20Results%20Record.md#matched-learned-attention-training-seed-repeat-7-october-2026).
 
 ## Immediate next step
 
-The frozen shuffle is a sensitivity test, not a fair effectiveness comparison
-with real-trained inputs. A bounded real-trained versus shuffled-trained
-attention repeat is prepared for seeds 2 and 3 on the two already-inspected
-sections, with all other scientific settings held fixed. Its purpose is to
-bound the small, opposite-sign seed-1 effects, not to select a better seed or
-claim held-out confirmation. Review the complete paired evaluations before
-deciding whether any wider spatial claim is warranted. Keep the separate S3PL
-quality/runtime and full scoring audits open.
+The bounded real-trained versus shuffled-trained attention repeat is now
+complete. It did not reveal a reproducible real-neighbour gain on the two
+already-inspected sections; the frozen-input swap remains a sensitivity test,
+not a fair effectiveness comparison. Do not expand this particular comparison
+just to seek a positive result or call these sections held-out confirmation.
+Return to the implementation/scoring and S3PL quality/runtime audits in the
+[two-week plan](09%20Two-Week%20Spatial%20Model%20Investigation%20Plan.md),
+then decide which spatial claim and any truly independent validation test are
+still justified. Host-RAM use and `batch` eligibility are not established by
+the 32-GB Slurm request or GPU-memory telemetry alone.
 
 The bounded [spatial-context claim–evidence ledger](investigations/13%20Spatial%20Context%20Claim-Evidence%20Ledger.md)
 now separates input sensitivity, peak-quality effect, score arithmetic and
