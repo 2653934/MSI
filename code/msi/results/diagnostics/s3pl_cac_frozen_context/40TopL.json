@@ -1,0 +1,86 @@
+{
+  "status": "valid_pair_with_prior_drift",
+  "section": "40TopL",
+  "training_name": "40TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9",
+  "training_repeated": false,
+  "checkpoint": "/home-mscluster/zsuliman/msi/checkpoints/baselines/s3pl/40TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9.pt",
+  "checkpoint_sha256": "f7e976b66f4d12da7017fb1e422da7c0007f1672fdad3e006ddadac9e343fec0",
+  "config_sha256": "4509b9d611ecbbea442e4f1455e364ae9a7738b874d65ff89c6c1d58290ba0b3",
+  "matched_peaks": 315,
+  "normalization": "reference_spatial_max",
+  "interventions": {
+    "zero_noncentral": "zero noncentral patch positions after original normalisation",
+    "tile_centre": "fill every patch position with the unchanged normalised central spectrum"
+  },
+  "baseline_matches_prior_selected_set_and_mixed_f1": false,
+  "baseline_selected_set_matches_prior": false,
+  "baseline_threshold_scores_match_prior": true,
+  "baseline_shared_selected_peaks_with_prior": 313,
+  "baseline_saved_only_peaks": [
+    387.0333251953125,
+    972.8558349609375
+  ],
+  "baseline_fresh_only_peaks": [
+    324.1971740722656,
+    617.4697875976562
+  ],
+  "baseline_prior_mscf1": 0.715,
+  "baseline_fresh_minus_prior_mscf1": 0.0,
+  "baseline_fresh_minus_prior_f1_by_threshold": {
+    "0.3": 0.0,
+    "0.4": 0.0,
+    "0.5": 0.0,
+    "0.6": 0.0
+  },
+  "baseline_peak_order_matches_prior": false,
+  "baseline_changed_rank_positions": 167,
+  "real_mscf1": 0.715,
+  "zero_noncentral_mscf1": 0.048,
+  "tiled_centre_mscf1": 0.626,
+  "real_minus_zero_mscf1": 0.6669999999999999,
+  "real_minus_tiled_mscf1": 0.08899999999999997,
+  "real_mscf1_unrounded": 0.7151657055756416,
+  "zero_noncentral_mscf1_unrounded": 0.04807410767712945,
+  "tiled_centre_mscf1_unrounded": 0.626395610790002,
+  "real_minus_zero_mscf1_unrounded": 0.6670915978985121,
+  "real_minus_tiled_mscf1_unrounded": 0.08877009478563958,
+  "shared_selected_peaks": 38,
+  "entering_and_leaving_peaks": 277,
+  "shared_selected_peaks_real_and_tiled": 248,
+  "entering_and_leaving_peaks_real_and_tiled": 67,
+  "thresholds": {
+    "0.3": {
+      "real_f1": 0.8725490196078431,
+      "zero_noncentral_f1": 0.0915032679738562,
+      "tiled_centre_f1": 0.7254901960784313,
+      "real_minus_zero_f1": 0.7810457516339869,
+      "real_minus_tiled_f1": 0.1470588235294118
+    },
+    "0.4": {
+      "real_f1": 0.8194945848375451,
+      "zero_noncentral_f1": 0.07942238267148015,
+      "tiled_centre_f1": 0.7148014440433214,
+      "real_minus_zero_f1": 0.740072202166065,
+      "real_minus_tiled_f1": 0.10469314079422376
+    },
+    "0.5": {
+      "real_f1": 0.6721991701244814,
+      "zero_noncentral_f1": 0.016597510373443983,
+      "tiled_centre_f1": 0.5975103734439834,
+      "real_minus_zero_f1": 0.6556016597510373,
+      "real_minus_tiled_f1": 0.07468879668049799
+    },
+    "0.6": {
+      "real_f1": 0.4964200477326969,
+      "zero_noncentral_f1": 0.00477326968973747,
+      "tiled_centre_f1": 0.4677804295942721,
+      "real_minus_zero_f1": 0.4916467780429594,
+      "real_minus_tiled_f1": 0.028639618138424805
+    }
+  },
+  "source_matched_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/40TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_matched_315peaks/metrics.json",
+  "real_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/40TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_real_315peaks/metrics.json",
+  "zero_noncentral_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/40TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_zero_noncentral_315peaks/metrics.json",
+  "tiled_centre_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/40TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_tiled_centre_315peaks/metrics.json",
+  "limitation": "Both frozen input interventions are out of training distribution; sensitivity or F1 change is not a causal training benefit and does not isolate the S3PL-versus-VAE architecture gap. The original spatial-maximum normalisation is applied before intervention, so unchanged central values can still encode neighbour-dependent scaling. Tiling preserves patch occupancy and approximate magnitude but not the distribution of real neighbour spectra. Any one-bin or score drift from the historical matched-count baseline is reported explicitly; real-versus-intervention scores use the same fresh job."
+}

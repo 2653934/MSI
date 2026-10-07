@@ -60,3 +60,24 @@ sbatch slurm_jobs/audit_s3pl_cac_reference_sets.sh
 ```
 
 This removes the reference-definition caveat from the matched-count CAC F1 comparison. It does **not** make S3PL and the VAE/IG pipelines architecturally or computationally matched, nor does it explain why their exclusive peaks differ.
+
+## Frozen S3PL patch-input intervention (7 October 2026)
+
+An evaluation-only [S3PL input audit](../../../code/msi/results/diagnostics/s3pl_cac_frozen_context/) reused each section's 10-epoch, patch-9 checkpoint and matched peak budget. It first reevaluated the real normalised patch. It then made two changes **after the original normalisation**: (1) zero every noncentral slot, or (2) fill every slot with a copy of the unchanged normalised centre spectrum. The second control keeps the 9×9 convolutional input populated while removing neighbour-specific differences. Checkpoints, masks, reference sets, model weights and scoring code were not changed. The [evaluator](../../../code/msi/scripts/evaluate_s3pl_cac_frozen_context.py), [patch intervention](../../../code/msi/baselines/s3pl/test.py), and [Slurm runner](../../../code/msi/slurm_jobs/audit_s3pl_cac_frozen_context.sh) define the protocol; four patch-invariant tests passed in each completed job.
+
+| CAC section | Real patch mSCF1 | Centre-tiled mSCF1 | Real − tiled | Shared selected peaks |
+|---|---:|---:|---:|---:|
+| 40TopL | 0.715 | 0.626 | +0.089 | 248/315 |
+| 160TopL | 0.495 | 0.456 | +0.039 | 175/210 |
+| 200TopL | 0.665 | 0.605 | +0.060 | 183/221 |
+| 240TopL | 0.672 | 0.642 | +0.030 | 227/255 |
+| 280TopL | 0.378 | 0.377 | +0.001 | 226/245 |
+| 360TopL | 0.643 | 0.601 | +0.042 | 207/247 |
+| 400TopL | 0.459 | 0.436 | +0.023 | 111/133 |
+| 520TopL | 0.707 | 0.668 | +0.040 | 198/232 |
+
+The mean *within-job* real-minus-tiled difference, calculated from unrounded threshold scores, is **+0.0404 mSCF1**; all eight section differences are positive. On the initial `160TopL` pilot, emptying the noncentral slots caused a far larger drop (0.495 to 0.015) and retained only 16/210 peaks. Centre tiling recovered most of that loss, showing why the zero-input result alone was a poor measure of useful spatial information.
+
+The old matched-count S3PL result is a separate historical run. Fresh real-input selections were not perfectly stable at the selection cutoff: the final `40TopL` run shared 313/315 selected peaks with its saved result but had identical threshold F1; `240TopL` shared 254/255 and changed saved mSCF1 0.670 to fresh 0.672. These are explicitly flagged as `valid_pair_with_prior_drift` in the JSON reports. The other six final reports matched the historical selected set and threshold scores. Every real-versus-tiled difference above uses the **same fresh evaluation job**, not a mixture of historical and new scores. Do not erase the baseline-drift flags when aggregating these results.
+
+This establishes **sensitivity of the frozen S3PL ranking and evaluated score to neighbour-specific patch content** on these eight sections. It does *not* establish the causal benefit of training with real neighbours: centre tiling is out of the model's training distribution, and applying the original spatial-maximum normalisation first leaves some neighbour-dependent scaling in the unchanged centre. The mean +0.0404 intervention effect is not interchangeable with S3PL's +0.032 matched-count lead over our VAE/IG pipeline; those are different comparisons. A separately trained, otherwise matched S3PL control would be needed before attributing its cross-model lead to spatial learning.
