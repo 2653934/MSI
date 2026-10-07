@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Pilot: score real versus shuffled-neighbour IG with one frozen model/GMM.
+"""Score a frozen attention model with shuffled inputs or uniform weights.
 
 This reuses the original real-input attribution pixels, component targets,
 checkpoint, and GMM. It changes only neighbour spectra at attribution time.
-Shuffled inputs may be out of the model's training distribution, so this is a
-mechanism diagnostic, not an estimate of generalisation performance.
+These are mechanism diagnostics, not estimates of generalisation performance.
 """
 
 import argparse
@@ -35,8 +34,10 @@ from run_spatial_msipl_gmm_integrated_gradients import (
     state_sha256,
 )
 from spatial_msipl.attribution import integrated_gradients_cluster_posterior
+from spatial_msipl.neighbourhood import UniformMeanNeighbourhood
 from spatial_msipl.peak_selection import balanced_round_robin_rankings
 from spatial_msipl.preprocessing import CachedH5SpatialContextDataset, tic_normalize
+from evaluate_spatial_reconstruction import deterministic_reconstruction_metrics
 
 
 def selected_pixel_indices(diagnostics, labels, components, expected_per_component):
@@ -116,11 +117,13 @@ def validate_gmm_provenance(fixed_gmm, attribution_dir):
 def save_plot(result, path):
     thresholds = result["pcc_thresholds"]
     real = result["real"]["mixed_f1"]
-    shuffled = result["shuffled"]["mixed_f1"]
+    key = "shuffled" if result["intervention"] == "shuffled_input" else "uniform_weights"
+    counterfactual = result[key]["mixed_f1"]
     positions = np.arange(len(thresholds))
     fig, ax = plt.subplots(figsize=(7.5, 4.2))
     ax.plot(positions, [real[str(value)] for value in thresholds], "o-", label="Real neighbours")
-    ax.plot(positions, [shuffled[str(value)] for value in thresholds], "o-", label="Shuffled neighbours")
+    ax.plot(positions, [counterfactual[str(value)] for value in thresholds], "o-",
+            label="Shuffled neighbours" if key == "shuffled" else "Uniform weights")
     ax.set_xticks(positions, [str(value) for value in thresholds])
     ax.set_xlabel("PCC threshold")
     ax.set_ylabel("Matched-count F1")
@@ -141,6 +144,8 @@ def main():
     parser.add_argument("--peak-evaluation-summary", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--matched-count", required=True, type=int)
+    parser.add_argument("--intervention", choices=("shuffled_input", "uniform_weights"),
+                        default="shuffled_input")
     parser.add_argument("--chunk-size", type=int, default=1024)
     parser.add_argument("--ig-steps", type=int, default=64)
     parser.add_argument("--ig-internal-batch-size", type=int, default=8)
@@ -178,19 +183,34 @@ def main():
     shuffled = CachedH5SpatialContextDataset(
         args.input, True, window_size=3, context_mode="shuffled",
         context_seed=int(swap_summary["shuffle_seed"]),
-    )
+    ) if args.intervention == "shuffled_input" else None
+    intervention_dataset = shuffled if shuffled is not None else real
     try:
-        if shuffled.context_permutation_sha256 != swap_summary["shuffle_source_slots_sha256"]:
+        if shuffled is not None and shuffled.context_permutation_sha256 != swap_summary["shuffle_source_slots_sha256"]:
             raise ValueError("shuffle permutation differs from the completed input-swap audit")
-        if not np.array_equal(real.neighbour_slots, shuffled.neighbour_slots):
+        if shuffled is not None and not np.array_equal(real.neighbour_slots, shuffled.neighbour_slots):
             raise ValueError("neighbour topology or missing slots changed")
-        if not np.array_equal(real.x, shuffled.x) or not np.array_equal(real.y, shuffled.y):
+        if shuffled is not None and (not np.array_equal(real.x, shuffled.x) or not np.array_equal(real.y, shuffled.y)):
             raise ValueError("section coordinates changed")
         device = torch.device("cuda")
         model, _ = load_model(args.checkpoint, real.n_mz, "attention", device, checkpoint)
         model_sha = state_sha256(model)
         if model_sha != real_summary["model_state_sha256"] or model_sha != swap_summary["checkpoint_state_sha256"]:
             raise ValueError("checkpoint differs from the frozen real and input-swap audits")
+        reconstruction = None
+        if args.intervention == "uniform_weights":
+            baseline_reconstruction, baseline_pixels = deterministic_reconstruction_metrics(
+                model, real, 32, device)
+            # Replace only the aggregator's forward rule. All trained encoder/decoder
+            # parameters, real neighbours, GMM and attribution targets stay frozen.
+            model.aggregator.forward = UniformMeanNeighbourhood().forward
+            uniform_reconstruction, uniform_pixels = deterministic_reconstruction_metrics(
+                model, real, 32, device)
+            if baseline_pixels != uniform_pixels or baseline_pixels != len(real):
+                raise ValueError("reconstruction pixel count changed under weight intervention")
+            reconstruction = {"learned": baseline_reconstruction,
+                              "uniform_weights": uniform_reconstruction,
+                              "pixels": baseline_pixels}
         with np.load(args.attribution_dir / "coordinates_and_gmm.npz") as saved:
             if not np.array_equal(saved["x"], real.x) or not np.array_equal(saved["y"], real.y):
                 raise ValueError("saved GMM coordinates differ from this section")
@@ -211,18 +231,18 @@ def main():
         )
         gmm = fixed_gmm_parameters(args.attribution_dir / "gmm_parameters.npz", device)
         mean_spectrum = torch.as_tensor(mean_tic_spectrum(real), device=device)
-        shuffled_scores = {}
+        intervention_scores = {}
         ig_diagnostics = []
         for component, indices in selected.items():
             contributions = []
             for index in indices:
                 real_sample = real[index]
-                shuffled_sample = shuffled[index]
-                if not np.array_equal(real_sample["target"], shuffled_sample["target"]):
+                intervention_sample = intervention_dataset[index]
+                if not np.array_equal(real_sample["target"], intervention_sample["target"]):
                     raise ValueError("central spectrum changed")
-                if not np.array_equal(real_sample["neighbour_mask"], shuffled_sample["neighbour_mask"]):
+                if not np.array_equal(real_sample["neighbour_mask"], intervention_sample["neighbour_mask"]):
                     raise ValueError("missing-neighbour mask changed")
-                central, neighbours, mask = sample_as_tensors(shuffled, index, device)
+                central, neighbours, mask = sample_as_tensors(intervention_dataset, index, device)
                 central_baseline, neighbour_baseline = baseline_for(mean_spectrum, neighbours, mask)
                 central_ig, neighbour_ig, check = integrated_gradients_cluster_posterior(
                     model, central, neighbours, mask, central_baseline, neighbour_baseline,
@@ -234,7 +254,7 @@ def main():
                     + neighbour_ig[0].abs().sum(dim=0).detach().cpu().numpy()
                 )
                 ig_diagnostics.append({"pixel_index": int(index), "component": int(component), **check})
-            shuffled_scores[component] = np.mean(contributions, axis=0)
+            intervention_scores[component] = np.mean(contributions, axis=0)
             print(f"{section}: component {component} finished {len(indices)} paired IG pixels", flush=True)
 
         mz, raw_labels, x, y, pixels_first = read_h5_metadata(args.input)
@@ -243,9 +263,9 @@ def main():
         if not np.array_equal(x, real.x) or not np.array_equal(y, real.y):
             raise ValueError("scoring coordinates differ from the attribution section")
         real_order = component_rankings(real_scores, len(mz))
-        shuffled_order = component_rankings(shuffled_scores, len(mz))
+        intervention_order = component_rankings(intervention_scores, len(mz))
         real_peaks = real_order[:args.matched_count]
-        shuffled_peaks = shuffled_order[:args.matched_count]
+        intervention_peaks = intervention_order[:args.matched_count]
         original_peaks_path = args.peak_evaluation_summary.parent / f"ig_matched_{args.matched_count}_bins.csv"
         with original_peaks_path.open(newline="", encoding="utf-8") as handle:
             original_peaks = np.asarray(
@@ -255,16 +275,19 @@ def main():
             raise ValueError("real-input selected peak order was not reproduced")
         correlations = load_correlations(args.input, raw_labels, len(mz), pixels_first, args.chunk_size)
         real_score = score_indices(real_peaks, correlations, len(mz))
-        shuffled_score = score_indices(shuffled_peaks, correlations, len(mz))
+        intervention_score = score_indices(intervention_peaks, correlations, len(mz))
         expected_real = evaluation_summary["matched_peak_evaluation"]["methods"]["integrated_gradients"]
         if abs(real_score["mSCF1"] - expected_real["mSCF1"]) > 1e-9:
             raise ValueError("real-input peak score was not reproduced")
         completeness = completeness_summary(ig_diagnostics)
-        overlap = len(set(real_peaks.tolist()) & set(shuffled_peaks.tolist()))
+        overlap = len(set(real_peaks.tolist()) & set(intervention_peaks.tolist()))
+        key = "shuffled" if args.intervention == "shuffled_input" else "uniform_weights"
         result = {
             "status": "valid" if completeness["passed"] else "inconclusive_ig_completeness",
-            "scope": "same-checkpoint, same-GMM, same-pixel and component-target input-swap peak-ranking diagnostic",
+            "scope": "same-checkpoint, same-GMM, same-pixel and component-target peak-ranking diagnostic",
             "section": section,
+            "intervention": args.intervention,
+            "reconstruction": reconstruction,
             "checkpoint": str(args.checkpoint),
             "checkpoint_state_sha256": model_sha,
             "original_attribution": str(args.attribution_dir),
@@ -276,15 +299,17 @@ def main():
                          "components": components, "ig_steps": args.ig_steps},
             "pcc_thresholds": list(THRESHOLDS),
             "real": {"mSCF1": real_score["mSCF1"], "mixed_f1": real_score["mixed_f1"]},
-            "shuffled": {"mSCF1": shuffled_score["mSCF1"], "mixed_f1": shuffled_score["mixed_f1"]},
-            "shuffled_minus_real_mSCF1": shuffled_score["mSCF1"] - real_score["mSCF1"],
+            key: {"mSCF1": intervention_score["mSCF1"], "mixed_f1": intervention_score["mixed_f1"]},
+            f"{key}_minus_real_mSCF1": intervention_score["mSCF1"] - real_score["mSCF1"],
             "matched_peak_overlap": overlap,
-            "shuffled_ig_completeness": completeness,
+            f"{key}_ig_completeness": completeness,
             "peak_process_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
             "peak_pytorch_gpu_allocated_bytes": torch.cuda.max_memory_allocated(device),
             "runtime_seconds": time.perf_counter() - started,
             "limitations": [
-                "The model was trained with real neighbours; shuffled inputs may be out of distribution.",
+                ("The model was trained with real neighbours; shuffled inputs may be out of distribution."
+                 if args.intervention == "shuffled_input" else
+                 "Uniform weighting is an inference-time intervention on a model trained with learned attention; it is not a retrained uniform model."),
                 "The original real-input GMM targets and attribution pixels are held fixed.",
                 "For sections where the earlier reconstruction audit fitted its own GMM, its GMM is not the ranking GMM.",
                 "Expert masks enter only the post-hoc peak scoring, not training, GMM fitting or ranking.",
@@ -294,15 +319,16 @@ def main():
         args.output.mkdir(parents=True, exist_ok=True)
         (args.output / "summary.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
         np.savez(args.output / "rankings.npz", mz=mz, real_indices=real_peaks,
-                 shuffled_indices=shuffled_peaks,
-                 **{f"shuffled_component_{component}": values for component, values in shuffled_scores.items()})
+                 **{f"{key}_indices": intervention_peaks},
+                 **{f"{key}_component_{component}": values for component, values in intervention_scores.items()})
         save_plot(result, args.output / "matched_peak_f1.png")
         print(json.dumps(result, indent=2), flush=True)
         if not completeness["passed"]:
-            raise RuntimeError("shuffled IG completeness failed; investigate before interpretation")
+            raise RuntimeError(f"{key} IG completeness failed; investigate before interpretation")
     finally:
         real.close()
-        shuffled.close()
+        if shuffled is not None:
+            shuffled.close()
 
 
 if __name__ == "__main__":
