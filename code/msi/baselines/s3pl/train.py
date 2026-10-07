@@ -12,11 +12,14 @@ from torchvision import transforms
 import tqdm
 
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
-from test import test
+from test import ablate_patch_context, test
 from utils.data_source import build_patch_dataset
 from utils.helpers import artifact_directories, normalize_spectra, resolve_data_paths
 
 def train(config):   
+    input_context_mode = config.get("input_context_mode", "none")
+    if input_context_mode not in ("none", "tile_centre"):
+        raise ValueError(f"Unsupported training input context: {input_context_mode}")
     random_seed = config["random_seed"]
     random.seed(random_seed)
     np.random.seed(random_seed)
@@ -68,7 +71,14 @@ def train(config):
     training_name = dataname + '_' + model._get_name() + '_' + str(config["n_epochs"]) + 'epochs_' + str(config["peaks_per_spectral_patch"]) + '_' + 'spectral_patch_size_' + str(config["spectral_patch_size"])
     if normalization != "reference_spatial_max":
         training_name += "_" + normalization
+    if input_context_mode != "none":
+        training_name += "_train_" + input_context_mode
     path_to_weights = artifact_dirs["weights"] / (training_name + '.pt')
+    if input_context_mode != "none" and (
+        path_to_weights.exists()
+        or (artifact_dirs["logs"] / (training_name + '.json')).exists()
+    ):
+        raise FileExistsError(f"Refusing to overwrite training-control artifacts for {training_name}")
 
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(path_to_weights)
@@ -77,6 +87,7 @@ def train(config):
     print('trainable parameters: ' + str(pytorch_total_params))
     print('GPU available: ' + str(use_cuda))
     print('normalization: ' + normalization)
+    print('input context mode: ' + input_context_mode)
     
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["learning_rate"])
 
@@ -90,8 +101,9 @@ def train(config):
                 bar.set_description(f"Epoch {epoch}")
                 optimizer.zero_grad()
 
-                X_batch, _ = batch            
-                y_batch = X_batch
+                X_batch, _ = batch
+                y_batch = X_batch  # Keep the original real-patch reconstruction target.
+                X_batch = ablate_patch_context(X_batch, input_context_mode)
 
                 if use_cuda:
                     X_batch = X_batch.cuda()

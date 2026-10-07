@@ -22,6 +22,7 @@ def load_config(config_path, args):
     if args.dropout is not None: config["dropout"] = args.dropout
     if args.random_seed is not None: config["random_seed"] = args.random_seed
     if args.normalization is not None: config["normalization"] = args.normalization
+    if args.input_context_mode is not None: config["input_context_mode"] = args.input_context_mode
 
     return config
 
@@ -47,6 +48,12 @@ if __name__ == "__main__":
         "--normalization",
         choices=("reference_spatial_max", "paper_tic"),
         default=None,
+    )
+    parser.add_argument(
+        "--input-context-mode",
+        choices=("none", "tile_centre"),
+        default=None,
+        help="training control: replace neighbour spectra with the normalised centre while keeping the real reconstruction target",
     )
 
     args = parser.parse_args()

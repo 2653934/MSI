@@ -52,6 +52,12 @@ def test(
 
     with open(config_path) as f:
         config = json.load(f)
+    training_context_mode = config.get("input_context_mode", "none")
+    if training_context_mode not in ("none", "tile_centre"):
+        raise ValueError(f"Unsupported training input context: {training_context_mode}")
+    if training_context_mode != "none" and input_ablation != "none":
+        raise ValueError("Do not combine a trained input control with a frozen input intervention")
+    effective_input_mode = training_context_mode if input_ablation == "none" else input_ablation
 
     if number_peaks_override is not None:
         if number_peaks_override < 1:
@@ -123,7 +129,7 @@ def test(
                 X_batch = X_batch.cuda()
                 y_batch = y_batch.cuda()
 
-            X_batch = ablate_patch_context(X_batch, input_ablation)
+            X_batch = ablate_patch_context(X_batch, effective_input_mode)
 
             y_pred, binary_mask, attention_mask = model(X_batch)
 
@@ -170,6 +176,8 @@ def test(
             ),
             "source_training_name": training_name,
             "frozen_input_ablation": input_ablation,
+            "training_input_context_mode": training_context_mode,
+            "effective_input_context_mode": effective_input_mode,
             "class_metrics": {},
             "mixed_f1": {},
         }
