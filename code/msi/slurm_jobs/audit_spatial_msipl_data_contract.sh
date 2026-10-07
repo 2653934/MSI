@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=8G
 #SBATCH --time=02:00:00
-#SBATCH --array=0-3%2
+#SBATCH --array=0-3
 #SBATCH --output=logs/spatial-data-audit-%A_%a.out
 #SBATCH --error=logs/spatial-data-audit-%A_%a.err
 
