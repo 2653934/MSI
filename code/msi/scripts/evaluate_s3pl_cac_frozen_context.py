@@ -69,16 +69,18 @@ def main():
     if len(source_peaks) != args.number_peaks:
         raise ValueError("Existing matched-count list has the wrong size")
 
-    # Reproduce the old result before interpreting the perturbation. Distinct
-    # suffixes leave the publication source and checkpoint untouched.
+    # Compare a fresh real-input run with the old result before interpreting
+    # the perturbation. Distinct suffixes leave the publication source and
+    # checkpoint untouched. A cutoff-bin drift is recorded, not hidden: the
+    # intervention is paired to this fresh real-input run on the same node.
     test(config, None, args.number_peaks, baseline_suffix, input_ablation="none")
     real_metrics_path, real_peaks_path = paths(baseline_suffix)
     real_metrics = json.loads(real_metrics_path.read_text(encoding="utf-8"))
     real_peaks = selected_mz(real_peaks_path)
-    # F1 evaluates the selected set, not its internal ranking. Equal-score
-    # pixel-frequency ties may reorder selected peaks without changing that set.
-    if set(real_peaks) != set(source_peaks) or real_metrics["mixed_f1"] != source_metrics["mixed_f1"]:
-        raise ValueError("Frozen real-input run did not reproduce the existing selected set and threshold scores")
+    if len(real_peaks) != args.number_peaks or real_metrics["number_picked_peaks"] != args.number_peaks:
+        raise ValueError("Fresh real-input evaluation did not honour the matched peak budget")
+    baseline_selected_set_matches = set(real_peaks) == set(source_peaks)
+    baseline_threshold_scores_match = real_metrics["mixed_f1"] == source_metrics["mixed_f1"]
 
     test(config, None, args.number_peaks, zero_suffix, input_ablation="zero_noncentral")
     zero_metrics_path, zero_peaks_path = paths(zero_suffix)
@@ -115,7 +117,7 @@ def main():
     zero_full = sum(zero_metrics["mixed_f1"][threshold] for threshold in THRESHOLDS) / len(THRESHOLDS)
     tiled_full = sum(tiled_metrics["mixed_f1"][threshold] for threshold in THRESHOLDS) / len(THRESHOLDS)
     report = {
-        "status": "valid",
+        "status": "valid" if baseline_selected_set_matches and baseline_threshold_scores_match else "valid_pair_with_prior_drift",
         "section": section,
         "training_name": training_name,
         "training_repeated": False,
@@ -128,7 +130,18 @@ def main():
             "zero_noncentral": "zero noncentral patch positions after original normalisation",
             "tile_centre": "fill every patch position with the unchanged normalised central spectrum",
         },
-        "baseline_matches_prior_selected_set_and_mixed_f1": True,
+        "baseline_matches_prior_selected_set_and_mixed_f1": baseline_selected_set_matches and baseline_threshold_scores_match,
+        "baseline_selected_set_matches_prior": baseline_selected_set_matches,
+        "baseline_threshold_scores_match_prior": baseline_threshold_scores_match,
+        "baseline_shared_selected_peaks_with_prior": len(real_set & set(source_peaks)),
+        "baseline_saved_only_peaks": sorted(set(source_peaks) - real_set),
+        "baseline_fresh_only_peaks": sorted(real_set - set(source_peaks)),
+        "baseline_prior_mscf1": source_metrics["mSCF1"],
+        "baseline_fresh_minus_prior_mscf1": real_metrics["mSCF1"] - source_metrics["mSCF1"],
+        "baseline_fresh_minus_prior_f1_by_threshold": {
+            threshold: real_metrics["mixed_f1"][threshold] - source_metrics["mixed_f1"][threshold]
+            for threshold in THRESHOLDS
+        },
         "baseline_peak_order_matches_prior": real_peaks == source_peaks,
         "baseline_changed_rank_positions": sum(left != right for left, right in zip(real_peaks, source_peaks)),
         "real_mscf1": real_metrics["mSCF1"],
@@ -150,7 +163,7 @@ def main():
         "real_metrics": str(real_metrics_path),
         "zero_noncentral_metrics": str(zero_metrics_path),
         "tiled_centre_metrics": str(tiled_metrics_path),
-        "limitation": "Both frozen input interventions are out of training distribution; sensitivity or F1 change is not a causal training benefit and does not isolate the S3PL-versus-VAE architecture gap. The original spatial-maximum normalisation is applied before intervention, so unchanged central values can still encode neighbour-dependent scaling. Tiling preserves patch occupancy and approximate magnitude but not the distribution of real neighbour spectra.",
+        "limitation": "Both frozen input interventions are out of training distribution; sensitivity or F1 change is not a causal training benefit and does not isolate the S3PL-versus-VAE architecture gap. The original spatial-maximum normalisation is applied before intervention, so unchanged central values can still encode neighbour-dependent scaling. Tiling preserves patch occupancy and approximate magnitude but not the distribution of real neighbour spectra. Any one-bin or score drift from the historical matched-count baseline is reported explicitly; real-versus-intervention scores use the same fresh job.",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
