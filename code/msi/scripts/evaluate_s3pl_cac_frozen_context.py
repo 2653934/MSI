@@ -74,8 +74,10 @@ def main():
     real_metrics_path, real_peaks_path = paths(baseline_suffix)
     real_metrics = json.loads(real_metrics_path.read_text(encoding="utf-8"))
     real_peaks = selected_mz(real_peaks_path)
-    if real_peaks != source_peaks or real_metrics["mixed_f1"] != source_metrics["mixed_f1"]:
-        raise ValueError("Frozen real-input run did not reproduce the existing matched-count evaluation")
+    # F1 evaluates the selected set, not its internal ranking. Equal-score
+    # pixel-frequency ties may reorder selected peaks without changing that set.
+    if set(real_peaks) != set(source_peaks) or real_metrics["mixed_f1"] != source_metrics["mixed_f1"]:
+        raise ValueError("Frozen real-input run did not reproduce the existing selected set and threshold scores")
 
     test(config, None, args.number_peaks, zero_suffix, input_ablation="zero_noncentral")
     zero_metrics_path, zero_peaks_path = paths(zero_suffix)
@@ -110,7 +112,9 @@ def main():
         "matched_peaks": args.number_peaks,
         "normalization": real_metrics["normalization"],
         "intervention": "zero noncentral patch positions after original normalisation, before frozen model inference",
-        "baseline_matches_prior_peaks_and_mixed_f1": True,
+        "baseline_matches_prior_selected_set_and_mixed_f1": True,
+        "baseline_peak_order_matches_prior": real_peaks == source_peaks,
+        "baseline_changed_rank_positions": sum(left != right for left, right in zip(real_peaks, source_peaks)),
         "real_mscf1": real_metrics["mSCF1"],
         "zero_noncentral_mscf1": zero_metrics["mSCF1"],
         "real_minus_zero_mscf1": real_metrics["mSCF1"] - zero_metrics["mSCF1"],
