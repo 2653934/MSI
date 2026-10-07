@@ -19,12 +19,29 @@ from utils.helpers import (
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 import data_configs
 
+
+def ablate_patch_context(batch, mode):
+    """Change only noncentral patch positions after the saved normalisation."""
+    if mode == "none":
+        return batch
+    if mode != "zero_noncentral":
+        raise ValueError(f"Unknown frozen input ablation: {mode}")
+    if batch.ndim != 5 or batch.shape[-1] != batch.shape[-2] or batch.shape[-1] % 2 != 1:
+        raise ValueError("S3PL batch must have shape (batch, channel, mz, odd_y, odd_x)")
+    centre = batch.shape[-1] // 2
+    ablated = torch.zeros_like(batch)
+    ablated[..., centre, centre] = batch[..., centre, centre]
+    return ablated
+
 def test(
     config,
     test_indices,
     number_peaks_override=None,
     result_suffix="",
+    input_ablation="none",
 ):
+    if input_ablation not in ("none", "zero_noncentral"):
+        raise ValueError(f"Unknown frozen input ablation: {input_ablation}")
     training_name = config["training_name"]
     directory_name = os.path.dirname(__file__)
     artifact_dirs = artifact_directories(config, directory_name)
@@ -104,6 +121,8 @@ def test(
                 X_batch = X_batch.cuda()
                 y_batch = y_batch.cuda()
 
+            X_batch = ablate_patch_context(X_batch, input_ablation)
+
             y_pred, binary_mask, attention_mask = model(X_batch)
 
             attention_mask = attention_mask.squeeze()
@@ -148,6 +167,7 @@ def test(
                 else "training_configuration_or_data_default"
             ),
             "source_training_name": training_name,
+            "frozen_input_ablation": input_ablation,
             "class_metrics": {},
             "mixed_f1": {},
         }
