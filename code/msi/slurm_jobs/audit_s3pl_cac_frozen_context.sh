@@ -35,8 +35,10 @@ CONFIG="$PROJECT_ROOT/logs/s3pl/${TRAINING_NAME}.json"
 OUTPUT="$PROJECT_ROOT/results/diagnostics/s3pl_cac_frozen_context/${DATASET}.json"
 
 cd "$PROJECT_ROOT"
+set +u  # Conda's MKL activation hook reads optional unset variables.
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env
+set -u
 export OMP_NUM_THREADS=4
 
 python -m py_compile baselines/s3pl/test.py scripts/evaluate_s3pl_cac_frozen_context.py
