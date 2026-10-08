@@ -1,0 +1,50 @@
+{
+  "status": "valid",
+  "section": "280TopL",
+  "training_repeated": false,
+  "training_name": "280TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9",
+  "checkpoint": "/home-mscluster/zsuliman/msi/checkpoints/baselines/s3pl/280TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9.pt",
+  "checkpoint_sha256": "acfa75887464622c1e7cb36c255b8ae3a4be2f053e7f4cfe26514f0408cb31e5",
+  "config_sha256": "ad7d255d58b9fbbb661b1a90d8e1932c64195a0ebe9d06a62b6da9ea30de0906",
+  "matched_peaks": 245,
+  "normalization": "reference_spatial_max",
+  "interventions": {
+    "rotate_90": "rotate the normalised 9x9 patch 90 degrees, preserving its centre, geometry, and all spectral values",
+    "permute_within_rings": "cyclically shift positions within each Chebyshev-distance ring around the centre; preserve its centre and each ring's spectral multiset"
+  },
+  "real_mscf1": 0.378,
+  "real_mscf1_unrounded": 0.3782426057802043,
+  "real_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/280TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_topology_real_245peaks/metrics.json",
+  "source_matched_metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/280TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_matched_245peaks/metrics.json",
+  "source_shared_selected_peaks_with_fresh_real": 245,
+  "source_threshold_scores_match_fresh_real": true,
+  "comparisons": {
+    "rotate_90": {
+      "intervention_mscf1": 0.378,
+      "real_minus_intervention_mscf1_unrounded": 0.0,
+      "real_minus_intervention_f1_by_threshold": {
+        "0.3": 0.0,
+        "0.4": 0.0,
+        "0.5": 0.0,
+        "0.6": 0.0
+      },
+      "shared_selected_peaks_with_real": 245,
+      "entering_and_leaving_peaks": 0,
+      "metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/280TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_topology_rotate90_245peaks/metrics.json"
+    },
+    "permute_within_rings": {
+      "intervention_mscf1": 0.378,
+      "real_minus_intervention_mscf1_unrounded": 0.0,
+      "real_minus_intervention_f1_by_threshold": {
+        "0.3": 0.0,
+        "0.4": 0.0,
+        "0.5": 0.0,
+        "0.6": 0.0
+      },
+      "shared_selected_peaks_with_real": 245,
+      "entering_and_leaving_peaks": 0,
+      "metrics": "/home-mscluster/zsuliman/msi/results/baselines/s3pl/280TopL_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_9_frozen_topology_ringshift_245peaks/metrics.json"
+    }
+  },
+  "limitation": "These are post-training, out-of-distribution input tests. They measure frozen-model position sensitivity, not whether real spatial context improves training or explains the S3PL-versus-VAE gap. Normalisation precedes intervention, so the central value can still depend on the original neighbours. Edge zero positions move under both interventions. A cutoff-bin difference from the historical source is recorded; each comparison uses the same fresh real-input job."
+}
