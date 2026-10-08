@@ -16,12 +16,16 @@ job_id = sys.argv[1]
 root = Path.cwd() / "results/validation/s3pl_vae_cac_runtime" / job_id
 stages = ("s3pl_full", "vae_train", "vae_attribution", "vae_peak_evaluation")
 exits = {}
+attempts = {}
 stage_log = root / "stages.tsv"
 if stage_log.is_file():
     with stage_log.open(newline="") as handle:
         for row in csv.DictReader(handle, delimiter="\t"):
             exits[row["stage"]] = int(row["exit_code"])
-print(f"Runtime workflow job {job_id} (160TopL; same-node native protocols)")
+            attempts[row["stage"]] = attempts.get(row["stage"], 0) + 1
+print(f"Runtime workflow job {job_id} (160TopL; native protocols)")
+if attempts.get("vae_peak_evaluation", 0) > 1:
+    print("Allocation note: VAE peak evaluation was repaired in a later allocation; its wall time includes fresh process/filesystem startup.")
 print(f'{"STAGE":<21} {"WALL s":>9} {"CPU s":>9} {"RSS GiB":>8} {"GPU max MiB":>11} STATUS')
 complete = 0
 walls = {}
