@@ -277,6 +277,11 @@ def robust_image(values, x, y):
 
 
 def save_ion_images(feature_values, indices, mz, correlations, sources, x, y, output):
+    # An explicit --ion-images 0 disables this optional visualisation.  The
+    # numerical peak evaluation is still valid and should not try to build a
+    # zero-row Matplotlib grid.
+    if len(indices) == 0:
+        return
     columns = 4
     rows = int(np.ceil(len(indices) / columns))
     fig, axes = plt.subplots(rows, columns, figsize=(16, 4 * rows), squeeze=False)
