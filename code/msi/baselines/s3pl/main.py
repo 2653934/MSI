@@ -21,6 +21,8 @@ def load_config(config_path, args):
     if args.learning_rate is not None: config["learning_rate"] = args.learning_rate
     if args.dropout is not None: config["dropout"] = args.dropout
     if args.random_seed is not None: config["random_seed"] = args.random_seed
+    if args.initialization_seed is not None: config["initialization_seed"] = args.initialization_seed
+    if args.sample_order_seed is not None: config["sample_order_seed"] = args.sample_order_seed
     if args.normalization is not None: config["normalization"] = args.normalization
     if args.input_context_mode is not None: config["input_context_mode"] = args.input_context_mode
 
@@ -44,6 +46,8 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=None)
     parser.add_argument("--dropout", type=float, default=None)
     parser.add_argument("--random_seed", type=int, default=None)
+    parser.add_argument("--initialization_seed", type=int, default=None, help="diagnostic only: seed for model initial weights")
+    parser.add_argument("--sample_order_seed", type=int, default=None, help="diagnostic only: seed for training-example order")
     parser.add_argument(
         "--normalization",
         choices=("reference_spatial_max", "paper_tic"),

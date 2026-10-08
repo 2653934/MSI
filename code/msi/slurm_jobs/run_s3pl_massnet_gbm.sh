@@ -19,6 +19,8 @@ PATCH_SIZE="${4:-3}"
 ARTIFACT_ROOT="${5:-$PROJECT_ROOT}"
 NORMALIZATION="${6:-reference_spatial_max}"
 RANDOM_SEED="${7:-1}"
+INITIALIZATION_SEED="${8:-}"
+SAMPLE_ORDER_SEED="${9:-}"
 
 case "$DATASET" in
     GBM108_negative|GBM108_positive|GBM12_1|GBM12_2|GBM22_1|GBM22_2|GBM39_1|GBM39_2)
@@ -75,6 +77,15 @@ if ! [[ "$RANDOM_SEED" =~ ^[0-9]+$ ]]; then
     exit 2
 fi
 
+SEED_FLAGS=()
+if [[ -n "$INITIALIZATION_SEED" || -n "$SAMPLE_ORDER_SEED" ]]; then
+    if ! [[ "$INITIALIZATION_SEED" =~ ^[0-9]+$ && "$SAMPLE_ORDER_SEED" =~ ^[0-9]+$ ]]; then
+        echo "Controlled diagnostic requires two nonnegative seeds: initialization and sample order." >&2
+        exit 2
+    fi
+    SEED_FLAGS=(--initialization_seed "$INITIALIZATION_SEED" --sample_order_seed "$SAMPLE_ORDER_SEED")
+fi
+
 S3PL_ROOT="$PROJECT_ROOT/baselines/s3pl"
 DATA_PATH="/datasets/zsuliman/msi_data/gbm_massnet/${DATASET}.h5"
 
@@ -99,4 +110,5 @@ python main.py \
     --normalization "$NORMALIZATION" \
     --input-context-mode none \
     --random_seed "$RANDOM_SEED" \
+    "${SEED_FLAGS[@]}" \
     "$EVAL_FLAG"

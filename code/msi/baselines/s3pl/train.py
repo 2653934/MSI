@@ -21,6 +21,16 @@ def train(config):
     if input_context_mode not in ("none", "tile_centre"):
         raise ValueError(f"Unsupported training input context: {input_context_mode}")
     random_seed = config["random_seed"]
+    initialization_seed = config.get("initialization_seed")
+    sample_order_seed = config.get("sample_order_seed")
+    if (initialization_seed is None) != (sample_order_seed is None):
+        raise ValueError("Set both initialization_seed and sample_order_seed for a controlled seed experiment")
+    if initialization_seed is not None and (
+        not isinstance(initialization_seed, int)
+        or not isinstance(sample_order_seed, int)
+        or min(initialization_seed, sample_order_seed) < 0
+    ):
+        raise ValueError("Controlled seeds must be nonnegative integers")
     random.seed(random_seed)
     np.random.seed(random_seed)
     torch.manual_seed(random_seed)
@@ -51,15 +61,24 @@ def train(config):
     
     dataset_size = len(training_dataset)
     indices = list(range(dataset_size))
-    np.random.seed(random_seed)
+    np.random.seed(random_seed if sample_order_seed is None else sample_order_seed)
     np.random.shuffle(indices)
 
     train_indices = indices
     test_indices = indices
 
-    train_sampler = SubsetRandomSampler(train_indices)
+    # The released-code path keeps the global RNG behaviour exactly as before.
+    # In a controlled experiment, the sampler has its own stream so changing
+    # model initialisation cannot silently change the mini-batch order.
+    sampler_generator = None
+    if sample_order_seed is not None:
+        sampler_generator = torch.Generator().manual_seed(sample_order_seed)
+    train_sampler = SubsetRandomSampler(train_indices, generator=sampler_generator)
     training_loader = DataLoader(training_dataset, batch_size=config["batch_size"], shuffle=False, drop_last=True, sampler=train_sampler)
 
+    if initialization_seed is not None:
+        torch.manual_seed(initialization_seed)
+        torch.cuda.manual_seed(initialization_seed)
     model = Attention3DConvAutoencoder(config["batch_size"], kernel_depth_d1=config["kernel_depth_d1"], kernel_depth_d2=config["kernel_depth_d2"], dropout=config["dropout"], spectral_patch_size=config["spectral_patch_size"])
     criterion = nn.MSELoss()
 
@@ -88,6 +107,9 @@ def train(config):
     print('GPU available: ' + str(use_cuda))
     print('normalization: ' + normalization)
     print('input context mode: ' + input_context_mode)
+    if initialization_seed is not None:
+        print('controlled initialization seed: ' + str(initialization_seed))
+        print('controlled sample-order seed: ' + str(sample_order_seed))
     
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["learning_rate"])
 

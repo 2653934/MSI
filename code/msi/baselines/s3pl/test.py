@@ -133,6 +133,10 @@ def test(
         mz_list = mz_list.cuda()
 
     peak_selection = {}
+    controlled_seed_diagnostic = (
+        config.get("initialization_seed") is not None
+        and config.get("sample_order_seed") is not None
+    )
     with tqdm.tqdm(test_loader, unit="batch") as bar:
         for batch in bar:
             bar.set_description(f"Test")
@@ -176,6 +180,16 @@ def test(
 
     df = pd.DataFrame(peak_list)
     df.to_csv(resultfolder / ('picked_peaks_' + dataname + '_' + str(peaks_per_spectral_patch) + 'peaks_z_patchsize_' + str(spectral_patch_size) + '.csv'), index=False)
+    if controlled_seed_diagnostic:
+        # Preserve the released peak ranking; expose the votes that produced it.
+        pd.DataFrame(
+            {
+                "rank": range(1, len(sorted_peak_list) + 1),
+                "mz": sorted_peak_list,
+                "pixel_topk_votes": [peak_selection[mz] for mz in sorted_peak_list],
+                "selected": [rank < number_peaks for rank in range(len(sorted_peak_list))],
+            }
+        ).to_csv(resultfolder / "peak_vote_diagnostics.csv", index=False)
 
     mSCF1 = None
     if config["evaluate_peak_picking"]:
