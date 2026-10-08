@@ -736,3 +736,33 @@ The bounded repeat resolves the seed-1 ambiguity only for these two tested
 configurations: no reproducible real-neighbour peak-quality advantage appears
 here. It does not prove that spatial context is generally useless, explain
 the CAC–GBM difference, or validate shuffled context as a deployment method.
+
+### S3PL GBM initialization stability and repeated native runtime (8 October 2026)
+
+The complete fixed-order S3PL screen now contains initialization seeds 1–3 for
+all eight GBM sections under the released 10-epoch, patch-size-3 protocol.
+Six of eight sections have an absolute mSCF1 seed range of at least 0.10:
+`GBM108_positive` 0.418, `GBM108_negative` 0.302, `GBM12_2` 0.235,
+`GBM22_1` 0.121, `GBM39_1` 0.140 and `GBM39_2` 0.131. `GBM12_1` and
+`GBM22_2` have smaller ranges of 0.056 and 0.059. The collection means are
+more stable at 0.300, 0.306 and 0.339 for seeds 1–3 because section-level
+movements partly cancel. This does not make a single section seed reliable.
+
+Combined with the earlier controlled order test and 25/50-epoch continuation,
+the evidence identifies weight initialization and the short stopping point as
+the source of the instability. Similar reconstruction losses can lead to
+different selected peaks and mSCF1. Report all declared seeds, section mean and
+sample SD, peak-set overlap and collection aggregation; never choose the best
+seed per section.
+
+Three complete native-workflow measurements on `160TopL` recorded S3PL totals
+of 151.18, 173.90 and 173.87 seconds, and VAE training + attribution + scoring
+totals of 135.30, 121.63 and 121.87 seconds. S3PL used approximately
+1.31–1.32 GiB maximum RSS and 315 MiB sampled GPU memory; the maximum VAE stage
+used approximately 1.15–1.18 GiB and 237 MiB. The VAE used less wall time and
+sampled memory in these runs, but this is a native-workflow comparison rather
+than an equal-work efficiency result because S3PL uses 10 epochs and the VAE
+100, with different objectives and downstream stages.
+
+The exact tables, figures, reporting rule and decision are in the
+[stability/runtime synthesis](investigations/16%20S3PL%20GBM%20Stability%20and%20Runtime%20Synthesis.md).

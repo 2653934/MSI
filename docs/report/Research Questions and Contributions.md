@@ -1,11 +1,11 @@
 # Final Research Questions and Contributions
 
-Last updated: 2026-09-22
+Last updated: 2026-10-08
 
-Status: **provisional framing for supervisor discussion**. These questions and
-contributions organise the current evidence, but they should not be treated as
-an approved replacement for the proposal until discussed with Hairong. The
-next planned confirmation is the supervision meeting on Monday, 2026-09-28.
+Status: **evidence-led report framing**. These questions and contributions now
+reflect the completed spatial-context controls, S3PL stability diagnosis and
+native workflow measurements. They remain bounded by the tested datasets,
+architectures and section-level evaluation.
 
 ## Report title
 
@@ -62,11 +62,12 @@ merely by returning more peaks.
 
 What peak-quality, attribution-faithfulness and computational trade-offs arise
 when uniform neighbourhood averaging is replaced by corrected learned
-attention, and are the observed differences stable across independent model
-training seeds?
+attention, and do intervention and training-seed controls show that the model
+uses real spatial topology beneficially?
 
-This is a targeted development-section question. It is not evidence that the
-same attention result generalises to all patients or sections.
+This is a targeted mechanistic question. The controls test sensitivity,
+spatial specificity and seed robustness separately; none alone proves a
+general benefit across patients or sections.
 
 ## Objectives
 
@@ -103,11 +104,18 @@ same attention result generalises to all patients or sections.
    universally beneficial: it does not consistently improve GBM reconstruction
    or mSCF1, but it improves mSCF1 over the centre-only control on all eight CAC
    sections.
-5. **A corrected attention ablation with a stated limitation.** Corrected
-   attention improves mSCF1 over uniform averaging in all three training seeds
-   on GBM108-positive, but does not improve deletion faithfulness and requires
-   more GPU memory. It therefore does not pass the combined promotion rule.
-6. **A reproducible evaluation record.** The repository includes data adapters,
+5. **A mechanistic diagnosis of the tested attention aggregator.** The model is
+   sensitive to neighbour inputs, but learned real-neighbour weights remain
+   close to uniform on typical sampled pixels and do not produce a reproducible
+   peak-quality advantage over matched shuffled or equal-weight controls on the
+   tested development sections. This is a bounded negative result, not a claim
+   that spatial modelling is generally ineffective.
+6. **A stability diagnosis of the executable S3PL GBM baseline.** Fixed-order
+   three-seed runs show material initialization sensitivity in six of eight
+   sections, while collection means are steadier. Longer training makes two
+   divergent GBM108-positive seeds converge, explaining why a single short run
+   is not a reliable section-level reference.
+7. **A reproducible evaluation record.** The repository includes data adapters,
    validation audits, restartable Slurm jobs, matched-count evaluation,
    completeness and faithfulness checks, section-level outputs and publication
    figures.
@@ -117,6 +125,7 @@ same attention result generalises to all patients or sections.
 - Neighbourhood context is universally better than a centre-only VAE.
 - Attention has been validated across the complete GBM and CAC collections.
 - The S3PL paper result was fully reproduced on GBM.
+- A single favourable S3PL initialization represents its expected GBM result.
 - Eight tissue sections are equivalent to eight independent patients.
 - Better mSCF1 proves biological biomarker validity.
 - A ten-epoch S3PL runtime and a one-hundred-epoch VAE runtime are directly
@@ -124,8 +133,8 @@ same attention result generalises to all patients or sections.
 
 ## One-sentence thesis
 
-In these experiments, explaining a frozen VAE nonlinearly is a more reliable
-source of peak-selection improvement than adding neighbourhood input alone,
-while spatial context remains useful on CAC and corrected attention shows a
-small but seed-stable development-section gain at an increased computational
-cost.
+In these experiments, nonlinear explanation of a frozen VAE is a more reliable
+source of peak-selection improvement than the tested neighbourhood mechanisms;
+spatial context shows collection-dependent value, while controlled attention
+and S3PL stability analyses show why model sensitivity, initialization and
+evaluation level must be separated before claiming a spatial advantage.
