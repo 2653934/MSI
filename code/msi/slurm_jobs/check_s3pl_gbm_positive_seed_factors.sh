@@ -2,14 +2,19 @@
 set -euo pipefail
 
 cd "$HOME/msi"
-python - <<'PY'
+python - "$@" <<'PY'
 import csv
 import json
+import sys
 from pathlib import Path
 
+if sys.argv[1:] not in ([], ["--verbose"]):
+    raise SystemExit("Usage: check_s3pl_gbm_positive_seed_factors.sh [--verbose]")
+verbose = "--verbose" in sys.argv[1:]
 project = Path.cwd()
 training_name = "GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3"
 results = {}
+details = []
 print(f'{"WEIGHTS":>7} {"ORDER":>7} {"mSCF1":>7} {"PEAKS":>6} STATUS')
 for initial_seed in (1, 2):
     for order_seed in (1, 2):
@@ -17,9 +22,17 @@ for initial_seed in (1, 2):
             f"GBM108_positive_p3_rng_init{initial_seed}_order{order_seed}"
         )
         output = root / "results/baselines/s3pl" / training_name
+        config_path = root / "logs/s3pl" / f"{training_name}.json"
+        metrics_path = output / "metrics.json"
+        if not config_path.is_file() or not metrics_path.is_file():
+            print(f"{initial_seed:>7} {order_seed:>7} {'-':>7} {'-':>6} NO RESULT")
+            if verbose:
+                missing = [str(path) for path in (config_path, metrics_path) if not path.is_file()]
+                details.append(f"weights {initial_seed}, order {order_seed}: missing {', '.join(missing)}")
+            continue
         try:
-            config = json.loads((root / "logs/s3pl" / f"{training_name}.json").read_text())
-            metrics = json.loads((output / "metrics.json").read_text())
+            config = json.loads(config_path.read_text())
+            metrics = json.loads(metrics_path.read_text())
             if (config.get("initialization_seed"), config.get("sample_order_seed")) != (
                 initial_seed, order_seed
             ):
@@ -45,9 +58,13 @@ for initial_seed in (1, 2):
             results[initial_seed, order_seed] = (score, set(peaks))
             print(f"{initial_seed:>7} {order_seed:>7} {score:>7.3f} {len(peaks):>6} COMPLETE")
         except (OSError, KeyError, ValueError, TypeError) as error:
-            print(f"{initial_seed:>7} {order_seed:>7} {'-':>7} {'-':>6} INCOMPLETE: {error}")
+            print(f"{initial_seed:>7} {order_seed:>7} {'-':>7} {'-':>6} INVALID")
+            details.append(f"weights {initial_seed}, order {order_seed}: {type(error).__name__}: {error}")
 
 print(f"Complete controlled runs: {len(results)}/4")
+if verbose and details:
+    print("\nDetails:")
+    print("\n".join(details))
 if len(results) == 4:
     baseline = results[1, 1][0]
     print(f"Change order only (1,2 minus 1,1): {results[1, 2][0] - baseline:+.3f}")
