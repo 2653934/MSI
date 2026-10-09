@@ -274,3 +274,60 @@ Context: I read `check_gate_d_n12_reproduction.py`, the shell diff, the three ne
 6. **Order is unchanged.** Run BIC only after the GBM108_positive pixel-count decision table is posted here and reviewed. Write the BIC job script then (CPU, batch, array per section-arm, `--parsable`, output folders created before submission).
 
 Do not commit, push or submit without Zayd's OK.
+
+### 2026-10-09 21:25 Code → Supervisor: Gate (d) GBM108_positive stage 1 — both arms reproduce
+Status: INFO
+Context: commit `945836a` (cluster copies matched `HEAD` by sha256sum, 59 files). Test job 66389: 86/86 passed, none skipped, including the three new stage-1 tests. IG n=12: 66390 (central_only), 66391 (uniform_mean). Checks: 66392, 66393.
+Evidence: `results/diagnostics/gate_d_pixel_counts/GBM108_positive_seed1/<arm>/n12/summary.json` and `<arm>/n12_reproduction/summary.json` (on the cluster; not yet synced). Protocol 18 Section 10.
+
+**Stage 1 outcome (exit code, PASS line and `status` only; no scores read):**
+1. **central_only n=12 reproduces: yes.** Check 66392 exited 0 ("n=12 REPRODUCTION PASSED", status `passed`).
+2. **uniform_mean n=12 reproduces: yes.** Check 66393 exited 0, status `passed`. So the attribution-version-1 baseline risk did not materialise.
+
+**Run records:**
+- **IG jobs:** both COMPLETED with exit 0 on `batch` RTX 3060 nodes (mscluster127/128). Elapsed 7:09 and 7:15. IG process 252 s and 258 s.
+- **Checks in each IG job:** CUDA warm-up passed with no replacement job, and the pre-run test suite (185 tests) passed. IG status `valid`.
+- **Label alignment:** identity in both arms. Max posterior difference 1.8e-6 for central_only and 3.0e-6 for uniform_mean.
+- **Reproduction checks:** 31 s and 52 s.
+- **Memory:** not available. `sacct` MaxRSS is blank for these jobs, as for the 40TopL job 66325, and `seff` is not installed. Neither job hit the 24G request.
+
+**Next:** stage 2 (n=48 and n=192 for both arms) after Zayd's OK, then the full evaluations, `run_gate_d_summary.sh`, and the decision table posted here.
+
+### 2026-10-09 23:15 Code → Supervisor: Gate (d) GBM108_positive stage 2 running; overnight plan
+Status: INFO
+Context: Stage 2 IG was submitted with Zayd's OK: 66399 (central_only n=48), 66400 (central_only n=192), 66401 (uniform_mean n=48), 66402 (uniform_mean n=192), via `submit_gate_d_pixel_counts.sh gbm --counts 48,192`. All four started at 23:10 SAST on separate `batch` RTX 3060 nodes, passed the CUDA warm-up and began the pre-run test suite. The submitter accepted both arms because both n=12 records are `passed`.
+Correction: the previous entry's heading time "21:25" was UTC. In SAST, which this chat uses, it was about 23:05.
+Evidence: protocol 18 Section 10; `CLAUDE.md` "Next".
+
+**Plan (no change to the approved sequence or rules):**
+1. Stage 2 is expected to finish between about 23:20 and 00:20 SAST. A timeout or failure is reported, not resubmitted.
+2. Zayd is away overnight. With his OK, the remaining steps can be queued as Slurm `afterok` dependencies so that they run without his machine:
+   - each arm's full evaluation after both of that arm's IG jobs;
+   - `run_gate_d_summary.sh` after both evaluations.
+   Any failure leaves the downstream jobs unrun; nothing is retried. If Zayd does not OK this tonight, the same steps run one at a time tomorrow.
+3. Tomorrow: check `sacct` and the logs, then Zayd syncs. Only then do I read `decisions.json` locally and post the decision table here exactly as the rule gives it, with the descriptive IG − posterior-|PCC| values.
+4. I then stop until you review it. A central_only n=192 trigger would mean a 16-section rerun, which is a new step needing your approval and Zayd's.
+5. BIC starts only after that review, following the approved specification in protocol 18 Section 6.
+
+No questions at this point; this is for your information.
+
+### 2026-10-09 23:17 Code → Supervisor: Overnight chain queued
+Status: INFO
+Context: Zayd gave his OK, so item 2 of the 23:15 plan is in place as Slurm `afterok` dependencies.
+- 66404: evaluation of GBM108_positive central_only, after IG 66399 and 66400.
+- 66405: evaluation of uniform_mean, after IG 66401 and 66402.
+- 66406: `run_gate_d_summary.sh`, after 66404 and 66405. It writes `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json`.
+Evidence: `squeue` at 23:17 SAST showed the three jobs PENDING (Dependency) and IG 66399–66402 RUNNING. Protocol 18 Section 10.
+Nothing else changed. The decision table is posted here after Zayd's sync tomorrow.
+
+### 2026-10-09 23:40 Supervisor → Code: Overnight review, no blockers
+Status: INFO
+- **Checked:** commits `6ee2b1e` and `945836a` change only the stage-1 check, the two shell scripts and the tests. The evaluator, the IG script and `gate_d_helpers.py` are unchanged since `3a9599d`, so the 40TopL and GBM108_positive evaluations share one code version. The stage-1 report and the `afterok` chain are fine.
+- **Small fix:** in CLAUDE.md, the gate (d) subsection heading still says "stage 2 IG running", but item 1 says all jobs are complete. Make them agree.
+- **Next session:** as in your plan.
+  1. `sacct` and the logs.
+  2. Zayd syncs.
+  3. Post the decision table here.
+  4. Stop for review.
+- **Memory:** a blank MaxRSS is acceptable. Note it once in Section 10, which is already done; don't chase it.
+

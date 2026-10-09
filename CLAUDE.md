@@ -14,7 +14,7 @@ This is Zayd's Honours research repository: unsupervised peak learning for mass 
 - `report/draft/`: the LaTeX report being rebuilt. `report/final/` stays empty until the final audit.
 - Raw data and checkpoints exist only on the cluster: `/datasets/zsuliman/msi_data/` and `/datasets/zsuliman/msi_checkpoints/`.
 
-## Current work (state at end of 9 October 2026, after the supervisor report was drafted)
+## Current work (state at 23:20 SAST, 9 October 2026: GBM108_positive gate (d) all jobs complete; results on the cluster, not yet synced or read)
 
 Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) run specification and its amendments, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
 
@@ -24,17 +24,21 @@ Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) r
 - **IG vs legacy:** positive in 8/8 sections in every arm at bin level and in the collapse diagnostic. The budget-stability clause cannot be assessed, so report it as 2 of 3 clauses met.
 - **Do not change the report headline or research questions yet** (supervisor). The provisional framing: on GBM, the label-free GMM segmentation plus a correlation ranking approaches the oracle; on CAC it is only comparable to mean intensity and Moran's I; IG underperforms the correlation ranking in both. Spatial context was not tested by this gate.
 
-### Gate (d), attribution-pixel count (12/48/192): 40TopL done and logged; GBM108_positive approved in stages (supervisor, 9 October), not yet run
+### Gate (d), attribution-pixel count (12/48/192): 40TopL done; GBM108_positive stage 1 passed, stage 2 IG running
 - **Specification:** protocol 18 Section 6, decided before any gate (d) output.
   - Sections: GBM108_positive and 40TopL. Both arms (central_only, uniform_mean), with the rule applied per arm.
   - Reproduction gate: an identical K_bin bin set plus the saved mSCF1 to 1e-12; order is recorded but not gating.
   - Run-validity checks: IG status `valid`; run signature equal to n=12; GMM labels aligned to production with a matching reference SHA-256.
   - Trigger: change ≥ +0.02 on **both** sections for that arm. Resources: `batch` with `--exclusive`, 8G for CAC, 24G for GBM.
-- **Code:** `slurm_jobs/run_gate_d_pixel_count_ig.sh`, `submit_gate_d_pixel_counts.sh pilot|gbm`, `run_gate_d_evaluation.sh SECTION ARM`, `run_gate_d_summary.sh`, `scripts/evaluate_gate_d_pixel_counts.py`, `scripts/summarise_gate_d_pixel_counts.py` and `scripts/check_gate_d_uniform_consistency.py`. The IG script has the opt-in flags `--attribution-total` and `--align-gmm-labels-to-production`; alignment failure exits with code 5.
+- **Code:** `slurm_jobs/run_gate_d_pixel_count_ig.sh`, `submit_gate_d_pixel_counts.sh pilot|gbm [--counts LIST] [--arms LIST]`, `run_gate_d_evaluation.sh SECTION ARM [n12-only]` (n12-only runs `scripts/check_gate_d_n12_reproduction.py`), `run_gate_d_summary.sh`, `scripts/evaluate_gate_d_pixel_counts.py`, `scripts/summarise_gate_d_pixel_counts.py` and `scripts/check_gate_d_uniform_consistency.py`. The IG script has the opt-in flags `--attribution-total` and `--align-gmm-labels-to-production`; alignment failure exits with code 5.
 - **History:**
   - Attempt 1 (66286–66291) failed at the unit-test step because `scripts/` was missing from `PYTHONPATH`; this was fixed.
   - Attempt 2 (66293–66298): the central_only GMM components came out renumbered by the GPU refit, so different attribution pixels were sampled. That led to the label-alignment amendment. The outputs were moved, not deleted, to `gate_d_pixel_counts/superseded_label_order/40TopL_seed1/`.
   - Attempt 3, aligned (commit `3a9599d`): tests 66324 passed 83/83; IG 66325–66330; evaluations 66331/66332. All passed.
+  - GBM108_positive, staged (commits `6ee2b1e`, `945836a`; 59 cluster files matched `HEAD` by sha256sum). Tests 66389 passed 86/86 with none skipped.
+    - Stage 1: IG n=12 66390/66391 valid, identity alignment, about 7 min each; checks 66392/66393 **passed in both arms** (uniform_mean's version-1 risk did not occur). No scores were read.
+    - Stage 2: IG 66399 (central_only n=48), 66400 (central_only n=192), 66401 (uniform_mean n=48), 66402 (uniform_mean n=192), all started 21:10 UTC (23:10 SAST).
+  - `sacct` MaxRSS is blank for gate (d) jobs and `seff` is not installed, so peak memory is not available.
 - **40TopL results** (in `gate_d_pixel_counts/40TopL_seed1/<arm>/evaluation/summary.json`):
   - The uniform_mean consistency check **passed** (identity mapping, max difference 0.0). The central_only permutation was {0→0, 1→2, 2→1}.
   - Change at K_bin: central_only n=48 −0.001, **n=192 +0.024**; uniform_mean n=48 −0.008 (value −0.0085), n=192 +0.003.
@@ -42,20 +46,23 @@ Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) r
   - **So uniform_mean cannot trigger. central_only n=192 depends on GBM108_positive central_only n=192.** That is a single section, single seed, just over the threshold, with bin-set Jaccard about 0.8 between counts.
 
 ### Next
-1. Done 9 October: the 40TopL outcomes, the consistency PASS, the supervisor's descriptive additions (budget consistency of the central_only n=192 gain, the IG − posterior-|PCC| gap by budget, 25–36 of 315 bins changing) and the supervisor's decisions are logged in protocol 18 Section 10. `docs/meetings/` is gitignored, so Section 10 is the record.
-2. Done 9 October: the supervisor report `docs/meetings/supervisor_report_2026-10-09_gate_d_40TopL.md` was sent and approved. Answers: (1) GBM108_positive approved **in stages**; (2) not stopping; (3) BIC kept, after the pixel-count result, with a plan drafted first.
-3. **Staging change: approved by the supervisor (chat entry 22:55, 9 October) as drafted. Uncommitted, not synced, nothing submitted.** The submitter could not stage by n, so the smallest change was made:
-   - `submit_gate_d_pixel_counts.sh`: `--counts` and `--arms` options; a count above 12 is refused unless `<arm>/n12_reproduction/summary.json` has status `passed` (a grep on the `atomic_write_json` format; switch to `json.load` if that format changes).
-   - `run_gate_d_evaluation.sh SECTION ARM n12-only` runs the new `scripts/check_gate_d_n12_reproduction.py` (n=12 validity checks plus the reproduction gate only). It imports the evaluator and does **not** modify it, so the evaluator code hash, which the summariser compares across sections, stays identical to 40TopL's.
-   - Three new tests in `test_fair_scoring_pipeline.py`. Not yet run: they need h5py, so they need the cluster test job, where they must show as run and passed.
-   - A validity failure (ValueError before scoring) writes no `n12_reproduction/summary.json`. Post its error text to the supervisor chat.
-4. Stages, after Zayd's commit and sync, a `sha256sum` match, and the cluster test job passing, with Zayd's OK for each `sbatch`:
-   - **Stage 1:** `bash slurm_jobs/submit_gate_d_pixel_counts.sh gbm --counts 12`, then `sbatch slurm_jobs/run_gate_d_evaluation.sh GBM108_positive <arm> n12-only` for each arm. Post yes/no per arm (from the exit code and status only, plus `sacct` Elapsed and MaxRSS) to `docs/supervision/supervisor_chat.md`. **Do not read scores.**
-   - **Stage 2:** `--counts 48,192 --arms central_only` if central_only reproduced; add uniform_mean only if it reproduced. Otherwise uniform_mean gets no verdict (no fallback; the decision table will show it as "missing").
-   - **Then:** both full evaluations (`run_gate_d_evaluation.sh GBM108_positive <arm>`), `run_gate_d_summary.sh`, and the decision table exactly as the rule gives it, posted to the supervisor chat. Report back before anything else.
-   - A timeout is a failed run: report it, do not silently resubmit. GBM IG time at n=192 is untested (limits 4h/4h/8h).
-5. BIC: the specification was approved with changes and is in protocol 18 Section 6 ("BIC run specification"). It is descriptive per section-arm with no verdict, and runs **no GPU IG** at any BIC or forced K. An optional labelled CPU "BIC-K segmentation sensitivity, descriptive" uses posterior-|PCC|; drop it and tell the supervisor if it needs more than a small script. **It runs only after the GBM108_positive decision table has been posted and reviewed; write the job script then.**
-6. Uncommitted (Zayd commits): `CLAUDE.md`, protocol 18 (Sections 6 and 10), `docs/supervision/` (chat and staging diff), the synced `results/diagnostics/gate_d_pixel_counts/40TopL_seed1/`, `results/validation/fair_scoring_env_tests/66324_*`, and the item 3 staging change.
+Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both.
+
+Done on 9 October: the 40TopL outcomes and the supervisor's fixes were logged in protocol 18 Section 10. The staging change was approved (chat, 22:55), committed and checked. Stage 1 passed and was posted to the supervisor chat (entry 21:25 UTC). The BIC specification was approved with changes (protocol 18 Section 6).
+
+1. **Done: all GBM108_positive gate (d) jobs completed with exit 0, by 21:18 UTC / 23:18 SAST on 9 October.**
+   - IG 66399–66402 took 5:56 to 7:08 elapsed. IG time barely grew with n, as on 40TopL.
+   - Evaluations 66404 (central_only) and 66405 (uniform_mean) have status `complete`, so all run-validity checks and both n=12 gates passed. Their `.err` files are empty.
+   - Summary 66406 wrote `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json`.
+   - **No values have been read.**
+2. These ran as an `afterok` chain queued at 23:17 SAST with Zayd's OK (logged in protocol 18 Section 10 and the supervisor chat).
+3. **Next session:**
+   - Check `sacct -j 66399,66400,66401,66402,66404,66405,66406` (State, Elapsed, ExitCode), and read the short `.out`/`.err` logs on the cluster. Don't print scores from the logs.
+   - Then Zayd syncs (cluster-to-local pull, `docs/operations/cluster_sync.md`).
+   - **Only after the sync**, read `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json` and the two `GBM108_positive_seed1/<arm>/evaluation/summary.json` files locally.
+4. **Post the decision table to the supervisor chat, exactly as the rule gives it** (per arm and n: changes on both sections, verdict, evaluation status), with the descriptive IG − posterior-|PCC| values. Log it in protocol 18 Section 10. Tell Zayd "Posted to supervisor chat: …". **Stop there until the supervisor reviews it.** If the table shows a trigger for central_only n=192, the 16-section rerun is a new step that needs the supervisor's and Zayd's approval.
+5. **BIC:** follow protocol 18 Section 6 ("BIC run specification"). It is descriptive per section-arm with no verdict and **no GPU IG** at any BIC or forced K. There is an optional labelled CPU "BIC-K segmentation sensitivity, descriptive"; drop it and tell the supervisor if it needs more than a small script. **Start BIC only after the supervisor has reviewed the decision table. Write the job script then.**
+6. **Uncommitted (Zayd commits):** `CLAUDE.md`, protocol 18 Section 10 (the test, stage 1 and plan entries), and `docs/supervision/supervisor_chat.md`. After the sync, also `results/validation/fair_scoring_env_tests/66389_*` and `results/diagnostics/gate_d_pixel_counts/GBM108_positive_seed1/`.
 
 ## Scientific rules
 
