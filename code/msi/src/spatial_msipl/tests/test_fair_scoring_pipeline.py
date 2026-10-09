@@ -133,9 +133,9 @@ class FairScoringPipelineTests(unittest.TestCase):
                 "--legacy-metrics", self.legacy_metrics, "--output", output,
                 "--random-draws", 5, "--chunk-size", 64, "--allow-outside-slurm"]
 
-    def approval(self, name, sha=None):
+    def approval(self, name, sha=None, status="approved"):
         path = self.root / name
-        path.write_text(json.dumps({"partitions": {"P1": {
+        path.write_text(json.dumps({"status": status, "partitions": {"P1": {
             "parameters": self.audit["partitions"]["P1"]["parameters"],
             "sections": {"SYN1": sha or self.audit["partitions"]["P1"]["structure"]["sha256"]},
         }}}))
@@ -205,6 +205,16 @@ class FairScoringPipelineTests(unittest.TestCase):
                      check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("hash differs", result.stderr)
+        self.assertFalse((output / "summary.json").exists())
+
+    def test_draft_partition_approval_is_refused_before_scoring(self):
+        approval = self.approval("draft_approval.json", status="draft")
+        output = self.root / "draft"
+        result = run("evaluate_fair_scoring_baselines.py", *self.common(output),
+                     "--partition-dir", self.partitions, "--partition-approval", approval,
+                     check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("status must be 'approved'", result.stderr)
         self.assertFalse((output / "summary.json").exists())
 
     def test_restart_reuses_only_identical_provenance(self):

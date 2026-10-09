@@ -80,8 +80,8 @@ from spatial_msipl.simple_baselines import (
     supervised_oracle_ranking,
 )
 
-EVALUATION_VERSION = 2
-PROTOCOL = "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3)"
+EVALUATION_VERSION = 3
+PROTOCOL = "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.1)"
 PARTITION_PARAMETERS = {"P1": P1_DEFAULTS, "P3": P3_DEFAULTS}
 # IG/L2/legacy are rescored with the same rule, data and scorer functions that
 # produced the saved values; only floating summation order can differ, which
@@ -134,6 +134,8 @@ def load_approval(args, dataset):
     if args.partition_dir is None:
         raise ValueError("--partition-approval requires --partition-dir")
     approval = json.loads(args.partition_approval.read_text(encoding="utf-8"))
+    if approval.get("status") != "approved":
+        raise ValueError("partition approval status must be 'approved'")
     expected = {}
     for name, record in approval.get("partitions", {}).items():
         if name not in PARTITION_PARAMETERS:

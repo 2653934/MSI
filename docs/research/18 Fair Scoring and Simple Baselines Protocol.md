@@ -81,7 +81,7 @@ A new group starts at bin i whenever the gap to bin i−1 exceeds 20 ppm. Groups
 
 **S1 is the only hard anti-chaining rule.** A partition that fails S1 in **any** section is rejected for that collection. S2 and S3 are reported alongside it, together with group bin counts, proportions and the extreme groups, but they never reject a partition by themselves. It is not tuned against outcomes. If both partitions fail, peak-level evaluation is reported as "not established" and any revision needs a new, separately predeclared rule.
 
-**Approval.** A reviewer writes `partition_approval.json` listing the approved partitions, their parameters and the per-section hashes. The scoring script refuses to run the peak-level analysis without it, and refuses again if any hash differs.
+**Approval.** A reviewer writes `partition_approval.json` with `status` set to `approved`, listing the approved partitions, their parameters and the per-section hashes. The scoring script refuses to run the peak-level analysis without it, refuses draft or otherwise unsigned approval files, and refuses again if any hash differs.
 
 ### 3.3 Peak-level scoring under an approved partition
 
@@ -173,8 +173,8 @@ A test rebuilds the IG matched groups from these files.
 
 - **No scientific computation on the login node.** The Python entry points refuse to run without `SLURM_JOB_ID`; `--allow-outside-slurm` exists for tests only. Submit scripts do file checks and `sbatch` only. The status checker reads status strings only; provenance validity is decided inside the jobs.
 - **Partition and resources.** All jobs use `batch`, not `bigbatch`.
-  - The partition audit requests 24 GB, 4 CPUs and 1 h.
-  - The fair-scoring array task requests 16 GB, 4 CPUs and 2 h for both arms of one section.
+  - The partition audit requests 4 GB, 2 CPUs and 15 min, reduced after the pilot: every section peaked at 204–220 MB and was I/O bound (about 21% CPU); GBM sections took about 1 min and CAC about 5 s.
+  - The fair-scoring array task requests 4 GB, 2 CPUs and 1 h for both arms of one section. Confirm with its own pilot (GBM22_2) before submitting all sections.
   - Each task records GNU-time elapsed time and peak RSS when `/usr/bin/time` exists.
   - **Run the pilot index first (GBM22_2, the largest section)** and read `sacct --format=JobID,State,Elapsed,MaxRSS,ReqMem,NodeList,ExitCode` before submitting the rest and before lowering or raising the requests.
 - **Arrays.**
@@ -197,6 +197,13 @@ A test rebuilds the IG matched groups from these files.
 **Resolved before the audit (v3.1): S2 on CAC.** S2 is now descriptive and S1 (width < 0.5 Da) is the only hard rule. The decision was made on structural grounds (bin count depends on axis resolution), without seeing any real audit output. Code: `check_partition_sanity` returns S2 values under `diagnostics`; audit version 3. Tests: the chained-axis case still fails S1 but not S2, and a new test shows a many-bin group narrower than 0.5 Da passes.
 
 ## 10. Executions on real data so far (record)
+
+0. **9 October, cluster (after v3.1):**
+   - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
+   - Partition audit: pilot job 66012 (GBM22_2) and job 66013 (the other 15 sections) completed; GBM22_2 was correctly skipped on rerun.
+   - P1 passes S1 in 16/16 sections (widest group 0.416 Da). P3 fails S1 in all 8 GBM sections (one 14.10 Da group of 43,285 bins) and passes on CAC, where both partitions are identical to bin level.
+   - `results/diagnostics/peak_partition_audit/partition_approval.json` approves P1 for all 16 sections and P3 for the 8 CAC sections. It was drafted from the audited hashes (each recomputed from the saved arrays) and approved after Codex review.
+   - **Noted limitation:** S1 does not detect over-splitting. GBM m/z 115.6–129.8 holds 51% of bins and 37% of P1 groups (median 7 bins, about 15 ppm), so one ion may span several groups there.
 
 1. **9 October, cloud workspace: read-only code validation** on the saved GBM108_positive / uniform_mean artifacts:
    - the NumPy posterior reproduces the saved assignments (maximum difference 6.9e-7);

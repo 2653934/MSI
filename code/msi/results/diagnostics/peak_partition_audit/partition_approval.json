@@ -1,0 +1,135 @@
+{
+  "approval_version": 1,
+  "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.1)",
+  "rule": "S1 (max group width < 0.5 Da) is the only hard rule; a partition failing S1 in any section of a collection is rejected for that collection. S2/S3 descriptive.",
+  "decision": "P1 approved for all 16 sections (passes S1 in 16/16). P3 approved for the 8 CAC sections (passes S1 8/8; identical to bin-level there) and rejected for GBM (fails S1 in 8/8: one 14.1043 Da group of 43,285 bins).",
+  "limitation_noted": "S1 guards against chaining, not over-splitting; in GBM m/z 115.6-129.8 (51% of bins) P1 groups have a median of 7 bins (~15 ppm), so one ion may span several P1 groups.",
+  "status": "approved",
+  "approved_at": "2026-10-09",
+  "reviewed_by": "Codex scientific and provenance review, authorized by the project owner",
+  "partitions": {
+    "P1": {
+      "parameters": {
+        "gap_break_ppm": 50.0,
+        "smoothing_bins": 3,
+        "min_relative_depth": 0.05,
+        "max_merge_width_ppm": 100.0
+      },
+      "sections": {
+        "GBM108_positive": "e5ccef96b76959074bc886595315694d2b0bb47cf0cce46d0e40cc6f26511750",
+        "GBM108_negative": "3bb8163fb982aff16daeddebf518c84a2f76ec4b67a511bc43fa7c6ef07540fd",
+        "GBM12_1": "9e1181ab8d76d09edb103337e976d830349c889e4e591735748b8773b24a6331",
+        "GBM12_2": "1e5d9d2e7c55602bbd3d77b59188d90ea2522e4c2ee80d0ed125617292276d91",
+        "GBM22_1": "f8d1552996d12cd7707c71e71c0e47ac5b3c42c85aeed8baa321d34d72a4f158",
+        "GBM22_2": "bc0dc8afe870eb266ebba60f031dacb8a72a9f9521cdb4475e6d677142341777",
+        "GBM39_1": "e290abf48671538e3d0871f3a1d889a8def478251b6c03e546b8eeeef4dff951",
+        "GBM39_2": "f2577d97f5f12f89bfa4f96b71e348a7a79c89af23a6d34723d5698d6da9de0b",
+        "40TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "160TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "200TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "240TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "280TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "360TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "400TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "520TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1"
+      }
+    },
+    "P3": {
+      "parameters": {
+        "tolerance_ppm": 20.0
+      },
+      "sections": {
+        "40TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "160TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "200TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "240TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "280TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "360TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "400TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+        "520TopL": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1"
+      }
+    }
+  },
+  "audit_evidence": {
+    "GBM108_positive": {
+      "summary_sha256": "2c7af4261539c67347f9ea8635522bc82fc3f629d5ec4a2552e8ac21b85fe294",
+      "partitions_npz_sha256": "9b1c04290ea30b6dc2ca8b8fa1c90daea438090851aa2090e3491d64f6908a37",
+      "audit_version": 3
+    },
+    "GBM108_negative": {
+      "summary_sha256": "c485b5a3c4c6f2d5bb8cc533da5c5dd6e33e9183edf79df5cc6139fb84700369",
+      "partitions_npz_sha256": "a7c3f3d853fa4057ae8c6cc80aa7881e98b9595f05c762254f1e3b391af4abdd",
+      "audit_version": 3
+    },
+    "GBM12_1": {
+      "summary_sha256": "22fe4afccf9c1f3cd18b4b8f5ced4dc6f1e102c186d3ed9ceb64c6d2b1a91b27",
+      "partitions_npz_sha256": "44ed0aececeeb7955aa5fd091a56b72682bf012f6ace4f8dff14b6c95a4a9b54",
+      "audit_version": 3
+    },
+    "GBM12_2": {
+      "summary_sha256": "fe7b32d8ad6e704ac55f2bd409be35b5d68d1b7c70a51e1fd59d4cbb8eb9eb76",
+      "partitions_npz_sha256": "89a7847d020cd3f29e3f8fef6b4f9d7dd5adee6a162e65cb0cda91f552865899",
+      "audit_version": 3
+    },
+    "GBM22_1": {
+      "summary_sha256": "ccdb36deb4c49c7a4d370873bf472ff257903cca9e098216f85894763ab98a92",
+      "partitions_npz_sha256": "7a8516dea383c72988e91ae4b9143c9b0e5cb86ed5919501cbf009432d9fb92f",
+      "audit_version": 3
+    },
+    "GBM22_2": {
+      "summary_sha256": "7ccc8f1070b007991cd953ebea003c5db7bee3b080485874ca78b70ba43a625f",
+      "partitions_npz_sha256": "093752d0e5cc0e4800207848276f956fec5aa7f8ae51331cdae2777585e501a4",
+      "audit_version": 3
+    },
+    "GBM39_1": {
+      "summary_sha256": "abd744ce501762e665d50b26a52a81089974ce86d790152948e7fccbca9d9cb9",
+      "partitions_npz_sha256": "2c1cbd545505dac66c0381f807746fbeded9a28b6c74ab94e3ef31b4cc43bba3",
+      "audit_version": 3
+    },
+    "GBM39_2": {
+      "summary_sha256": "5d1f69f39aea678a4f5e2c3650d76391aa95a53749d3e96da9e44ff887eb036f",
+      "partitions_npz_sha256": "f93da4ca5ca375c6ce14a39ccc2259f30dc71dabace5a3825eeca8188a2b2efc",
+      "audit_version": 3
+    },
+    "40TopL": {
+      "summary_sha256": "75d6747cbad2875582ccf3a1b982ef89c1703b5389b4387d446bb51d16a73111",
+      "partitions_npz_sha256": "9de925d62e258c6e571d50a396f7af989a469d48b7084634152fa92dd8be4952",
+      "audit_version": 3
+    },
+    "160TopL": {
+      "summary_sha256": "253d3646d9d49d4e6cb86d4a33c52869d76b816195d6f929fdb62f82718a60b0",
+      "partitions_npz_sha256": "693ad27dddf10c662f5146d1f46d3ab410546f836fee593f73f1bd8a7dc83928",
+      "audit_version": 3
+    },
+    "200TopL": {
+      "summary_sha256": "179f27610a06092d6a2009678d6e3ab1ba6827ede42fe3fc3ff35737dde96ee5",
+      "partitions_npz_sha256": "c035ccd4d7b93268dc53e5887905f5d7494c3bd3e17c2bd9ac644b3713c979d7",
+      "audit_version": 3
+    },
+    "240TopL": {
+      "summary_sha256": "df3d7fd61f8c349f2875ff6ec8909cc80f5716e38e192a943eb9923b4fb6e0e7",
+      "partitions_npz_sha256": "e4ad731eb0a06211e2c92b07bf14812feb0b177e429bc946575fbea15ce562d6",
+      "audit_version": 3
+    },
+    "280TopL": {
+      "summary_sha256": "a8b7f13ece71970b1552e44d1c5699239a54dbd85b21e4a2dea395254e393d94",
+      "partitions_npz_sha256": "a0fae8f6fac81703eebb06805accc7c6c2d867ca12a2ee617904f6a95f5e47ff",
+      "audit_version": 3
+    },
+    "360TopL": {
+      "summary_sha256": "dee8a70397347619ad7e9760333696d6d78a452e9c57e044596e4e291e26296b",
+      "partitions_npz_sha256": "5b9b80ee468acfc83bc146078daeca604eafb2786d80bcd140c8638a58dfc91e",
+      "audit_version": 3
+    },
+    "400TopL": {
+      "summary_sha256": "34544314f0fb95e4653eac985b3148abcf266cdb597b826342c215d0d1bc41b6",
+      "partitions_npz_sha256": "e22f20028d439665cc535653d774b7614bb6727928ffd1af9f6c6f0546afdf5f",
+      "audit_version": 3
+    },
+    "520TopL": {
+      "summary_sha256": "1229b275f6f19b793325f79a1d2903a5f88be5351ecbacf736326e4304934c78",
+      "partitions_npz_sha256": "2f5d8bc82d8ebd4bbfceaec4ae687156ffd3efdb4a9f8a0c66a0c74578a76481",
+      "audit_version": 3
+    }
+  }
+}
