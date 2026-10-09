@@ -8,7 +8,7 @@
 # Without --max-concurrent, Slurm/QOS limits apply; give N only to protect the
 # shared filesystem deliberately. Run the pilot first and read its Elapsed and
 # MaxRSS before submitting the remaining sections:
-#   sacct -j JOBID --format=JobID,State,Elapsed,MaxRSS,ReqMem,NodeList,ExitCode
+#   (the submitter prints the exact sacct command with the job ID)
 set -euo pipefail
 PROJECT_ROOT="$HOME/msi"
 cd "$PROJECT_ROOT"
@@ -37,7 +37,10 @@ for dataset in "${FAIR_SECTIONS[@]}"; do
 done
 [ "$missing" -eq 0 ] || exit 1
 
-sbatch --array="${indices}${throttle}" slurm_jobs/run_peak_partition_audit_array.sh
-echo "Submitted partition audit indices ${indices}${throttle:+ (throttle ${throttle#%})}."
+submission="$(sbatch --parsable --array="${indices}${throttle}" slurm_jobs/run_peak_partition_audit_array.sh)"
+job_id="${submission%%;*}"
+echo "Submitted partition audit job $job_id, indices ${indices}${throttle:+ (throttle ${throttle#%})}."
+echo "Monitor: squeue -j $job_id"
+echo "Resources: sacct -j $job_id --format=JobID,State,Elapsed,MaxRSS,ReqMem,NodeList,ExitCode"
 echo "Outputs: results/diagnostics/peak_partition_audit/<section>/summary.json"
 echo "Review the S1 verdict (hard) and S2/S3 diagnostics before writing partition_approval.json."

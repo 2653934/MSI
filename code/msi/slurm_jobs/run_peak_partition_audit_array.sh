@@ -4,13 +4,14 @@
 # The Python script validates provenance before skipping and refuses stale
 # outputs (exit 3); it never overwrites them. Submit via
 # slurm_jobs/submit_peak_partition_audit.sh. No CUDA preflight is needed.
+# Resources set from the 9 Oct partition-audit pilot: max RSS 215 MB, I/O bound (~21% CPU).
 #SBATCH --job-name=peak-partition-audit
 #SBATCH --partition=batch
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=24G
-#SBATCH --time=01:00:00
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=4G
+#SBATCH --time=00:15:00
 #SBATCH --output=logs/peak-partition-audit-%A_%a.out
 #SBATCH --error=logs/peak-partition-audit-%A_%a.err
 
@@ -32,7 +33,7 @@ echo "=== $DATASET partition audit on ${SLURMD_NODENAME:-unknown} (job ${SLURM_A
 
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
-export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
 PYTHON="$HOME/miniconda3/envs/s3pl_env/bin/python"
 # Record elapsed time and peak RSS of the scientific process when GNU time exists.
 timed() {

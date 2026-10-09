@@ -5,7 +5,7 @@
 #        [--approval /path/partition_approval.json] [--max-concurrent N]
 #
 # Each array task scores one section (both arms). Without --max-concurrent,
-# Slurm/QOS limits apply. Run 'pilot' first and check sacct Elapsed/MaxRSS.
+# Slurm/QOS limits apply. Run 'pilot' first; the job ID and its sacct command are printed.
 # The decision table is a separate job: run_fair_scoring_summary.sh.
 set -euo pipefail
 PROJECT_ROOT="$HOME/msi"
@@ -44,8 +44,11 @@ for dataset in "${FAIR_SECTIONS[@]}"; do
 done
 [ "$missing" -eq 0 ] || exit 1
 
-sbatch --array="${indices}${throttle}" --export=ALL,PARTITION_APPROVAL="$approval" \
-    slurm_jobs/run_fair_scoring_array.sh
-echo "Submitted fair-scoring indices ${indices}${throttle:+ (throttle ${throttle#%})}${approval:+ with approval $approval}."
-echo "Then: sacct -j JOBID --format=JobID,State,Elapsed,MaxRSS,ReqMem,NodeList,ExitCode"
+submission="$(sbatch --parsable --array="${indices}${throttle}" \
+    --export=ALL,PARTITION_APPROVAL="$approval" slurm_jobs/run_fair_scoring_array.sh)"
+job_id="${submission%%;*}"
+echo "Submitted fair-scoring job $job_id, indices ${indices}${throttle:+ (throttle ${throttle#%})}${approval:+ with approval $approval}."
+echo "Monitor: squeue -j $job_id"
+echo "Resources: sacct -j $job_id --format=JobID,State,Elapsed,MaxRSS,ReqMem,NodeList,ExitCode"
+echo "Logs: logs/fair-scoring-${job_id}_<index>.out"
 echo "Decision table (separate job): sbatch slurm_jobs/run_fair_scoring_summary.sh [bin_level_only|with_approved_partitions]"

@@ -5,13 +5,14 @@
 # The Python script validates provenance before skipping, refuses stale
 # results (exit 3) and writes summary.json atomically. Submit via
 # slurm_jobs/submit_fair_scoring.sh; PARTITION_APPROVAL is exported by it.
+# Resources set from the 9 Oct partition-audit pilot: max RSS 215 MB, I/O bound (~21% CPU).
 #SBATCH --job-name=fair-scoring
 #SBATCH --partition=batch
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
-#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=4G
+#SBATCH --time=01:00:00
 #SBATCH --output=logs/fair-scoring-%A_%a.out
 #SBATCH --error=logs/fair-scoring-%A_%a.err
 
@@ -34,7 +35,7 @@ fi
 
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
-export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 MPLBACKEND=Agg
+export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 MPLBACKEND=Agg
 PYTHON="$HOME/miniconda3/envs/s3pl_env/bin/python"
 # Record elapsed time and peak RSS of the scientific process when GNU time exists.
 timed() {
