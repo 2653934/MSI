@@ -73,15 +73,17 @@ from spatial_msipl.simple_baselines import (
     one_hot_maps,
     pearson_features_vs_maps,
     posterior_pcc_rankings,
-    production_ig_ranking,
+    balanced_ranking_from_component_scores,
+    production_ig_scores,
     production_l2_ranking,
+    tie_permuted_positions,
     random_rankings,
     rank_descending,
     supervised_oracle_ranking,
 )
 
-EVALUATION_VERSION = 3
-PROTOCOL = "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.1)"
+EVALUATION_VERSION = 4
+PROTOCOL = "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.2)"
 PARTITION_PARAMETERS = {"P1": P1_DEFAULTS, "P3": P3_DEFAULTS}
 # IG/L2/legacy are rescored with the same rule, data and scorer functions that
 # produced the saved values; only floating summation order can differ, which
@@ -295,18 +297,34 @@ def main():
     posterior = gmm_posterior_numpy(latent, **gmm_parameters)
     posterior_difference = check_posterior_against_saved(
         posterior, saved_gmm["component"], saved_gmm["assigned_posterior"])
+    ig_scores = production_ig_scores(attributions)
+    ig_ranking, ig_sources = balanced_ranking_from_component_scores(
+        ig_scores, with_sources=True)
+    l2_scores = np.asarray(attributions["first_layer_combined_l2"], dtype=np.float64)
     rankings = {
-        "integrated_gradients": production_ig_ranking(attributions),
+        "integrated_gradients": ig_ranking,
         "first_layer_l2": production_l2_ranking(attributions),
     }
+    # Same bins at K_bin, and any order difference only between exactly tied
+    # scores (historical argsort tie order is platform-dependent); else stop.
+    score_at = {
+        "integrated_gradients": lambda i, b: ig_scores[int(ig_sources[i])][b],
+        "first_layer_l2": lambda i, b: l2_scores[b],
+    }
+    tie_positions = {}
     for name, key in (("integrated_gradients", "saved_ig_list"),
                       ("first_layer_l2", "saved_l2_list")):
-        if not np.array_equal(rankings[name][:k_bin], read_saved_list(source_paths[key])):
-            raise ValueError(f"{name}: reconstructed ranking differs from saved list")
+        try:
+            tie_positions[name] = tie_permuted_positions(
+                rankings[name][:k_bin], read_saved_list(source_paths[key]), score_at[name])
+        except ValueError as error:
+            raise ValueError(f"{name}: reconstructed ranking differs from saved list "
+                             f"beyond exact ties ({error})") from error
 
     correlations = load_correlations(args.input, raw_labels, n_bins, pixels_first,
                                      args.chunk_size)
-    checks = {"posterior_max_abs_difference": posterior_difference}
+    checks = {"posterior_max_abs_difference": posterior_difference,
+              "tie_permuted_positions_vs_saved_list": tie_positions}
     for name in ("integrated_gradients", "first_layer_l2"):
         rescored = score_indices(rankings[name][:k_bin], correlations, n_bins)["mSCF1"]
         saved = float(saved_summary["matched_peak_evaluation"]["methods"][name]["mSCF1"])

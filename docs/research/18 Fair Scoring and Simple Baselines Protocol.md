@@ -1,4 +1,4 @@
-# Fair-scoring and simple-baseline protocol (v3.1, 9 October 2026)
+# Fair-scoring and simple-baseline protocol (v3.2, 9 October 2026)
 
 Status: **protocol v3; implementation revised for cluster operation and provenance; nothing submitted.** No existing evidence, figure, table or report claim is replaced by anything here. This document supersedes the protocol parts of `docs/meetings/supervisor_review_2026-10-09_response_to_codex.md` wherever the two differ.
 
@@ -35,7 +35,7 @@ Do not call the CAC targets mask-derived.
 
 - Bin-level mSCF1 at K_bin with the existing scorer (`score_indices`) is unchanged and remains primary.
 - Before scoring anything new, the script stops unless the following reproduce:
-  - **IG and L2:** the saved bin lists in order, and their saved mSCF1 to 1e-12.
+  - **IG and L2:** the same bins as the saved lists at K_bin, in the same order except for swaps between bins with **exactly equal** scores, and their saved mSCF1 to 1e-12. (v3.2: the historical lists were built with `np.argsort(scores)[::-1]`, whose order among exact ties depends on the NumPy version and CPU sort kernel. New rankings break exact ties by lower bin index, so they are platform-independent. Any difference other than an exact-tie swap still stops the run.)
   - **Legacy msiPL:** the snapped unique-bin count equals K_bin and the saved `unique_nearest_bins`; per-threshold mixed TP, FP and FN equal the saved integers exactly; and mSCF1 agrees to 1e-12.
 - **Why that tolerance:** the rescore uses the same data, rule and scorer functions that produced the saved values. Only floating-point summation order can differ, and that cannot change an integer count unless a PCC lies within about 1e-12 of a decision boundary. Any mismatch therefore stops the run, so that the scorer difference is documented rather than silently carried forward.
 - **Budget sensitivity:** every ranked method is scored at round(K_bin × m) for m ∈ {0.5, 0.75, 1.0, 1.5, 2.0}. Legacy is scored at m = 1 only.
@@ -197,6 +197,8 @@ A test rebuilds the IG matched groups from these files.
 **Resolved before the audit (v3.1): S2 on CAC.** S2 is now descriptive and S1 (width < 0.5 Da) is the only hard rule. The decision was made on structural grounds (bin count depends on axis resolution), without seeing any real audit output. Code: `check_partition_sanity` returns S2 values under `diagnostics`; audit version 3. Tests: the chained-axis case still fails S1 but not S2, and a new test shows a many-bin group narrower than 0.5 Da passes.
 
 ## 10. Executions on real data so far (record)
+
+- **9 October, cluster: fair-scoring pilot job 66037 (GBM22_2) stopped correctly before scoring.** The reconstructed centre-only L2 ranking matched the saved 1,028-bin set exactly, but two bins with identical float32 scores (0.77442014; bins 57438 and 61083) were in swapped order at positions 965–966. The cause is platform-dependent tie order in `np.argsort` (NumPy 2.4.6 on the cluster), not a scoring difference. The set, and therefore mSCF1, is unaffected. **Fix (v3.2, evaluator version 4):** a deterministic tie-break and a tie-aware reproduction check, with unit tests. A read-only check of all 32 saved IG and L2 lists (16 sections × 2 arms) under the new rule found **0 failures**; with the index tie-break, the reconstructed order matches every saved list exactly. No output from job 66037 was kept except its resource record.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).

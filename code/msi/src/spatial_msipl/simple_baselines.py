@@ -19,8 +19,36 @@ MOORE_OFFSETS = (
 
 
 def rank_descending(scores):
-    """Production ranking convention used for IG: ``argsort(scores)[::-1]``."""
-    return np.argsort(np.asarray(scores, dtype=np.float64))[::-1].copy()
+    """Descending ranking with a deterministic tie-break (lower bin index first).
+
+    The historical production lists used ``np.argsort(scores)[::-1]``, whose
+    order among *exactly tied* scores depends on the NumPy version and CPU sort
+    kernel. Rankings here are therefore platform-independent, and saved lists
+    are compared with ``tie_permuted_positions`` rather than exact order.
+    """
+    scores = np.asarray(scores, dtype=np.float64).reshape(-1)
+    return np.lexsort((np.arange(len(scores)), -scores)).astype(np.int64)
+
+
+def tie_permuted_positions(reconstructed, saved, score_at):
+    """Count positions where two rankings differ only by exactly tied scores.
+
+    ``score_at(position, bin)`` returns the score that ranked ``bin`` at that
+    position. Raises ValueError unless both prefixes hold the same bins and every
+    differing position swaps bins with identical scores.
+    """
+    reconstructed = np.asarray(reconstructed, dtype=np.int64)
+    saved = np.asarray(saved, dtype=np.int64)
+    if reconstructed.shape != saved.shape:
+        raise ValueError("ranking prefixes have different lengths")
+    if set(reconstructed.tolist()) != set(saved.tolist()):
+        raise ValueError("ranking prefixes select different bins")
+    differing = np.flatnonzero(reconstructed != saved)
+    for position in differing:
+        if score_at(position, reconstructed[position]) != score_at(position, saved[position]):
+            raise ValueError(
+                f"rankings differ at position {position} between bins with unequal scores")
+    return int(len(differing))
 
 
 def gmm_posterior_numpy(latent, scaler_mean, scaler_scale, mixture_weights,
@@ -128,12 +156,12 @@ def nan_to_lowest(scores):
     return scores
 
 
-def balanced_ranking_from_component_scores(component_scores):
+def balanced_ranking_from_component_scores(component_scores, with_sources=False):
     """Per-component descending rankings followed by production round-robin."""
     rankings = {int(c): rank_descending(s) for c, s in component_scores.items()}
     n_bins = len(next(iter(component_scores.values())))
-    selected, _ = balanced_round_robin_rankings(rankings, n_bins)
-    return selected
+    selected, sources = balanced_round_robin_rankings(rankings, n_bins)
+    return (selected, sources) if with_sources else selected
 
 
 def posterior_pcc_rankings(pcc_by_component, hard_pcc_by_component=None):
@@ -162,25 +190,29 @@ def posterior_pcc_rankings(pcc_by_component, hard_pcc_by_component=None):
     return rankings
 
 
-def production_ig_ranking(attributions):
-    """Reproduce the production IG ranking from a saved ``attributions.npz``."""
+def production_ig_scores(attributions):
     keys = sorted(
         key for key in attributions
         if key.startswith("component_") and key.endswith("_combined_absolute_mean")
     )
     if not keys:
         raise KeyError("no per-component combined IG scores")
-    scores = {
+    return {
         int(key.split("_")[1]): np.asarray(attributions[key], dtype=np.float64)
         for key in keys
     }
-    return balanced_ranking_from_component_scores(scores)
+
+
+def production_ig_ranking(attributions):
+    """Reproduce the production IG ranking from a saved ``attributions.npz``.
+
+    Identical to production except that exact ties are broken by bin index.
+    """
+    return balanced_ranking_from_component_scores(production_ig_scores(attributions))
 
 
 def production_l2_ranking(attributions):
-    return np.argsort(
-        np.asarray(attributions["first_layer_combined_l2"], dtype=np.float64)
-    )[::-1].copy()
+    return rank_descending(attributions["first_layer_combined_l2"])
 
 
 def supervised_oracle_ranking(class_correlations):

@@ -21,6 +21,7 @@ from spatial_msipl.simple_baselines import (
     random_rankings,
     rank_descending,
     supervised_oracle_ranking,
+    tie_permuted_positions,
 )
 
 
@@ -77,6 +78,30 @@ class CorrelationAndMoranTests(unittest.TestCase):
             self.assertAlmostEqual(values[column], morans_i(features[:, column], slots))
         self.assertTrue(np.isnan(values[2]))
         self.assertEqual(rank_descending(nan_to_lowest(values))[-1], 2)
+
+
+class TieHandlingTests(unittest.TestCase):
+    def test_rank_descending_breaks_exact_ties_by_index_on_any_platform(self):
+        scores = np.array([0.5, 0.9, 0.9, 0.1, 0.9, -np.inf])
+        np.testing.assert_array_equal(rank_descending(scores), [1, 2, 4, 0, 3, 5])
+        float32_tie = np.array([0.77442014, 0.1, 0.77442014], dtype=np.float32)
+        np.testing.assert_array_equal(rank_descending(float32_tie), [0, 2, 1])
+
+    def test_reproduction_accepts_only_exact_tie_permutations(self):
+        # Mirrors the GBM22_2 centre-only L2 case: two bins with identical
+        # float32 scores in swapped order in the historical list.
+        scores = np.array([0.9, 0.7744, 0.7744, 0.5, 0.2])
+        score_at = lambda position, b: scores[b]
+        saved = np.array([0, 2, 1, 3])
+        self.assertEqual(tie_permuted_positions(rank_descending(scores)[:4], saved,
+                                                score_at), 2)
+        self.assertEqual(tie_permuted_positions(saved, saved, score_at), 0)
+        with self.assertRaises(ValueError):  # non-tied swap
+            tie_permuted_positions(np.array([0, 3, 1, 2]), saved, score_at)
+        with self.assertRaises(ValueError):  # different bins selected
+            tie_permuted_positions(np.array([0, 1, 2, 4]), saved, score_at)
+        with self.assertRaises(ValueError):
+            tie_permuted_positions(np.array([0, 1, 2]), saved, score_at)
 
 
 class OracleTests(unittest.TestCase):
