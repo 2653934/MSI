@@ -72,7 +72,9 @@ fi
 
 source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda activate s3pl_env
-export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+# scripts/ is needed by the test suite (several tests import audit scripts);
+# pilot jobs 66286-66291 failed at the test step without it.
+export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
 export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 MPLBACKEND=Agg
 echo "=== gate (d) IG: $DATASET $VARIANT n=$TOTAL on ${SLURMD_NODENAME:-unknown} (job $SLURM_JOB_ID, retry $CUDA_RETRY_COUNT) ==="
 

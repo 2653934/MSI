@@ -238,6 +238,8 @@ A test rebuilds the IG matched groups from these files.
     - IG versus posterior-|PCC|: neither predeclared verdict applies in any collection-arm. IG − posterior-|PCC| is positive in 0/8 sections at bin level in all four arms (means: GBM −0.225 and −0.233; CAC −0.078 and −0.047), and under P1 (GBM −0.201 and −0.213; CAC −0.092 and −0.039, with CAC/uniform_mean 280TopL the only positive section, +0.058). On CAC, P3 equals P1. All four GBM patient means are negative.
     - IG versus legacy: positive in 8/8 sections at bin level in every arm (+0.097 to +0.157) and in the K_bin collapse diagnostic (+0.066 to +0.157). The budget-stability clause is not assessable (Section 7.1, item 2), so the rule is reported as two of three clauses satisfied, not as met. The collapse diagnostic is not a matched peak-level comparison.
 
+- **9 October, cluster: gate (d) pilot attempt 1 (40TopL, jobs 66286–66291) stopped before IG.** Test job 66273 had passed 71/71 on commit `3cc562b`. In all six pilot jobs the CUDA warm-up passed (NVIDIA GeForce RTX 3060, `batch`). The full unit-test discovery step that runs before IG then failed with 10 import errors, because the job's `PYTHONPATH` held `src/` but not `scripts/`. No IG ran and no gate (d) output was written. **Fix:** `scripts/` added to `PYTHONPATH` in `run_gate_d_pixel_count_ig.sh`. Nothing else changed.
+
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
    - Partition audit: pilot job 66012 (GBM22_2) and job 66013 (the other 15 sections) completed; GBM22_2 was correctly skipped on rerun.
