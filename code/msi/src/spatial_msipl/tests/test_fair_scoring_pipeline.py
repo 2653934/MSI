@@ -444,6 +444,54 @@ class FairScoringPipelineTests(unittest.TestCase):
         self.assertIn("refusing to score incomplete attributions", result.stderr)
         self.assertFalse((run_root / "evaluation" / "summary.json").exists())
 
+    # --- Gate (d) stage 1: n=12 check on its own (n=48/192 not yet run). ---
+    def n12_only(self, name, n12_arrays=None):
+        import shutil
+        run_root, args = self.gate_d_runs(name, n12_arrays=n12_arrays)
+        for n in (48, 192):
+            shutil.rmtree(run_root / f"n{n}")
+        keep = ("--input", "--run-root", "--production-attribution-dir",
+                "--saved-evaluation-dir", "--chunk-size")
+        check_args = []
+        for flag, value in zip(args[0::2], args[1::2]):
+            if flag in keep:
+                check_args += [flag, value]
+        return run_root, check_args + ["--allow-outside-slurm"]
+
+    def test_gate_d_n12_check_passes_without_larger_counts(self):
+        run_root, args = self.n12_only("gate_d_stage1_ok")
+        result = run("check_gate_d_n12_reproduction.py", *args)
+        self.assertIn("PASSED", result.stdout)
+        summary = json.loads((run_root / "n12_reproduction" / "summary.json").read_text())
+        self.assertEqual(summary["status"], "passed")
+        self.assertTrue(summary["n12_reproduction"]["identical_bin_set"])
+        self.assertEqual(summary["actual_attribution_pixels"], {"0": 12, "1": 12})
+        self.assertFalse((run_root / "evaluation").exists())
+        again = run("check_gate_d_n12_reproduction.py", *args)
+        self.assertIn("skipped", again.stdout)
+
+    def test_gate_d_n12_check_fails_when_bin_set_differs(self):
+        run_root, args = self.n12_only("gate_d_stage1_bad",
+                                       n12_arrays=self.swapped_n12(False))
+        result = run("check_gate_d_n12_reproduction.py", *args, check=False)
+        self.assertEqual(result.returncode, 4)
+        summary = json.loads((run_root / "n12_reproduction" / "summary.json").read_text())
+        self.assertEqual(summary["status"], "reproduction_failed")
+        # A failed record is never reused or overwritten.
+        self.assertEqual(run("check_gate_d_n12_reproduction.py", *args,
+                             check=False).returncode, 3)
+
+    def test_gate_d_n12_check_refuses_unaligned_run(self):
+        run_root, args = self.n12_only("gate_d_stage1_unaligned")
+        path = run_root / "n12" / "summary.json"
+        summary = json.loads(path.read_text())
+        del summary["gmm_label_alignment"]
+        path.write_text(json.dumps(summary))
+        result = run("check_gate_d_n12_reproduction.py", *args, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--align-gmm-labels-to-production", result.stderr)
+        self.assertFalse((run_root / "n12_reproduction" / "summary.json").exists())
+
     def test_summariser_writes_decision_table(self):
         output = self.root / "fair" / "SYN1_seed1" / "uniform_mean"
         run("evaluate_fair_scoring_baselines.py", *self.common(output))

@@ -1,0 +1,361 @@
+diff --git a/code/msi/slurm_jobs/run_gate_d_evaluation.sh b/code/msi/slurm_jobs/run_gate_d_evaluation.sh
+index c84c42b..c948504 100644
+--- a/code/msi/slurm_jobs/run_gate_d_evaluation.sh
++++ b/code/msi/slurm_jobs/run_gate_d_evaluation.sh
+@@ -1,7 +1,10 @@
+ #!/bin/bash
+ # Gate (d) CPU evaluation of the three pixel-count IG runs for one development
+ # section and arm (protocol 18 Section 6). No GPU and no CUDA.
+-#   sbatch slurm_jobs/run_gate_d_evaluation.sh GBM108_positive|40TopL central_only|uniform_mean
++#   sbatch slurm_jobs/run_gate_d_evaluation.sh GBM108_positive|40TopL central_only|uniform_mean [n12-only]
++# n12-only (stage 1, supervisor review 9 October): run-validity checks and the
++# reproduction gate on n=12 alone, written to <arm>/n12_reproduction/; no other
++# count is scored. Without it, the full evaluation of n=12/48/192.
+ # Exit 3: stale result (move aside). Exit 4: the n=12 reproduction gate failed.
+ # Resources as the fair-scoring task, which peaked at ~0.86 GB on the largest GBM section.
+ #SBATCH --job-name=gate-d-eval
+@@ -19,6 +22,8 @@ set -euo pipefail
+ DATASET="${1:?Usage: sbatch $0 SECTION ARM}"
+ ARM="${2:?Usage: sbatch $0 SECTION ARM}"
+ case "$ARM" in central_only|uniform_mean) ;; *) echo "Unknown arm: $ARM" >&2; exit 2 ;; esac
++MODE="${3:-full}"
++case "$MODE" in full|n12-only) ;; *) echo "Unknown mode: $MODE" >&2; exit 2 ;; esac
+ PROJECT_ROOT="$HOME/msi"
+ RESULTS="$PROJECT_ROOT/results"
+ case "$DATASET" in
+@@ -38,6 +43,11 @@ FAIR="$RESULTS/diagnostics/fair_scoring_baselines/bin_level_only/${DATASET}_seed
+ cd "$PROJECT_ROOT"
+ export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+ export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 MPLBACKEND=Agg
++if [ "$MODE" = n12-only ]; then
++    exec "$HOME/miniconda3/envs/s3pl_env/bin/python" -u scripts/check_gate_d_n12_reproduction.py \
++        --input "$INPUT" --run-root "$RUN_ROOT" \
++        --production-attribution-dir "$PRODUCTION" --saved-evaluation-dir "$SAVED"
++fi
+ "$HOME/miniconda3/envs/s3pl_env/bin/python" -u scripts/evaluate_gate_d_pixel_counts.py \
+     --input "$INPUT" --run-root "$RUN_ROOT" \
+     --production-attribution-dir "$PRODUCTION" --saved-evaluation-dir "$SAVED" \
+diff --git a/code/msi/slurm_jobs/submit_gate_d_pixel_counts.sh b/code/msi/slurm_jobs/submit_gate_d_pixel_counts.sh
+index d7f9c97..3c351f4 100644
+--- a/code/msi/slurm_jobs/submit_gate_d_pixel_counts.sh
++++ b/code/msi/slurm_jobs/submit_gate_d_pixel_counts.sh
+@@ -3,7 +3,13 @@
+ # sbatch only. Protocol 18 Section 6 ("Pixel-count run specification").
+ #
+ #   bash slurm_jobs/submit_gate_d_pixel_counts.sh pilot|gbm \
+-#        [--partition P] [--mem M] [--time-12 T] [--time-48 T] [--time-192 T]
++#        [--partition P] [--mem M] [--time-12 T] [--time-48 T] [--time-192 T] \
++#        [--counts 12|48,192|12,48,192] [--arms central_only,uniform_mean]
++#
++# --counts/--arms stage the runs (supervisor review, 9 October): stage 1 is
++# --counts 12; stage 2 is --counts 48,192 for each arm whose n=12 reproduced.
++# A count above 12 is refused unless <arm>/n12_reproduction/summary.json
++# (run_gate_d_evaluation.sh SECTION ARM n12-only) has status "passed".
+ #
+ #   pilot : 40TopL, both arms, n = 12, 48, 192 (production CAC IG took ~10 s per arm)
+ #   gbm   : GBM108_positive, both arms, n = 12, 48, 192
+@@ -17,7 +23,7 @@ set -euo pipefail
+ PROJECT_ROOT="$HOME/msi"
+ cd "$PROJECT_ROOT"
+ 
+-selection="${1:?Usage: $0 pilot|gbm [--partition P] [--mem M] [--time-12 T] [--time-48 T] [--time-192 T]}"
++selection="${1:?Usage: $0 pilot|gbm [--partition P] [--mem M] [--time-12 T] [--time-48 T] [--time-192 T] [--counts LIST] [--arms LIST]}"
+ shift
+ case "$selection" in
+     pilot) dataset=40TopL; mem=8G; declare -A limit=([12]=00:30:00 [48]=00:30:00 [192]=01:00:00) ;;
+@@ -25,6 +31,8 @@ case "$selection" in
+     *) echo "Selection must be pilot or gbm" >&2; exit 2 ;;
+ esac
+ partition=batch
++counts="12 48 192"
++arms="central_only uniform_mean"
+ while [ "$#" -gt 0 ]; do
+     case "$1" in
+         --partition) partition="${2:?}"; shift 2 ;;
+@@ -32,10 +40,19 @@ while [ "$#" -gt 0 ]; do
+         --time-12) limit[12]="${2:?}"; shift 2 ;;
+         --time-48) limit[48]="${2:?}"; shift 2 ;;
+         --time-192) limit[192]="${2:?}"; shift 2 ;;
++        --counts) counts="${2//,/ }"; shift 2 ;;
++        --arms) arms="${2//,/ }"; shift 2 ;;
+         *) echo "Unknown argument: $1" >&2; exit 2 ;;
+     esac
+ done
+ 
++for total in $counts; do
++    case "$total" in 12|48|192) ;; *) echo "Unknown count: $total" >&2; exit 2 ;; esac
++done
++for arm in $arms; do
++    case "$arm" in central_only|uniform_mean) ;; *) echo "Unknown arm: $arm" >&2; exit 2 ;; esac
++done
++
+ quarantine="slurm_jobs/gpu_cuda_quarantine.txt"
+ [ -f "$quarantine" ] || { echo "Missing CUDA quarantine file: $quarantine" >&2; exit 1; }
+ excludes=$(sed -e 's/\r$//' -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$quarantine" | sort -u | paste -sd, -)
+@@ -43,12 +60,17 @@ excludes=$(sed -e 's/\r$//' -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$quarantine" |
+ 
+ # Refuse up front if any output already exists, so a run is never half-submitted.
+ outputs="results/diagnostics/gate_d_pixel_counts/${dataset}_seed1"
+-for arm in central_only uniform_mean; do
+-    for total in 12 48 192; do
++for arm in $arms; do
++    for total in $counts; do
+         if [ -e "$outputs/$arm/n$total" ]; then
+             echo "Output already exists: $outputs/$arm/n$total (move it aside first)" >&2
+             exit 3
+         fi
++        if [ "$total" != 12 ] && ! grep -q '"status": "passed"' \
++                "$outputs/$arm/n12_reproduction/summary.json" 2>/dev/null; then
++            echo "n=$total refused for $arm: no passed n=12 reproduction record" >&2
++            exit 4
++        fi
+     done
+ done
+ 
+@@ -57,8 +79,8 @@ done
+ mkdir -p "$outputs/central_only" "$outputs/uniform_mean" logs
+ 
+ printf '%-16s %-13s %-5s %-10s %s\n' DATASET ARM N TIME JOB
+-for arm in central_only uniform_mean; do
+-    for total in 12 48 192; do
++for arm in $arms; do
++    for total in $counts; do
+         job=$(sbatch --parsable \
+             --partition="$partition" --mem="$mem" --time="${limit[$total]}" \
+             --exclude="$excludes" \
+diff --git a/code/msi/src/spatial_msipl/tests/test_fair_scoring_pipeline.py b/code/msi/src/spatial_msipl/tests/test_fair_scoring_pipeline.py
+index f61bcaf..6eae5ec 100644
+--- a/code/msi/src/spatial_msipl/tests/test_fair_scoring_pipeline.py
++++ b/code/msi/src/spatial_msipl/tests/test_fair_scoring_pipeline.py
+@@ -444,6 +444,54 @@ class FairScoringPipelineTests(unittest.TestCase):
+         self.assertIn("refusing to score incomplete attributions", result.stderr)
+         self.assertFalse((run_root / "evaluation" / "summary.json").exists())
+ 
++    # --- Gate (d) stage 1: n=12 check on its own (n=48/192 not yet run). ---
++    def n12_only(self, name, n12_arrays=None):
++        import shutil
++        run_root, args = self.gate_d_runs(name, n12_arrays=n12_arrays)
++        for n in (48, 192):
++            shutil.rmtree(run_root / f"n{n}")
++        keep = ("--input", "--run-root", "--production-attribution-dir",
++                "--saved-evaluation-dir", "--chunk-size")
++        check_args = []
++        for flag, value in zip(args[0::2], args[1::2]):
++            if flag in keep:
++                check_args += [flag, value]
++        return run_root, check_args + ["--allow-outside-slurm"]
++
++    def test_gate_d_n12_check_passes_without_larger_counts(self):
++        run_root, args = self.n12_only("gate_d_stage1_ok")
++        result = run("check_gate_d_n12_reproduction.py", *args)
++        self.assertIn("PASSED", result.stdout)
++        summary = json.loads((run_root / "n12_reproduction" / "summary.json").read_text())
++        self.assertEqual(summary["status"], "passed")
++        self.assertTrue(summary["n12_reproduction"]["identical_bin_set"])
++        self.assertEqual(summary["actual_attribution_pixels"], {"0": 12, "1": 12})
++        self.assertFalse((run_root / "evaluation").exists())
++        again = run("check_gate_d_n12_reproduction.py", *args)
++        self.assertIn("skipped", again.stdout)
++
++    def test_gate_d_n12_check_fails_when_bin_set_differs(self):
++        run_root, args = self.n12_only("gate_d_stage1_bad",
++                                       n12_arrays=self.swapped_n12(False))
++        result = run("check_gate_d_n12_reproduction.py", *args, check=False)
++        self.assertEqual(result.returncode, 4)
++        summary = json.loads((run_root / "n12_reproduction" / "summary.json").read_text())
++        self.assertEqual(summary["status"], "reproduction_failed")
++        # A failed record is never reused or overwritten.
++        self.assertEqual(run("check_gate_d_n12_reproduction.py", *args,
++                             check=False).returncode, 3)
++
++    def test_gate_d_n12_check_refuses_unaligned_run(self):
++        run_root, args = self.n12_only("gate_d_stage1_unaligned")
++        path = run_root / "n12" / "summary.json"
++        summary = json.loads(path.read_text())
++        del summary["gmm_label_alignment"]
++        path.write_text(json.dumps(summary))
++        result = run("check_gate_d_n12_reproduction.py", *args, check=False)
++        self.assertNotEqual(result.returncode, 0)
++        self.assertIn("--align-gmm-labels-to-production", result.stderr)
++        self.assertFalse((run_root / "n12_reproduction" / "summary.json").exists())
++
+     def test_summariser_writes_decision_table(self):
+         output = self.root / "fair" / "SYN1_seed1" / "uniform_mean"
+         run("evaluate_fair_scoring_baselines.py", *self.common(output))
+diff --git a/code/msi/scripts/check_gate_d_n12_reproduction.py b/code/msi/scripts/check_gate_d_n12_reproduction.py
+new file mode 100644
+index 0000000..4510ace
+--- /dev/null
++++ b/code/msi/scripts/check_gate_d_n12_reproduction.py
+@@ -0,0 +1,171 @@
++#!/usr/bin/env python3
++"""Gate (d) stage 1: n = 12 run-validity checks and reproduction gate only.
++
++CPU only. Supervisor review of 9 October approved GBM108_positive in stages:
++n = 12 for both arms first, then n = 48 and 192 only for an arm whose n = 12
++reproduces. evaluate_gate_d_pixel_counts.py needs all three runs, so this
++script applies its n = 12 checks on their own, by importing its functions.
++The evaluator itself is not changed, so its code hash (part of the campaign
++provenance the summariser compares) stays the same as for 40TopL.
++
++Checks, as in the evaluator: IG status 'valid'; labels aligned to the same
++production reference; dataset and arm match; coordinates match the HDF5; GMM
++assignment identical to production; exactly 12 attribution pixels requested
++per component. Then the reproduction gate: identical bin set at K_bin as the
++saved production IG list and saved mSCF1 to 1e-12.
++
++Writes <run-root>/n12_reproduction/summary.json with status 'passed' or
++'reproduction_failed' (exit 4). No n = 48 or 192 score is computed. The final
++evaluation repeats every check on all three runs.
++"""
++
++import argparse
++import json
++import sys
++import time
++from pathlib import Path
++
++import numpy as np
++
++from evaluate_fair_scoring_baselines import read_saved_list
++from evaluate_gate_d_pixel_counts import (
++    code_paths,
++    ig_ranking,
++    max_relative_attribution_difference,
++    reproduction_check,
++    run_signature,
++    sample_counts,
++)
++from evaluate_spatial_msipl_attributed_peaks import (
++    load_correlations,
++    read_h5_metadata,
++    score_indices,
++)
++from spatial_msipl.provenance import (
++    StaleResultError,
++    atomic_write_json,
++    check_existing,
++    code_record,
++    file_record,
++    require_slurm,
++)
++
++CHECK_VERSION = 1
++PASSED = "passed"
++REPRODUCTION_FAILED = "reproduction_failed"
++
++
++def parse_arguments():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--input", required=True, type=Path)
++    parser.add_argument("--run-root", required=True, type=Path,
++                        help="gate_d_pixel_counts/<section>_seed1/<arm> holding n12")
++    parser.add_argument("--production-attribution-dir", required=True, type=Path)
++    parser.add_argument("--saved-evaluation-dir", required=True, type=Path)
++    parser.add_argument("--chunk-size", type=int, default=1024)
++    parser.add_argument("--allow-outside-slurm", action="store_true",
++                        help="tests only; real sections must run inside Slurm")
++    return parser.parse_args()
++
++
++def main():
++    args = parse_arguments()
++    require_slurm(args.allow_outside_slurm)
++    started = time.perf_counter()
++    dataset = args.input.stem
++    arm = args.run_root.name
++    output = args.run_root / "n12_reproduction"
++    output.mkdir(parents=True, exist_ok=True)
++
++    saved_summary_path = args.saved_evaluation_dir / "summary.json"
++    saved_summary = json.loads(saved_summary_path.read_text(encoding="utf-8"))
++    k_bin = int(saved_summary["matched_peak_evaluation"]["count"])
++    saved_ig_mscf1 = float(saved_summary["matched_peak_evaluation"]["methods"]
++                           ["integrated_gradients"]["mSCF1"])
++    run_dir = args.run_root / "n12"
++    source_paths = {
++        "saved_evaluation_summary": saved_summary_path,
++        "saved_ig_list": args.saved_evaluation_dir / f"ig_matched_{k_bin}_bins.csv",
++        "production_coordinates_and_gmm":
++            args.production_attribution_dir / "coordinates_and_gmm.npz",
++        "production_attributions": args.production_attribution_dir / "attributions.npz",
++        "n12_attributions": run_dir / "attributions.npz",
++        "n12_coordinates_and_gmm": run_dir / "coordinates_and_gmm.npz",
++        "n12_summary": run_dir / "summary.json",
++    }
++    expected = {
++        "check_version": CHECK_VERSION,
++        "dataset": dataset,
++        "arm": arm,
++        "input": file_record(args.input),
++        "source_artifacts": {name: file_record(path) for name, path in source_paths.items()},
++        "code": code_record(code_paths() + [Path(__file__).resolve()]),
++    }
++    summary_path = output / "summary.json"
++    try:
++        state = check_existing(summary_path, expected, PASSED)
++    except StaleResultError as error:
++        print(f"STALE: {error}", file=sys.stderr)
++        raise SystemExit(3)
++    if state == "valid":
++        print(f"Existing result matches current provenance; skipped: {summary_path}")
++        return
++
++    mz, raw_labels, x, y, pixels_first = read_h5_metadata(args.input)
++    n_bins = len(mz)
++
++    run_summary = json.loads(source_paths["n12_summary"].read_text(encoding="utf-8"))
++    if run_summary.get("status") != "valid":
++        raise ValueError(f"n=12: IG run status is {run_summary.get('status')!r}, "
++                         "not 'valid'; refusing to score incomplete attributions")
++    alignment = run_summary.get("gmm_label_alignment") or {}
++    if not alignment.get("enabled"):
++        raise ValueError("n=12: run was not made with --align-gmm-labels-to-production; "
++                         "all gate (d) runs must use the same code path")
++    reference_sha256 = expected["source_artifacts"]["production_coordinates_and_gmm"]["sha256"]
++    if (alignment.get("production_reference") or {}).get("sha256") != reference_sha256:
++        raise ValueError("n=12: GMM labels were aligned to a different production "
++                         "reference than the one this check compares against")
++    signature = run_signature(run_summary)
++    if signature["variant"] != arm or Path(signature["dataset"]).stem != dataset:
++        raise ValueError("n=12: run summary dataset or arm does not match the request")
++    gmm = np.load(source_paths["n12_coordinates_and_gmm"])
++    if not (np.array_equal(gmm["x"], x) and np.array_equal(gmm["y"], y)):
++        raise ValueError("n=12: coordinates do not match the HDF5 input")
++    production_gmm = np.load(source_paths["production_coordinates_and_gmm"])
++    if not np.array_equal(gmm["component"], production_gmm["component"]):
++        raise ValueError("n=12: GMM assignment differs from production; the pixel "
++                         "count would not be the only variable changed")
++    counts = sample_counts(run_summary, 12)
++    ranking = ig_ranking(np.load(source_paths["n12_attributions"]))
++
++    correlations = load_correlations(args.input, raw_labels, n_bins, pixels_first,
++                                     args.chunk_size)
++    reproduction = reproduction_check(
++        ranking[:k_bin], read_saved_list(source_paths["saved_ig_list"]),
++        score_indices(ranking[:k_bin], correlations, n_bins)["mSCF1"], saved_ig_mscf1)
++    reproduction["max_relative_attribution_difference"] = max_relative_attribution_difference(
++        np.load(source_paths["n12_attributions"]),
++        np.load(source_paths["production_attributions"]))
++
++    result = {
++        "status": PASSED if reproduction["passed"] else REPRODUCTION_FAILED,
++        "provenance": expected,
++        "K_bin": k_bin,
++        "n12_reproduction": reproduction,
++        "actual_attribution_pixels": counts,
++        "run_signature": signature,
++        "gmm_label_alignment": {key: alignment.get(key) for key in (
++            "permutation", "identity", "max_posterior_diff", "production_reference")},
++        "ig_runtime_seconds": run_summary.get("runtime_seconds"),
++        "runtime_seconds": time.perf_counter() - started,
++    }
++    atomic_write_json(summary_path, result)
++    if not reproduction["passed"]:
++        print(f"REPRODUCTION FAILED: {reproduction['error']}", file=sys.stderr)
++        raise SystemExit(4)
++    print("n=12 REPRODUCTION PASSED")
++
++
++if __name__ == "__main__":
++    main()

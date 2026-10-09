@@ -1,7 +1,10 @@
 #!/bin/bash
 # Gate (d) CPU evaluation of the three pixel-count IG runs for one development
 # section and arm (protocol 18 Section 6). No GPU and no CUDA.
-#   sbatch slurm_jobs/run_gate_d_evaluation.sh GBM108_positive|40TopL central_only|uniform_mean
+#   sbatch slurm_jobs/run_gate_d_evaluation.sh GBM108_positive|40TopL central_only|uniform_mean [n12-only]
+# n12-only (stage 1, supervisor review 9 October): run-validity checks and the
+# reproduction gate on n=12 alone, written to <arm>/n12_reproduction/; no other
+# count is scored. Without it, the full evaluation of n=12/48/192.
 # Exit 3: stale result (move aside). Exit 4: the n=12 reproduction gate failed.
 # Resources as the fair-scoring task, which peaked at ~0.86 GB on the largest GBM section.
 #SBATCH --job-name=gate-d-eval
@@ -19,6 +22,8 @@ set -euo pipefail
 DATASET="${1:?Usage: sbatch $0 SECTION ARM}"
 ARM="${2:?Usage: sbatch $0 SECTION ARM}"
 case "$ARM" in central_only|uniform_mean) ;; *) echo "Unknown arm: $ARM" >&2; exit 2 ;; esac
+MODE="${3:-full}"
+case "$MODE" in full|n12-only) ;; *) echo "Unknown mode: $MODE" >&2; exit 2 ;; esac
 PROJECT_ROOT="$HOME/msi"
 RESULTS="$PROJECT_ROOT/results"
 case "$DATASET" in
@@ -38,6 +43,11 @@ FAIR="$RESULTS/diagnostics/fair_scoring_baselines/bin_level_only/${DATASET}_seed
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
 export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 MPLBACKEND=Agg
+if [ "$MODE" = n12-only ]; then
+    exec "$HOME/miniconda3/envs/s3pl_env/bin/python" -u scripts/check_gate_d_n12_reproduction.py \
+        --input "$INPUT" --run-root "$RUN_ROOT" \
+        --production-attribution-dir "$PRODUCTION" --saved-evaluation-dir "$SAVED"
+fi
 "$HOME/miniconda3/envs/s3pl_env/bin/python" -u scripts/evaluate_gate_d_pixel_counts.py \
     --input "$INPUT" --run-root "$RUN_ROOT" \
     --production-attribution-dir "$PRODUCTION" --saved-evaluation-dir "$SAVED" \
