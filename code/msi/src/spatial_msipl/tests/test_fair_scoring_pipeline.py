@@ -325,7 +325,10 @@ class FairScoringPipelineTests(unittest.TestCase):
                     "baseline": "synthetic", "target": "synthetic", "steps": 64,
                     "integration": "trapezoidal", "attribution_pixels_per_component": 12,
                     "central_context_combination": "synthetic", "sampling_seed": 1,
-                    "selection_seed": 701, "nested_attribution_samples": samples}}))
+                    "selection_seed": 701, "nested_attribution_samples": samples},
+                "gmm_label_alignment": {
+                    "enabled": True, "permutation": {"0": 0, "1": 1}, "identity": True,
+                    "max_posterior_diff": 0.0}}))
         args = ["--input", self.input, "--run-root", run_root,
                 "--production-attribution-dir", self.attribution,
                 "--saved-evaluation-dir", self.saved,
@@ -346,6 +349,7 @@ class FairScoringPipelineTests(unittest.TestCase):
         self.assertAlmostEqual(summary["change_vs_saved_n12_at_K_bin"]["12"], 0.0, places=12)
         self.assertEqual(summary["jaccard_vs_n12_at_K_bin"]["12"], 1.0)
         self.assertEqual(set(summary["mSCF1"]), {"12", "48", "192"})
+        self.assertTrue(summary["gmm_label_alignment"]["192"]["identity"])
         self.assertTrue(all(summary["distinct_from_next_smaller"].values()))
         self.assertIn("1.0", summary["descriptive_ig_minus_posterior_abs_pcc"]["48"])
         again = run("evaluate_gate_d_pixel_counts.py", *args)
@@ -402,6 +406,17 @@ class FairScoringPipelineTests(unittest.TestCase):
         result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("run configuration differs from n=12", result.stderr)
+        self.assertFalse((run_root / "evaluation" / "summary.json").exists())
+
+    def test_gate_d_refuses_a_run_without_label_alignment(self):
+        run_root, args = self.gate_d_runs("gate_d_unaligned")
+        path = run_root / "n48" / "summary.json"
+        summary = json.loads(path.read_text())
+        del summary["gmm_label_alignment"]
+        path.write_text(json.dumps(summary))
+        result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--align-gmm-labels-to-production", result.stderr)
         self.assertFalse((run_root / "evaluation" / "summary.json").exists())
 
     def test_gate_d_refuses_incomplete_ig(self):

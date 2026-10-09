@@ -5,6 +5,7 @@ import argparse
 import csv
 import hashlib
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -23,7 +24,14 @@ from spatial_msipl.attribution import (
     gmm_posterior,
     integrated_gradients_cluster_posterior,
 )
-from spatial_msipl.gate_d_helpers import nested_attribution_samples
+from spatial_msipl.gate_d_helpers import (
+    GMM_ALIGNMENT_EXIT_CODE,
+    GmmLabelAlignmentError,
+    component_order,
+    nested_attribution_samples,
+    production_label_permutation,
+    reorder_gmm_components,
+)
 from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
 from spatial_msipl.preprocessing import H5SpatialContextDataset, checkpoint_input_spec
 
@@ -62,6 +70,18 @@ def parse_arguments():
             "Gate-(d) pixel-count test only. Keep the production attribution "
             "and faithfulness pixels and add attribution pixels from the same "
             "seeded permutation up to this total. Omit for production behaviour."
+        ),
+    )
+    parser.add_argument(
+        "--align-gmm-labels-to-production",
+        type=Path,
+        default=None,
+        help=(
+            "Gate-(d) only: production attribution folder. After the GMM refit, "
+            "relabel components so the hard assignment is identical to the saved "
+            "production assignment (exactly one permutation must work), otherwise "
+            f"exit with code {GMM_ALIGNMENT_EXIT_CODE} before writing outputs. Omit "
+            "for production behaviour."
         ),
     )
     parser.add_argument("--faithfulness-per-cluster", type=int, default=32)
@@ -166,6 +186,62 @@ def torch_gmm_parameters(scaler, gmm, device):
         "component_means": convert(gmm.means_),
         "precision_cholesky": convert(gmm.precisions_cholesky_),
     }
+
+
+def runtime_environment():
+    """What is known about the refit environment (recorded, not investigated)."""
+    import os
+    import sklearn
+
+    return {
+        "numpy": np.__version__,
+        "sklearn": sklearn.__version__,
+        "torch": torch.__version__,
+        "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        "threads": {name: os.environ.get(name) for name in
+                    ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")},
+        "node": os.environ.get("SLURMD_NODENAME"),
+    }
+
+
+def align_gmm_to_production(gmm, standardized, production_dir):
+    """Gate (d): relabel the refitted GMM onto the production assignment.
+
+    Uses hard assignments only. Exactly one permutation must make the refit
+    identical to production pixel for pixel; it is applied to the weights,
+    means, covariances and precisions, so every later output (posterior target,
+    samples, component_k_* arrays, saved GMM parameters) uses production's
+    numbering. The relabelled posterior must then reproduce the saved
+    production assignment and assigned posterior (tolerance 1e-4). Any failure
+    exits with GMM_ALIGNMENT_EXIT_CODE before any output file is written.
+    """
+    from spatial_msipl.simple_baselines import check_posterior_against_saved
+
+    production = np.load(Path(production_dir) / "coordinates_and_gmm.npz")
+    try:
+        permutation = production_label_permutation(
+            gmm.predict(standardized), production["component"], gmm.n_components)
+        reorder_gmm_components(gmm, component_order(permutation))
+        labels = gmm.predict(standardized)
+        posterior = gmm.predict_proba(standardized)
+        max_posterior_difference = check_posterior_against_saved(
+            posterior, production["component"], production["assigned_posterior"],
+            tolerance=1e-4)
+    except (GmmLabelAlignmentError, ValueError) as error:
+        print(f"GMM label alignment failed: {error}", file=sys.stderr)
+        raise SystemExit(GMM_ALIGNMENT_EXIT_CODE)
+    record = {
+        "enabled": True,
+        "production_dir": str(production_dir),
+        "permutation": {str(r): p for r, p in enumerate(permutation)},
+        "identity": permutation == tuple(range(len(permutation))),
+        "max_posterior_diff": max_posterior_difference,
+        "refit_environment": runtime_environment(),
+        "production_environment": "not recorded in the production summary",
+        "note": ("GMM component numbers are arbitrary; tiny GPU differences in the "
+                 "latent means can change the order sklearn lists them in."),
+    }
+    return labels, posterior, record
 
 
 def sample_as_tensors(dataset, index, device):
@@ -461,6 +537,10 @@ def main():
     ).fit(standardized)
     labels = gmm.predict(standardized)
     sklearn_posterior = gmm.predict_proba(standardized)
+    alignment_record = None
+    if args.align_gmm_labels_to_production is not None:
+        labels, sklearn_posterior, alignment_record = align_gmm_to_production(
+            gmm, standardized, args.align_gmm_labels_to_production)
     confidence = sklearn_posterior[np.arange(len(dataset)), labels]
     gmm_parameters = torch_gmm_parameters(scaler, gmm, device)
     with torch.no_grad():
@@ -748,6 +828,8 @@ def main():
         },
         "runtime_seconds": time.perf_counter() - started,
     }
+    if alignment_record is not None:
+        summary["gmm_label_alignment"] = alignment_record
     (args.output / "summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )

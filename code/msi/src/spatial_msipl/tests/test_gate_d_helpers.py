@@ -11,6 +11,12 @@ from pathlib import Path
 import numpy as np
 
 from spatial_msipl.gate_d_helpers import (
+    GMM_ALIGNMENT_EXIT_CODE,
+    SKLEARN_COMPONENT_ATTRIBUTES,
+    GmmLabelAlignmentError,
+    component_order,
+    production_label_permutation,
+    reorder_gmm_components,
     mark_distinct_arms,
     nested_attribution_samples,
     pixel_count_decision,
@@ -65,6 +71,127 @@ class NestedSamplingTests(unittest.TestCase):
     def test_too_few_pixels_is_an_error_as_in_production(self):
         with self.assertRaises(ValueError):
             nested_attribution_samples(np.array([0] * 43 + [1] * 100), 12, self.seed)
+
+
+def three_blob_gmm(seed=0):
+    from sklearn.mixture import GaussianMixture
+
+    rng = np.random.default_rng(seed)
+    data = np.vstack([rng.normal(centre, 0.3, (120 + 40 * i, 4))
+                      for i, centre in enumerate((0.0, 4.0, 8.0))])
+    return data, GaussianMixture(3, covariance_type="full", n_init=2,
+                                 random_state=1).fit(data)
+
+
+class GmmLabelAlignmentTests(unittest.TestCase):
+    """Protocol 18 Section 6 amendment: relabel the refit onto production."""
+
+    def test_swapped_labels_are_aligned_and_sampling_draws_production_pixels(self):
+        rng = np.random.default_rng(3)
+        production = rng.integers(0, 3, 900)
+        swap = np.array([0, 2, 1])
+        refit = swap[production]  # identical segmentation, components 1 and 2 renumbered
+        permutation = production_label_permutation(refit, production, 3)
+        self.assertEqual(permutation, (0, 2, 1))
+        aligned = np.asarray(permutation)[refit]
+        np.testing.assert_array_equal(aligned, production)
+        seed = 1 + 700
+        expected = production_disjoint_samples(production, 12, 32, seed)
+        unaligned = nested_attribution_samples(refit, 12, seed)
+        realigned = nested_attribution_samples(aligned, 12, seed)
+        for component in expected:
+            np.testing.assert_array_equal(realigned[component]["attribution"],
+                                          expected[component]["attribution"])
+            np.testing.assert_array_equal(realigned[component]["faithfulness"],
+                                          expected[component]["faithfulness"])
+        # Without alignment the renumbered components draw each other's permutations.
+        self.assertFalse(np.array_equal(unaligned[1]["attribution"],
+                                        expected[1]["attribution"]))
+
+    def test_non_identical_assignment_has_no_permutation(self):
+        production = np.repeat([0, 1, 2], 50)
+        refit = np.array([0, 2, 1])[production]
+        refit[0] = 1  # one pixel genuinely moved
+        with self.assertRaises(GmmLabelAlignmentError):
+            production_label_permutation(refit, production, 3)
+
+    def test_identity_is_a_no_op(self):
+        data, gmm = three_blob_gmm()
+        labels = gmm.predict(data)
+        before = {a: np.array(getattr(gmm, a)) for a in SKLEARN_COMPONENT_ATTRIBUTES}
+        permutation = production_label_permutation(labels, labels, 3)
+        self.assertEqual(permutation, (0, 1, 2))
+        reorder_gmm_components(gmm, component_order(permutation))
+        for attribute, value in before.items():
+            np.testing.assert_array_equal(getattr(gmm, attribute), value)
+
+    def test_permuted_parameters_reorder_posterior_columns_exactly(self):
+        data, gmm = three_blob_gmm()
+        posterior = gmm.predict_proba(data)
+        order = np.array([2, 0, 1])
+        reorder_gmm_components(gmm, order)
+        reordered = gmm.predict_proba(data)
+        self.assertLessEqual(float(np.max(np.abs(reordered - posterior[:, order]))), 1e-12)
+        np.testing.assert_array_equal(gmm.predict(data), np.argmax(posterior[:, order], axis=1))
+
+
+class IgScriptLabelAlignmentTests(unittest.TestCase):
+    """align_gmm_to_production in the IG script: relabel, verify, or exit 5."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            import run_spatial_msipl_gmm_integrated_gradients as ig
+        except ImportError as error:  # pragma: no cover - needs torch and scripts/
+            raise unittest.SkipTest(f"IG script not importable: {error}")
+        cls.ig = ig
+
+    def production_dir(self, tmp, labels, assigned):
+        path = Path(tmp)
+        np.savez(path / "coordinates_and_gmm.npz", x=np.arange(len(labels)),
+                 y=np.zeros(len(labels)), component=labels, assigned_posterior=assigned)
+        return path
+
+    def test_swapped_production_labels_are_aligned_with_matching_posterior(self):
+        data, gmm = three_blob_gmm()
+        posterior = gmm.predict_proba(data)
+        swap = np.array([0, 2, 1])
+        production = swap[gmm.predict(data)]
+        assigned = posterior[np.arange(len(data)), gmm.predict(data)]
+        with tempfile.TemporaryDirectory() as tmp:
+            labels, aligned_posterior, record = self.ig.align_gmm_to_production(
+                gmm, data, self.production_dir(tmp, production, assigned))
+        np.testing.assert_array_equal(labels, production)
+        self.assertFalse(record["identity"])
+        self.assertEqual(record["permutation"], {"0": 0, "1": 2, "2": 1})
+        self.assertLessEqual(record["max_posterior_diff"], 1e-12)
+        self.assertIn("sklearn", record["refit_environment"])
+        self.assertLessEqual(float(np.max(np.abs(aligned_posterior - posterior[:, swap]))),
+                             1e-12)
+
+    def test_identity_alignment_is_recorded_as_a_no_op(self):
+        data, gmm = three_blob_gmm()
+        labels = gmm.predict(data)
+        assigned = gmm.predict_proba(data)[np.arange(len(data)), labels]
+        means = np.array(gmm.means_)
+        with tempfile.TemporaryDirectory() as tmp:
+            aligned, _, record = self.ig.align_gmm_to_production(
+                gmm, data, self.production_dir(tmp, labels, assigned))
+        self.assertTrue(record["identity"])
+        np.testing.assert_array_equal(aligned, labels)
+        np.testing.assert_array_equal(gmm.means_, means)
+
+    def test_non_identical_assignment_exits_with_alignment_code(self):
+        data, gmm = three_blob_gmm()
+        labels = gmm.predict(data)
+        production = labels.copy()
+        production[0] = (production[0] + 1) % 3
+        assigned = gmm.predict_proba(data)[np.arange(len(data)), labels]
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit) as stop:
+                self.ig.align_gmm_to_production(
+                    gmm, data, self.production_dir(tmp, production, assigned))
+        self.assertEqual(stop.exception.code, GMM_ALIGNMENT_EXIT_CODE)
 
 
 class PixelCountDecisionTests(unittest.TestCase):

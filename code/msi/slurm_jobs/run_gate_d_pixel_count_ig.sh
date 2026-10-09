@@ -35,6 +35,10 @@ case "$DATASET" in
         GMM_COMPONENTS=3 ;;
     *) echo "Gate (d) sections are GBM108_positive and 40TopL only: $DATASET" >&2; exit 2 ;;
 esac
+case "$DATASET" in
+    GBM*) PRODUCTION_IG="$HOME/msi/results/experiments/spatial_msipl_gmm_integrated_gradients/${DATASET}_seed1/$VARIANT" ;;
+    *) PRODUCTION_IG="$HOME/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/${DATASET}_seed1/$VARIANT" ;;
+esac
 case "$VARIANT" in
     central_only) CHECKPOINT="$CHECKPOINT_ROOT/reconstruction/${DATASET}_seed1/central_only/checkpoint.pt" ;;
     uniform_mean) CHECKPOINT="$CHECKPOINT_ROOT/production/${DATASET}_seed1/uniform_mean/checkpoint.pt" ;;
@@ -67,6 +71,10 @@ if [ -d "$OUTPUT" ] && [ -n "$(ls -A "$OUTPUT")" ]; then
 fi
 if [ ! -f "$CHECKPOINT" ]; then
     echo "Required checkpoint is missing: $CHECKPOINT" >&2
+    exit 1
+fi
+if [ ! -f "$PRODUCTION_IG/coordinates_and_gmm.npz" ]; then
+    echo "Production GMM assignment is missing: $PRODUCTION_IG/coordinates_and_gmm.npz" >&2
     exit 1
 fi
 
@@ -142,8 +150,10 @@ timed() {
         "$@"
     fi
 }
-# Everything except --attribution-total matches the production IG invocation
-# (run_spatial_msipl_gbm_attribution.sh / run_spatial_msipl_cac_attribution.sh).
+# Everything except --attribution-total and --align-gmm-labels-to-production
+# matches the production IG invocation (run_spatial_msipl_gbm_attribution.sh /
+# run_spatial_msipl_cac_attribution.sh). Exit 5: the refitted GMM could not be
+# relabelled onto the production assignment (protocol 18 Section 6).
 timed "logs/gate-d-ig-${SLURM_JOB_ID}.resources.txt" \
 python -u scripts/run_spatial_msipl_gmm_integrated_gradients.py \
     --input "$INPUT" \
@@ -155,6 +165,7 @@ python -u scripts/run_spatial_msipl_gmm_integrated_gradients.py \
     --gmm-n-init 20 \
     --attribution-per-cluster 12 \
     --attribution-total "$TOTAL" \
+    --align-gmm-labels-to-production "$PRODUCTION_IG" \
     --faithfulness-per-cluster 32 \
     --ig-steps 64 \
     --ig-internal-batch-size 8 \

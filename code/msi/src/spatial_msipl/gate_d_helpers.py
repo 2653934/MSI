@@ -80,6 +80,52 @@ def mark_distinct_arms(actual_counts_by_arm):
     return flags
 
 
+GMM_ALIGNMENT_EXIT_CODE = 5
+SKLEARN_COMPONENT_ATTRIBUTES = ("weights_", "means_", "covariances_", "precisions_",
+                                "precisions_cholesky_")
+
+
+class GmmLabelAlignmentError(ValueError):
+    """The refitted GMM cannot be mapped onto the production assignment."""
+
+
+def production_label_permutation(refit_labels, production_labels, n_components):
+    """Return the unique relabelling that makes the refit identical to production.
+
+    ``permutation[r]`` is the production label given to refit component ``r``.
+    Only the hard assignments are used; attributions, scores and F1 never are.
+    Raises GmmLabelAlignmentError unless exactly one permutation makes the
+    relabelled assignment identical pixel for pixel.
+    """
+    from itertools import permutations
+
+    refit_labels = np.asarray(refit_labels, dtype=np.int64)
+    production_labels = np.asarray(production_labels, dtype=np.int64)
+    if refit_labels.shape != production_labels.shape:
+        raise GmmLabelAlignmentError("refit and production assignments differ in length")
+    matches = [p for p in permutations(range(n_components))
+               if np.array_equal(np.asarray(p)[refit_labels], production_labels)]
+    if len(matches) != 1:
+        raise GmmLabelAlignmentError(
+            f"{len(matches)} label permutations make the refitted GMM assignment identical "
+            "to production; exactly one is required")
+    return tuple(int(p) for p in matches[0])
+
+
+def component_order(permutation):
+    """Index array giving, for each production label p, the refit component it came from."""
+    order = np.empty(len(permutation), dtype=np.int64)
+    order[np.asarray(permutation)] = np.arange(len(permutation))
+    return order
+
+
+def reorder_gmm_components(gmm, order):
+    """Reorder a fitted sklearn GaussianMixture in place so component p is old order[p]."""
+    for attribute in SKLEARN_COMPONENT_ATTRIBUTES:
+        setattr(gmm, attribute, np.asarray(getattr(gmm, attribute))[order].copy())
+    return gmm
+
+
 PIXEL_COUNTS = (12, 48, 192)
 PIXEL_COUNT_SECTIONS = ("GBM108_positive", "40TopL")
 PIXEL_COUNT_ARMS = ("central_only", "uniform_mean")

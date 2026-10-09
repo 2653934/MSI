@@ -5,8 +5,10 @@ CPU only; it reads the three gate-(d) IG runs (n = 12, 48, 192) written by
 slurm_jobs/run_gate_d_pixel_count_ig.sh. Protocol 18 Section 6
 ("Pixel-count run specification"):
 
-1. Every run must use the production GMM assignment, so that the pixel count
-   is the only variable changed; otherwise the script stops.
+1. Every run must have been relabelled onto production with
+   --align-gmm-labels-to-production and must use the production GMM
+   assignment, so that the pixel count is the only variable changed;
+   otherwise the script stops.
 2. Reproduction gate: the n = 12 rerun must select the identical bin set at
    K_bin as the saved production IG list and reproduce the saved mSCF1 to
    1e-12. Order differences within the top K_bin and the maximum relative
@@ -231,6 +233,10 @@ def main():
         if run_summaries[n].get("status") != "valid":
             raise ValueError(f"n={n}: IG run status is {run_summaries[n].get('status')!r}, "
                              "not 'valid'; refusing to score incomplete attributions")
+        alignment = run_summaries[n].get("gmm_label_alignment") or {}
+        if not alignment.get("enabled"):
+            raise ValueError(f"n={n}: run was not made with --align-gmm-labels-to-production; "
+                             "all gate (d) runs must use the same code path")
         current_signature = run_signature(run_summaries[n])
         if current_signature["variant"] != arm or Path(current_signature["dataset"]).stem != dataset:
             raise ValueError(f"n={n}: run summary dataset or arm does not match the request")
@@ -269,6 +275,10 @@ def main():
         "distinct_from_next_smaller": {str(n): bool(f) for n, f in distinct.items()},
         "run_diagnostics_not_in_signature": {
             str(n): {key: run_summaries[n]["gmm"].get(key) for key in RUN_DIAGNOSTIC_GMM_KEYS}
+            for n in PIXEL_COUNTS},
+        "gmm_label_alignment": {
+            str(n): {key: run_summaries[n]["gmm_label_alignment"].get(key)
+                     for key in ("permutation", "identity", "max_posterior_diff")}
             for n in PIXEL_COUNTS},
     }
     if not reproduction["passed"]:
