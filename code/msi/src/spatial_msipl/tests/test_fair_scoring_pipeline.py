@@ -318,7 +318,9 @@ class FairScoringPipelineTests(unittest.TestCase):
                 "model_state_sha256": "synthetic", "model_configuration": {},
                 "input_specification": {}, "pixels": 24, "spectral_bins": 48,
                 "gmm": {"components": 2, "covariance_type": "full", "n_init": 20,
-                        "seed": 1},
+                        "seed": 1, "component_counts": {"0": 60, "1": 60},
+                        # GPU diagnostic: differs per run, must not block scoring.
+                        "differentiable_posterior_max_absolute_difference": 1e-7 * n},
                 "integrated_gradients": {
                     "baseline": "synthetic", "target": "synthetic", "steps": 64,
                     "integration": "trapezoidal", "attribution_pixels_per_component": 12,
@@ -378,6 +380,28 @@ class FairScoringPipelineTests(unittest.TestCase):
         result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("GMM assignment differs", result.stderr)
+        self.assertFalse((run_root / "evaluation" / "summary.json").exists())
+
+    def test_gate_d_records_but_does_not_compare_gpu_posterior_diagnostic(self):
+        # gate_d_runs gives each run a different posterior diagnostic (1e-7 * n).
+        run_root, args = self.gate_d_runs("gate_d_diagnostic")
+        run("evaluate_gate_d_pixel_counts.py", *args)
+        summary = json.loads((run_root / "evaluation" / "summary.json").read_text())
+        self.assertEqual(summary["status"], "complete")
+        recorded = summary["run_diagnostics_not_in_signature"]
+        self.assertAlmostEqual(
+            recorded["192"]["differentiable_posterior_max_absolute_difference"], 1.92e-5)
+        self.assertNotEqual(recorded["12"], recorded["48"])
+
+    def test_gate_d_refuses_a_changed_run_configuration(self):
+        run_root, args = self.gate_d_runs("gate_d_config")
+        path = run_root / "n192" / "summary.json"
+        summary = json.loads(path.read_text())
+        summary["gmm"]["component_counts"] = {"0": 59, "1": 61}
+        path.write_text(json.dumps(summary))
+        result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("run configuration differs from n=12", result.stderr)
         self.assertFalse((run_root / "evaluation" / "summary.json").exists())
 
     def test_gate_d_refuses_incomplete_ig(self):

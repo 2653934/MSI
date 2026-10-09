@@ -139,9 +139,18 @@ def sample_counts(run_summary, n):
     return counts
 
 
+# Floating-point diagnostics computed on the GPU in each run. They can differ in
+# the last digits between runs and nodes without any configuration change, so
+# they are recorded per run but excluded from the signature. The GMM assignment
+# itself is compared label for label against production separately.
+RUN_DIAGNOSTIC_GMM_KEYS = ("differentiable_posterior_max_absolute_difference",)
+
+
 def run_signature(run_summary):
     """Fields that must stay fixed while only the attribution count changes."""
     ig = run_summary["integrated_gradients"]
+    gmm = {key: value for key, value in run_summary["gmm"].items()
+           if key not in RUN_DIAGNOSTIC_GMM_KEYS}
     return {
         "attribution_version": run_summary["attribution_version"],
         "variant": run_summary["variant"],
@@ -151,7 +160,7 @@ def run_signature(run_summary):
         "input_specification": run_summary["input_specification"],
         "pixels": run_summary["pixels"],
         "spectral_bins": run_summary["spectral_bins"],
-        "gmm": run_summary["gmm"],
+        "gmm": gmm,
         "integrated_gradients": {
             key: ig[key] for key in (
                 "baseline", "target", "steps", "integration",
@@ -258,6 +267,9 @@ def main():
         "n12_reproduction": reproduction,
         "actual_attribution_pixels": {str(n): c for n, c in counts.items()},
         "distinct_from_next_smaller": {str(n): bool(f) for n, f in distinct.items()},
+        "run_diagnostics_not_in_signature": {
+            str(n): {key: run_summaries[n]["gmm"].get(key) for key in RUN_DIAGNOSTIC_GMM_KEYS}
+            for n in PIXEL_COUNTS},
     }
     if not reproduction["passed"]:
         result["note"] = ("n=12 rerun did not reproduce the saved production IG list; "
