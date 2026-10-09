@@ -163,6 +163,8 @@ def run_signature(run_summary):
         "pixels": run_summary["pixels"],
         "spectral_bins": run_summary["spectral_bins"],
         "gmm": gmm,
+        "gmm_alignment_reference_sha256":
+            (run_summary.get("gmm_label_alignment") or {}).get("production_reference", {}).get("sha256"),
         "integrated_gradients": {
             key: ig[key] for key in (
                 "baseline", "target", "steps", "integration",
@@ -237,6 +239,10 @@ def main():
         if not alignment.get("enabled"):
             raise ValueError(f"n={n}: run was not made with --align-gmm-labels-to-production; "
                              "all gate (d) runs must use the same code path")
+        reference_sha256 = expected["source_artifacts"]["production_coordinates_and_gmm"]["sha256"]
+        if (alignment.get("production_reference") or {}).get("sha256") != reference_sha256:
+            raise ValueError(f"n={n}: GMM labels were aligned to a different production "
+                             "reference than the one this evaluation compares against")
         current_signature = run_signature(run_summaries[n])
         if current_signature["variant"] != arm or Path(current_signature["dataset"]).stem != dataset:
             raise ValueError(f"n={n}: run summary dataset or arm does not match the request")
@@ -278,7 +284,8 @@ def main():
             for n in PIXEL_COUNTS},
         "gmm_label_alignment": {
             str(n): {key: run_summaries[n]["gmm_label_alignment"].get(key)
-                     for key in ("permutation", "identity", "max_posterior_diff")}
+                     for key in ("permutation", "identity", "max_posterior_diff",
+                                 "production_reference")}
             for n in PIXEL_COUNTS},
     }
     if not reproduction["passed"]:

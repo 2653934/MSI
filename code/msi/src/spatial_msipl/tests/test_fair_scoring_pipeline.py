@@ -328,7 +328,10 @@ class FairScoringPipelineTests(unittest.TestCase):
                     "selection_seed": 701, "nested_attribution_samples": samples},
                 "gmm_label_alignment": {
                     "enabled": True, "permutation": {"0": 0, "1": 1}, "identity": True,
-                    "max_posterior_diff": 0.0}}))
+                    "max_posterior_diff": 0.0,
+                    "production_reference": {"sha256": __import__("hashlib").sha256(
+                        (self.attribution / "coordinates_and_gmm.npz").read_bytes()
+                    ).hexdigest()}}}))
         args = ["--input", self.input, "--run-root", run_root,
                 "--production-attribution-dir", self.attribution,
                 "--saved-evaluation-dir", self.saved,
@@ -417,6 +420,17 @@ class FairScoringPipelineTests(unittest.TestCase):
         result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--align-gmm-labels-to-production", result.stderr)
+        self.assertFalse((run_root / "evaluation" / "summary.json").exists())
+
+    def test_gate_d_refuses_a_different_alignment_reference(self):
+        run_root, args = self.gate_d_runs("gate_d_reference")
+        path = run_root / "n12" / "summary.json"
+        summary = json.loads(path.read_text())
+        summary["gmm_label_alignment"]["production_reference"]["sha256"] = "0" * 64
+        path.write_text(json.dumps(summary))
+        result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("different production reference", result.stderr)
         self.assertFalse((run_root / "evaluation" / "summary.json").exists())
 
     def test_gate_d_refuses_incomplete_ig(self):

@@ -115,6 +115,17 @@ class GmmLabelAlignmentTests(unittest.TestCase):
         with self.assertRaises(GmmLabelAlignmentError):
             production_label_permutation(refit, production, 3)
 
+    def test_component_count_mismatch_is_an_alignment_error(self):
+        production = np.repeat([0, 1], 60)  # production K = 2
+        refit_three = np.repeat([0, 1, 2], 40)
+        with self.assertRaises(GmmLabelAlignmentError):
+            production_label_permutation(refit_three, production, 3)
+        with self.assertRaises(GmmLabelAlignmentError):
+            production_label_permutation(production, np.repeat([0, 1, 2], 40), 2)
+        # A K=3 refit that leaves one component empty must not "match" a K=2 production.
+        with self.assertRaises(GmmLabelAlignmentError):
+            production_label_permutation(production.copy(), production, 3)
+
     def test_identity_is_a_no_op(self):
         data, gmm = three_blob_gmm()
         labels = gmm.predict(data)
@@ -180,6 +191,27 @@ class IgScriptLabelAlignmentTests(unittest.TestCase):
         self.assertTrue(record["identity"])
         np.testing.assert_array_equal(aligned, labels)
         np.testing.assert_array_equal(gmm.means_, means)
+
+    def test_component_count_mismatch_exits_with_alignment_code(self):
+        data, gmm = three_blob_gmm()  # refit K = 3
+        production = (gmm.predict(data) > 0).astype(np.int64)  # production K = 2
+        assigned = np.ones(len(data))
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit) as stop:
+                self.ig.align_gmm_to_production(
+                    gmm, data, self.production_dir(tmp, production, assigned))
+        self.assertEqual(stop.exception.code, GMM_ALIGNMENT_EXIT_CODE)
+
+    def test_alignment_records_the_production_reference_hash(self):
+        import hashlib
+        data, gmm = three_blob_gmm()
+        labels = gmm.predict(data)
+        assigned = gmm.predict_proba(data)[np.arange(len(data)), labels]
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = self.production_dir(tmp, labels, assigned)
+            expected = hashlib.sha256((folder / "coordinates_and_gmm.npz").read_bytes()).hexdigest()
+            _, _, record = self.ig.align_gmm_to_production(gmm, data, folder)
+        self.assertEqual(record["production_reference"]["sha256"], expected)
 
     def test_non_identical_assignment_exits_with_alignment_code(self):
         data, gmm = three_blob_gmm()

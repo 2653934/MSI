@@ -217,7 +217,9 @@ def align_gmm_to_production(gmm, standardized, production_dir):
     """
     from spatial_msipl.simple_baselines import check_posterior_against_saved
 
-    production = np.load(Path(production_dir) / "coordinates_and_gmm.npz")
+    reference_path = Path(production_dir) / "coordinates_and_gmm.npz"
+    reference_sha256 = hashlib.sha256(reference_path.read_bytes()).hexdigest()
+    production = np.load(reference_path)
     try:
         permutation = production_label_permutation(
             gmm.predict(standardized), production["component"], gmm.n_components)
@@ -233,6 +235,7 @@ def align_gmm_to_production(gmm, standardized, production_dir):
     record = {
         "enabled": True,
         "production_dir": str(production_dir),
+        "production_reference": {"path": str(reference_path), "sha256": reference_sha256},
         "permutation": {str(r): p for r, p in enumerate(permutation)},
         "identity": permutation == tuple(range(len(permutation))),
         "max_posterior_diff": max_posterior_difference,

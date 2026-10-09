@@ -103,6 +103,16 @@ def production_label_permutation(refit_labels, production_labels, n_components):
     production_labels = np.asarray(production_labels, dtype=np.int64)
     if refit_labels.shape != production_labels.shape:
         raise GmmLabelAlignmentError("refit and production assignments differ in length")
+    production_k = len(np.unique(production_labels))
+    if production_k != n_components or not np.array_equal(
+            np.unique(production_labels), np.arange(n_components)):
+        raise GmmLabelAlignmentError(
+            f"production assignment uses {production_k} components "
+            f"({np.unique(production_labels).tolist()}); the refit has K={n_components}")
+    if len(np.unique(refit_labels)) != n_components:
+        raise GmmLabelAlignmentError(
+            f"refit assignment uses {len(np.unique(refit_labels))} of its "
+            f"K={n_components} components")
     matches = [p for p in permutations(range(n_components))
                if np.array_equal(np.asarray(p)[refit_labels], production_labels)]
     if len(matches) != 1:
