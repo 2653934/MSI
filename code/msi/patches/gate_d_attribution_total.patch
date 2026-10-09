@@ -1,0 +1,72 @@
+--- a/code/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py
++++ b/code/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py
+@@ -23,6 +23,7 @@
+     gmm_posterior,
+     integrated_gradients_cluster_posterior,
+ )
++from spatial_msipl.gate_d_helpers import nested_attribution_samples
+ from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
+ from spatial_msipl.preprocessing import H5SpatialContextDataset, checkpoint_input_spec
+ 
+@@ -53,6 +54,16 @@
+     parser.add_argument("--gmm-components", type=int, default=2)
+     parser.add_argument("--gmm-n-init", type=int, default=20)
+     parser.add_argument("--attribution-per-cluster", type=int, default=12)
++    parser.add_argument(
++        "--attribution-total",
++        type=int,
++        default=None,
++        help=(
++            "Gate-(d) pixel-count test only. Keep the production attribution "
++            "and faithfulness pixels and add attribution pixels from the same "
++            "seeded permutation up to this total. Omit for production behaviour."
++        ),
++    )
+     parser.add_argument("--faithfulness-per-cluster", type=int, default=32)
+     parser.add_argument("--ig-steps", type=int, default=64)
+     parser.add_argument("--ig-internal-batch-size", type=int, default=8)
+@@ -463,12 +474,30 @@
+             f"differentiable posterior disagrees with sklearn: {posterior_max_difference}"
+         )
+ 
+-    selected = choose_disjoint_samples(
+-        labels,
+-        args.attribution_per_cluster,
+-        args.faithfulness_per_cluster,
+-        sampling_seed + 700,
+-    )
++    if args.attribution_total is None:
++        selected = choose_disjoint_samples(
++            labels,
++            args.attribution_per_cluster,
++            args.faithfulness_per_cluster,
++            sampling_seed + 700,
++        )
++        sample_record = None
++    else:
++        selected = nested_attribution_samples(
++            labels,
++            args.attribution_total,
++            sampling_seed + 700,
++            n_base=args.attribution_per_cluster,
++            n_faithfulness=args.faithfulness_per_cluster,
++        )
++        sample_record = {
++            str(component): {
++                "requested_attribution": split["requested_attribution"],
++                "actual_attribution": split["actual_attribution"],
++                "capped": split["capped"],
++            }
++            for component, split in selected.items()
++        }
+     mean_spectrum = torch.as_tensor(mean_spectrum_np, device=device)
+     aggregate = {}
+     diagnostics = []
+@@ -680,6 +709,7 @@
+             "steps": args.ig_steps,
+             "integration": "trapezoidal rule including both endpoints",
+             "attribution_pixels_per_component": args.attribution_per_cluster,
++            "nested_attribution_samples": sample_record,
+             "central_context_combination": (
+                 "per-bin |central IG| + sum over valid neighbour slots of |neighbour IG|"
+                 if args.variant not in ("central_only", "zero_context")
