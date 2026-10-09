@@ -39,25 +39,49 @@ def paired(values_a, values_b):
     }
 
 
+def campaign_provenance(by_collection):
+    """Check that the section results can share one decision table.
+
+    The approval may approve different partitions per collection (P3 is
+    approved for CAC only), so each section records only its own approved
+    partition parameters. Those must agree within a collection; everything
+    else (versions, other parameters, approval hash, code) must agree across
+    all sections.
+    """
+    if any(len(keys) != 1 for keys in by_collection.values()):
+        raise SystemExit("section results come from different code, parameters or approvals; "
+                         "refusing to mix them in one decision table")
+    records = {c: json.loads(next(iter(keys))) for c, keys in by_collection.items()}
+    partitions = {c: r["parameters"].pop("approved_partition_parameters", {})
+                  for c, r in records.items()}
+    shared = {json.dumps(r, sort_keys=True) for r in records.values()}
+    if len(shared) != 1:
+        raise SystemExit("collections come from different code, parameters or approvals; "
+                         "refusing to mix them in one decision table")
+    campaign = json.loads(next(iter(shared)))
+    campaign["approved_partition_parameters_by_collection"] = partitions
+    return campaign
+
+
 def main():
     args = parse_arguments()
     args.output.mkdir(parents=True, exist_ok=True)
     rows = []
-    campaign = set()
+    by_collection = {}
     for path in sorted(args.root.glob("*_seed1/*/summary.json")):
         summary = json.loads(path.read_text(encoding="utf-8"))
         if summary.get("status") != "complete" or "provenance" not in summary:
             raise SystemExit(f"{path}: not a complete version-2 result")
         prov = summary["provenance"]
-        campaign.add(json.dumps({
+        section, arm = path.parent.parent.name.replace("_seed1", ""), path.parent.name
+        collection = "GBM" if section.startswith("GBM") else "CAC"
+        by_collection.setdefault(collection, set()).add(json.dumps({
             "evaluation_version": prov["evaluation_version"],
             "protocol": prov["protocol"],
             "parameters": prov["parameters"],
             "approval": (prov["partition_approval"] or {}).get("sha256"),
             "code": prov["code"],
         }, sort_keys=True))
-        section, arm = path.parent.parent.name.replace("_seed1", ""), path.parent.name
-        collection = "GBM" if section.startswith("GBM") else "CAC"
         bin_level = summary["bin_level"]
         row = {"collection": collection, "section": section, "arm": arm,
                "patient": GBM_PATIENT.get(section, section)}
@@ -78,9 +102,7 @@ def main():
                     if "collapse_K_bin" in method else None
         rows.append(row)
 
-    if len(campaign) != 1:
-        raise SystemExit("section results come from different code, parameters or approvals; "
-                         "refusing to mix them in one decision table")
+    campaign = campaign_provenance(by_collection)
 
     decisions = {}
     for collection in ("GBM", "CAC"):
@@ -137,7 +159,7 @@ def main():
             record["peak_level_partitions_used"] = partitions
             decisions[key] = record
 
-    decisions["_campaign_provenance"] = json.loads(next(iter(campaign)))
+    decisions["_campaign_provenance"] = campaign
     (args.output / "decisions.json").write_text(json.dumps(decisions, indent=2) + "\n",
                                                 encoding="utf-8")
     fields = sorted({k for r in rows for k in r})
