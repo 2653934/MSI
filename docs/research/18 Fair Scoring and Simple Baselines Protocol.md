@@ -125,6 +125,26 @@ All label-free baselines use the **TIC-normalised** spectra, which is the repres
 - **If BIC selects K = 1, that is the primary result:** "no supported multi-cluster latent structure under BIC". A forced best-K ≥ 2 IG run may be reported only as a separately labelled sensitivity analysis and is never called BIC-selected IG.
 - Balanced accuracy is not computed when K differs from the class count; ARI and NMI only.
 
+**BIC run specification (drafted 9 October after the 40TopL pixel-count result; approved by the supervisor on 9 October, 22:55, with changes a–c below; nothing run). The BIC outcome has not been seen. The only earlier execution is the quarantined smoke run in Section 10, whose output was never read.**
+
+- **Question answered:** is the production K supported by BIC, or arbitrary? The result is descriptive, per section and arm. **There is no arm or collection verdict for BIC**, and production K stays the reported setting whatever BIC shows.
+- **Order:** only after the GBM108_positive pixel-count decision table has been posted to the supervisor and reviewed. The BIC job script is written at that point. It does not change the pixel-count runs.
+- **Sections and arms:** GBM108_positive and 40TopL (the same development sections as the pixel-count test, not confirmation evidence), each in central_only and uniform_mean, so 4 BIC selections. Production K is 2 for GBM108_positive and 3 for 40TopL in both arms.
+- **Input:** the saved production `latent_mean.npy` and `coordinates_and_gmm.npz` in each production attribution folder. CPU only, no labels read, `select_gmm_k_bic.py` (selection version 2) with `--production-k` set as above, `--seed 1`, `--n-init 20`. Outputs go to `results/diagnostics/gate_d_bic/<section>_seed1/<arm>/bic_selection.json`, never to production folders.
+- **Candidates and rule (already coded in `gate_d_helpers.select_gmm_k_by_bic`, unchanged):** K ∈ {1, …, 6}. Only K whose best fit converged are compared. Among them, the smallest K within ΔBIC < 10 of the minimum is selected. A K that fails or does not converge is excluded and recorded.
+- **Provenance check first:** refitting the production K must reproduce the saved assignment (ARI ≥ 0.999), or the script stops for that section-arm, and it gets no BIC result.
+- **(a) No GPU IG run at any BIC-selected or forced K.** Reasons: IG is no longer the likely headline, the pixel-count label alignment cannot apply when the segmentation changes, and a new IG run would need a new reproduction baseline.
+- **(c) K = 1 handling:** if K = 1 is selected, the primary result for that section-arm is "no supported multi-cluster latent structure under BIC". The script also records the best K ≥ 2 under the same tie rule. No IG is run on it.
+- **(b) Optional CPU follow-up, descriptive only: "BIC-K segmentation sensitivity, descriptive".** Applies only to a section-arm where the BIC-selected K (or, after K = 1, the recorded best K ≥ 2) differs from production K.
+  - Refit the GMM at that K on the saved latent (production settings: StandardScaler, full covariance, `n_init` 20, seed 1).
+  - Compute the soft posterior maps, then the posterior-|PCC| balanced ranking with the existing `simple_baselines.posterior_pcc_rankings`.
+  - Score mSCF1 at K_bin with the existing scorer, and compare it with the saved posterior-|PCC| at production K (gate (a)/(b) bin-level summary, m = 1).
+  - ARI and NMI of the refitted hard assignment against labels are descriptive; no balanced accuracy.
+  - **No trigger and no verdict.** The label "BIC-K segmentation sensitivity, descriptive" is used everywhere it appears.
+  - If this needs more than a small script reusing existing functions, it is dropped and the supervisor is told instead.
+- **Reporting (per section and arm):** the BIC value and status for every candidate K, the selected K, whether it equals production K, the refit ARI, the primary-result sentence, and, where (b) ran, its labelled descriptive comparison. Selected K = production K is reported as "BIC supports the production K", with no further computation.
+- **Resources:** `batch`, 1–2 CPUs, small memory (to be set from a first `sacct` reading, not `bigbatch`). The job script follows the cluster rules: one array task per section-arm, `sbatch --parsable`, and shared output folders created before submission.
+
 **Attribution-pixel count** (the only variable changed):
 
 - The production sample is preserved exactly. The same seeded generator (`sampling_seed + 700`, shared sequentially across components in label order) produces one permutation per component.
@@ -261,6 +281,53 @@ A test rebuilds the IG matched groups from these files.
   - Evaluation 66299 (central_only) stopped before scoring: "n=12: GMM assignment differs from production". No summary was written.
   - **Diagnosis, from the synced artifacts:** a pure relabelling. All three reruns (n = 12, 48, 192) found the identical segmentation: the same weights 0.419/0.350/0.231, and 0 of 4,686 pixels disagreeing after mapping production components {0, 1, 2} to rerun {0, 2, 1}. The latent means differ from production by at most 4.8e-7, from GPU floating-point differences, which was enough to change the order sklearn lists the components in. The attribution sampler walks the components in label order, sharing one seeded generator, so the swapped components drew each other's permutations. Their attribution pixels therefore differ from production. Component 0 kept its label, and its IG matches production to 6e-8 relative; components 1 and 2 differ by 15% and 25%.
   - **Status under the predeclared rules:** a run-validity check failed, so 40TopL central_only gets **no verdict**. The rule needs both sections, so the central_only arm cannot trigger a rerun. The check was not loosened.
+
+- **9 October, cluster: gate (d) 40TopL with GMM label alignment (commit `3a9599d`).**
+  - Test job 66324: 83/83 passed, none skipped. This includes the five script-level alignment tests and both evaluator refusal tests.
+  - IG reruns 66325–66330 (both arms, n = 12/48/192, with `--align-gmm-labels-to-production`) all completed with exit 0 on `batch`. In each, the CUDA warm-up and the test suite passed and no alignment failure occurred. Peak RSS was ≤ 1.25 GB.
+  - Evaluations 66331 (central_only) and 66332 (uniform_mean) both completed with exit 0. So both arms passed the run-validity checks and the n = 12 reproduction gate.
+  - Values and the alignment permutations had not been read when this entry was written. The uniform_mean consistency check against `superseded_label_order/` is run after the local sync.
+
+- **9 October, 14:56 UTC, cluster: superseded gate (d) attempt moved, not deleted.**
+  - **Moved:** `results/diagnostics/gate_d_pixel_counts/40TopL_seed1/` (55 files) to `results/diagnostics/gate_d_pixel_counts/superseded_label_order/40TopL_seed1/`. The sorted file list is identical before and after the move.
+  - **Contents:**
+    - the central_only runs n = 12/48/192 (IG jobs 66293–66295) and the empty `evaluation/` folder left by the stopped evaluation 66299;
+    - the uniform_mean runs n = 12/48/192 (IG jobs 66296–66298) and evaluation 66300.
+  - **Reason superseded:** these runs were made without `--align-gmm-labels-to-production` (Section 6 amendment). The central_only reruns had swapped component labels and so a different attribution sample. The uniform_mean outputs are kept as the reference for the consistency check.
+  - **Local copy:** already at the superseded path, and committed there in `88e6216` (55 files, the same sorted file list as the cluster). Nothing remains at the old local path.
+
+- **9 October, local (after Zayd's sync): gate (d) 40TopL values read** from `results/diagnostics/gate_d_pixel_counts/40TopL_seed1/<arm>/evaluation/summary.json` (jobs 66331/66332). K_bin = 315 in both arms.
+  - **Run validity:** n = 12 reproduction passed in both arms (identical bin set, 0 order differences, mSCF1 difference 0.0; saved mSCF1 0.6804 central_only, 0.6827 uniform_mean). Every component received exactly n attribution pixels, and each count's sample is distinct from the next smaller one.
+  - **Label alignment:** central_only permutation {0→0, 1→2, 2→1} at every n (as diagnosed in attempt 2); uniform_mean identity. Production reference SHA-256 matched in all six runs.
+  - **Uniform_mean consistency check** (`uniform_mean/consistency_vs_superseded.json`, `check_gate_d_uniform_consistency.py`): **passed**, maximum difference 0.0 over all 18 compared values (tolerance 1e-12). The aligned rerun reproduces the superseded unaligned uniform_mean evaluation exactly, as expected for an identity mapping.
+  - **Change in mSCF1 at K_bin versus saved n = 12** (trigger: ≥ +0.02 on both sections for that arm):
+
+    | Arm | n = 48 | n = 192 | Jaccard vs n = 12 (48 / 192) |
+    |---|---|---|---|
+    | central_only | −0.001 | **+0.024** | 0.795 / 0.805 |
+    | uniform_mean | −0.008 | +0.003 | 0.853 / 0.848 |
+
+  - **Descriptive, not gating:** IG − posterior-|PCC| at K_bin stays negative at every n (central_only −0.047/−0.048/−0.023; uniform_mean −0.062/−0.071/−0.059 for n = 12/48/192). IG runtime was 4–8 s per run.
+  - **Descriptive, not gating (added after supervisor review, 9 October; no rule changed):**
+    - The central_only n = 192 gain over n = 12 has the same sign and a similar size across budgets: +0.023 / +0.017 / +0.024 at 0.5 / 0.75 / 1.0 × K_bin. These budget-multiplier values depend on order, so they are descriptive only (this section, above).
+    - IG − posterior-|PCC| is negative at 0.75 and 1.0 × K_bin in both arms at every n. At 1.5 and 2.0 × K_bin it lies between −0.004 and 0.000 (uniform_mean at 2.0 × is exactly 0.000). At 0.5 × K_bin it is **positive for central_only** (+0.033 / +0.050 / +0.056 for n = 12/48/192) and negative for uniform_mean (−0.019 / −0.032 / −0.031).
+    - Bin-set change between counts: the Jaccard values correspond to 25–36 of the 315 selected bins (8–11%) differing from the n = 12 set.
+  - **Consequence under the rule:** uniform_mean cannot trigger, whatever GBM108_positive shows. central_only n = 192 meets the threshold on 40TopL only, so that arm's outcome depends on GBM108_positive central_only. This is one development section, one seed, 0.004 above the threshold.
+
+- **9 October, supervisor review of the 40TopL gate (d) result** (report `docs/meetings/supervisor_report_2026-10-09_gate_d_40TopL.md`; that folder is not versioned, so this entry is the record). The supervisor checked the report against the evaluation summaries, the 66324 test log and the consistency report, and approved it. Decisions:
+  1. **GBM108_positive is approved, in stages, with Zayd's OK at each step.**
+     - **Stage 1:** n = 12 for both arms. Check the run-validity checks and the reproduction gate, plus `sacct` runtime and memory, and report yes/no per arm. No gate (d) scores are read at this stage.
+     - **Stage 2:** if central_only n = 12 reproduces, run central_only n = 48 and 192. Run uniform_mean n = 48 and 192 only if uniform_mean n = 12 reproduces. If it does not, that arm gets no verdict, as decided in Section 6 (no fallback).
+     - **Then:** both evaluations, `run_gate_d_summary.sh`, and the decision table exactly as the rule gives it. Report back before anything else.
+     - A timeout counts as a failed run. It is reported, not silently resubmitted. GBM IG runtime at n = 192 is untested under this code path (limits 4h / 4h / 8h).
+     - **Staging needs a code change (proposed 9 October, for supervisor review; not committed or run).** The submitter always submitted all six runs, and the evaluator needs all three counts. Proposed change: `submit_gate_d_pixel_counts.sh --counts/--arms`, which refuses a count above 12 unless the arm's n = 12 record has status `passed`; and `run_gate_d_evaluation.sh SECTION ARM n12-only`, which runs a new `check_gate_d_n12_reproduction.py` that applies the evaluator's n = 12 run-validity checks and reproduction gate alone and writes `<arm>/n12_reproduction/summary.json`. The evaluator file is not modified, so its code hash, which is part of the campaign provenance the summariser compares, stays identical to the 40TopL evaluations. No rule, threshold or check changes. An arm stopped at stage 1 has no `evaluation/` summary and appears in the decision table as "missing", which gives no verdict.
+  2. **Not stopping:** gate (d) is not reported as "central_only not resolved".
+  3. **BIC is kept,** after the pixel-count result. The plan is drafted in Section 6 ("BIC run plan, draft") for supervisor review before any run.
+
+- **9 October, 22:55, supervisor answer to the staging change and BIC plan** (chat `docs/supervision/supervisor_chat.md`; this entry is the record).
+  - **Staging change approved as drafted.** Sequence: Zayd commits and syncs; `sha256sum` check against the commit; the cluster test job, in which the three new stage-1 tests must show as run and passed; stage 1; post yes/no per arm with `sacct` Elapsed and MaxRSS, no scores read; then stage 2.
+  - **Watch-points:** the submitter's `grep '"status": "passed"'` depends on the `atomic_write_json` formatting, so switch to a `json.load` check if that format changes. A validity failure before scoring writes no `n12_reproduction/summary.json`, so stage 2 is refused for that arm, and the error text is posted to the supervisor.
+  - **BIC plan approved as the specification with changes**, now written into Section 6 ("BIC run specification"): no GPU IG at any BIC or forced K; an optional, labelled CPU posterior-|PCC| sensitivity with no trigger or verdict; results per section-arm only, with no arm or collection verdict; and BIC runs only after the GBM108_positive decision table has been reviewed.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
