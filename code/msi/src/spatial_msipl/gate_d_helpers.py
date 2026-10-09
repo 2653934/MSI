@@ -80,6 +80,45 @@ def mark_distinct_arms(actual_counts_by_arm):
     return flags
 
 
+PIXEL_COUNTS = (12, 48, 192)
+PIXEL_COUNT_SECTIONS = ("GBM108_positive", "40TopL")
+PIXEL_COUNT_ARMS = ("central_only", "uniform_mean")
+PIXEL_COUNT_TRIGGER = 0.02
+
+
+def pixel_count_decision(changes, distinct):
+    """Apply the predeclared gate-(d) pixel-count rule (protocol Section 6).
+
+    ``changes[arm][section][n]`` is mSCF1(n) - mSCF1(n=12, saved production) at
+    K_bin, and ``distinct[arm][section][n]`` says whether arm n differs from the
+    next smaller arm after capping. A setting n triggers the 16-section rerun
+    for an arm only if the change is >= +0.02 on both development sections
+    (and n is distinct on both). Anything else keeps the production n=12.
+    Missing sections or arms give no verdict rather than a guess.
+    """
+    decisions = {}
+    for arm in PIXEL_COUNT_ARMS:
+        record = {}
+        for n in PIXEL_COUNTS[1:]:
+            values = [changes.get(arm, {}).get(s, {}).get(n) for s in PIXEL_COUNT_SECTIONS]
+            flags = [distinct.get(arm, {}).get(s, {}).get(n) for s in PIXEL_COUNT_SECTIONS]
+            if any(v is None for v in values) or any(f is None for f in flags):
+                verdict = "incomplete; no verdict"
+            elif not all(flags):
+                verdict = "not distinct from the next smaller count on every section; no verdict"
+            elif all(v >= PIXEL_COUNT_TRIGGER for v in values):
+                verdict = "triggers the predeclared 16-section rerun of this setting"
+            else:
+                verdict = "production n=12 stands"
+            record[str(n)] = {
+                "change_by_section": dict(zip(PIXEL_COUNT_SECTIONS, values)),
+                "distinct_by_section": dict(zip(PIXEL_COUNT_SECTIONS, flags)),
+                "verdict": verdict,
+            }
+        decisions[arm] = record
+    return decisions
+
+
 def select_gmm_k_by_bic(latent, seed, n_init=20, candidates=BIC_CANDIDATES,
                         tie_delta=BIC_TIE_DELTA):
     """Fit full-covariance GMMs on standardized latents and choose K by BIC.

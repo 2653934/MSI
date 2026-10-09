@@ -1,12 +1,19 @@
 """Tests for gate-(d) sampling and BIC helpers."""
 
+import json
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 
 from spatial_msipl.gate_d_helpers import (
     mark_distinct_arms,
     nested_attribution_samples,
+    pixel_count_decision,
     production_disjoint_samples,
     select_gmm_k_by_bic,
 )
@@ -58,6 +65,97 @@ class NestedSamplingTests(unittest.TestCase):
     def test_too_few_pixels_is_an_error_as_in_production(self):
         with self.assertRaises(ValueError):
             nested_attribution_samples(np.array([0] * 43 + [1] * 100), 12, self.seed)
+
+
+class PixelCountDecisionTests(unittest.TestCase):
+    """The predeclared rule: >= +0.02 on both development sections, per arm."""
+
+    def decide(self, gbm, cac, distinct=(True, True), arm="uniform_mean"):
+        changes = {arm: {"GBM108_positive": {48: gbm, 192: gbm},
+                         "40TopL": {48: cac, 192: cac}}}
+        flags = {arm: {"GBM108_positive": {48: distinct[0], 192: distinct[0]},
+                       "40TopL": {48: distinct[1], 192: distinct[1]}}}
+        return pixel_count_decision(changes, flags)[arm]["48"]["verdict"]
+
+    def test_gain_on_both_sections_triggers_rerun(self):
+        self.assertIn("triggers", self.decide(0.03, 0.02))
+
+    def test_gain_on_one_section_only_keeps_production(self):
+        self.assertEqual(self.decide(0.05, 0.019), "production n=12 stands")
+
+    def test_large_decrease_keeps_production(self):
+        self.assertEqual(self.decide(-0.10, -0.08), "production n=12 stands")
+
+    def test_non_distinct_arm_gives_no_verdict(self):
+        self.assertIn("not distinct", self.decide(0.05, 0.05, distinct=(True, False)))
+
+    def test_missing_section_or_arm_gives_no_verdict(self):
+        changes = {"uniform_mean": {"GBM108_positive": {48: 0.05, 192: 0.05}}}
+        flags = {"uniform_mean": {"GBM108_positive": {48: True, 192: True}}}
+        decisions = pixel_count_decision(changes, flags)
+        self.assertEqual(decisions["uniform_mean"]["48"]["verdict"], "incomplete; no verdict")
+        self.assertEqual(decisions["central_only"]["192"]["verdict"], "incomplete; no verdict")
+
+    def test_rule_is_applied_per_arm(self):
+        changes = {"central_only": {"GBM108_positive": {48: 0.05, 192: 0.0},
+                                    "40TopL": {48: 0.05, 192: 0.0}},
+                   "uniform_mean": {"GBM108_positive": {48: 0.0, 192: 0.0},
+                                    "40TopL": {48: 0.0, 192: 0.0}}}
+        flags = {arm: {s: {48: True, 192: True} for s in ("GBM108_positive", "40TopL")}
+                 for arm in changes}
+        decisions = pixel_count_decision(changes, flags)
+        self.assertIn("triggers", decisions["central_only"]["48"]["verdict"])
+        self.assertEqual(decisions["central_only"]["192"]["verdict"], "production n=12 stands")
+        self.assertEqual(decisions["uniform_mean"]["48"]["verdict"], "production n=12 stands")
+
+
+class PixelCountSummaryScriptTests(unittest.TestCase):
+    def run_summary(self, root, output):
+        scripts = Path(__file__).resolve().parents[3] / "scripts"
+        environment = dict(os.environ)
+        environment["PYTHONPATH"] = os.pathsep.join(
+            [str(scripts.parent / "src"), environment.get("PYTHONPATH", "")])
+        return subprocess.run(
+            [sys.executable, str(scripts / "summarise_gate_d_pixel_counts.py"),
+             "--root", str(root), "--output", str(output)],
+            env=environment, capture_output=True, text=True)
+
+    def write(self, root, section, arm, status="complete", change=0.0, code="c0de"):
+        path = root / f"{section}_seed1" / arm / "evaluation" / "summary.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        record = {"status": status,
+                  "provenance": {"evaluation_version": 1, "protocol": "p",
+                                 "parameters": {"pixel_counts": [12, 48, 192]},
+                                 "code": {"evaluate_gate_d_pixel_counts.py": code}}}
+        if status == "complete":
+            record["change_vs_saved_n12_at_K_bin"] = {"12": 0.0, "48": change, "192": change}
+            record["distinct_from_next_smaller"] = {"12": True, "48": True, "192": True}
+        path.write_text(json.dumps(record))
+
+    def test_failed_reproduction_gives_no_verdict_for_that_arm(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for section in ("GBM108_positive", "40TopL"):
+                self.write(root, section, "central_only", change=0.05)
+            self.write(root, "GBM108_positive", "uniform_mean", change=0.05)
+            self.write(root, "40TopL", "uniform_mean", status="reproduction_failed")
+            result = self.run_summary(root, root / "out")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            decisions = json.loads((root / "out" / "decisions.json").read_text())
+            self.assertIn("triggers", decisions["central_only"]["48"]["verdict"])
+            self.assertEqual(decisions["uniform_mean"]["48"]["verdict"],
+                             "incomplete; no verdict")
+            self.assertEqual(decisions["_evaluation_status"]["uniform_mean"]["40TopL"],
+                             "reproduction_failed")
+
+    def test_mixed_code_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write(root, "GBM108_positive", "central_only")
+            self.write(root, "40TopL", "central_only", code="other")
+            result = self.run_summary(root, root / "out")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("refusing to mix", result.stderr)
 
 
 class BicTests(unittest.TestCase):

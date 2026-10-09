@@ -261,6 +261,136 @@ class FairScoringPipelineTests(unittest.TestCase):
         self.assertIn("Refusing", result.stderr)
         self.assertIn("Refusing", audit.stderr)
 
+    # --- Gate (d) pixel-count evaluator on the same synthetic section. ---
+    def gate_d_ranking(self, arrays):
+        from spatial_msipl.simple_baselines import (
+            balanced_ranking_from_component_scores, production_ig_scores)
+        return balanced_ranking_from_component_scores(production_ig_scores(arrays))
+
+    def swapped_n12(self, same_set):
+        """Swap two component-0 IG scores so the K_bin set stays (or does not stay) the same."""
+        production = dict(np.load(self.attribution / "attributions.npz"))
+        key = "component_0_combined_absolute_mean"
+        reference = self.gate_d_ranking(production)[:self.k_bin]
+        order = np.argsort(-production[key], kind="stable")
+        candidates = ([(order[i], order[i + 1]) for i in range(self.k_bin - 1)] if same_set
+                      else [(order[0], b) for b in order[self.k_bin * 3:]])
+        for a, b in candidates:
+            arrays = dict(production)
+            arrays[key] = production[key].copy()
+            arrays[key][[a, b]] = arrays[key][[b, a]]
+            prefix = self.gate_d_ranking(arrays)[:self.k_bin]
+            if (set(prefix.tolist()) == set(reference.tolist())) == same_set and \
+                    not np.array_equal(prefix, reference):
+                return arrays
+        self.fail("no swap gives the required precondition")
+
+    def gate_d_runs(self, name, n12_arrays=None, n48_component=None):
+        """Fake n=12/48/192 IG runs: n=12 copies production unless n12_arrays is given."""
+        import shutil
+        fair = self.root / f"{name}_fair"
+        if not (fair / "summary.json").exists():
+            run("evaluate_fair_scoring_baselines.py", *self.common(fair))
+        run_root = self.root / name / "uniform_mean"
+        production = dict(np.load(self.attribution / "attributions.npz"))
+        rng = np.random.default_rng(5)
+        for n in (12, 48, 192):
+            directory = run_root / f"n{n}"
+            directory.mkdir(parents=True)
+            shutil.copy(self.attribution / "coordinates_and_gmm.npz", directory)
+            arrays = dict(production)
+            key = "component_0_combined_absolute_mean"
+            if n == 12:
+                arrays = n12_arrays if n12_arrays is not None else arrays
+            else:
+                arrays[key] = arrays[key] * rng.uniform(0.5, 1.5, len(arrays[key])
+                                                        ).astype(np.float32)
+            np.savez(directory / "attributions.npz", **arrays)
+            if n == 48 and n48_component is not None:
+                gmm = dict(np.load(directory / "coordinates_and_gmm.npz"))
+                gmm["component"] = n48_component
+                np.savez(directory / "coordinates_and_gmm.npz", **gmm)
+            samples = {str(c): {"requested_attribution": n, "actual_attribution": n,
+                                "capped": False} for c in (0, 1)}
+            (directory / "summary.json").write_text(json.dumps({
+                "attribution_version": 2, "status": "valid", "runtime_seconds": 1.0,
+                "variant": "uniform_mean", "dataset": str(self.input),
+                "model_state_sha256": "synthetic", "model_configuration": {},
+                "input_specification": {}, "pixels": 24, "spectral_bins": 48,
+                "gmm": {"components": 2, "covariance_type": "full", "n_init": 20,
+                        "seed": 1},
+                "integrated_gradients": {
+                    "baseline": "synthetic", "target": "synthetic", "steps": 64,
+                    "integration": "trapezoidal", "attribution_pixels_per_component": 12,
+                    "central_context_combination": "synthetic", "sampling_seed": 1,
+                    "selection_seed": 701, "nested_attribution_samples": samples}}))
+        args = ["--input", self.input, "--run-root", run_root,
+                "--production-attribution-dir", self.attribution,
+                "--saved-evaluation-dir", self.saved,
+                "--fair-scoring-summary", fair / "summary.json",
+                "--output", run_root / "evaluation", "--chunk-size", 64,
+                "--allow-outside-slurm"]
+        return run_root, args
+
+    def test_gate_d_reproduces_n12_and_scores_larger_counts(self):
+        run_root, args = self.gate_d_runs("gate_d_ok")
+        run("evaluate_gate_d_pixel_counts.py", *args)
+        summary = json.loads((run_root / "evaluation" / "summary.json").read_text())
+        self.assertEqual(summary["status"], "complete")
+        self.assertTrue(summary["n12_reproduction"]["passed"])
+        self.assertEqual(summary["n12_reproduction"]["order_differing_positions"], 0)
+        self.assertEqual(
+            summary["n12_reproduction"]["max_relative_attribution_difference"]["maximum"], 0.0)
+        self.assertAlmostEqual(summary["change_vs_saved_n12_at_K_bin"]["12"], 0.0, places=12)
+        self.assertEqual(summary["jaccard_vs_n12_at_K_bin"]["12"], 1.0)
+        self.assertEqual(set(summary["mSCF1"]), {"12", "48", "192"})
+        self.assertTrue(all(summary["distinct_from_next_smaller"].values()))
+        self.assertIn("1.0", summary["descriptive_ig_minus_posterior_abs_pcc"]["48"])
+        again = run("evaluate_gate_d_pixel_counts.py", *args)
+        self.assertIn("skipped", again.stdout)
+
+    def test_gate_d_order_change_with_identical_set_passes(self):
+        run_root, args = self.gate_d_runs("gate_d_order", n12_arrays=self.swapped_n12(True))
+        run("evaluate_gate_d_pixel_counts.py", *args)
+        summary = json.loads((run_root / "evaluation" / "summary.json").read_text())
+        reproduction = summary["n12_reproduction"]
+        self.assertEqual(summary["status"], "complete")
+        self.assertTrue(reproduction["passed"])
+        self.assertTrue(reproduction["identical_bin_set"])
+        self.assertGreater(reproduction["order_differing_positions"], 0)
+        self.assertGreater(reproduction["max_relative_attribution_difference"]["maximum"], 0.0)
+
+    def test_gate_d_stops_when_n12_bin_set_differs(self):
+        run_root, args = self.gate_d_runs("gate_d_bad", n12_arrays=self.swapped_n12(False))
+        result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
+        self.assertEqual(result.returncode, 4)
+        summary = json.loads((run_root / "evaluation" / "summary.json").read_text())
+        self.assertEqual(summary["status"], "reproduction_failed")
+        self.assertFalse(summary["n12_reproduction"]["identical_bin_set"])
+        self.assertNotIn("mSCF1", summary)
+        # A failed result is never reused or overwritten.
+        self.assertEqual(run("evaluate_gate_d_pixel_counts.py", *args,
+                             check=False).returncode, 3)
+
+    def test_gate_d_refuses_a_different_gmm_assignment(self):
+        component = np.load(self.attribution / "coordinates_and_gmm.npz")["component"]
+        run_root, args = self.gate_d_runs("gate_d_gmm", n48_component=1 - component)
+        result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("GMM assignment differs", result.stderr)
+        self.assertFalse((run_root / "evaluation" / "summary.json").exists())
+
+    def test_gate_d_refuses_incomplete_ig(self):
+        run_root, args = self.gate_d_runs("gate_d_incomplete")
+        path = run_root / "n48" / "summary.json"
+        summary = json.loads(path.read_text())
+        summary["status"] = "needs_more_ig_steps"
+        path.write_text(json.dumps(summary))
+        result = run("evaluate_gate_d_pixel_counts.py", *args, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing to score incomplete attributions", result.stderr)
+        self.assertFalse((run_root / "evaluation" / "summary.json").exists())
+
     def test_summariser_writes_decision_table(self):
         output = self.root / "fair" / "SYN1_seed1" / "uniform_mean"
         run("evaluate_fair_scoring_baselines.py", *self.common(output))

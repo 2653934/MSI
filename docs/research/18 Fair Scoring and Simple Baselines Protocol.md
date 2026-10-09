@@ -114,7 +114,7 @@ All label-free baselines use the **TIC-normalised** spectra, which is the repres
 - **Normalisation audit.** A documentary check in this order: the paper text, the upstream repository at the commit the paper cites, then CAC consistency. The maximum-F1 bound from Section 2 limits how much normalisation could change mSCF1.
 - **Matched-K re-rank.** Only if S3PL GBM is placed in the main table; a small effect is expected. Not implemented in this round.
 
-## 6. Gate (d): bounded GPU tests on development sections (helpers prepared; production script not modified)
+## 6. Gate (d): bounded GPU tests on development sections (pixel-count patch applied 9 October as an opt-in flag; production behaviour unchanged when it is omitted)
 
 **BIC-selected K** (CPU on saved latents; IG then needs GPU):
 
@@ -132,6 +132,21 @@ All label-free baselines use the **TIC-normalised** spectra, which is the repres
 - The 48- and 192-pixel arms add positions 44 onward, so the sets are nested: 12 ⊂ 48 ⊂ 192.
 - If a component has too few pixels, n = 12 + min(target − 12, available − 44), and the actual n is recorded. An arm whose capped n equals the next smaller arm's n is marked "not distinct". Fewer than 44 pixels in a component is an error, as in production.
 - Aggregation stays |IG| as in production. **Signed versus absolute aggregation is a separate later ablation at n = 12.** Extra sampling seeds are a separately labelled replication, because changing the seed changes the production 12-pixel sample.
+
+**Pixel-count run specification (fixed 9 October, before any gate (d) run; gate (a)/(b) results had already been seen):**
+
+- **Sections:** GBM108_positive and 40TopL, one development section per collection. These are the development sections named in the Results Record for the window campaign. They are not confirmation evidence.
+- **Arms:** central_only and uniform_mean, each scored with its own GMM as in gates (a)/(b). The decision rule is applied **per arm**.
+- **Runs:** n ∈ {12, 48, 192} per section and arm, all through the patched `--attribution-total` path. That is 12 GPU runs. Outputs go to `results/diagnostics/gate_d_pixel_counts/<section>_seed1/<arm>/n<N>/` and never to the production directories.
+- **Reproduction gate (n = 12; amended 9 October after supervisor review, before any gate (d) output existed):**
+  - **PASS** requires two things: the n = 12 rerun selects the **identical bin set** at K_bin as the saved production IG list, **and** it reproduces the saved mSCF1 to 1e-12.
+  - **Recorded but not gating:** the number of positions within the top K_bin whose order differs from the saved list, and the maximum relative difference between the new and saved attribution arrays. For each array this is max |new − saved| / max |saved|; the largest over arrays is reported.
+  - **Reason for the amendment:** GPU nondeterminism can swap near-equal bins that are not exactly tied, and mSCF1 at K_bin depends only on the set. The earlier draft of this gate required the same order up to exact ties. Budget-multiplier results depend on order, so they remain descriptive only.
+  - **On failure:** the comparison for that section and arm stops, the failure is documented, and the arm gets no verdict. The criterion is not loosened after the fact.
+- **GBM108_positive / uniform_mean reproduction risk (decided 9 October, before any gate (d) output):** the saved production IG for this arm is the 16 September pilot (attribution version 1), and the data-loading code has changed since. The rule above stays as written, with **no fallback**. If this arm fails the gate, uniform_mean gets no verdict, and the reason is documented.
+- **Resources (decided 9 October):** `batch`, not `bigbatch`, with `--exclusive`. 40TopL uses 8G; GBM108_positive uses 24G. Move to `bigbatch` only if `sacct` MaxRSS or an out-of-memory failure shows it is needed.
+- **Metric:** bin-level mSCF1 at K_bin with the existing scorer, plus the Section 2 budget multipliers for description. The change is mSCF1(n) − mSCF1(n = 12, saved production).
+- **Decision (direction fixed here):** a 16-section rerun of a setting n is triggered only if that change is **≥ +0.02 on both** sections, for that arm. Any other outcome, including a decrease of 0.02 or more, means the production n = 12 stands and the result is reported descriptively. IG(n) − posterior-|PCC| is also reported descriptively. It is not a new verdict.
 
 ## 7. Decision thresholds
 
@@ -252,7 +267,10 @@ A test rebuilds the IG matched groups from these files.
 | `scripts/evaluate_fair_scoring_baselines.py` | Gates (a)/(b) per arm, with the strict IG, L2 and legacy reproduction, provenance, reconstruction files and stale-result refusal |
 | `scripts/summarise_fair_scoring_baselines.py` | Decision table; refuses mixed provenance; no verdict below 8 sections; legacy collapse labelled as a diagnostic |
 | `scripts/select_gmm_k_bic.py` | Gate (d) BIC on saved latents; Slurm guard and provenance |
-| `patches/gate_d_attribution_total.patch` | **Not applied.** Opt-in `--attribution-total` for the IG script |
+| `patches/gate_d_attribution_total.patch` | **Applied 9 October** to `run_spatial_msipl_gmm_integrated_gradients.py`: opt-in `--attribution-total`; omitting it gives production behaviour |
+| `slurm_jobs/run_gate_d_pixel_count_ig.sh`, `submit_gate_d_pixel_counts.sh` | Gate (d) GPU IG runs (n = 12/48/192) with the real CUDA warm-up, quarantine exclusions and retry; own output root `results/diagnostics/gate_d_pixel_counts/` |
+| `scripts/evaluate_gate_d_pixel_counts.py`, `slurm_jobs/run_gate_d_evaluation.sh` | CPU evaluation per section and arm: production-GMM check, n = 12 reproduction gate (exit 4 on failure), K_bin and budget scoring |
+| `scripts/summarise_gate_d_pixel_counts.py`, `slurm_jobs/run_gate_d_summary.sh` | Decision table: ≥ +0.02 on both development sections, per arm |
 | `slurm_jobs/fair_scoring_sections.sh` | Shared ordered section list, input paths and pilot index |
 | `slurm_jobs/run_fair_scoring_tests.sh` | `s3pl_env` compatibility test (synthetic data only) |
 | `slurm_jobs/run_peak_partition_audit_array.sh`, `submit_peak_partition_audit.sh` | Partition-audit array on `batch` with 24 GB, plus its submitter |
