@@ -183,7 +183,7 @@ A test rebuilds the IG matched groups from these files.
   - The decision table is a separate job (`run_fair_scoring_summary.sh`). It refuses to mix results with different code, parameters or approvals, and gives no verdict for a collection with fewer than 8 sections.
 - **Output roots.** Bin-level-only runs go to `fair_scoring_baselines/bin_level_only/`; runs with an approved partition go to `fair_scoring_baselines/with_approved_partitions/`.
 - **No CUDA.** These jobs are CPU-only and use no CUDA preflight or GPU quarantine. Any later IG job (gate d) must use the real CUDA warm-up and read exclusions from `slurm_jobs/gpu_cuda_quarantine.txt`.
-- **Environment compatibility.** `run_fair_scoring_tests.sh` runs the new test modules plus `test_peak_selection` and `test_evaluation` under `s3pl_env` (Python 3.11.5 per `environment.yml`). It records package versions in `results/validation/fair_scoring_env_tests/`. **It must pass before any real section is processed.** Local runs on Python 3.13 with NumPy 2.5 and sklearn 1.9, and on Python 3.11.17 with NumPy 1.26.4, sklearn 1.3.2 and SciPy 1.11.4 (an approximation of `s3pl_env`), both pass 44/44 tests. Neither establishes cluster compatibility.
+- **Environment compatibility.** `run_fair_scoring_tests.sh` runs the new test modules plus `test_peak_selection` and `test_evaluation` under `s3pl_env`. It records package versions in `results/validation/fair_scoring_env_tests/`. **It must pass before any real section is processed.** Cluster job 66006 passed all 47 tests under Python 3.11.5, NumPy 2.4.6, SciPy 1.17.1, scikit-learn 1.9.0, h5py 3.16.0 and Matplotlib 3.11.1. The saved version record and full unit-test log are the compatibility evidence.
 
 **Submission order (after approval of this protocol and code):**
 
@@ -210,6 +210,7 @@ A test rebuilds the IG matched groups from these files.
    - The output file was written to a scratch directory and **deleted immediately afterwards. That happened before the instruction not to delete it**, so the result cannot be recovered or audited.
    - It is a blinded code-validation execution, **not evidence**, and must not inform any decision. The protocol BIC run (`n_init` 20, under Slurm) will be the first and only result used.
 3. No partition audit, fair-scoring, IG or other scoring run has been executed on any real section.
+4. **9 October, cluster compatibility gate:** Slurm job 66006 ran the synthetic fair-scoring test suite under the production `s3pl_env` and passed 47/47 tests in 29.4 s. This validates environment compatibility only; it did not read or score a real section.
 
 ## 11. Files (implementation v3; nothing applied to production code or submitted)
 
@@ -230,7 +231,7 @@ A test rebuilds the IG matched groups from these files.
 | `slurm_jobs/run_fair_scoring_array.sh`, `submit_fair_scoring.sh` | Per-section scoring array on `batch` with 16 GB, plus its submitter |
 | `slurm_jobs/run_fair_scoring_summary.sh` | Separate decision-table job |
 | `slurm_jobs/check_fair_scoring_campaign.sh` | Login-safe status listing |
-| Tests: `test_peak_groups.py`, `test_simple_baselines.py`, `test_gate_d_helpers.py`, `test_provenance.py`, `test_fair_scoring_pipeline.py` | 44 tests including the existing `test_peak_selection`. They add the S1-only width test, the three-class oracle, strict legacy, stale and bare-summary refusal, tampered-hash refusal before scoring, peak-level reconstruction, and the Slurm guard |
+| Tests: `test_peak_groups.py`, `test_simple_baselines.py`, `test_gate_d_helpers.py`, `test_provenance.py`, `test_fair_scoring_pipeline.py` | 47 cluster-validated tests including the existing `test_peak_selection` and `test_evaluation`. They add the S1-only width test, the three-class oracle, strict legacy, stale and bare-summary refusal, tampered-hash refusal before scoring, peak-level reconstruction, and the Slurm guard |
 
 **Removed:** the v2 single-allocation jobs `slurm_jobs/audit_peak_partitions.sh` and `slurm_jobs/evaluate_fair_scoring_baselines.sh` (untracked, never submitted).
 
