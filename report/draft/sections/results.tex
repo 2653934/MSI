@@ -19,6 +19,28 @@ zero-context, shuffled-context and learned-attention controls further prevent a
 general claim that correct local topology caused the CAC gain. The final result
 presentation will show every paired section and group GBM sections by patient.
 
+\input{tables/gbm_patient_summary}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.96\textwidth]{images/gbm_patient_grouped_effects.png}
+  \caption{GBM centre-only and uniform-context IG results grouped within the
+  four patients. Open and filled markers show the two model variants for each
+  section; the right panel averages the two sections within each patient. The
+  context effect is positive for patients 108 and 12 and negative for patients
+  22 and 39. These descriptive summaries prevent related sections from being
+  presented as eight independent biological subjects.}
+  \label{fig:gbm_patient_context}
+\end{figure*}
+
+Within-patient mean context effects were $+0.0147$, $+0.0069$, $-0.0334$ and
+$-0.0150$ mSCF1 for patients 108, 12, 22 and 39, respectively
+(\Cref{tab:gbm_patient_summary,fig:gbm_patient_context}). The direction is
+therefore evenly split across patients, and the two negative patient means are
+larger in magnitude than the positive means. This patient-aware summary agrees
+with the near-zero section-weighted collection difference and provides no basis
+for a population-level spatial-context claim.
+
 Matched-count S3PL obtained higher mean CAC mSCF1 than fixed-context IG under
 its native evaluated protocol. On GBM, the executable 10-epoch S3PL baseline
 was initialization-sensitive at section level: six of eight sections had a
@@ -31,4 +53,3 @@ Three native 160TopL measurements recorded S3PL workflow totals of 151.2,
 seconds and used slightly less sampled memory. These measurements describe the
 specified native procedures; they do not equate ten S3PL epochs with one hundred
 VAE epochs or establish universal architectural efficiency.
-
