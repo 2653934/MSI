@@ -1,0 +1,34 @@
+\section{Discussion}
+\label{sec:discussion}
+
+The most reliable improvement belongs to the evaluated VAE/GMM/IG package, not
+to neighbourhood context alone. The centre-only result shows that much of the
+gain over legacy msiPL remains when neighbours are removed. Context contributes
+positively in the frozen CAC comparison, but the GBM, shuffled and attention
+controls show that this effect cannot yet be generalised as a benefit caused by
+correct local topology.
+
+This distinction explains why a negative or mixed spatial result remains
+useful. Uniform averaging compresses neighbouring spectra into one vector and
+can mix tissue across boundaries. Learned attention can reweight neighbours but
+was close to uniform in typical evaluated pixels and did not yield a stable
+peak-quality advantage on the outcome-known pilot sections. These findings
+bound the evaluated mechanisms; they do not imply that spatial modelling is
+unhelpful in MSI or that convolutional, graph-based or multiscale approaches
+would behave similarly.
+
+The evaluation is spatial rather than molecular. A high PCC or mSCF1 indicates
+that an ion image agrees with an expert mask under the chosen thresholds. It
+does not identify the molecule, validate a biomarker or prove that a poorly
+correlated ion is noise. Likewise, the GBM collection contains eight sections
+from four patients. Patient-grouped descriptive summaries can show whether an
+effect is driven by one patient, but the study does not support broad
+population-level inference.
+
+S3PL supplies two further cautions. Its CAC result demonstrates that its native
+pipeline can exploit context effectively under the evaluated conditions, while
+centre-tiled and topology controls answer narrower and partly confounded
+questions. Its short GBM protocol is also sensitive to initialization. These
+results make a single favourable score an inadequate baseline and show why
+reconstruction loss alone cannot stand in for downstream peak quality.
+

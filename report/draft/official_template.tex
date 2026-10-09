@@ -1,0 +1,453 @@
+% ============================================================
+%  BSc Honours Research Report Template
+%  School of Computer Science and Applied Mathematics
+%  University of the Witwatersrand
+%
+%  Format: IEEE Journal Paper (two-column, 10 pt, single-spaced)
+%  Instructions to students are typeset in RED.
+%
+%  Hairong Bau (2024, 2025, 2026)
+% ============================================================
+
+\documentclass[journal, 10pt, twoside]{IEEEtran}
+
+% ------------------------------------------------------------
+%  Encoding & fonts
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% ------------------------------------------------------------
+%  Essential packages
+% ------------------------------------------------------------
+\usepackage{graphicx}               % \includegraphics
+\usepackage{amsmath}                % align, equation, etc.
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+
+\usepackage{float}                  % [H] placement specifier
+\usepackage{url}                    % \url{}
+\usepackage{svg}                    % \includesvg
+\usepackage{rotating}               % sidewaysfigure / sidewaystable
+\usepackage{booktabs}               % \toprule, \midrule, \bottomrule
+\usepackage{enumitem}               % compact lists
+\usepackage{pifont}                 % \cmark / \xmark
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}                 % \textcolor{red}{...}
+\usepackage{balance}                % balance the last two columns
+\usepackage{microtype}              % better line breaking
+\usepackage{dblfloatfix}            % fixes double-column float placement
+
+% Compact list spacing (mirrors the proposal template)
+\setlist[enumerate]{noitemsep, nolistsep}
+\setlist[itemize]{noitemsep, nolistsep}
+\setlist[description]{noitemsep, nolistsep}
+
+% ------------------------------------------------------------
+%  Referencing
+% ------------------------------------------------------------
+\usepackage{varioref}
+\usepackage[bookmarks=true, bookmarksopen=true]{hyperref}
+\usepackage{cleveref}
+
+\hypersetup{
+  colorlinks = true,
+  urlcolor   = blue,
+  linkcolor  = blue,
+  citecolor  = blue
+}
+
+\crefname{table}{table}{tables}
+\Crefname{table}{Table}{Tables}
+\crefname{figure}{figure}{figures}
+\Crefname{figure}{Figure}{Figures}
+\crefname{equation}{equation}{equations}
+\Crefname{equation}{Equation}{Equations}
+
+% Wits citation style (mirrors the proposal template)
+\usepackage{natbib} \input{natbib-add}
+\bibliographystyle{apalike}
+\bibpunct{[}{]}{;}{a}{}{}
+
+% Convenience macro: "Author's (year)" possessive citation
+\newcommand{\citets}[1]{\citeauthor{#1}'s \citeyearpar{#1}}
+\renewcommand{\bibname}{References}
+
+% ------------------------------------------------------------
+%  Custom theorem-like environments
+% ------------------------------------------------------------
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+
+% ============================================================
+%  PAPER METADATA  —  fill in your own details
+% ============================================================
+\newcommand{\reporttitle}{Your Research Report Title Goes Here}
+\newcommand{\authorname}{Firstname \textsc{Lastname}}
+\newcommand{\studentnumber}{1234567}
+\newcommand{\supervisorname}{Dr. Hairong Bau}
+\newcommand{\academicyear}{2026}
+
+% ============================================================
+%  BEGIN DOCUMENT
+% ============================================================
+\begin{document}
+
+% ------------------------------------------------------------
+%  TITLE BLOCK  (IEEE style — full-width above the columns)
+% ------------------------------------------------------------
+\title{%
+  \vspace{4pt}
+  \includegraphics[width=0.12\textwidth]{images/witslogonew.png}\\[6pt]
+  \Large\textbf{\reporttitle}%
+}
+
+\author{%
+  \authorname,~Student~No.~\studentnumber\\
+  \small School of Computer Science and Applied Mathematics,
+         Faculty of Science,
+         University of the Witwatersrand\\
+  \small Supervisor:~\supervisorname \qquad \academicyear
+}
+
+\maketitle
+
+% ============================================================
+%  ABSTRACT  (single column in IEEEtran)
+% ============================================================
+\begin{abstract}
+\textcolor{red}{%
+  Write a concise, self-contained summary of your entire report in \textbf{150--250 words}.  A strong abstract covers four things: 
+  (1)~\textbf{motivation / context} --- why is the problem important? 
+  (2)~\textbf{problem} --- what specific gap or challenge do you address? 
+  (3)~\textbf{approach} --- what did you do (methods, data, key techniques)? 
+  (4)~\textbf{results and conclusions} --- what did you find and what does it mean? Write the abstract \emph{last}, after the rest of the report is complete.  Do \emph{not} include citations or undefined acronyms.
+}
+\end{abstract}
+
+% ============================================================
+%  KEYWORDS
+% ============================================================
+\begin{IEEEkeywords}
+\textcolor{red}{%
+  List 4--6 keywords separated by commas.  Choose terms that are specific enough to be meaningful but broad enough to be useful for indexing. Examples: deep learning, object detection, monocular depth estimation, multi-object tracking, road safety.}
+\end{IEEEkeywords}
+
+% ============================================================
+%  NOTE ON USING THIS TEMPLATE
+% ============================================================
+\begin{quote}
+  \textcolor{red}{\textbf{How to use this template.}
+  All red text contains instructions; replace every red passage with your own content before submission.  The report follows the structure of an IEEE journal paper with two columns, 10\,pt font, and single line spacing.  Keep your report within the \textbf{8--12 page limit} (excluding references).  Use \texttt{\textbackslash section}, \texttt{\textbackslash subsection}, and  \texttt{\textbackslash subsubsection} for headings; do \emph{not} use \texttt{\textbackslash chapter}.} 
+  %Compile with: \texttt{pdflatex}, \texttt{bibtex}, \texttt{pdflatex}, \texttt{pdflatex} (or run \texttt{make}).}
+\end{quote}
+
+% ============================================================
+%  SECTION 1 — INTRODUCTION ( )
+% ============================================================
+\section{Introduction}
+\label{sec:introduction}
+
+\begin{quote}
+  \textcolor{red}{%
+    The introduction ($\approx$ 1 page) should draw the reader in and explain why your work matters.  Structure it as follows.\\[4pt]
+    \textbf{(a)~Broad context.}  Start with the large research area you are working in (e.g., computer vision, NLP, HPC). Define key terms and cite foundational or landmark papers that establish the
+    field~\citep{zhao2019object}.\\[4pt]
+    \textbf{(b)~Narrowing to the problem.}  Progressively narrow the discussion toward the specific gap or challenge your work addresses.  Highlight what existing methods achieve and where they fall short.\\[4pt]
+    \textbf{(c)~Problem statement.}  Summarise the gap in 1--2 paragraphs. The ideal structure is: \emph{ideal situation} $\to$ \emph{reality / gap} $\to$ \emph{your proposed improvement}.\\[4pt]
+    \textbf{(d)~Research questions.}  State 2--3 focused questions that your study answers.  These should be specific, measurable, and directly tied to the problem statement.\\[4pt]
+    \textbf{(e)~Research aim and objectives.}  State the overarching aim (the \emph{what}) and 3--5 objectives (the \emph{how}).  Objectives begin with action verbs such as \emph{develop}, \emph{evaluate}, \emph{compare}, \emph{implement}, or \emph{analyse}.\\[4pt]
+    \textbf{(f)~Contributions.}  Briefly bullet or enumerate the novel contributions of your work.  Think: What is new?  What artefact or finding does this report produce?\\[4pt]
+    \textbf{(g)~Paper outline.}  End the introduction with one short paragraph describing the structure of the rest of the report.\\[4pt]
+    \emph{Example narrative citation:} \citet{liu2022convnet} propose a next-generation CNN \dots\\
+    \emph{Example parenthetical citation:} Vision Transformers~\citep{dosovitskiy2020image} have become a strong alternative to CNNs for image classification.%
+  }
+\end{quote}
+
+Road safety in urban environments is a matter of growing concern due to the complex nature of vehicle interactions with other vehicles, pedestrians, and cyclists~\citep{lekgothoane2015feasibility, risimati2019mapping}.
+% Replace this placeholder paragraph with your own introduction text.
+
+The remainder of this report is organised as follows. Section~\ref{sec:related_work} reviews related work \dots
+% Describe what each subsequent section covers.
+
+% ============================================================
+%  SECTION 2 — RELATED WORK
+% ============================================================
+\section{Related Work}
+\label{sec:related_work}
+
+\begin{quote}
+  \textcolor{red}{%
+    \textbf{Background.}  Provide the concepts, definitions, and foundational knowledge a reader needs to follow your methodology and results.  Write in continuous prose --- not bullet points.  Cite classic and recent papers that define or survey the relevant sub-fields.\\[4pt]
+    \textbf{Literature review.}  Critically discuss prior work that is directly relevant to your problem.  A good literature review is a \emph{story}: where did the field start, what key milestones shaped it, and what gaps or open questions remain?  Synthesise the literature into a single coherent view rather than presenting paper-by-paper summaries. Group related methods thematically (e.g., by technique, chronology, or performance trade-off)~\citep{ming2021deep}.\\[4pt]
+    Use sub-sections to separate major themes if needed (e.g., \S\ref{ssec:detection} for detection methods, \S\ref{ssec:tracking} for tracking, etc.).%
+  }
+\end{quote}
+
+\subsection{Background / Foundational Concepts}
+\label{ssec:background}
+
+\begin{quote}
+  \textcolor{red}{%
+    Introduce and define the core technical concepts your report builds upon. For example, if your work uses convolutional neural networks (CNNs), briefly explain what they are and cite a seminal reference.  Keep this concise --- the goal is to orient the reader, not to write a textbook chapter.%
+  }
+\end{quote}
+
+The landscape of object detection methods includes a wide range of approaches, each with unique strengths and applications~\citep{zhao2019object}.
+% Replace / expand with your own background text.
+
+\subsection{Related Methods}
+\label{ssec:related_methods}
+
+\begin{quote}
+  \textcolor{red}{%
+    Discuss the existing methods most closely related to your own approach. For each group of methods, explain: what problem do they solve, how do they work at a high level, what are their strengths, and where do they fail or fall short?  Connect the discussion back to the gap your work addresses.%
+  }
+\end{quote}
+
+\subsection{Summary and Positioning}
+\label{ssec:summary_rw}
+
+\begin{quote}
+  \textcolor{red}{%
+    End the section with a short paragraph that summarises the key takeaways from the literature and explicitly positions your work: how does your approach differ from or build upon the most relevant prior methods? This paragraph bridges the related work and your methodology.%
+  }
+\end{quote}
+
+% ============================================================
+%  SECTION 3 — METHODOLOGY
+% ============================================================
+\section{Methodology}
+\label{sec:methodology}
+
+\begin{quote}
+  \textcolor{red}{%
+    This is the technical heart of your report.  Describe \emph{what} you built or did and \emph{why} each design decision was made.  A reader should be able to reproduce your work from this section alone.\\[4pt]
+    Typical sub-sections (adapt to your project):%
+    \begin{itemize}
+      \item \textbf{System / Pipeline Overview} --- a high-level diagram (Fig.~\ref{fig:pipeline}) and narrative that shows how all components fit together.
+      \item \textbf{Dataset(s)} --- describe each dataset: source, size, classes / labels, train / val / test splits.
+      \item \textbf{Preprocessing} --- data cleaning, augmentation, normalisation, feature engineering.
+      \item \textbf{Model / Algorithm} --- detailed description of your chosen model or algorithm, including its architecture or pseudocode.  Justify \emph{why} this model is appropriate. Use equations where necessary (e.g., Eq.~\ref{eq:loss}).
+      \item \textbf{Implementation Details} --- software stack, hardware, hyper-parameters, training procedure, random seeds.
+    \end{itemize}%
+  }
+\end{quote}
+
+\subsection{System Overview}
+\label{ssec:overview}
+
+\begin{quote}
+  \textcolor{red}{%
+    Provide a block diagram or pipeline figure and describe each stage in one or two sentences.  The figure should be the first thing a reader sees in this section.%
+  }
+\end{quote}
+
+% Example figure (replace with your own):
+\begin{figure}[t]
+  \centering
+  % \includegraphics[width=\columnwidth]{images/pipeline.pdf}
+  \fbox{\rule{0pt}{3cm}\rule{\columnwidth}{0pt}} % placeholder box - must replace this with your own figure or remove this if you dont need it 
+  \caption{\textcolor{red}{Replace this placeholder with your system / pipeline diagram.  Caption should be self-contained: a reader should understand the figure without reading the surrounding text.}}
+  \label{fig:pipeline}
+\end{figure}
+
+\subsection{Dataset}
+\label{ssec:dataset}
+
+\begin{quote}
+  \textcolor{red}{%
+    Describe every dataset you use.  Include: full name and citation, number of samples, classes / labels, image resolution (if applicable), and how you split the data into training, validation, and test sets. If you collected or annotated your own data, describe the collection protocol and quality-control steps.%
+  }
+\end{quote}
+
+\subsection{Preprocessing}
+\label{ssec:preprocessing}
+
+\begin{quote}
+  \textcolor{red}{%
+    If applicable. Describe data-cleaning steps, augmentation strategies (e.g., random cropping, flipping, colour jitter), normalisation, and any feature engineering.  Explain \emph{why} each step is necessary. This section can be merged with \S\ref{ssec:dataset} if preprocessing is minimal.%
+  }
+\end{quote}
+
+\subsection{Model and Algorithm}
+\label{ssec:model}
+
+\begin{quote}
+  \textcolor{red}{%
+    Provide a technically detailed description of your chosen model or algorithm.  Cover:\\
+    (i)~\textbf{Architecture} --- layers, modules, and their purpose. Include a figure or table if helpful.\\
+    (ii)~\textbf{Key equations} --- loss function, update rule, or decision boundary.  Number every equation.\\
+    (iii)~\textbf{Justification} --- why is this model the best fit for your problem compared to alternatives?\\[4pt]
+    Example equation (replace with your own):%
+  }
+\end{quote}
+
+As an example, the cross-entropy loss is defined as 
+\begin{equation}
+  \mathcal{L}(\theta) = -\frac{1}{N}\sum_{i=1}^{N}
+    \sum_{c=1}^{C} y_{ic}\log\hat{y}_{ic},
+  \label{eq:loss}
+\end{equation}
+where $y_{ic}$ is the ground-truth label and $\hat{y}_{ic}$ is the predicted probability for sample $i$ and class $c$.
+
+% If applicable, here is an example algorithm (replace with your own):
+\begin{algorithm}[t]
+  \caption{\textcolor{red}{Replace with your algorithm title.}}
+  \label{alg:example}
+  \begin{algorithmic}[1]
+    \Require Input $X$, parameters $\theta$
+    \Ensure Output $Y$
+    \State \textcolor{red}{Describe step 1}
+    \State \textcolor{red}{Describe step 2}
+    \State \Return $Y$
+  \end{algorithmic}
+\end{algorithm}
+
+\subsection{Implementation Details}
+\label{ssec:implementation}
+
+\begin{quote}
+  \textcolor{red}{%
+    Report: programming language and version, key libraries / frameworks (e.g., PyTorch x.x, TensorFlow x.x), hardware (CPU/GPU model, RAM), all hyper-parameters (learning rate, batch size, number of epochs, optimiser and its parameters, regularisation), and random seed(s) used to ensure reproducibility.%
+  }
+\end{quote}
+
+% ============================================================
+%  SECTION 4 — EXPERIMENTS AND RESULTS
+% ============================================================
+\section{Experiments and Results}
+\label{sec:results}
+
+\begin{quote}
+  \textcolor{red}{%
+    Present your experimental results clearly and objectively.  I recommend \emph{do not} interpret or explain the results in this section, rather save that for \S\ref{sec:discussion}.  Structure this section as follows:%
+    \begin{itemize}
+      \item \textbf{Experimental Setup} --- any details not already covered in \S\ref{sec:methodology}: evaluation metrics, baseline methods, ablation study design. 
+      \item \textbf{Quantitative Results} --- tables and/or charts comparing your method against baselines on all relevant metrics.  Every table and figure must be referenced in the text.
+      \item \textbf{Qualitative Results} (if applicable) --- illustrative examples (e.g., sample detections, generated images, attention maps) that give the reader intuition about your method's behaviour.
+      \item \textbf{Ablation Study} (if applicable) --- systematically remove or replace components to show their individual contribution.
+    \end{itemize}%
+  }
+\end{quote}
+
+\subsection{Evaluation Metrics}
+\label{ssec:metrics}
+
+\begin{quote}
+  \textcolor{red}{%
+    Define every metric you use and justify why it is the right choice for your task.  Use standard metrics so your results are comparable to the literature.  Examples: accuracy, precision, recall, F1 score, mean Average Precision (mAP), RMSE, BLEU, FID, inference time. Provide the mathematical definition of any metric that is not universally known.%
+  }
+\end{quote}
+
+\subsection{Quantitative Results}
+\label{ssec:quant}
+
+\begin{quote}
+  \textcolor{red}{%
+    Present your main results in a table (see Table~\ref{tab:results}) or a figure.  Compare your method against relevant baselines. Bold the best result in each column.  Report means and standard deviations across multiple runs wherever possible.%
+  }
+\end{quote}
+
+% Example results table (replace with your own data):
+\begin{table}[t]
+  \centering
+  \caption{%
+    \textcolor{red}{Replace with your results table caption.  The caption goes \emph{above} the table in IEEE style.}%
+  }
+  \label{tab:results}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Method} & \textbf{Metric 1} & \textbf{Metric 2} & \textbf{Metric 3} \\
+    \midrule
+    Baseline A      & 0.00 & 0.00 & 0.00 \\
+    Baseline B      & 0.00 & 0.00 & 0.00 \\
+    \textbf{Ours}   & \textbf{0.00} & \textbf{0.00} & \textbf{0.00} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Qualitative Results}
+\label{ssec:qual}
+
+\begin{quote}
+  \textcolor{red}{%
+    Show representative examples of your method's outputs.  For vision tasks, annotated images work well.  For NLP tasks, sample inputs and outputs.  For time-series, plots of predicted vs.\
+    ground-truth sequences.  Always select examples that are informative --- include at least one success case and one failure case.%
+  }
+\end{quote}
+
+% Example two-image figure (replace with your own):
+\begin{figure}[t]
+  \centering
+  % \includegraphics[width=\columnwidth]{images/qualitative.pdf}
+  \fbox{\rule{0pt}{3cm}\rule{\columnwidth}{0pt}} % placeholder box
+  \caption{\textcolor{red}{Replace this placeholder with a qualitative results figure.  Show representative success and failure cases.}}
+  \label{fig:qualitative}
+\end{figure}
+
+\subsection{Ablation Study}
+\label{ssec:ablation}
+
+\begin{quote}
+  \textcolor{red}{%
+    Optional but strongly encouraged. Remove or replace individual components of your system one at a time and report the change in performance. This demonstrates that each design choice is
+    justified and that your contributions are indeed responsible for the observed improvements.%
+  }
+\end{quote}
+
+% ============================================================
+%  SECTION 5 — DISCUSSION
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\begin{quote}
+  \textcolor{red}{%
+    Interpret and contextualise the results from \S\ref{sec:results}. A strong discussion covers:\\[4pt]
+    \textbf{(a) Analysis of results.}  Why do you think your method performs the way it does?  Refer to specific numbers from your tables / figures.  Explain surprising or counter-intuitive
+    findings.\\[4pt]
+    \textbf{(b) Comparison with related work.}  How does your method compare to the related methods discussed in \S\ref{sec:related_work}? Where do you outperform them and where do you fall short?\\[4pt]
+    \textbf{(c) Limitations.}  Be honest about the limitations of your study: data constraints, computational budget, generalisability, assumptions that may not hold in practice.\\[4pt]
+    \textbf{(d) Future work.}  Based on your findings and limitations, what are the most promising directions for extending this work?%
+  }
+\end{quote}
+
+% ============================================================
+%  SECTION 6 — CONCLUSION
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+\begin{quote}
+  \textcolor{red}{%
+    Write a concise conclusion (one or two paragraphs).  Do \emph{not} introduce new information here.  The conclusion should:\\ 
+    (i) restate the research problem and your approach briefly;\\
+    (ii) summarise your key findings and contributions;\\
+    (iii) state the broader significance or impact of your work.\\[4pt]
+    The conclusion is your last opportunity to leave an impression on the reader --- make it count.%
+  }
+\end{quote}
+
+This study explored \dots % replace with your own conclusion text.
+
+% ============================================================
+%  ACKNOWLEDGEMENTS  (optional)
+% ============================================================
+\section*{Acknowledgements}
+\begin{quote}
+  \textcolor{red}{%
+    Optional.  Thank any collaborators, funding bodies, or computing resources you used.  Do not list yourself.%
+  }
+\end{quote}
+
+% ============================================================
+%  REFERENCES
+% ============================================================
+\balance  % balance the final two columns before the bibliography
+\bibliography{references}
+
+\end{document}

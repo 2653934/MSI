@@ -1,0 +1,41 @@
+\section{Methodology}
+\label{sec:methodology}
+
+\emph{Drafting status.} The final methodology will be reconstructed from the
+audited data, model, attribution and scoring implementations. Equations will be
+checked directly against code before promotion.
+
+The study uses eight CAC and eight GBM tissue sections. The eight GBM sections
+belong to four patient groups; sections are therefore paired experimental units
+for section-level descriptions but are not eight independent patients. Training
+is label-free. Expert masks are used only to evaluate the spatial agreement of
+selected-bin ion images.
+
+Each VAE encodes either the central spectrum alone or a contextual input formed
+from the central spectrum and neighbouring spectra. The decoder reconstructs
+only the centre. Controlled variants include a fixed $3\times3$ neighbour mean,
+a $5\times5$ mean, zero context, nonlocal shuffled context and a learned
+attention aggregator. These variants answer different questions and are not
+treated as interchangeable evidence of spatial causality.
+
+After training, a two-component GMM is fitted to frozen latent means. IG is
+computed with the implementation's trapezoidal path integration, not the
+right-endpoint approximation used in the previous report draft. Attribution is
+aggregated into a ranking of raw spectral bins. Consolidated molecular-peak
+views are used for interpretation only; matched-budget mSCF1 evaluates the raw
+ranked bins.
+
+For every selected bin, its ion image is compared with an expert mask using
+Pearson correlation coefficient (PCC). F1 is evaluated at PCC thresholds 0.3,
+0.4, 0.5 and 0.6, and mSCF1 is their unweighted mean. The reproduced S3PL code
+uses the nearest position in its ranked correlation list as a threshold-derived
+rank cutoff; it is not described as an exactly equivalent literal
+$r\geq t$ filter. Independent audits recompute the saved peak scores from raw
+spectra and masks.
+
+Computational comparisons report measured native workflow cost under the
+specified protocols. Timer boundaries, hardware, repetitions, CPU time, RSS and
+sampled GPU memory are stated separately. Because S3PL uses 10 epochs and the
+VAE uses 100, these measurements are not interpreted as equal-work evidence of
+intrinsic architectural efficiency.
+

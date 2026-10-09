@@ -1,0 +1,34 @@
+\section{Experiments and Results}
+\label{sec:results}
+
+\emph{Drafting status.} This section will be populated only from the audited
+section-level tables. The authoritative patient-grouped GBM summary is still to
+be generated before inferential wording is finalised.
+
+At matched section-specific peak budgets, reproduced legacy msiPL obtained mean
+mSCF1 values of 0.4024 on CAC and 0.4142 on GBM. The centre-only VAE/GMM/IG
+pipeline obtained 0.5285 and 0.5178, respectively, while the fixed-context
+variant obtained 0.5595 and 0.5111. These are method-package comparisons:
+architecture, training, latent modelling, attribution and ranking all differ
+from legacy msiPL.
+
+The spatial comparison is collection-dependent. Fixed context exceeded the
+centre-only model on all eight CAC sections in the frozen single-seed
+comparison, but did not produce a consistent GBM benefit. Larger-window,
+zero-context, shuffled-context and learned-attention controls further prevent a
+general claim that correct local topology caused the CAC gain. The final result
+presentation will show every paired section and group GBM sections by patient.
+
+Matched-count S3PL obtained higher mean CAC mSCF1 than fixed-context IG under
+its native evaluated protocol. On GBM, the executable 10-epoch S3PL baseline
+was initialization-sensitive at section level: six of eight sections had a
+three-seed range of at least 0.10 mSCF1, although collection means were steadier.
+Longer GBM108-positive runs caused initially divergent peak sets and scores to
+converge, showing that a favourable short run is not a stable baseline.
+
+Three native 160TopL measurements recorded S3PL workflow totals of 151.2,
+173.9 and 173.9 seconds. The VAE workflow totals were 135.3, 121.6 and 121.9
+seconds and used slightly less sampled memory. These measurements describe the
+specified native procedures; they do not equate ten S3PL epochs with one hundred
+VAE epochs or establish universal architectural efficiency.
+
