@@ -1,6 +1,6 @@
 # Fair-scoring and simple-baseline protocol (v3.2, 9 October 2026)
 
-Status: **protocol v3; implementation revised for cluster operation and provenance; nothing submitted.** No existing evidence, figure, table or report claim is replaced by anything here. This document supersedes the protocol parts of `docs/meetings/supervisor_review_2026-10-09_response_to_codex.md` wherever the two differ.
+Status (updated 9 October): **protocol v3.2; gates (a) and (b) complete on all 16 sections, at bin level (decision table 66097) and under the approved partitions (66238). Neither predeclared IG-versus-posterior verdict applies, because IG scored below posterior-|PCC| in every section at bin level (Sections 7.1 and 10). Gate (d) is not yet run.** No existing evidence, figure, table or report claim is replaced by anything here. This document supersedes the protocol parts of `docs/meetings/supervisor_review_2026-10-09_response_to_codex.md` wherever the two differ.
 
 v3 incorporates Codex's operational and provenance corrections (Sections 0, 4, 8, 9 and 10). **v3.1 makes S2 descriptive rather than a rejection rule (Section 3.2).** This decision was made before any real partition-audit output existed. Every execution on real data so far is listed in Section 10.
 
@@ -142,6 +142,16 @@ Unchanged from the previous response: 0.02 mSCF1 practical signal, per collectio
 - **IG beats legacy, robust to scoring:** at least 7 of 8 sections at bin level, with the same direction in the K_bin collapse diagnostic, and the ordering stable across the budget multipliers. The collapse diagnostic is **not** a matched peak-level comparison; a matched one needs the Beta re-tune in Section 1.
 - **Development-section GPU tests:** a change below 0.02 means the production setting stands. A change of 0.02 or more on both development sections triggers a predeclared 16-section rerun of that one setting only.
 
+### 7.1 Rule gaps found after the results (note added 9 October; the rules above are unchanged)
+
+These gaps were noticed only after the gate (a)/(b) results had been seen. They are recorded here so that the reported wording is accurate. **No new verdict category is added, and the rules above are not changed.**
+
+1. **No outcome for "IG clearly worse".** The IG-versus-posterior rule defines only "adds value" (≥ +0.02 and positive in ≥ 6/8 sections) and "equivalent" (within ±0.02). A difference beyond −0.02 fits neither. The summariser labels it "mixed / not resolved by the predeclared rule". That label is a fall-through, not a mixed result. **Reporting wording:** "Neither predeclared verdict applies, because IG scored below posterior-|PCC| in every section (bin level: 0/8 sections positive in each of the four collection-arms)." The size and consistency of the gap are given as effect sizes and per-section results, not as a verdict.
+2. **The budget-stability clause of "IG beats legacy" cannot be evaluated as written.** Legacy msiPL is scored at m = 1 only (Section 2), so there is no legacy ordering across budget multipliers to compare. The summariser does not compute this clause. Report the two clauses that can be evaluated (bin level, and the K_bin collapse diagnostic) and state that the third was not assessable. Do not call the rule met.
+3. **"Under every approved partition" means per-collection partitions.** GBM has P1 only; CAC has P1 and P3 (Section 10).
+
+Any future rule that covers these cases needs its own predeclaration and must be reported as a separate, labelled analysis.
+
 ## 8. Provenance, restart and reconstruction (new in v3)
 
 **Provenance block.** Every result's `summary.json` carries a `provenance` block containing:
@@ -204,6 +214,10 @@ A test rebuilds the IG matched groups from these files.
   - Bin level: pilot 66045 (GBM22_2), then array 66053 (all 16 sections; GBM22_2 reused the pilot after a provenance match). Decision table 66097 completed.
   - Approved partitions: array 66114. Task 1 (GBM108_negative) failed before scoring with `mkdir: Already exists`; all 16 tasks started at once and `with_approved_partitions/` did not exist yet, so this looks like a race on creating the parent directory. Nothing was written for that section. It was resubmitted alone as 66179 and completed. All 32 arm summaries are complete.
   - Decision table 66181 refused to run ("refusing to mix"). **Cause, a summariser bug:** each section records only its own approved partitions, and the approval file approves P3 for CAC only, so GBM and CAC differ in `approved_partition_parameters` by design. **Fix (summariser only; no rule, threshold or result changed):** that field must agree within each collection; versions, every other parameter, the approval hash and the code hashes must still agree across all sections. Test: `test_fair_scoring_summary.py`. The summariser is not among the hashed code files, so no section provenance changes.
+  - After the fix: cluster test job 66237 passed 56/56. Decision table 66238 (`with_approved_partitions/summary_66238/`) then ran, as a Slurm `afterok` dependency of 66237. Its bin-level entries are identical to 66097.
+  - **Outcome, recorded as given by the rules (Section 7.1):**
+    - IG versus posterior-|PCC|: neither predeclared verdict applies in any collection-arm. IG − posterior-|PCC| is positive in 0/8 sections at bin level in all four arms (means: GBM −0.225 and −0.233; CAC −0.078 and −0.047), and under P1 (GBM −0.201 and −0.213; CAC −0.092 and −0.039, with CAC/uniform_mean 280TopL the only positive section, +0.058). On CAC, P3 equals P1. All four GBM patient means are negative.
+    - IG versus legacy: positive in 8/8 sections at bin level in every arm (+0.097 to +0.157) and in the K_bin collapse diagnostic (+0.066 to +0.157). The budget-stability clause is not assessable (Section 7.1, item 2), so the rule is reported as two of three clauses satisfied, not as met. The collapse diagnostic is not a matched peak-level comparison.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
