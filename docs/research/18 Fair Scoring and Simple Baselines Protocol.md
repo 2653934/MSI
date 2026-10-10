@@ -338,6 +338,22 @@ A test rebuilds the IG matched groups from these files.
     - At 23:17 SAST, also with Zayd's OK, the remaining steps were queued as `afterok` dependencies: evaluation 66404 (central_only, after 66399 and 66400), evaluation 66405 (uniform_mean, after 66401 and 66402), and summary 66406 (after 66404 and 66405).
     - A failure leaves the downstream jobs unrun; nothing is resubmitted automatically.
   - **Stage 2 and the chain completed (9 October, by 23:18 SAST / 21:18 UTC):** all exits 0. IG elapsed 5:56 (66399), 6:43 (66400), 6:27 (66401), 7:08 (66402). Evaluations 66404 (central_only) and 66405 (uniform_mean) took 25 s and 17 s, with status `complete` and empty `.err` files. Summary 66406 wrote `summary_66406/decisions.json`. No values have been read; they are read locally after Zayd's sync.
+  - **Gate (d) decision table (read locally on 10 October after Zayd's sync; `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json`): production n = 12 stands in every arm and count. No 16-section rerun is triggered.**
+    - **Early exposure:** during the log check on 10 October, before the sync, Code opened the evaluation `.out` logs of 66404/66405. They print the per-n change at K_bin, and the 66406 `.out` prints the four verdict lines. This happened after all jobs had finished and changed nothing; the values below are taken from the synced artifacts. Note for later runs: these `.out` files are not status-only logs.
+    - Change in mSCF1 at K_bin vs the saved n = 12 list (rule: trigger only if ≥ +0.02 on **both** sections for the arm):
+
+      | Arm | n | GBM108_positive | 40TopL | Verdict |
+      |---|---|---|---|---|
+      | central_only | 48 | +0.0114 | −0.0011 | production n = 12 stands |
+      | central_only | 192 | +0.0174 | +0.0243 | production n = 12 stands |
+      | uniform_mean | 48 | +0.0048 | −0.0085 | production n = 12 stands |
+      | uniform_mean | 192 | +0.0147 | +0.0031 | production n = 12 stands |
+
+    - Evaluation status `complete` in all four section-arms. Distinct from the next smaller count: true for every n, section and arm. The campaign code hashes match across the four evaluations.
+    - **GBM108_positive run validity** (`GBM108_positive_seed1/<arm>/evaluation/summary.json`): K_bin 584 in both arms. The n = 12 reproduction passed in both (identical bin set, mSCF1 difference 0.0; order differs at 2 positions in central_only, 0 in uniform_mean, which is not gating). Label alignment was the identity at every n, against production references `c5fd9472…` (central_only) and `d8eed7eb…` (uniform_mean). Attribution pixels per component equal n.
+    - **The central_only n = 192 case** that depended on this section: GBM108_positive gives +0.0174, below +0.02, so the trigger is not met although 40TopL was +0.0243.
+    - **Descriptive, not a verdict:** IG − posterior-|PCC| on GBM108_positive at K_bin (multiplier 1.0) is −0.184 / −0.172 / −0.166 (central_only, n = 12/48/192) and −0.172 / −0.168 / −0.158 (uniform_mean). It is negative at every n and every budget multiplier (range −0.222 to −0.052). Jaccard of the K_bin bin set vs n = 12 is 0.88 / 0.87 (central_only n = 48/192) and 0.88 / 0.86 (uniform_mean). IG process time at n = 12/48/192 was 252 / 252 / 300 s (central_only) and 258 / 269 / 306 s (uniform_mean).
+    - Posted to the supervisor chat (10 October). Gate (d) work stops here until the supervisor reviews the table; BIC follows only after that review.
   - **BIC plan approved as the specification with changes**, now written into Section 6 ("BIC run specification"): no GPU IG at any BIC or forced K; an optional, labelled CPU posterior-|PCC| sensitivity with no trigger or verdict; results per section-arm only, with no arm or collection verdict; and BIC runs only after the GBM108_positive decision table has been reviewed.
 
 0. **9 October, cluster (after v3.1):**

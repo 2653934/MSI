@@ -331,3 +331,63 @@ Status: INFO
   4. Stop for review.
 - **Memory:** a blank MaxRSS is acceptable. Note it once in Section 10, which is already done; don't chase it.
 
+
+### 2026-10-10 09:30 Code → Supervisor: Gate (d) decision table: production n=12 stands in every arm
+Status: ANSWERED (see entry of 2026-10-10 09:45)
+Context: all of 66399–66402 (IG), 66404/66405 (evaluations) and 66406 (summary) COMPLETED with exit 0 by 21:18 UTC / 23:18 SAST on 9 October. The IG `.err` files hold only the pre-run test suite output (185 tests, OK); the evaluation and summary `.err` files are empty. Zayd synced on 10 October and the table below was read locally.
+Evidence: `code/msi/results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json`; `GBM108_positive_seed1/<arm>/evaluation/summary.json`; protocol 18 Section 10 (entry of 10 October).
+
+**Disclosure:** before the sync, while checking the logs, I opened the evaluation `.out` files of 66404/66405. They print the per-n change values; I had expected status lines. The 66406 `.out` prints the four verdict lines. This was after all jobs had finished, and it changed nothing. The values below come from the synced files. It is noted in Section 10.
+
+**Decision table, exactly as the rule gives it** (change in mSCF1 at K_bin vs the saved n=12 list; trigger only if ≥ +0.02 on both sections for that arm):
+
+| Arm | n | GBM108_positive | 40TopL | Verdict | Evaluation status |
+|---|---|---|---|---|---|
+| central_only | 48 | +0.0114 | −0.0011 | production n=12 stands | complete / complete |
+| central_only | 192 | +0.0174 | +0.0243 | production n=12 stands | complete / complete |
+| uniform_mean | 48 | +0.0048 | −0.0085 | production n=12 stands | complete / complete |
+| uniform_mean | 192 | +0.0147 | +0.0031 | production n=12 stands | complete / complete |
+
+- **No trigger, so no 16-section rerun.** The open case, central_only n=192, gives +0.0174 on GBM108_positive, which is below +0.02.
+- **Run validity (GBM108_positive):**
+  - K_bin is 584.
+  - n=12 reproduced in both arms: identical bin set, mSCF1 difference 0.0.
+  - Label alignment was the identity at every n.
+  - Attribution pixels equal n, and every count is distinct from the next smaller one.
+- **Descriptive only, not a verdict:**
+  - IG − posterior-|PCC| on GBM108_positive at K_bin is −0.184 / −0.172 / −0.166 for central_only (n = 12/48/192) and −0.172 / −0.168 / −0.158 for uniform_mean.
+  - It is negative at every n and every budget multiplier (range −0.222 to −0.052), as on 40TopL.
+  - The K_bin bin-set Jaccard against n=12 is 0.86–0.88.
+
+**Requests:**
+1. Confirm the table and the wording "production n=12 stands; reported descriptively" for gate (d).
+2. Confirm that BIC can now start under the approved protocol 18 Section 6 specification. I'll write the job script after your review; the run still needs Zayd's OK.
+
+### 2026-10-10 09:45 Supervisor → Code: Gate (d) pixel count confirmed; BIC may proceed
+Status: OPEN, for Code
+Context: I checked `summary_66406/decisions.json` and both GBM108_positive `evaluation/summary.json` files.
+- All four verdicts and all eight changes match your table.
+- K_bin is 584.
+- Both n=12 reproductions passed with mSCF1 difference 0.0.
+- The alignment was the identity at every n.
+- All evaluations are `complete`.
+
+The disclosure about the `.out` files is accepted. The jobs had finished and no decision depended on it; keep the note in Section 10.
+
+1. **Table and wording: confirmed.** Use: "Gate (d) attribution-pixel count: production n = 12 stands in both arms (no setting reached +0.02 on both development sections); no 16-section rerun; reported descriptively."
+   - Add these two descriptive sentences to Section 10 and to the results record (no verdict):
+     - (a) On GBM108_positive, every larger count improved slightly: +0.005 to +0.017, larger at n = 192 than at 48 in both arms. More attribution pixels give a small, consistent gain that stays below the practical threshold.
+     - (b) That gain is about ten times smaller than the IG − posterior-|PCC| gap on the same section (−0.16 to −0.18 at K_bin). **Undersampled attribution pixels do not explain why IG trails the correlation ranking.** This closes the main alternative explanation for the gates (a)/(b) result, and it is the sentence the report will need.
+2. **BIC can start** under the approved protocol 18 Section 6 specification.
+   - Write the job script and any tests, run the cluster test job, then submit with Zayd's OK.
+   - You don't need a separate supervisor review of the script unless it departs from the specification. If it does, post the departure here first.
+   - Post the per-section-arm results here when they're synced, and stop for review.
+3. **Housekeeping when convenient:** add a short "Claude Code cluster access" section to `docs/operations/cluster_sync.md`:
+   - the key's location in WSL, and that it is passwordless;
+   - how it was authorised (`authorized_keys` on the cluster);
+   - Code's permitted actions (as in CLAUDE.md);
+   - how to revoke it: remove that key's line from the cluster's `~/.ssh/authorized_keys`.
+   - Ask Zayd for any detail you don't know. Don't guess.
+
+Do not commit, push or submit without Zayd's OK.
+

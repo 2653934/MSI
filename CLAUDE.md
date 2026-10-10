@@ -14,7 +14,7 @@ This is Zayd's Honours research repository: unsupervised peak learning for mass 
 - `report/draft/`: the LaTeX report being rebuilt. `report/final/` stays empty until the final audit.
 - Raw data and checkpoints exist only on the cluster: `/datasets/zsuliman/msi_data/` and `/datasets/zsuliman/msi_checkpoints/`.
 
-## Current work (state at 23:20 SAST, 9 October 2026: GBM108_positive gate (d) all jobs complete; results on the cluster, not yet synced or read)
+## Current work (state at 09:45 SAST, 10 October 2026: gate (d) pixel count closed, production n=12 stands; supervisor reviewed; BIC approved to start)
 
 Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) run specification and its amendments, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
 
@@ -24,7 +24,7 @@ Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) r
 - **IG vs legacy:** positive in 8/8 sections in every arm at bin level and in the collapse diagnostic. The budget-stability clause cannot be assessed, so report it as 2 of 3 clauses met.
 - **Do not change the report headline or research questions yet** (supervisor). The provisional framing: on GBM, the label-free GMM segmentation plus a correlation ranking approaches the oracle; on CAC it is only comparable to mean intensity and Moran's I; IG underperforms the correlation ranking in both. Spatial context was not tested by this gate.
 
-### Gate (d), attribution-pixel count (12/48/192): 40TopL done; GBM108_positive stage 1 passed, stage 2 IG running
+### Gate (d), attribution-pixel count (12/48/192): CLOSED. Production n=12 stands in both arms; no 16-section rerun (supervisor confirmed, chat entry 2026-10-10 09:45)
 - **Specification:** protocol 18 Section 6, decided before any gate (d) output.
   - Sections: GBM108_positive and 40TopL. Both arms (central_only, uniform_mean), with the rule applied per arm.
   - Reproduction gate: an identical K_bin bin set plus the saved mSCF1 to 1e-12; order is recorded but not gating.
@@ -54,15 +54,20 @@ Done on 9 October: the 40TopL outcomes and the supervisor's fixes were logged in
    - IG 66399–66402 took 5:56 to 7:08 elapsed. IG time barely grew with n, as on 40TopL.
    - Evaluations 66404 (central_only) and 66405 (uniform_mean) have status `complete`, so all run-validity checks and both n=12 gates passed. Their `.err` files are empty.
    - Summary 66406 wrote `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json`.
-   - **No values have been read.**
+   - **No values were read before the sync** (except the evaluation `.out` exposure noted in item 4).
 2. These ran as an `afterok` chain queued at 23:17 SAST with Zayd's OK (logged in protocol 18 Section 10 and the supervisor chat).
 3. **Next session:**
    - Check `sacct -j 66399,66400,66401,66402,66404,66405,66406` (State, Elapsed, ExitCode), and read the short `.out`/`.err` logs on the cluster. Don't print scores from the logs.
    - Then Zayd syncs (cluster-to-local pull, `docs/operations/cluster_sync.md`).
    - **Only after the sync**, read `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json` and the two `GBM108_positive_seed1/<arm>/evaluation/summary.json` files locally.
-4. **Post the decision table to the supervisor chat, exactly as the rule gives it** (per arm and n: changes on both sections, verdict, evaluation status), with the descriptive IG − posterior-|PCC| values. Log it in protocol 18 Section 10. Tell Zayd "Posted to supervisor chat: …". **Stop there until the supervisor reviews it.** If the table shows a trigger for central_only n=192, the 16-section rerun is a new step that needs the supervisor's and Zayd's approval.
-5. **BIC:** follow protocol 18 Section 6 ("BIC run specification"). It is descriptive per section-arm with no verdict and **no GPU IG** at any BIC or forced K. There is an optional labelled CPU "BIC-K segmentation sensitivity, descriptive"; drop it and tell the supervisor if it needs more than a small script. **Start BIC only after the supervisor has reviewed the decision table. Write the job script then.**
-6. **Uncommitted (Zayd commits):** `CLAUDE.md`, protocol 18 Section 10 (the test, stage 1 and plan entries), and `docs/supervision/supervisor_chat.md`. After the sync, also `results/validation/fair_scoring_env_tests/66389_*` and `results/diagnostics/gate_d_pixel_counts/GBM108_positive_seed1/`.
+4. **Done 10 October:** decision table posted (chat 09:30) and **confirmed by the supervisor (chat 09:45)**. No trigger; production n=12 stands in both arms. Wording to use: "Gate (d) attribution-pixel count: production n = 12 stands in both arms (no setting reached +0.02 on both development sections); no 16-section rerun; reported descriptively."
+   - **To do:** add the supervisor's two descriptive sentences (chat 09:45, item 1a/1b) to protocol 18 Section 10 and `docs/research/01 Results Record.md`. The key one: the pixel-count gains on GBM108_positive (+0.005 to +0.017) are about ten times smaller than the IG − posterior-|PCC| gap (−0.16 to −0.18), so undersampled attribution pixels do not explain why IG trails the correlation ranking.
+5. **BIC: approved to start** under protocol 18 Section 6 ("BIC run specification"): descriptive per section-arm, no verdict, **no GPU IG** at any BIC or forced K, and the optional labelled CPU posterior-|PCC| sensitivity only if it's a small script.
+   - Write the job script and tests, run the cluster test job, then submit with Zayd's OK.
+   - No supervisor review of the script is needed unless it departs from the specification; post any departure to the chat first.
+   - Post the per-section-arm results to the chat after Zayd syncs, then stop for review.
+5b. **Housekeeping:** add a "Claude Code cluster access" section to `docs/operations/cluster_sync.md` (chat 09:45, item 3). Ask Zayd for details you don't know; don't guess.
+6. **Uncommitted (Zayd commits):** `CLAUDE.md`, protocol 18 Section 10, `docs/supervision/supervisor_chat.md`, `results/validation/fair_scoring_env_tests/66389_*`, `results/diagnostics/gate_d_pixel_counts/GBM108_positive_seed1/` and `summary_66406/`.
 
 ## Scientific rules
 
