@@ -116,6 +116,22 @@ def poisson_augment_tic_normalized(spectra, effective_count, generator=None):
     return torch.where(sampled_totals > 0, noisy, spectra)
 
 
+def apply_centre_mask(central, probability, generator):
+    """Zero whole centre spectra in the encoder input with the given probability.
+
+    One uniform draw per row comes from ``generator`` (a CPU generator of its
+    own, so the model, loader and Poisson streams are untouched). Returns the
+    encoder input and the boolean row mask. ``central`` itself is not modified;
+    the caller keeps it as the unmasked reconstruction target.
+    """
+    if not 0.0 <= probability <= 1.0:
+        raise ValueError("centre mask probability must lie in [0, 1]")
+    draws = torch.rand(central.shape[0], generator=generator)
+    masked = (draws < probability).to(central.device)
+    encoder_input = torch.where(masked.unsqueeze(1), torch.zeros_like(central), central)
+    return encoder_input, masked
+
+
 def select_training_indices(dataset_size, maximum_samples, seed):
     """Select a fixed random subset, or every index when no limit is requested."""
     if maximum_samples is None or maximum_samples >= dataset_size:
@@ -188,8 +204,17 @@ def train_vae(
     save_checkpoint=True,
     checkpoint_interval=0,
     resume_checkpoint=None,
+    centre_mask_probability=0.0,
+    centre_mask_seed=None,
 ):
-    """Train a VAE with optional exact epoch-boundary checkpoint/resume support."""
+    """Train a VAE with optional exact epoch-boundary checkpoint/resume support.
+
+    ``centre_mask_probability`` > 0 (item G) zeroes the centre spectrum fed to
+    the model for that fraction of training samples, drawn from a separate
+    generator seeded with ``centre_mask_seed``; neighbours and the decoder
+    target are unchanged. At 0 (the default) nothing is drawn and training is
+    the historical code path.
+    """
     if epochs < 1:
         raise ValueError("epochs must be at least 1")
     if batch_size < 2:
@@ -204,6 +229,15 @@ def train_vae(
         raise ValueError("poisson_effective_count must be positive when enabled")
     if resume_checkpoint is not None and not save_checkpoint:
         raise ValueError("resume_checkpoint requires save_checkpoint=True")
+    centre_masking = centre_mask_probability > 0
+    if not 0.0 <= centre_mask_probability <= 1.0:
+        raise ValueError("centre_mask_probability must lie in [0, 1]")
+    if centre_masking and centre_mask_seed is None:
+        raise ValueError("centre masking requires an explicit centre_mask_seed")
+    if centre_masking and poisson_effective_count is not None:
+        raise ValueError("centre masking and Poisson augmentation are not combined")
+    if centre_masking and not getattr(model, "uses_neighbourhood_batch", False):
+        raise ValueError("centre masking requires the separate neighbourhood batch interface")
 
     torch_device = torch.device(device)
     uses_cuda = torch_device.type == "cuda"
@@ -241,6 +275,9 @@ def train_vae(
         poisson_generator = torch.Generator(device=torch_device).manual_seed(
             seed + 1_000_003
         )
+    centre_mask_generator = None
+    if centre_masking:
+        centre_mask_generator = torch.Generator().manual_seed(int(centre_mask_seed))
     loader = DataLoader(
         subset,
         batch_size=batch_size,
@@ -277,6 +314,9 @@ def train_vae(
         resume_signature["poisson_effective_count"] = float(
             poisson_effective_count
         )
+    if centre_masking:
+        resume_signature["centre_mask_probability"] = float(centre_mask_probability)
+        resume_signature["centre_mask_seed"] = int(centre_mask_seed)
     history = []
     start_epoch = 1
     resumed_from_epoch = 0
@@ -297,6 +337,10 @@ def train_vae(
         if poisson_generator is not None:
             poisson_generator.set_state(
                 checkpoint["poisson_generator_state"].cpu()
+            )
+        if centre_mask_generator is not None:
+            centre_mask_generator.set_state(
+                checkpoint["centre_mask_generator_state"].cpu()
             )
         history = checkpoint["history"]
         resumed_from_epoch = int(checkpoint["completed_epochs"])
@@ -347,6 +391,8 @@ def train_vae(
         }
         if poisson_generator is not None:
             payload["poisson_generator_state"] = poisson_generator.get_state()
+        if centre_mask_generator is not None:
+            payload["centre_mask_generator_state"] = centre_mask_generator.get_state()
         return payload
 
     session_start = time.perf_counter()
@@ -365,6 +411,7 @@ def train_vae(
             "poisson_central_l1": 0.0,
             "poisson_central_cosine": 0.0,
             "samples": 0,
+            "centre_masked": 0,
         }
         for batch in loader:
             target = batch["target"].to(torch_device, dtype=torch.float32)
@@ -374,6 +421,11 @@ def train_vae(
                 central_input = poisson_augment_tic_normalized(
                     target, poisson_effective_count, generator=poisson_generator
                 )
+            if centre_mask_generator is not None:
+                central_input, centre_masked = apply_centre_mask(
+                    target, centre_mask_probability, centre_mask_generator
+                )
+                totals["centre_masked"] += int(centre_masked.sum())
 
             optimizer.zero_grad(set_to_none=True)
             if getattr(model, "uses_neighbourhood_batch", False):
@@ -483,6 +535,9 @@ def train_vae(
             "epoch_seconds": epoch_seconds,
             "samples_per_second": totals["samples"] / epoch_seconds,
         }
+        if centre_masking:
+            record["centre_masked_samples"] = totals["centre_masked"]
+            record["centre_masked_fraction"] = totals["centre_masked"] / totals["samples"]
         history.append(record)
         print(json.dumps(record), flush=True)
         scheduler.step()
@@ -588,6 +643,18 @@ def train_vae(
         "experiment": experiment_metadata or {},
         "status": "complete",
     }
+    if centre_masking:
+        metadata["centre_masking"] = {
+            "probability": float(centre_mask_probability),
+            "seed": int(centre_mask_seed),
+            "rule": (
+                "training only: per sample, with this probability, the centre "
+                "spectrum given to the model (encoder input and attention query) "
+                "is replaced by zeros; neighbours unchanged; the decoder target "
+                "is always the unmasked centre"
+            ),
+            "masked_samples_total": sum(r["centre_masked_samples"] for r in history),
+        }
     if save_checkpoint:
         _atomic_torch_save(
             checkpoint_payload(epochs, metadata), checkpoint_path

@@ -25,6 +25,7 @@ def load_config(config_path, args):
     if args.sample_order_seed is not None: config["sample_order_seed"] = args.sample_order_seed
     if args.normalization is not None: config["normalization"] = args.normalization
     if args.input_context_mode is not None: config["input_context_mode"] = args.input_context_mode
+    if args.checkpoint_epochs is not None: config["checkpoint_epochs"] = args.checkpoint_epochs
 
     return config
 
@@ -58,6 +59,14 @@ if __name__ == "__main__":
         choices=("none", "tile_centre"),
         default=None,
         help="training control: replace neighbour spectra with the normalised centre while keeping the real reconstruction target",
+    )
+
+    parser.add_argument(
+        "--checkpoint_epochs",
+        type=int,
+        nargs="+",
+        default=None,
+        help="logging only: save state-dict copies at these epochs and record per-epoch loss, time and memory",
     )
 
     args = parser.parse_args()

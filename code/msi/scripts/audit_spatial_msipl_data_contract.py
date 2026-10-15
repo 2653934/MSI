@@ -19,10 +19,44 @@ import numpy as np
 from spatial_msipl.preprocessing import H5SpatialContextDataset
 
 
+AUDIT_WINDOWS = (3, 5, 7, 9)
+
+
+def check_window_spectra(h5_path, raw_data, pixels_first, slots, indices, size):
+    """Sampled neighbour mask and TIC spectra of the production loader at one window."""
+    dataset = H5SpatialContextDataset(h5_path, include_neighbourhood=True, window_size=size)
+    try:
+        for index in indices:
+            sample = dataset[index]
+            valid = slots[index] >= 0
+            if not np.array_equal(sample["neighbour_mask"], valid):
+                raise AssertionError(f"{size}x{size} neighbour mask differs at pixel {index}")
+            if np.any(sample["neighbours"][~valid] != 0):
+                raise AssertionError(f"{size}x{size} invalid neighbour carries intensity at pixel {index}")
+            for position, neighbour in zip(np.flatnonzero(valid), slots[index][valid]):
+                spectrum = read_raw(raw_data, [neighbour], pixels_first)[0]
+                total = float(spectrum.sum(dtype=np.float64))
+                expected = spectrum / total if total else np.zeros_like(spectrum)
+                np.testing.assert_allclose(sample["neighbours"][position], expected,
+                                           rtol=1e-6, atol=1e-7)
+    finally:
+        dataset.close()
+
+
+def window_coverage(slots):
+    valid = (slots >= 0).sum(axis=1)
+    return {"slots": int(slots.shape[1]),
+            "pixels_with_full_window": int(np.count_nonzero(valid == slots.shape[1])),
+            "pixels_with_partial_window": int(np.count_nonzero(valid < slots.shape[1])),
+            "pixels_with_no_valid_neighbour": int(np.count_nonzero(valid == 0)),
+            "valid_neighbours_min_median_max": [int(valid.min()), float(np.median(valid)),
+                                                int(valid.max())]}
+
+
 def reference_slots(x, y, width):
     """Build a coordinate lookup independently of the production slot builder."""
-    if width not in (3, 5):
-        raise ValueError("audit supports the evaluated 3x3 and 5x5 windows")
+    if width not in AUDIT_WINDOWS:
+        raise ValueError("audit supports the 3x3, 5x5, 7x7 and 9x9 windows")
     coordinates = [(int(a), int(b)) for a, b in zip(x, y)]
     lookup = {point: index for index, point in enumerate(coordinates)}
     if len(lookup) != len(coordinates):
@@ -100,9 +134,12 @@ def render_spotcheck(output, mz, mask, coverage, x, y, index, slots, raw, normal
     plt.close(figure)
 
 
-def audit(h5_path, mask_path, output, collection, source_imzml=None):
-    if collection not in ("cac", "gbm"):
-        raise ValueError("collection must be cac or gbm")
+def audit(h5_path, mask_path, output, collection, source_imzml=None, windows=(3, 5)):
+    if collection not in ("cac", "gbm", "rcc"):
+        raise ValueError("collection must be cac, gbm or rcc")
+    windows = tuple(sorted(set(int(w) for w in windows)))
+    if 3 not in windows or any(w not in AUDIT_WINDOWS for w in windows):
+        raise ValueError("windows must include 3 and lie in 3/5/7/9")
     h5_path = h5_path.resolve(strict=True)
     mask_path = mask_path.resolve(strict=True)
     mask = np.load(mask_path, allow_pickle=False)
@@ -141,9 +178,15 @@ def audit(h5_path, mask_path, output, collection, source_imzml=None):
             if not set(np.unique(labels).tolist()) <= {1, 2}:
                 raise ValueError("GBM HDF5 labels are not raw classes 1/2")
             expected_mask = labels.astype(np.int64) - 1
-        else:
+        elif collection == "cac":
             if not set(np.unique(labels).tolist()) <= {0, 1, 2}:
                 raise ValueError("CAC HDF5 labels are not classes 0/1/2")
+            expected_mask = labels.astype(np.int64)
+        else:
+            classes = np.unique(labels)
+            if (np.any(labels != np.rint(labels)) or classes.min() < 0
+                    or not np.array_equal(classes, np.arange(len(classes)))):
+                raise ValueError("RCC HDF5 labels are not consecutive classes 0..K-1")
             expected_mask = labels.astype(np.int64)
         if not np.array_equal(mask[y - 1, x - 1], expected_mask):
             raise AssertionError("mask and HDF5 labels disagree at measured coordinates")
@@ -180,7 +223,7 @@ def audit(h5_path, mask_path, output, collection, source_imzml=None):
                   if source_imzml is not None else None)
         h5_shape = list(data.shape)
 
-    reference = {size: reference_slots(x, y, size) for size in (3, 5)}
+    reference = {size: reference_slots(x, y, size) for size in windows}
     dataset = H5SpatialContextDataset(h5_path, include_neighbourhood=True)
     try:
         if not np.array_equal(dataset.x, x) or not np.array_equal(dataset.y, y):
@@ -219,6 +262,18 @@ def audit(h5_path, mask_path, output, collection, source_imzml=None):
             ])
             centre = int(np.argmax(boundary_counts))
             centre_raw = read_raw(raw_data, [centre], pixels_first)[0]
+            # Larger windows: the same sampled pixels plus each window's most
+            # partially covered measured pixel (edges, holes, partial grids).
+            window_checks = {}
+            for size in windows:
+                if size == 3:
+                    continue
+                most_partial = int(np.argmin((reference[size] >= 0).sum(axis=1)))
+                checked = list(dict.fromkeys(indices + [most_partial]))
+                check_window_spectra(h5_path, raw_data, pixels_first, reference[size],
+                                     checked, size)
+                window_checks[str(size)] = {"sampled_indices": checked,
+                                            "most_partial_pixel": most_partial}
         coverage = np.zeros(mask.shape, dtype=bool)
         coverage[y - 1, x - 1] = True
         output.mkdir(parents=True, exist_ok=True)
@@ -241,7 +296,10 @@ def audit(h5_path, mask_path, output, collection, source_imzml=None):
         "raw_intensity_min_max": [minimum_intensity, maximum_intensity],
         "nonzero_tic_min": None if minimum_nonzero_tic == float("inf") else minimum_nonzero_tic,
         "tic_max": maximum_tic,
-        "reference_neighbours_match_production_all_pixels": {"3": True, "5": True},
+        "windows_audited": list(windows),
+        "reference_neighbours_match_production_all_pixels": {str(s): True for s in windows},
+        "window_coverage": {str(s): window_coverage(reference[s]) for s in windows},
+        "larger_window_sampled_spectra_match": window_checks,
         "sampled_raw_tic_and_neighbours_match": True,
         "limitations": ["imzML intensities checked only at sampled pixels" if source else
                         "no original imzML source was supplied",
@@ -255,12 +313,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--h5", required=True, type=Path)
     parser.add_argument("--mask", required=True, type=Path)
-    parser.add_argument("--collection", required=True, choices=("cac", "gbm"))
+    parser.add_argument("--collection", required=True, choices=("cac", "gbm", "rcc"))
+    parser.add_argument("--windows", type=int, nargs="+", default=[3, 5],
+                        choices=AUDIT_WINDOWS)
     parser.add_argument("--source-imzml", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
-        audit(args.h5, args.mask, args.output, args.collection, args.source_imzml)
+        audit(args.h5, args.mask, args.output, args.collection, args.source_imzml,
+              windows=args.windows)
     except Exception as error:
         # Never leave an earlier valid summary looking like the result of a
         # failed rerun. The traceback is still emitted for diagnosis.

@@ -56,11 +56,16 @@ esac
 echo "Auditing $section on $(hostname) (input files are read-only)"
 "$python_bin" -m unittest discover -s src/spatial_msipl/tests -p test_data_contract_audit.py
 
+# Item E (15 October): AUDIT_WINDOWS="3 5 7 9" with a separate AUDIT_OUTPUT_ROOT.
+# The defaults reproduce the original 3x3/5x5 audit and its output folder.
+read -r -a windows <<< "${AUDIT_WINDOWS:-3 5}"
+output_root="${AUDIT_OUTPUT_ROOT:-results/diagnostics/spatial_msipl_data_contract}"
 arguments=(
     --h5 "$input"
     --mask "$mask"
     --collection "$collection"
-    --output "results/diagnostics/spatial_msipl_data_contract/$section"
+    --output "$output_root/$section"
+    --windows "${windows[@]}"
 )
 if [[ -n "$source" ]]; then
     arguments+=(--source-imzml "$source")

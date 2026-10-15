@@ -2,6 +2,10 @@ import os
 import random
 import json
 import time
+try:
+    import resource  # peak host RSS (Linux); absent on Windows
+except ImportError:
+    resource = None
 import numpy as np
 
 import torch
@@ -113,10 +117,20 @@ def train(config):
     
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["learning_rate"])
 
+    # Item C2 (15 October), opt-in and logging only: state-dict copies at the
+    # listed epochs and per-epoch timing/loss/memory records. Neither draws
+    # random numbers nor changes any computation or the data order.
+    checkpoint_epochs = sorted(set(int(e) for e in config.get("checkpoint_epochs") or []))
+    if any(e < 1 or e > config["n_epochs"] for e in checkpoint_epochs):
+        raise ValueError("checkpoint_epochs must lie within 1..n_epochs")
+    epoch_details = []
     train_started_at = time.perf_counter()
     train_history = []
     for epoch in range(config["n_epochs"]):
         model.train()
+        epoch_started_at = time.perf_counter()
+        batch_loss_sum = 0.0
+        batch_count = 0
 
         with tqdm.tqdm(training_loader, unit="batch") as bar:
             for batch in bar:
@@ -137,17 +151,40 @@ def train(config):
                 loss.backward()
                 optimizer.step()
 
-                bar.set_postfix_str(str(criterion._get_name()) + '=' + str(loss.item()))
+                batch_loss = loss.item()
+                batch_loss_sum += batch_loss
+                batch_count += 1
+                bar.set_postfix_str(str(criterion._get_name()) + '=' + str(batch_loss))
 
         loss = loss.item()
         train_history.append(loss)
-        
+        if checkpoint_epochs:
+            completed = epoch + 1
+            epoch_details.append({
+                "epoch": completed,
+                "last_batch_loss": loss,
+                "epoch_mean_loss": batch_loss_sum / batch_count,
+                "batches": batch_count,
+                "epoch_seconds": time.perf_counter() - epoch_started_at,
+                "peak_gpu_memory_allocated_bytes_so_far": (
+                    int(torch.cuda.max_memory_allocated()) if use_cuda else None),
+                "peak_host_rss_kib_so_far": (
+                    resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if resource else None),
+            })
+            if completed in checkpoint_epochs:
+                torch.save(model.state_dict(),
+                           str(artifact_dirs["weights"] / f"{training_name}_epoch{completed}.pt"))
+
     training_seconds = time.perf_counter() - train_started_at
     torch.save(model.state_dict(), str(path_to_weights))
 
     config["training_name"] = training_name
     config["train_history"] = train_history
-    
+    if checkpoint_epochs:
+        config["epoch_details"] = epoch_details
+        config["epoch_checkpoints"] = {
+            str(e): f"{training_name}_epoch{e}.pt" for e in checkpoint_epochs}
+
     with open(artifact_dirs["logs"] / (training_name + '.json'), 'w') as f:
         json.dump(config, f, indent=4)
 
@@ -167,6 +204,11 @@ def train(config):
             int(torch.cuda.max_memory_allocated()) if use_cuda else None
         ),
     }
+    if checkpoint_epochs:
+        runtime_metrics["peak_host_rss_kib"] = (
+            resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if resource else None)
+        runtime_metrics["training_seconds_scope"] = (
+            "training loop only; patch dataset built before the timer; evaluation separate")
     resultfolder = artifact_dirs["results"] / training_name
     resultfolder.mkdir(parents=True, exist_ok=True)
     with open(resultfolder / "runtime_metrics.json", "w") as f:

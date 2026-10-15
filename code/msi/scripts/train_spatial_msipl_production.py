@@ -75,6 +75,20 @@ def main():
             "effective ion count; the clean central spectrum remains the target."
         ),
     )
+    parser.add_argument(
+        "--centre-mask-probability",
+        type=float,
+        default=0.0,
+        help=(
+            "Item G: per-sample probability of zeroing the centre spectrum given "
+            "to the model during training only; 0 keeps the historical path."
+        ),
+    )
+    parser.add_argument(
+        "--centre-mask-seed",
+        type=int,
+        help="Seed of the separate masking generator (default: seed + 2000003).",
+    )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--context-seed", type=int, default=1,
                         help="Global measured-pixel permutation seed for shuffled context arms.")
@@ -88,6 +102,11 @@ def main():
     args = parser.parse_args()
     if args.variant == "depthwise" and args.window_size != 3:
         parser.error("depthwise currently supports only the historical 3x3 window")
+    centre_masking = args.centre_mask_probability > 0
+    if centre_masking and args.variant == "central_only":
+        parser.error("centre masking is defined for neighbourhood variants only")
+    if centre_masking and args.centre_mask_seed is None:
+        args.centre_mask_seed = args.seed + 2_000_003
 
     if not torch.cuda.is_available():
         raise RuntimeError(
@@ -185,6 +204,8 @@ def main():
             },
             checkpoint_interval=args.checkpoint_interval,
             resume_checkpoint=args.resume_checkpoint,
+            centre_mask_probability=args.centre_mask_probability,
+            centre_mask_seed=args.centre_mask_seed if centre_masking else None,
         )
         attention_diagnostics_after = None
         if args.variant in ("attention", "attention_shuffled"):
@@ -267,6 +288,11 @@ def main():
         summary["purpose"] = (
             "cached full-run runtime/equivalence validation, not frozen baseline"
         )
+    if centre_masking:
+        summary["purpose"] = "item G centre-masking experiment, not frozen baseline"
+        summary["controls"]["centre_mask_probability"] = args.centre_mask_probability
+        summary["controls"]["centre_mask_seed"] = args.centre_mask_seed
+        summary["centre_masking"] = metadata["centre_masking"]
     args.output.mkdir(parents=True, exist_ok=True)
     summary_path = args.output / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")

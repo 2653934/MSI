@@ -14,7 +14,7 @@ This is Zayd's Honours research repository: unsupervised peak learning for mass 
 - `report/draft/`: the LaTeX report being rebuilt. `report/final/` stays empty until the final audit.
 - Raw data and checkpoints exist only on the cluster: `/datasets/zsuliman/msi_data/` and `/datasets/zsuliman/msi_checkpoints/`.
 
-## Current work (state at 13:21 SAST, 15 October 2026: BIC and S3PL seed 2 complete, synced and logged; supervisor confirmed; work stopped until the Hairong meeting, Monday 19 October)
+## Current work (state at 16:00 SAST, 15 October 2026: final experiment round coded and tested locally, nothing submitted yet; experiments end Tuesday 20 October)
 
 Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) run specification and its amendments, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
 
@@ -45,27 +45,30 @@ Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) r
   - IG − posterior-|PCC| stays negative at every n (−0.02 to −0.07).
   - **So uniform_mean cannot trigger. central_only n=192 depends on GBM108_positive central_only n=192.** That is a single section, single seed, just over the threshold, with bin-set Jaccard about 0.8 between counts.
 
+### Final experiment round (supervisor chat 15 Oct 13:00, 13:30, 15:35, 15:51; experiments end Tuesday 20 October)
+Specifications are in protocol 18 Section 6.1, and the log is in Section 10 ("Final experiment round").
+- **State at 16:00 SAST, 15 October:** nothing has been submitted yet; the 15:51 review fixes (dates, this section, memory requests) are made. Everything below is coded and tested locally and waits for Zayd's commit, sync and per-`sbatch` OK. `batch` is down, so `bigbatch` is approved (CPU jobs via `SBATCH_PARTITION=bigbatch`).
+- **B and C1 are done:** `scripts/build_runtime_and_training_curves.py` produces `runtime_all_sections.csv` and `training_curves_*` in `current_evidence/`. Note that the S3PL `train_history` is the last-batch MSE, not an epoch mean.
+- **A:** the GBM attention evaluations used the old counts. The approved fix is `check_saved_list_reproduction.py`, then re-evaluation at K_bin into `peak_evaluation_tuned_count/`, then the unchanged evaluator. Run with `submit_fair_scoring_extra_arm.sh attention pilot|all`; the summariser is `summarise_fair_scoring_arms.py`.
+- **G:** centre masking with p = 0.5 (`train_vae(centre_mask_probability)`). The zeroed centre also serves as the attention query, which the supervisor confirmed. Run with `submit_centremask_campaign.sh` (34 tasks), then fair scoring with `submit_fair_scoring_extra_arm.sh <G arm>`.
+- **C2:** S3PL 100 epochs, with logging-only `--checkpoint_epochs` in `baselines/s3pl/train.py`. Run with `submit_s3pl_e100.sh`; evaluate with `evaluate_s3pl_epoch_checkpoints.py`.
+- **E:** first the audit with `--windows 3 5 7 9` (`AUDIT_WINDOWS`/`AUDIT_OUTPUT_ROOT` on `audit_spatial_msipl_data_contract.sh`). The E training spec is written only after the audit passes.
+- **D:** `rcc_env` exists (Cardinal 3.12.1). Run `run_rcc_feasibility.sh`; the go/no-go goes in `results/validation/rcc_feasibility/go_no_go.json`, due by the end of Friday 16 October.
+- **C3:** only if GPU time remains.
+
 ### Next
-Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both.
+Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both. **Take dates from the local clock:** in Git Bash use `TZ=SAST-2 date` (Git Bash ignores `TZ=Africa/Johannesburg` and prints UTC), or PowerShell `Get-Date`.
 
-The governing brief is the supervisor chat entry of **15 October, 14:00** ("Finish and curate everything before Zayd meets Hairong"). The target is everything synced and logged by **Saturday 17 October**. Its don'ts: no changes to protocol 18 rules; no new claims in `report/draft/` or `planning/claim_map.md`; no RCC; no new architectures.
+Governing entries: supervisor chat of 15 October 13:00 (round A–F), 13:30 (item G), 15:35 (answers) and 15:51 (code review). Specifications are in protocol 18 Section 6.1.
+1. Zayd commits and syncs. Then check `sha256sum` against `HEAD` on the cluster.
+2. Run the cluster test job `run_fair_scoring_tests.sh` on `bigbatch`. `test_fair_scoring_arms`, `test_centre_masking` and `test_neighbourhood` must show as run and passed, not skipped.
+3. Submit in order, each with Zayd's OK, posting the job IDs to the chat: A pilot → A all → G pilot (160TopL G1) → G rest → C2 → E audit → E → C3 if time allows. D runs in parallel; its go/no-go is due by the end of Friday 16 October.
+4. Still in force: no new claims in `report/draft/` or `planning/claim_map.md` until Hairong has responded (meeting Monday 19 October). Slurm email is not used; track jobs with `sacct`.
 
-1. **Complete, synced and logged (15 October):**
-   - **BIC 68496:** K = 6 in all four section-arms, which is the largest candidate. BIC is still falling at K = 6, so the minimum is at the boundary. It does not support production K (2 for GBM108_positive, 3 for 40TopL).
-     - Sensitivity at K = 6 changes posterior-|PCC| by −0.30 on GBM108_positive and +0.001 / −0.021 on 40TopL.
-     - Word it as "no minimum within K ≤ 6", never "six clusters". This is descriptive, with no verdict.
-   - **S3PL seed 2 (68500/68501):** the two-seed rule is **supported**: 8/8 sections in both seeds, +0.413 and +0.438. The harder-target caveat always goes with it.
-   - **Confirmed by the supervisor (chat, 15:30 SAST).** BIC wording to use: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count."
-   - **Stopped until after the Hairong meeting (19 October).** No report or claim-map edits until Hairong has responded to the framing.
-   - Job scripts: `slurm_jobs/run_/submit_gate_d_bic.sh`, `scripts/bic_segmentation_sensitivity.py`, `slurm_jobs/run_/submit_/check_s3pl_cac_centre_control_seed2.sh`. After any new sync, rebuild the tables with `python scripts/build_current_evidence_tables.py`.
-2. **Slurm email is not used.** Test job 68526 sent nothing (`MailProg` is `/bin/mail`, which is absent on the login node), and Zayd decided to drop it. Track jobs by polling `sacct`.
-3. **Done 15 October:**
-   - The Results Record has a dated supersession note, a corrected IG bullet, and new sections for fair scoring, gate (d) and the S3PL controls.
-   - Investigation 15 is marked complete.
-   - The curated tables and their README index are in `results/publication/current_evidence/`.
-   - The 10 October supervisor confirmation and sentences are in Section 10.
-   - The cluster-access section in `docs/operations/cluster_sync.md` is drafted. **Zayd still has to fill in the key location and type, and how it was authorised** (Claude must not inspect the keys).
-4. **Uncommitted (Zayd commits):** everything since `234873b`. This is the new BIC, S3PL seed-2 and table scripts; the synced `results/diagnostics/gate_d_bic/` and `reproducibility/s3pl_cac_centre_control/`; `results/validation/fair_scoring_env_tests/68489_*`; the test changes; `CLAUDE.md`; protocol 18; the Results Record; investigation 15; `cluster_sync.md`; `supervisor_chat.md`; `results/publication/current_evidence/`; `results/validation/fair_scoring_env_tests/66389_*`; and the gate (d) GBM108_positive results and `summary_66406/`.
+**Completed earlier (15 October; synced, logged and confirmed by the supervisor):**
+- **BIC 68496:** K = 6 (the largest candidate) in all four section-arms. Wording: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count." Never write "six clusters".
+- **S3PL CAC seed 2 (68500/68501):** the two-seed rule is supported (8/8 sections in both seeds, +0.413 / +0.438). Always give the harder-target and sample-order caveats with it.
+- The cluster-access details in `docs/operations/cluster_sync.md` are filled in. Claude still does not inspect the keys.
 
 ## Scientific rules
 

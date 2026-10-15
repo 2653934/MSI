@@ -46,6 +46,56 @@ class DataContractAuditTests(unittest.TestCase):
                         self.assertIn('"status": "valid"',
                                       (root / "audit" / "summary.json").read_text())
 
+    def make_grid(self, root, labels_fn, holes=()):
+        """A 10 x 9 partial grid with holes, so 7x7/9x9 windows meet edges and gaps."""
+        coordinates = [(x, y) for y in range(1, 10) for x in range(1, 11)
+                       if (x, y) not in set(holes)]
+        labels = np.array([labels_fn(x, y) for x, y in coordinates], dtype=np.int64)
+        mask = np.full((9, 10), -1, dtype=np.int64)
+        for (x, y), label in zip(coordinates, labels):
+            mask[y - 1, x - 1] = label
+        np.save(root / "mask.npy", mask)
+        rng = np.random.default_rng(5)
+        spectra = rng.random((len(coordinates), 6)).astype(np.float32)
+        with h5py.File(root / "grid.h5", "w") as handle:
+            handle.create_dataset("Data", data=spectra.T)
+            handle.create_dataset("mzArray", data=np.arange(100., 106.))
+            handle.create_dataset("xLocation", data=[p[0] for p in coordinates])
+            handle.create_dataset("yLocation", data=[p[1] for p in coordinates])
+            handle.create_dataset("Class_Label", data=labels)
+        return root / "grid.h5", root / "mask.npy"
+
+    def test_seven_and_nine_windows_on_edges_and_holes(self):
+        import json
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            h5_path, mask_path = self.make_grid(
+                root, lambda x, y: int(x > 5), holes=((5, 5), (6, 5), (2, 8)))
+            audit(h5_path, mask_path, root / "audit", "cac", windows=(3, 5, 7, 9))
+            summary = json.loads((root / "audit" / "summary.json").read_text())
+        self.assertEqual(summary["windows_audited"], [3, 5, 7, 9])
+        self.assertEqual(summary["window_coverage"]["9"]["slots"], 80)
+        self.assertGreater(summary["window_coverage"]["9"]["pixels_with_partial_window"], 0)
+        self.assertEqual(set(summary["larger_window_sampled_spectra_match"]), {"5", "7", "9"})
+
+    def test_rcc_labels_must_be_consecutive_classes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            h5_path, mask_path = self.make_grid(root, lambda x, y: int(y > 4))
+            audit(h5_path, mask_path, root / "audit", "rcc", windows=(3, 9))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            h5_path, mask_path = self.make_grid(root, lambda x, y: 2 * int(y > 4))
+            with self.assertRaisesRegex(ValueError, "consecutive classes"):
+                audit(h5_path, mask_path, root / "audit", "rcc")
+
+    def test_window_list_must_include_three(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            h5_path, mask_path = self.make_inputs(root)
+            with self.assertRaisesRegex(ValueError, "windows must include 3"):
+                audit(h5_path, mask_path, root / "audit", "cac", windows=(5, 7))
+
     def test_misaligned_mask_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
