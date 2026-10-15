@@ -1,0 +1,24 @@
+{
+  "source": "docs/supervision/supervisor_chat.md, entry 2026-10-15 14:00, item 2",
+  "statement": "S3PL benefits from real neighbourhood input during training",
+  "supported_if": "real minus retrained tile-centre >= 0.02 mSCF1 on >= 7/8 sections in both seeds, and mean paired difference >= 0.02 in both seeds",
+  "otherwise": "mixed, with per-section values",
+  "caveat": "the tile-centre model still reconstructs the real patch, so its target is harder; this is not a pure information ablation",
+  "per_seed": {
+    "1": {
+      "sections": 8,
+      "sections_at_least_0.02": 8,
+      "mean_paired_difference": 0.41266921535951834,
+      "mean_real": 0.5914723720621087,
+      "mean_retrained_tile_centre": 0.17880315670259034
+    },
+    "2": {
+      "sections": 8,
+      "sections_at_least_0.02": 8,
+      "mean_paired_difference": 0.43758270130665766,
+      "mean_real": 0.5907244790916372,
+      "mean_retrained_tile_centre": 0.15314177778497945
+    }
+  },
+  "outcome": "supported"
+}
