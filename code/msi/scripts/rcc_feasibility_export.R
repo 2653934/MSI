@@ -2,10 +2,16 @@
 # Item D (supervisor chat 2026-10-15 13:00 and 15:35): RCC feasibility, go/no-go.
 # Runs inside Slurm in the separate rcc_env (Cardinal), never in s3pl_env.
 #   Rscript scripts/rcc_feasibility_export.R RCC_RDA EXPORT_DIR REPORT_JSON
-# Criterion 2: rcc.rda loads. Criterion 3: pixel-level class labels per run.
+# Criterion 2: rcc.rda loads. Criterion 3: a run counts as labelled when every
+# annotated level (cancer, normal) has pixels; unlabelled (NA) pixels do not
+# disqualify it. NA is kept as a third class "unannotated" (K = 3, every pixel
+# kept so the grid stays intact), as CAC scores background (supervisor chat
+# 2026-10-15 19:37, option (a), predeclared before any RCC export or score).
 # Exports one HDF5 per run in the project contract (Data pixels x m/z, mzArray,
-# xLocation, yLocation from 1, Class_Label 0..K-1 by sorted label level) for the
-# criterion-4 audit. Labels are exported for evaluation only, as on GBM/CAC.
+# xLocation, yLocation from 1, Class_Label 0..K-1: sorted annotated levels, then
+# unannotated last) for the criterion-4 audit. Labels are exported for evaluation
+# only, as on GBM/CAC. Also records, descriptively, where NA pixels lie and their
+# TIC by class, to say whether NA is mainly off-tissue border or unannotated tissue.
 # Writes a JSON report; no model, clustering or peak scoring.
 suppressPackageStartupMessages({
   library(jsonlite)
@@ -69,25 +75,60 @@ if (length(label_column) == 0L) {
   quit(status = 0)
 }
 labels <- as.character(extract$pdata[[label_column[[1L]]]])
-levels <- sort(unique(labels[!is.na(labels)]))
+annotated <- sort(unique(labels[!is.na(labels)]))
+if ("unannotated" %in% annotated) stop("an annotated level is already called 'unannotated'")
+labels[is.na(labels)] <- "unannotated"
+levels <- c(annotated, "unannotated")
 report$label_column <- label_column[[1L]]
+report$annotated_levels <- annotated
 report$label_levels <- levels
 report$label_encoding <- setNames(as.list(seq_along(levels) - 1L), levels)
+report$unlabelled_treatment <- "NA kept as third class 'unannotated' (chat 2026-10-15 19:37, option a)"
+
+tic_summary <- function(tic) {
+  if (length(tic) == 0L) return(list(pixels = 0L))
+  list(pixels = length(tic), median = stats::median(tic), mean = mean(tic),
+       q10 = unname(stats::quantile(tic, 0.10)), q90 = unname(stats::quantile(tic, 0.90)))
+}
+# Descriptive only: where the unannotated pixels lie on the run's measured grid.
+na_location <- function(x, y, is_na) {
+  key <- paste(x, y)
+  measured <- key
+  annotated_key <- key[!is_na]
+  neighbours <- function(dx, dy) paste(x + dx, y + dy)
+  shifts <- list(c(1L, 0L), c(-1L, 0L), c(0L, 1L), c(0L, -1L))
+  touches_unmeasured <- Reduce(`|`, lapply(shifts, function(d) !(neighbours(d[1], d[2]) %in% measured)))
+  touches_annotated <- Reduce(`|`, lapply(shifts, function(d) neighbours(d[1], d[2]) %in% annotated_key))
+  on_box_edge <- x == min(x) | x == max(x) | y == min(y) | y == max(y)
+  n <- sum(is_na)
+  fraction <- function(v) if (n == 0L) NA else sum(v & is_na) / n
+  list(unannotated_pixels = n,
+       fraction_on_bounding_box_edge = fraction(on_box_edge),
+       fraction_touching_unmeasured_grid = fraction(touches_unmeasured | on_box_edge),
+       fraction_touching_annotated_pixel = fraction(touches_annotated))
+}
 dir.create(export_dir, recursive = TRUE, showWarnings = FALSE)
 labelled_runs <- 0L
 for (run in sort(unique(extract$run))) {
   columns <- which(extract$run == run)
   run_labels <- labels[columns]
   counts <- as.list(table(factor(run_labels, levels = levels), useNA = "no"))
-  missing <- sum(is.na(run_labels))
+  missing <- counts[["unannotated"]]
+  annotated_present <- sum(unlist(counts[annotated]) > 0)
   record <- list(run = run, pixels = length(columns), label_counts = counts,
                  unlabelled_pixels = missing,
+                 annotated_classes_present = annotated_present,
+                 all_annotated_classes_present = annotated_present == length(annotated),
                  classes_present = sum(unlist(counts) > 0))
   values <- extract$intensity(columns)            # m/z x pixels
   record$finite <- all(is.finite(values))
   record$nonnegative <- all(values >= 0, na.rm = TRUE)
-  if (missing == 0L && record$classes_present >= 2L) labelled_runs <- labelled_runs + 1L
-  if (missing == 0L && record$finite && record$nonnegative) {
+  tic <- colSums(values)
+  record$tic_by_class <- lapply(setNames(levels, levels), function(l) tic_summary(tic[run_labels == l]))
+  record$unannotated_location <- na_location(extract$x[columns], extract$y[columns],
+                                             run_labels == "unannotated")
+  if (record$all_annotated_classes_present) labelled_runs <- labelled_runs + 1L
+  if (record$all_annotated_classes_present && record$finite && record$nonnegative) {
     x <- extract$x[columns] - min(extract$x[columns]) + 1L
     y <- extract$y[columns] - min(extract$y[columns]) + 1L
     order <- order(y, x)
@@ -103,7 +144,7 @@ for (run in sort(unique(extract$run))) {
   }
   report$runs[[length(report$runs) + 1L]] <- record
 }
-report$runs_with_two_or_more_label_classes_and_no_unlabelled_pixels <- labelled_runs
+report$runs_with_all_annotated_classes <- labelled_runs
 report$criteria$pixel_labels <- labelled_runs >= 4L
 report$status <- "complete"
 write_json(report, report_path, auto_unbox = TRUE, pretty = TRUE, digits = NA)

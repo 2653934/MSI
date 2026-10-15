@@ -3,6 +3,8 @@
 # Go requires all four: (1) Cardinal in a separate env (rcc_env; s3pl_env
 # untouched), (2) rcc.rda loads, (3) pixel-level class labels on >= 4 sections,
 # (4) the exported HDF5s pass the existing data-contract audit (collection rcc).
+# Criterion 3 reading (chat 2026-10-15 19:37): >= 4 runs with pixel-level cancer
+# and normal labels; NA pixels are kept as a third class "unannotated" (K = 3).
 # CPU only; no model, clustering or peak scoring. Writes
 # results/validation/rcc_feasibility/go_no_go.json. Status lines only.
 #SBATCH --job-name=rcc-feasibility
@@ -87,7 +89,7 @@ environment = (root / "environment.txt").read_text().strip()
 report_path = root / "export_report.json"
 report = json.loads(report_path.read_text()) if report_path.is_file() else {}
 labelled = [r["run"] for r in report.get("runs", [])
-            if r.get("unlabelled_pixels") == 0 and r.get("classes_present", 0) >= 2]
+            if r.get("all_annotated_classes_present") is True]
 audited = {}
 for run in report.get("runs", []):
     if "export" in run:
@@ -110,6 +112,8 @@ decision = {
     "environment": environment,
     "labelled_runs": labelled, "audit_status_by_run": audited,
     "label_levels": report.get("label_levels"), "label_column": report.get("label_column"),
+    "label_encoding": report.get("label_encoding"),
+    "unlabelled_treatment": report.get("unlabelled_treatment"),
     "export_report": str(report_path),
 }
 (root / "go_no_go.json").write_text(json.dumps(decision, indent=2) + "\n")

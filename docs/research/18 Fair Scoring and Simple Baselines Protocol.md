@@ -259,7 +259,7 @@ The rules below are copied from the chat entries, which fixed them before any ou
 - **Arms:** `uniform_p7` and `uniform_p9` on all 16 sections, trained exactly like `uniform_p5`: `uniform_mean`, 100 epochs, seed 1, batch 128, lr 1e-3, cosine schedule, cached loader on GBM (checked against streaming by `validate_spatial_window_cache.py`, extended to 7 and 9) and streaming on CAC. The only code change is that 7 and 9 are allowed as `--window-size` values.
 - **Root:** `results/experiments/spatial_window_e79/<section>_seed1/<arm>/`; checkpoints in `.../window_e79/`.
 - **Evaluation:** GMM K 2 (GBM) and 3 (CAC), IG with 12 pixels per component, then matched peak evaluation at the **production K_bin**, then the unchanged fair-scoring evaluator (`run_fair_scoring_extra_arm.sh uniform_p7|uniform_p9`).
-- **p5 found at the old counts (15 October, before any p5 score at K_bin was computed or read):** the existing `uniform_p5` GBM evaluations used the pre-tuning counts, as attention did. So p5 goes through the same approved A(a)/(b) route (reproduce the saved old-count list, then re-evaluate at K_bin into `peak_evaluation_tuned_count/`) via `run_fair_scoring_extra_arm.sh uniform_p5`. CAC p5 is already at K_bin. **(for supervisor confirmation)**
+- **p5 found at the old counts (15 October, before any p5 score at K_bin was computed or read):** the existing `uniform_p5` GBM evaluations used the pre-tuning counts, as attention did. So p5 goes through the same approved A(a)/(b) route (reproduce the saved old-count list, then re-evaluate at K_bin into `peak_evaluation_tuned_count/`) via `run_fair_scoring_extra_arm.sh uniform_p5`. CAC p5 is already at K_bin. **Approved by the supervisor on 15 October 19:37.**
 - **Rule (13:00 item E; confirmed and extended by the supervisor on 15 October 19:37, before any E output existed):** a larger window "helps" only if its IG mSCF1 at K_bin beats real 3×3 (`uniform_mean`) by ≥ 0.02 in mean **and** is positive in ≥ 6/8 sections of a collection, **at bin level and under P1**.
   - If |mean| < 0.02 at both scales, it is "equivalent". Anything else is "mixed", meaning it does not meet the "helps" rule. This is the same structure as items A and G.
   - The verdict uses all 8 sections of a collection. The 7 confirmation sections and the window campaign's development section (40TopL, GBM108_positive) are reported separately beside it, at both scales.
@@ -269,13 +269,20 @@ The rules below are copied from the chat entries, which fixed them before any ou
   - `run_window_e79_campaign.sh`: 32 tasks (0–15 p7, 16–31 p9). It refuses to run unless the four audit summaries are `valid`.
   - `submit_window_e79_campaign.sh`: the pilot (task 8, 40TopL p7) alone, then the rest via `--indices` (`bigbatch` cap of 48 submitted jobs per user).
   - Estimated cost from p5 (24 slots, GBM22_2 1.7 h, 3.85 GB GPU): GBM p9 (80 slots) about 5–6 h and about 12 GB; about 65 GPU-hours for all of E.
-- **Test:** `test_window_rule_verdict_and_separate_development_report` in `test_fair_scoring_arms.py` (8/8 pass locally).
 
 **Item D: RCC feasibility** (chat 15 October 13:00, plus 15:35 point 4; go/no-go by the end of Friday 16 October).
 
 - **Environment:** a separate `rcc_env` (conda-forge and bioconda: R 4.5.3, Cardinal 3.12.1, CardinalIO 1.8.0, rhdf5 2.56.1), created on 15 October with Zayd's OK. `s3pl_env` is untouched.
 - **Job:** `run_rcc_feasibility.sh` (CPU). It checks the archive SHA-256, extracts `rcc.rda` to job-local scratch, then runs `scripts/rcc_feasibility_export.R` (`rcc_env`), which loads it through Cardinal or, failing that, the legacy slots. It records runs and per-pixel labels, and exports each fully labelled run as an HDF5 in the project layout to `/datasets/zsuliman/msi_data/rcc_cardinal/`, with labels 0..K−1 by sorted level. Each export is audited with the data-contract audit (collection `rcc`).
 - **Decision** (`results/validation/rcc_feasibility/go_no_go.json`): go only if all four criteria hold. **(reading)** Criterion 4 counts as met only if at least 4 labelled sections pass the audit, since otherwise criterion 3 has no usable sections.
+- **Unlabelled (NA) pixels: option (a), predeclared on 15 October 19:37 (supervisor chat), before any RCC export or score.**
+  - NA is kept as a third class, `unannotated`. K = 3, and every pixel is kept so the spatial grid stays intact. This mirrors CAC, where background is a scored class.
+  - Encoding: the sorted annotated levels first, then `unannotated` last (cancer 0, normal 1, unannotated 2 if the levels are those two). The encoding is written to the report.
+  - Criterion 3 means "≥ 4 runs with pixel-level cancer **and** normal labels". NA pixels don't disqualify a run. Every run with all annotated levels present (and finite, non-negative spectra) is exported.
+  - **The nature of NA is reported descriptively,** never used to change the design. The report gives per-class TIC (median, mean, 10th/90th percentiles) for each run. It also gives where NA pixels lie: the fraction on the run's bounding-box edge, the fraction touching unmeasured grid, and the fraction touching an annotated pixel. Together with the audit spot-check, these say whether NA is mainly off-tissue border or unannotated tissue. If it is tissue, the report says so beside every RCC number.
+  - The budget is K_bin = |R@0.4| over all three classes, as specified.
+  - Implementation: `scripts/rcc_feasibility_export.R` and `slurm_jobs/run_rcc_feasibility.sh`. Test: `test_rcc_labels_must_be_consecutive_classes` now also checks that a K = 3 export passes the audit.
+  - The first outputs (68633) are moved aside, not deleted, before the rerun; the rerun needs Zayd's OK.
 - The RCC run specification (if go) is written here before any RCC training job.
 
 ## 7. Decision thresholds
@@ -522,6 +529,15 @@ A test rebuilds the IG matched groups from these files.
       - Meanwhile 10 G section-arms completed on other nodes and 4 were running. The C2 remainder 68675 was left at `DependencyNeverSatisfied`.
       - Following the standing rule (record the node, retry only the failed indices, within the runs Zayd approved): mscluster72 was recorded in `cluster_node_issues.txt` and added to the local `gpu_cuda_quarantine.txt` (the cluster copy changes through Zayd's next sync). 68675 was cancelled.
       - Resubmitted with mscluster72 excluded explicitly: **G retry 68717** (tasks 15–33), **C2 pilot 68718** (160TopL) and the **C2 remainder 68719** (`afterok:68718`). No specification changed.
+    - **17:34 UTC / 19:34 SAST:** no new failures. G is 30/34 complete (all 16 G1 sections done; G2 GBM tasks 20–22 and G3 task 33 running). C2 pilot 68718_9 completed in 12:27; the remainder 68719 is running at the 6-job cap. A all 68621, E audit 68632, RCC 68633 and test job 68616 had all completed.
+    - **Supervisor decisions, 15 October 19:37 (before any RCC export, any p5 score at K_bin, or any E output):**
+      1. **RCC:** option (a), NA kept as a third class `unannotated` (Section 6.1 item D). **The first run's no-go was a reading error by Code**: `rcc_feasibility_export.R` counted a run as labelled only if it had no unlabelled pixels, which the criterion never required. The 68633 outputs (`results/validation/rcc_feasibility/` and the empty `/datasets/zsuliman/msi_data/rcc_cardinal/`) are to be moved aside, not deleted, and the job rerun with the corrected code, both with Zayd's OK.
+      2. **p5 GBM at the old counts:** approved for the A(a)/(b) route. It was found from metadata before any p5 score at K_bin existed.
+      3. **E rule:** confirmed, with P1 added alongside bin level so E matches A and G (Section 6.1). The supervisor implemented it in `window_rule()` and added `test_window_rule_requires_p1_as_well_as_bin_level`; Code re-ran `test_fair_scoring_arms` locally, 9/9 pass.
+      4. **Go-aheads:** G1 fair scoring now; G2 and G3 fair scoring when their training finishes; the E pilot after the `sha256sum` check. Each still needs Zayd's OK.
+      5. **Capacity:** the order is unchanged. If the 6-GPU cap makes E finish after Tuesday 20 October, the missing sections are reported as not done; G and C2 are not cut. C3 stays last and will probably be dropped, which is acceptable and will be recorded as such.
+    - **Pre-submit check:** all 10 files from commits `bde92e6`/`7eda6df` matched on the cluster by `sha256sum` (`cluster_node_issues.txt` differs by CRLF only).
+    - **Submitted with Zayd's OK at 18:02 UTC / 20:02 SAST:** **68800**, G1 fair scoring (`attention_centremask_p50`, indices 0–15, `bigbatch`, `--max-concurrent 2`), and **68801**, the E pilot (task 8, 40TopL `uniform_p7`).
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).

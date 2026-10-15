@@ -83,6 +83,13 @@ class DataContractAuditTests(unittest.TestCase):
             root = Path(temporary)
             h5_path, mask_path = self.make_grid(root, lambda x, y: int(y > 4))
             audit(h5_path, mask_path, root / "audit", "rcc", windows=(3, 9))
+        # K = 3: cancer 0, normal 1, unannotated 2 (chat 2026-10-15 19:37, option a).
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            h5_path, mask_path = self.make_grid(
+                root, lambda x, y: 2 if x in (1, 10) else int(y > 4))
+            audit(h5_path, mask_path, root / "audit", "rcc")
+            self.assertIn('"status": "valid"', (root / "audit" / "summary.json").read_text())
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             h5_path, mask_path = self.make_grid(root, lambda x, y: 2 * int(y > 4))

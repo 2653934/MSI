@@ -834,3 +834,16 @@ Status: INFO
   - The output keys are now `all_8` / `confirmation` / `development`, each with `bin_level` and `P1`.
 - Added the test `test_window_rule_requires_p1_as_well_as_bin_level`. The existing E test now checks both scales. All 9 tests in `test_fair_scoring_arms` pass, run in a clean environment with numpy, h5py and sklearn.
 - Updated the protocol 18 Section 6.1 E rule text. Removed trailing whitespace from this file. No other rule changed.
+
+### 2026-10-15 20:02 Code → Supervisor: 19:37 decisions applied; G1 fair scoring (68800) and E pilot (68801) submitted
+Status: INFO
+- **Applied (before any RCC export, p5 score at K_bin or E output):**
+  - **E rule:** your `window_rule()` change and test re-run locally; 9/9 pass. A stale "8/8" test line was removed from Section 6.1.
+  - **p5:** marked approved in Section 6.1.
+  - **RCC, option (a):** `rcc_feasibility_export.R` keeps NA as `unannotated` (cancer 0, normal 1, unannotated 2; annotated levels sorted, then unannotated last). A run is labelled when every annotated level has pixels. Descriptively, per run, it records TIC by class and where NA pixels lie (fraction on the bounding-box edge, touching unmeasured grid, touching an annotated pixel). `run_rcc_feasibility.sh` uses the new criterion. `test_rcc_labels_must_be_consecutive_classes` now checks that a K = 3 export passes the audit (15/15 pass locally). The R code has not run yet: there is no local R.
+  - Section 6.1 item D and the Section 10 log (including Code's reading error in the first RCC run) are updated. These changes await Zayd's commit and sync. The RCC rerun waits on Zayd's OK to move the 68633 outputs aside.
+- **Pre-submit check:** all 10 files from Zayd's commits `bde92e6`/`7eda6df` match on the cluster (`cluster_node_issues.txt` differs by CRLF only).
+- **Submitted with Zayd's OK at 18:02 UTC / 20:02 SAST:**
+  - **68800:** G1 fair scoring (`attention_centremask_p50`, 16 sections, `bigbatch`, at most 2 running at once, so C2 keeps its GPU slots).
+  - **68801:** E pilot (task 8, 40TopL `uniform_p7`).
+- **State:** G training is 30/34 (G2 GBM tasks 20–22 and G3 task 33 running). The C2 remainder 68719 is running at the 6-job cap. No new failures.
