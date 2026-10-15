@@ -166,4 +166,16 @@ mscluster50
   Classification: Repeated CUDA access failure in our environment; root cause
   and current node health have not been established.
 
-Last updated: 2026-09-20
+mscluster72
+  Symptom: PyTorch CUDA initialization returned "CUDA unknown error" and exposed
+  zero CUDA devices; every task stopped at the CUDA warm-up (2-30 s) before any
+  data load, training or output.
+  Evidence: 15 October 2026, 20 consecutive tasks on mscluster72 (item G array
+  68643 tasks 15-33; C2 pilot 68644_9); logs/centremask-p50-68643_15.err to
+  _33.err and logs/s3pl-e100-68644_9.err. The same code completed on
+  mscluster43/54/71/73/80/89 at the same time. (mscluster72 had completed job
+  54112 in September, so its state has changed.)
+  Classification: Repeated CUDA access failure in our environment.
+  Status: Excluded from 15 October retries; added to the CUDA quarantine.
+
+Last updated: 2026-10-15
