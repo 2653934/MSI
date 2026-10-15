@@ -16,13 +16,14 @@ import summarise_fair_scoring_arms as arms
 from spatial_msipl.tests.test_fair_scoring_summary import CAC, GBM, P1, P3, provenance
 
 
-def summary(partitions, ig, posterior=0.6, k_bin=100):
+def summary(partitions, ig, posterior=0.6, k_bin=100, peak_ig=None):
+    peak_ig = ig if peak_ig is None else peak_ig
     return {
         "status": "complete", "provenance": provenance(partitions), "K_bin": k_bin,
         "bin_level": {"integrated_gradients": {"1.0": {"mSCF1": ig}},
                       "posterior_abs_pcc_balanced": {"1.0": {"mSCF1": posterior}}},
         "peak_level": {name: {"methods": {
-            "integrated_gradients": {"matched_K_peak": {"mSCF1": ig}},
+            "integrated_gradients": {"matched_K_peak": {"mSCF1": peak_ig}},
             "posterior_abs_pcc_balanced": {"matched_K_peak": {"mSCF1": posterior}}}}
             for name in partitions},
     }
@@ -44,12 +45,12 @@ class ArmsDecisionTests(unittest.TestCase):
             item.stop()
         self.tmp.cleanup()
 
-    def write(self, section, arm, ig, code="c0de"):
+    def write(self, section, arm, ig, code="c0de", peak_ig=None):
         extra = arm not in arms.EXISTING_ARMS
         for index, scope in enumerate(("bin_level_only", "with_approved_partitions")):
             partitions = {} if index == 0 else (
                 {"P1": P1} if section.startswith("GBM") else {"P1": P1, "P3": P3})
-            record = summary(partitions, ig)
+            record = summary(partitions, ig, peak_ig=peak_ig)
             record["provenance"]["code"] = {"evaluate_fair_scoring_baselines.py": code}
             path = self.scopes[scope][int(extra)] / f"{section}_seed1" / arm / "summary.json"
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,6 +100,35 @@ class ArmsDecisionTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as raised:
             self.decide()
         self.assertIn("refusing to mix", str(raised.exception))
+
+    def test_window_rule_verdict_and_separate_development_report(self):
+        for i, section in enumerate(CAC):
+            self.write(section, "uniform_mean", 0.50)
+            self.write(section, "uniform_p9", 0.53 if i < 6 else 0.49)   # mean +0.02, 6/8
+            self.write(section, "uniform_p5", 0.60)
+        rules = self.decide()["e_windows_vs_real_3x3"]
+        p9 = rules["uniform_p9"]["CAC"]
+        self.assertEqual(p9["verdict"], "uniform_p9 helps over real 3x3")
+        for scale in ("bin_level", "P1"):
+            self.assertEqual(p9["development"][scale]["sections"], 1)
+            self.assertEqual(p9["confirmation"][scale]["sections"], 7)
+            self.assertEqual(p9["all_8"][scale]["sections"], 8)
+        self.assertEqual(rules["uniform_p5"]["CAC"]["verdict"], "descriptive only (existing arm)")
+        self.assertIn("no verdict", rules["uniform_p9"]["GBM"]["verdict"])
+
+    def test_window_rule_requires_p1_as_well_as_bin_level(self):
+        # Supervisor entry 15 October 19:37: "helps" needs both scales.
+        for i, section in enumerate(CAC):
+            self.write(section, "uniform_mean", 0.50)
+            self.write(section, "uniform_p7", 0.53, peak_ig=0.50)  # bin +0.03 8/8, P1 0.00
+        for section in GBM:
+            self.write(section, "uniform_mean", 0.50)
+            self.write(section, "uniform_p7", 0.505)               # +0.005 at both scales
+        rules = self.decide()["e_windows_vs_real_3x3"]["uniform_p7"]
+        self.assertEqual(rules["CAC"]["verdict"], "mixed (does not meet the 'helps' rule)")
+        self.assertEqual(rules["CAC"]["all_8"]["bin_level"]["positive_sections"], 8)
+        self.assertEqual(rules["CAC"]["all_8"]["P1"]["positive_sections"], 0)
+        self.assertEqual(rules["GBM"]["verdict"], "uniform_p7 equivalent to real 3x3")
 
     def test_g3_and_mechanism_rules(self):
         for section, real, shuffled in (("160TopL", 0.50, 0.47), ("GBM22_2", 0.50, 0.49)):

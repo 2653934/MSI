@@ -16,7 +16,14 @@ item A and 10:00 item G; protocol 18 Section 6.1), never chosen from outcomes:
   wording applies to the fall-through label);
 * G3: G1 minus G3 >= 0.02 on both 160TopL and GBM22_2, bin level, descriptive;
 * G mechanism: G1 median normalised attention entropy < 0.95 on both
-  exploratory sections.
+  exploratory sections;
+* E (13:00 item E; supervisor entry 15 October 19:37): a larger uniform window
+  "helps" if its IG mSCF1 at K_bin beats real 3x3 (uniform_mean) by >= 0.02 in
+  mean and is positive in >= 6/8 sections of a collection, at bin level AND
+  under P1; "equivalent" if |mean| < 0.02 at both scales; otherwise "mixed".
+  The verdict uses all 8 sections; the 7 confirmation sections and the window
+  campaign's development section are also reported separately at both scales.
+  p7 and p9 get the verdict; p5 is reported descriptively.
 No collection with fewer than 8 sections gets a verdict.
 """
 
@@ -39,7 +46,11 @@ SCOPES = {
 }
 EXISTING_ARMS = ("central_only", "uniform_mean")
 EXTRA_ARMS = ("attention", "attention_centremask_p50", "uniform_centremask_p50",
-              "shuffled_attention_centremask_p50")
+              "shuffled_attention_centremask_p50", "uniform_p5", "uniform_p7", "uniform_p9")
+POSTERIOR_ARMS = ("attention", "attention_centremask_p50", "uniform_centremask_p50",
+                  "uniform_p5", "uniform_p7", "uniform_p9")
+E_ARMS = ("uniform_p7", "uniform_p9")
+WINDOW_DEVELOPMENT = {"40TopL", "GBM108_positive"}
 COMPARISONS = (
     ("A: attention vs uniform_mean", "attention", "uniform_mean"),
     ("G rule 2: G1 vs standard attention", "attention_centremask_p50", "attention"),
@@ -179,6 +190,38 @@ def g3_rule(bins):
         "label": "descriptive, two development sections"}
 
 
+def window_rule(bins, parts, arm, collection):
+    common = [s for s in sections_of(bins, arm, collection)
+              if (s, "uniform_mean") in bins and (s, arm) in parts and (s, "uniform_mean") in parts]
+    if len(common) != 8:
+        return {"sections": common,
+                "verdict": f"incomplete collection ({len(common)}/8 sections); no verdict"}
+
+    def compare(sections):
+        return {
+            "bin_level": paired([ig_bin(bins[(s, arm)]) for s in sections],
+                                [ig_bin(bins[(s, "uniform_mean")]) for s in sections]),
+            "P1": paired([ig_partition(parts[(s, arm)], "P1") for s in sections],
+                         [ig_partition(parts[(s, "uniform_mean")], "P1") for s in sections]),
+        }
+
+    all_sections = compare(common)
+    record = {"sections": common, "all_8": all_sections,
+              "confirmation": compare([s for s in common if s not in WINDOW_DEVELOPMENT]),
+              "development": compare([s for s in common if s in WINDOW_DEVELOPMENT])}
+    if arm in E_ARMS:
+        if all(v["mean_difference"] >= PRACTICAL and v["positive_sections"] >= 6
+               for v in all_sections.values()):
+            record["verdict"] = f"{arm} helps over real 3x3"
+        elif all(abs(v["mean_difference"]) < PRACTICAL for v in all_sections.values()):
+            record["verdict"] = f"{arm} equivalent to real 3x3"
+        else:
+            record["verdict"] = "mixed (does not meet the 'helps' rule)"
+    else:
+        record["verdict"] = "descriptive only (existing arm)"
+    return record
+
+
 def mechanism_rule():
     medians = {}
     for section in EXPLORATORY:
@@ -209,10 +252,13 @@ def main():
         if any(a == arm_a for (_, a) in bins):
             decisions["comparisons"][label] = {
                 c: arm_comparison(bins, parts, arm_a, arm_b, c) for c in ("GBM", "CAC")}
-    for arm in EXTRA_ARMS[:3]:
+    for arm in POSTERIOR_ARMS:
         if any(a == arm for (_, a) in bins):
             decisions["ig_vs_posterior"][arm] = {
                 c: ig_vs_posterior(bins, parts, arm, c) for c in ("GBM", "CAC")}
+    decisions["e_windows_vs_real_3x3"] = {
+        arm: {c: window_rule(bins, parts, arm, c) for c in ("GBM", "CAC")}
+        for arm in ("uniform_p5",) + E_ARMS if any(a == arm for (_, a) in bins)}
     decisions["g3_spatial_specificity"] = g3_rule(bins)
     decisions["g_mechanism"] = mechanism_rule()
     decisions["_campaign_provenance"] = {"bin_level_only": bin_campaign,

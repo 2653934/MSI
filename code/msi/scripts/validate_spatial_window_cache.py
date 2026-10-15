@@ -13,7 +13,7 @@ from spatial_msipl.preprocessing import (
 
 
 CACHE_VARIANTS = (
-    "uniform_p5", "zero_p3", "shuffled_p3",
+    "uniform_p5", "uniform_p7", "uniform_p9", "zero_p3", "shuffled_p3",
     "real_attention", "shuffled_attention",
 )
 
@@ -27,7 +27,7 @@ def cache_context_mode(variant):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True)
-    parser.add_argument("--window-size", required=True, type=int, choices=(3, 5))
+    parser.add_argument("--window-size", required=True, type=int, choices=(3, 5, 7, 9))
     parser.add_argument("--variant", required=True, choices=CACHE_VARIANTS)
     args = parser.parse_args()
     context_mode = cache_context_mode(args.variant)

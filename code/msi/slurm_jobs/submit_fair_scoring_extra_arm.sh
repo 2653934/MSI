@@ -21,7 +21,7 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 case "$arm" in
-    attention|attention_centremask_p50|uniform_centremask_p50) ;;
+    attention|attention_centremask_p50|uniform_centremask_p50|uniform_p5|uniform_p7|uniform_p9) ;;
     shuffled_attention_centremask_p50)
         [[ "$selection" =~ ^(5|9|5,9|9,5)$ ]] || { echo "G3 exists for indices 5 (GBM22_2) and 9 (160TopL) only" >&2; exit 2; } ;;
     *) echo "Unknown arm: $arm" >&2; exit 2 ;;

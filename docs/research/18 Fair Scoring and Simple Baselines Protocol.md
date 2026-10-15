@@ -254,6 +254,23 @@ The rules below are copied from the chat entries, which fixed them before any ou
 - Run: the existing `audit_spatial_msipl_data_contract.sh` array (40TopL, 280TopL with its partial coverage, GBM108_positive, GBM22_2) with `AUDIT_WINDOWS="3 5 7 9"` and `AUDIT_OUTPUT_ROOT=results/diagnostics/spatial_msipl_data_contract_windows`.
 - The E training specification (`uniform_p7`, `uniform_p9`) is written here after this audit passes and before any E training job.
 
+**Item E, step 2: training and scoring specification** (written 15 October, about 17:30 SAST, after audit 68632 passed on all four sections and before any E training job; nothing submitted).
+
+- **Arms:** `uniform_p7` and `uniform_p9` on all 16 sections, trained exactly like `uniform_p5`: `uniform_mean`, 100 epochs, seed 1, batch 128, lr 1e-3, cosine schedule, cached loader on GBM (checked against streaming by `validate_spatial_window_cache.py`, extended to 7 and 9) and streaming on CAC. The only code change is that 7 and 9 are allowed as `--window-size` values.
+- **Root:** `results/experiments/spatial_window_e79/<section>_seed1/<arm>/`; checkpoints in `.../window_e79/`.
+- **Evaluation:** GMM K 2 (GBM) and 3 (CAC), IG with 12 pixels per component, then matched peak evaluation at the **production K_bin**, then the unchanged fair-scoring evaluator (`run_fair_scoring_extra_arm.sh uniform_p7|uniform_p9`).
+- **p5 found at the old counts (15 October, before any p5 score at K_bin was computed or read):** the existing `uniform_p5` GBM evaluations used the pre-tuning counts, as attention did. So p5 goes through the same approved A(a)/(b) route (reproduce the saved old-count list, then re-evaluate at K_bin into `peak_evaluation_tuned_count/`) via `run_fair_scoring_extra_arm.sh uniform_p5`. CAC p5 is already at K_bin. **(for supervisor confirmation)**
+- **Rule (13:00 item E; confirmed and extended by the supervisor on 15 October 19:37, before any E output existed):** a larger window "helps" only if its IG mSCF1 at K_bin beats real 3×3 (`uniform_mean`) by ≥ 0.02 in mean **and** is positive in ≥ 6/8 sections of a collection, **at bin level and under P1**.
+  - If |mean| < 0.02 at both scales, it is "equivalent". Anything else is "mixed", meaning it does not meet the "helps" rule. This is the same structure as items A and G.
+  - The verdict uses all 8 sections of a collection. The 7 confirmation sections and the window campaign's development section (40TopL, GBM108_positive) are reported separately beside it, at both scales.
+  - p7 and p9 get the verdict; p5 is reported descriptively.
+  - Implementation: `window_rule()` in `scripts/summarise_fair_scoring_arms.py`. Tests: `test_window_rule_verdict_and_separate_development_report` and `test_window_rule_requires_p1_as_well_as_bin_level` in `test_fair_scoring_arms.py`. All 9 tests in that module pass.
+- **Jobs:**
+  - `run_window_e79_campaign.sh`: 32 tasks (0–15 p7, 16–31 p9). It refuses to run unless the four audit summaries are `valid`.
+  - `submit_window_e79_campaign.sh`: the pilot (task 8, 40TopL p7) alone, then the rest via `--indices` (`bigbatch` cap of 48 submitted jobs per user).
+  - Estimated cost from p5 (24 slots, GBM22_2 1.7 h, 3.85 GB GPU): GBM p9 (80 slots) about 5–6 h and about 12 GB; about 65 GPU-hours for all of E.
+- **Test:** `test_window_rule_verdict_and_separate_development_report` in `test_fair_scoring_arms.py` (8/8 pass locally).
+
 **Item D: RCC feasibility** (chat 15 October 13:00, plus 15:35 point 4; go/no-go by the end of Friday 16 October).
 
 - **Environment:** a separate `rcc_env` (conda-forge and bioconda: R 4.5.3, Cardinal 3.12.1, CardinalIO 1.8.0, rhdf5 2.56.1), created on 15 October with Zayd's OK. `s3pl_env` is untouched.
@@ -477,6 +494,34 @@ A test rebuilds the IG matched groups from these files.
     2. **`CLAUDE.md`:** the stale "Next" (no RCC, stopped until the meeting, the key still to fill in, an old uncommitted list) was replaced by a pointer to Section 6.1 and the four chat entries of 15 October, plus the agreed submission order.
     3. **Memory:** `run_fair_scoring_extra_arm.sh` is 32G → 8G, because the unchanged evaluator peaked at 0.91 GB (GNU time over all 32 tasks of 66053/66114). `run_rcc_feasibility.sh` is 32G → 8G, with no measured peak: `rcc.rda` is 24.8 MB compressed. Each justification is in its job header.
     - Re-run locally afterwards: `test_centre_masking`, `test_fair_scoring_arms` and `test_fair_scoring_summary`, 21 tests, all pass.
+  - **Cluster check and first submissions (15 October; Zayd committed `496825d` and synced):**
+    - **Checksums:** 36 of 37 round files (all new and changed code, plus the unchanged evaluator, its modules, the section list and the CUDA quarantine) match `HEAD` by `sha256sum`. The exception is `baselines/s3pl/test.py`. Its local working copy, and therefore the cluster copy synced on 8 October, has CRLF line endings that git normalises on commit. With CRLF converted to LF it is byte-identical to `HEAD`, so Python runs the same code; it was not changed.
+    - **Test job 68616** (`bigbatch`, mscluster43, 5:26 elapsed): **119 tests ran and passed, none skipped**, including all of `test_fair_scoring_arms` (7), `test_centre_masking` (8) and `test_neighbourhood` (12). Log: `results/validation/fair_scoring_env_tests/68616_unittest.log`.
+    - **A pilot 68620** (attention arm, GBM22_2; A(b) reproduction, then A(a) re-evaluation, then bin-level and approved-partition fair scoring) was submitted at 14:12 UTC / 16:12 SAST on `bigbatch` with Zayd's OK, after 68616 passed.
+    - **A pilot result:** 68620_5 completed with exit 0 in 5:05 (mscluster43; `sacct` MaxRSS blank) and an empty `.err`. A(b) saved-list reproduction `passed`; A(a) re-evaluation at K_bin = 1028 complete; fair scoring `complete` in both scopes. No scores were read.
+    - **Submitted at 14:19 UTC / 16:19 SAST with Zayd's OK:** A all **68621** (indices 0–4 and 6–15; GBM22_2 done in the pilot) and the G pilot **68628** (task 9, 160TopL G1, alone via `--indices 9`). The other 33 G tasks are submitted only after the pilot is checked and Zayd approves. The per-user QOS job limit queues the tasks.
+    - **Submitted at 14:23 UTC / 16:23 SAST with Zayd's OK (`bigbatch`):** the E audit **68632** (array 0–3: 40TopL, 280TopL, GBM108_positive, GBM22_2; `AUDIT_WINDOWS="3 5 7 9"`, output `results/diagnostics/spatial_msipl_data_contract_windows/`, folder created before submission) and the RCC feasibility job **68633**. Neither had existing outputs. Zayd also approved, on condition the G pilot passes: the remaining 33 G tasks and C2.
+    - **14:28 UTC / 16:28 SAST:**
+      - **A all 68621:** all 15 tasks exit 0, every task `complete` in both scopes, with A(b) passed on every GBM section. No scores were read.
+      - **G pilot 68628_9** (160TopL G1): exit 0 in 2:51. Training `complete`, IG `valid`, peak evaluation `complete`, mechanism check `valid`; the masking tests ran in the job (11 OK).
+      - **G rest 68643** (33 tasks) was submitted as approved.
+      - **C2 pilot 68644** (160TopL) was submitted. Its `afterok` array for the other 15 sections was **refused by the `bigbatch` QOS (`MaxSubmitPU` 48; `MaxJobsPU` 6 running)**, because G's 33 tasks were already queued.
+      - A watcher submits the C2 remainder when the queue allows: with `afterok:68644` while the pilot is pending or running, or without it if the pilot has completed. It submits nothing if the pilot failed. The job IDs go to `reproducibility/s3pl_e100/seed1_released/provenance/slurm_job_ids.txt`.
+    - **E audit 68632:** `valid` on 40TopL, 280TopL and GBM108_positive for windows 3/5/7/9; GBM22_2 was still running at 14:30 UTC.
+    - **RCC 68633: recorded as no-go, but the no-go comes from Code's reading, not the data.**
+      - It completed in 21 s. Criterion 1 (Cardinal 3.12.1 in `rcc_env`) and criterion 2 (`rcc.rda` loads: a legacy `MSImageSet`, converted through Cardinal, 16,000 pixels × 10,200 m/z, 8 runs) are met.
+      - **All 8 runs have pixel-level cancer and normal labels** (81–793 pixels per class per run). Each also has 609–2,763 pixels with no diagnosis (NA).
+      - `rcc_feasibility_export.R` counted a run as labelled only if it had **no** unlabelled pixels. That condition was Code's reading; the supervisor's criterion 3 asks only for pixel-level class labels on ≥ 4 sections. So nothing was exported, and criteria 3 and 4 were recorded false.
+      - How to treat the NA pixels is a design decision, posted to the supervisor chat. The output in `results/validation/rcc_feasibility/` and the empty export folder stay as they are; any rerun needs them moved aside with Zayd's OK.
+    - **15:14 UTC / 17:14 SAST:**
+      - The watcher submitted the C2 remainder as **68675** (indices 0–8 and 10–15, `afterok:68644`, quarantine excluded).
+      - **E audit 68632 passed on all four sections** (40TopL, 280TopL, GBM108_positive, GBM22_2): every task exit 0 and `status: valid` for windows 3/5/7/9. The E training specification can now be written.
+      - G: 2/34 section-arms complete (160TopL and GBM108_positive G1; 68643_0 took 43:51).
+    - **15:48 UTC / 17:48 SAST: node failure on mscluster72 (operational, not scientific).**
+      - 20 tasks failed at the CUDA warm-up with "CUDA unknown error" and zero devices, after 2–30 s, before any data load or output: G 68643 tasks 15–33 and the C2 pilot 68644_9. All of them ran on mscluster72.
+      - Meanwhile 10 G section-arms completed on other nodes and 4 were running. The C2 remainder 68675 was left at `DependencyNeverSatisfied`.
+      - Following the standing rule (record the node, retry only the failed indices, within the runs Zayd approved): mscluster72 was recorded in `cluster_node_issues.txt` and added to the local `gpu_cuda_quarantine.txt` (the cluster copy changes through Zayd's next sync). 68675 was cancelled.
+      - Resubmitted with mscluster72 excluded explicitly: **G retry 68717** (tasks 15–33), **C2 pilot 68718** (160TopL) and the **C2 remainder 68719** (`afterok:68718`). No specification changed.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).

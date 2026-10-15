@@ -155,7 +155,7 @@ index d7f9c97..3c351f4 100644
 @@ -17,7 +23,7 @@ set -euo pipefail
  PROJECT_ROOT="$HOME/msi"
  cd "$PROJECT_ROOT"
- 
+
 -selection="${1:?Usage: $0 pilot|gbm [--partition P] [--mem M] [--time-12 T] [--time-48 T] [--time-192 T]}"
 +selection="${1:?Usage: $0 pilot|gbm [--partition P] [--mem M] [--time-12 T] [--time-48 T] [--time-192 T] [--counts LIST] [--arms LIST]}"
  shift
@@ -179,7 +179,7 @@ index d7f9c97..3c351f4 100644
          *) echo "Unknown argument: $1" >&2; exit 2 ;;
      esac
  done
- 
+
 +for total in $counts; do
 +    case "$total" in 12|48|192) ;; *) echo "Unknown count: $total" >&2; exit 2 ;; esac
 +done
@@ -191,7 +191,7 @@ index d7f9c97..3c351f4 100644
  [ -f "$quarantine" ] || { echo "Missing CUDA quarantine file: $quarantine" >&2; exit 1; }
  excludes=$(sed -e 's/\r$//' -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$quarantine" | sort -u | paste -sd, -)
 @@ -43,12 +60,17 @@ excludes=$(sed -e 's/\r$//' -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$quarantine" |
- 
+
  # Refuse up front if any output already exists, so a run is never half-submitted.
  outputs="results/diagnostics/gate_d_pixel_counts/${dataset}_seed1"
 -for arm in central_only uniform_mean; do
@@ -209,10 +209,10 @@ index d7f9c97..3c351f4 100644
 +        fi
      done
  done
- 
+
 @@ -57,8 +79,8 @@ done
  mkdir -p "$outputs/central_only" "$outputs/uniform_mean" logs
- 
+
  printf '%-16s %-13s %-5s %-10s %s\n' DATASET ARM N TIME JOB
 -for arm in central_only uniform_mean; do
 -    for total in 12 48 192; do
@@ -521,3 +521,316 @@ Context: I checked `gate_d_bic.csv`, all four `bic_selection.json` files (every 
    - Then stop. No report or claim-map edits until Hairong has responded to the framing on 19 October.
    - The cluster-key details in `cluster_sync.md` stay for Zayd.
 
+### 2026-10-15 13:00 Supervisor → Code: Final experiment round (A–F), predeclared here; experiments end Tuesday 20 October
+Status: OPEN, for Code. Each `sbatch` needs Zayd's OK. Read results only after Zayd syncs.
+
+**Context:**
+- Zayd wants the research and report finished by 31 October, so **experiments stop on Tuesday 20 October**. Anything not synced by then is reported as not done.
+- The Hairong meeting is Monday 19 October; partial results are fine for it.
+- Already handled by the Supervisor (uncommitted, for Zayd's review):
+  - `check_s3pl_cac_centre_control_seed2.sh` now exits 1 unless 16/16 runs verify;
+  - the key details in `cluster_sync.md` are filled in;
+  - figure 15 in the meeting pack is rebuilt.
+- `seed2_init2_order1/run_logs/` stays untracked, but **do not delete it**. If item C uses its losses, extract them to a tracked CSV.
+- Every new comparison runs through the existing fair-scoring code: the same K_bin budget, the posterior-|PCC| baseline, and peak-level P1.
+- **The rules below are fixed now, before any output exists. Do not change them after seeing results.**
+
+**Order:**
+1. First, the work that needs no compute: B and C1.
+2. Then submit the long GPU jobs early: C2, C3 and E.
+3. Then A (CPU).
+4. D runs in parallel as a strict feasibility check.
+
+**A. Learned attention through the fair-scoring test (CPU only, saved artifacts).**
+- **Why:** the main neighbourhood comparison so far is uniform vs centre-only. A learned aggregator has never been put through the fair test.
+- **Inputs:** the existing seed-1 real-attention models on all 16 sections (`experiments/spatial_attention_context/<section>_seed1/real_attention/`). Add a third arm, `attention`, to the fair-scoring evaluator (bin level and P1/P3 under the approved partitions). This only adds an arm; existing arms and outputs must not change. Produce a new summary covering all three arms.
+- **Rule, per collection:** "attention improves on uniform" requires a mean attention − uniform IG mSCF1 of ≥ +0.02, and a positive difference in ≥ 6/8 sections, at bin level **and** under P1. Within ±0.02 counts as "equivalent". Anything else is "mixed". Also report attention IG vs the posterior-|PCC| baseline, using the existing Section 7 rules and the Section 7.1 wording.
+- **Check first:** the attention models' K_bin and GMM settings must match the other arms, and the saved attention IG list must reproduce exactly before any scoring (the same strict reproduction rule as the other arms). If it doesn't reproduce, stop and post here.
+
+**B. Runtime and cost table for all 16 sections (no new runs).**
+- From the existing training and attribution summaries, build one table per section: VAE centre-only, uniform and attention training time; S3PL 10-epoch training time; GPU model; epochs.
+- Label the timer boundaries explicitly. The historical VAE timer includes HDF5 loading; the cached runs exist only for GBM108_positive.
+- Put it in `publication/current_evidence/runtime_all_sections.csv`, made by a script.
+
+**C. Training length: why 10 epochs for S3PL and 100 for our VAE.**
+- **C1 (no compute):** plot the per-epoch training losses we already have:
+  - VAE histories for all 16 sections and both arms;
+  - S3PL GBM108_positive 10/25/50-epoch runs.
+
+  Produce `publication/current_evidence/training_curves_*.csv` and a figure.
+- **C2 (GPU): S3PL for 100 epochs on all 16 sections, seed 1, timed.**
+  - Use the same settings as the existing seed-1 baselines: the released RNG path, patch size 9 for CAC and 3 for GBM, as in the existing runs.
+  - Save checkpoints at epochs **10, 25, 50 and 100**, and evaluate each at the matched counts.
+  - Record per-epoch loss, per-epoch wall time, total wall time, peak RAM and GPU memory, and the GPU model.
+  - Use new artifact roots containing `e100`. Never overwrite the 10-epoch results.
+  - **Validation:** the epoch-10 checkpoint should reproduce the existing 10-epoch mSCF1 when the RNG path is identical. Report the difference; if it doesn't reproduce, explain why before interpreting the curve.
+  - **Reporting:** this is descriptive and has no verdict. Report the mSCF1 curve by epoch, per section and collection, and say whether 10 epochs is before, at or after the best of the four points. **Use these to report S3PL at 10 epochs (its published protocol) and at 100 epochs (the same length as our VAE). Never pick the best epoch per section.**
+- **C3 (GPU, development sections only): VAE training length.**
+  - GBM108_positive and 40TopL, centre-only and uniform, seed 1, 100 epochs.
+  - Save checkpoints at epochs 10, 25, 50 and 100, then GMM + IG + the posterior-|PCC| baseline at each, at K_bin.
+  - The epoch-100 result must reproduce the saved production result; if it doesn't, stop.
+  - Descriptive only. It justifies or questions the 100-epoch choice with the same evidence we use for S3PL.
+
+**D. RCC feasibility (strict time box: go/no-go by the end of Friday 16 October).**
+- **Go requires all four:**
+  1. Cardinal (or an equivalent reader) installs in a **separate** conda environment, so `s3pl_env` is untouched.
+  2. `rcc.rda` loads.
+  3. It has pixel-level class labels (for example cancer/normal) on at least 4 sections.
+  4. An exported HDF5 passes the existing data-contract audit: coordinates, masks, finite non-negative spectra.
+- If any fails, record "RCC not used" and the reason in protocol 18 and investigation notes, then stop.
+- **If go (predeclared now):** frozen pipeline as on GBM (centre-only and uniform VAE, 100 epochs, seed 1).
+  - **GMM K = the number of label classes.** Disclose this as class-informed, as on GBM and CAC.
+  - **Budget K_bin = |R@0.4|,** the reference-set size at PCC 0.4, exactly the definition that matches GBM. There are no released S3PL counts for RCC.
+  - **Scoring:** fair scoring with all baselines and the oracle. Legacy msiPL only if it runs without new tuning; otherwise leave it out and say so.
+  - **Primary RCC test:** posterior-|PCC| vs IG under the Section 7 rule. This is the first time the posterior-correlation finding is tested on data it wasn't discovered on.
+  - Write the RCC spec into protocol 18 Section 6 before any RCC training job.
+
+**E. Larger uniform windows: 7×7 and 9×9 (GPU, 16 sections, seed 1).**
+- **Why:** S3PL uses a 9×9 patch on CAC, so this gives window-size parity. Retrain `uniform_p7` and `uniform_p9` exactly like the existing `uniform_p5` arm, then fair-score them against p3 and p5.
+- **Descriptive, with one fixed rule:** a larger window "helps" only if it beats real 3×3 by ≥ 0.02 in mean and is positive in ≥ 6/8 sections in a collection (confirmation sections as before, development sections reported separately).
+- Check first that neighbour slots for 7×7 and 9×9 pass the data-contract audit, including edges and partial coverage on 280TopL.
+
+**F. Not now:** new architectures and S3PL-feature hybrids. (The attention objective change is now item G; see the next entry.)
+
+**Documentation:** keep protocol 18 Sections 6 and 10, the Results Record, `CLAUDE.md` "Current work" and `publication/current_evidence/` up to date as each item lands. Post here when each item is submitted, and again when it's synced and logged.
+
+### 2026-10-15 13:30 Supervisor → Code: Item G added: give attention a reason to use neighbours (predeclared)
+Status: OPEN, for Code. Same rules as the 13:00 entry: Zayd's OK for each `sbatch`, results read only after the sync, everything ends Tuesday 20 October.
+
+Zayd decided to run this now rather than wait for the meeting.
+
+**Diagnosis (from existing results):**
+- Learned 3×3 attention collapses to near-uniform weights: median normalised entropy 0.999 on 160TopL and 0.98 on GBM22_2.
+- Replacing them with uniform weights changes reconstruction negligibly.
+- Neighbours are nearly identical to the centre (median cosine about 0.98), and the objective reconstructs only the centre, which is fully visible. So nothing rewards selective attention.
+
+**Change: train with random centre masking.** Keep the architecture, decoder and output size identical; only the training input changes.
+- During training, with probability **p = 0.5 per sample**, the **centre spectrum fed to the encoder is replaced by zeros**. The neighbour context is left unchanged.
+- The reconstruction target is always the true, unmasked centre.
+- Evaluation, GMM, IG and fair scoring use the **unmasked** input, exactly as now.
+- The masking RNG is seeded and logged. Use the same epochs (100), seed 1 and optimiser.
+- Don't change the GMM K, the budget or the scoring.
+- Patch-level reconstruction (S3PL-style) is **not** used. On GBM a 9 × 85,062-bin decoder is impractical.
+
+**Arms (new artifact roots containing `centremask_p50`; never overwrite existing runs):**
+- **G1:** corrected 3×3 attention with centre masking, on all 16 sections.
+- **G2:** uniform 3×3 with centre masking, on all 16 sections. This separates "the objective helps" from "attention helps".
+- **G3 (spatial-specificity control):** shuffled-context attention with centre masking, on the two exploratory sections only (160TopL, GBM22_2). Use the same seed-1701 shuffle map as before.
+
+**Checks before any scoring:**
+- Unit tests: masking applies only in training mode; the target is the unmasked centre; masked rows give no gradient through the centre input; with p = 0 the run reproduces the existing training step for step on a synthetic example.
+- After training, a mechanism check that does not touch peak scores: the attention-weight entropy summary, using the existing diagnostic, on the same 128 sampled centres as before.
+
+**Rules (fixed now):**
+1. **Mechanism:** "masking made attention selective" if the median normalised entropy on both exploratory sections falls below 0.95. Otherwise report "attention stayed near-uniform".
+2. **Peak quality, per collection, at bin level and P1:**
+   - G1 vs existing standard attention (item A arm), and
+   - G1 vs G2,
+
+   each "improves" only if the mean gain is ≥ +0.02 and the difference is positive in ≥ 6/8 sections. Within ±0.02 is "equivalent"; anything else is "mixed".
+3. **Against the correlation baseline:** report G1 and G2 IG vs posterior-|PCC|, using the Section 7 rules and the Section 7.1 wording.
+4. **Spatial specificity (G3):** real-context masked attention must beat shuffled-context masked attention by ≥ 0.02 on both exploratory sections. Descriptive, two sections only.
+5. **No retuning of p after results.** If a sensitivity is wanted later, it's a separately labelled analysis.
+
+**Priority within the round:**
+1. A, B and C1 first (cheap).
+2. Then submit the GPU jobs in this order: G (implementation and tests first), C2, E, then C3.
+3. D in parallel.
+
+If GPU time runs short, drop C3 first, then E; G and C2 are the priority. Write the item G spec into protocol 18 Section 6 before submitting.
+
+### 2026-10-15 15:20 Code → Supervisor: Round of 15 Oct — B and C1 built; A blocked on GBM K_bin; G implemented, two readings to confirm
+Status: ANSWERED (see Supervisor entry of 2026-10-15 15:35)
+Context: work done locally on 15 October 15:20 SAST (13:20 UTC); nothing submitted. Note that this is dated before your entries of 15 October 13:00 and 13:30, which were already in the file when I read it. `batch` is still down (all 100 nodes offline at 13:10 UTC), so GPU and CPU jobs will need `bigbatch` with Zayd's OK. Specifications and log: protocol 18 Section 6.1 (item G) and Section 10 (entry "Final experiment round").
+Evidence: `code/msi/results/publication/current_evidence/runtime_all_sections.csv`, `training_curves_vae.csv`, `training_curves_s3pl.csv`, `training_curves.png`; `code/msi/scripts/build_runtime_and_training_curves.py`; `code/msi/src/spatial_msipl/tests/test_centre_masking.py`.
+
+1. **A is blocked on GBM: the attention models were evaluated at the old GBM counts.**
+   - The check-first step matches on GMM settings (all 16), IG settings (all 16) and K_bin on all 8 CAC sections.
+   - It fails K_bin on **all 8 GBM sections**: the attention peak evaluations used 530/458/453/478/589/464/686/523, against production K_bin 584/940/691/986/834/1028/695/911. So no saved attention IG list exists at K_bin to reproduce.
+   - **Proposed fix (CPU only; the same route the production GBM arms took to their tuned counts):**
+     - (a) Re-evaluate the frozen attention attributions at production K_bin with the unchanged `evaluate_spatial_msipl_attributed_peaks.py`, into a new folder `real_attention/peak_evaluation_tuned_count/`. Nothing is overwritten.
+     - (b) Before that, require the rebuilt IG ranking to reproduce the saved old-count list and its mSCF1 under the existing tie-aware rule, which ties the new list to the saved artifacts.
+     - (c) Then run the **unchanged** fair-scoring evaluator on all 16 sections, with the same code hash as the existing arms, plus a new three-arm summariser applying your rule.
+   - CAC needs only (c). Approve (a)–(c), or say what you want instead.
+2. **G: please confirm two readings before I submit** (both are in Section 6.1, written before any run):
+   - (a) The zeroed centre replaces the centre **everywhere in the model input**, including the attention query, not only in the encoder concatenation. Your test "masked rows give no gradient through the centre input" requires this. So for a masked row the attention weights depend on the neighbours only. The alternative, keeping the real centre as the query, would leak centre information through the weights.
+   - (b) The metric for rules 2 and 4 is IG mSCF1 at K_bin from the fair-scoring summaries, at bin level and under P1. I'll also evaluate G at the **production** K_bin, not at the old attention counts.
+3. **Done, for information:**
+   - **B:** 66 rows, each with its timer boundary labelled. The historical VAE trainer streams HDF5 inside the timer, which is why GBM108_positive centre-only shows 40,179 s streamed against 1,309 s in the cached rerun. Attention and the cached runs time their load separately. S3PL times the training loop only.
+   - **C1:** VAE histories (16 × 2 × 100 epochs) and the S3PL GBM108_positive 10/25/50-epoch runs, plus the 16 baselines. **The S3PL `train_history` is the last mini-batch MSE per epoch, not an epoch mean**, and is labelled so. No losses were taken from `run_logs/`.
+   - **G code:** masking in `train_vae` behind `centre_mask_probability`, which is 0 by default. **p = 0 reproduces the committed `HEAD` `train_vae` bit for bit** (history, weights, RNG) for attention and uniform. 7 new tests pass locally.
+   - Jobs written: `run/submit/check_centremask_campaign.sh`, 34 tasks, a 160TopL G1 pilot first.
+
+Not started yet: C2, C3, E (the data-contract audit supports only 3×3 and 5×5, so 7×7 and 9×9 need an audit extension first) and D. For D, the 4 October attempt failed because Cardinal was missing and the cluster R module could not see `/datasets`. I'll propose a separate `rcc_env` conda env to Zayd.
+
+### 2026-10-15 15:35 Supervisor → Code: Answers on A and G; go-aheads for E, D and C2
+Status: OPEN, for Code. Each `sbatch` needs Zayd's OK (on `bigbatch` while `batch` is down; log it as before).
+
+Good catches on the GBM attention counts and on the S3PL `train_history` definition. Both would otherwise have quietly biased the comparisons.
+
+1. **A: approve (a)–(c) as proposed.**
+   - Re-evaluate the frozen attention attributions at production K_bin, into the new `peak_evaluation_tuned_count/`. Before that, the tie-aware reproduction of the saved old-count list and its mSCF1 must pass.
+   - Then run the unchanged fair-scoring evaluator, with the same code hash, plus the three-arm summariser.
+   - CAC needs only (c).
+   - Log the GBM count mismatch in Section 10 as found, before any attention score at K_bin was read.
+2. **G: both readings confirmed.**
+   - (a) Yes: zero the centre **everywhere** in the model input, including the attention query. One consequence to record in Section 6.1 and test:
+     - `AttentionNeighbourhood.projection` has a bias, so for a masked row the query is `tanh(b)`, a learned constant that acts like a mask token. Masked-row weights can therefore still be non-uniform, chosen by neighbour content against that learned query.
+     - Add a unit test: for a masked row, the weights must depend only on the neighbours and the bias (unchanged when the true centre changes), and they are **not** forced to be uniform.
+     - Don't add any other mechanism (no separate mask token, no context-derived query). That would be a new design, not the predeclared one.
+   - (b) Yes: IG mSCF1 at **production K_bin**, from the fair-scoring summaries, at bin level and P1, for rules 2 and 4.
+3. **E: approve the audit extension first.** Extend the data-contract audit to 7×7 and 9×9, including edges and the partial coverage of 280TopL. It must pass on the same four sections before any E training job.
+4. **D: approve a separate `rcc_env` conda environment**, leaving `s3pl_env` untouched. Use it to get Cardinal and read `rcc.rda`. Read RCC from a path that the environment can see; copying the archive into `$HOME` is fine if `/datasets` isn't visible from R. The go/no-go deadline is still the end of Friday 16 October.
+5. **C2 addition: log the epoch-mean loss.** In the 100-epoch S3PL runs, also record the **epoch-mean** training loss alongside the existing last-mini-batch value, provided it is pure logging.
+   - It must not change any computation, RNG draw or data order. Accumulate the detached loss values.
+   - The epoch-10 reproduction check against the existing 10-epoch result confirms this.
+   - Keep `train_history` exactly as it is.
+6. **C1/B:** accepted as built.
+   - In the report, label the S3PL curve as "last mini-batch MSE per epoch" until C2 provides epoch means.
+   - The runtime table's timer-boundary labels are exactly right. The 40,179 s vs 1,309 s pair belongs in the report as the caching result.
+
+**Sequence from here:**
+1. A(a)–(c).
+2. Show Zayd the G diff, including the new test, then submit the G pilot (160TopL G1) and the rest after the pilot passes.
+3. C2.
+4. E's audit, then E.
+5. C3 only if GPU time remains.
+6. D in parallel.
+
+### 2026-10-15 15:51 Supervisor → Code: Review of the uncommitted round code; fixes before the first submission
+Status: DONE by Code (fixes made; see entry of 15:54); was OPEN (small fixes; then Zayd commits and syncs, then the cluster test job, then submissions in the agreed order)
+
+I read the diffs of `training.py`, `train_spatial_msipl_production.py`, `test_centre_masking.py`, `run_fair_scoring_extra_arm.sh`, `check_saved_list_reproduction.py`, `summarise_fair_scoring_arms.py`, `run_s3pl_e100.sh`, the `baselines/s3pl` `main.py`/`train.py` changes, the RCC script and job, and `CLAUDE.md`.
+
+**Verdict: the science code is correct and matches the predeclared specs.**
+- **Masking:** a separate CPU generator, so p = 0 is bit-identical. The target stays unmasked. Resume is exact. The masked-query test (`tanh(b)`, weights not forced uniform) is exactly what I asked for.
+- **A:** the reproduction runs first, with exit 4 on failure. The re-evaluation goes into a new folder. The evaluator is unchanged, and the summariser refuses to mix code hashes. The rules are coded as written (both scales, ≥ +0.02 and ≥ 6/8; "equivalent" only if |mean| < 0.02 at both scales).
+- **C2:** S3PL has no learning-rate scheduler, and checkpoint saving and loss accumulation draw no RNG, so the epoch-10 reproduction check is meaningful. The epoch-mean loss is recorded alongside the unchanged `train_history`.
+- **RCC:** the criteria are coded as specified and it refuses to overwrite.
+
+**Fix before the first submission:**
+1. **Dates.** The Supervisor had misdated three entries as 16 October; they are now 15 October 13:00, 13:30 and 15:35. Two deadlines were also wrong. Correct dates:
+   - **experiments end Tuesday 20 October;**
+   - **RCC go/no-go by the end of Friday 16 October.**
+
+   Update every reference, including:
+   - `CLAUDE.md`;
+   - the docstrings in `test_centre_masking.py`, `check_saved_list_reproduction.py` and `summarise_fair_scoring_arms.py`;
+   - the headers of `run_s3pl_e100.sh` and `rcc_feasibility_export.R`;
+   - any Section 6.1/10 text not already fixed.
+
+   From now on, take dates from the local clock: `TZ=Africa/Johannesburg date`.
+2. **`CLAUDE.md` "Next" is stale and contradicts the current plan.** It says "no RCC", "Zayd still has to fill in the key", "stopped until the meeting", and has an old uncommitted list. Replace it with a short "Next" that points to Section 6.1 and the chat entries of 15 October 13:00 / 13:30 / 15:35 and this one. The key details in `cluster_sync.md` are filled in; Claude still does not inspect the keys.
+3. **Memory requests.** `run_fair_scoring_extra_arm.sh` and `run_rcc_feasibility.sh` ask for 32G, but the fair-scoring tasks peaked under 1 GB. Either base the value on a measured peak (for example, earlier `evaluate_spatial_msipl_attributed_peaks.py` jobs on GBM), or use 8G with a one-line justification in the header. Don't request 32G by default.
+
+**Then:**
+1. Zayd commits and syncs.
+2. Check `sha256sum` against `HEAD`.
+3. Run the cluster test job on `bigbatch`. The new modules `test_fair_scoring_arms`, `test_centre_masking` and `test_neighbourhood` must show as run and passed, not skipped.
+4. Submit in order: A pilot → A all → G pilot (160TopL G1) → G rest → C2 → the E audit → E → C3 if time allows. D runs in parallel.
+
+Each step needs Zayd's OK. Post job IDs here.
+
+### 2026-10-15 15:54 Code → Supervisor: Review fixes made; ready for Zayd's commit and sync
+Status: INFO (no answer needed; next step is Zayd's commit and sync)
+Context: all three fixes from your 15:51 entry are made, logged in protocol 18 Section 10 ("Supervisor code review"). Nothing submitted.
+
+1. **Dates:**
+   - Every reference now reads 15 October 13:00 / 13:30 / 15:35. Experiments end **Tuesday 20 October**; the RCC go/no-go is due by the **end of Friday 16 October**.
+   - Fixed in: protocol 18 Sections 6.1 and 10, `CLAUDE.md`, the docstrings of `test_centre_masking.py`, `check_saved_list_reproduction.py`, `summarise_fair_scoring_arms.py` and `audit_centremask_attention_weights.py`, the headers of `run_s3pl_e100.sh`, `rcc_feasibility_export.R`, `run_rcc_feasibility.sh`, `run_centremask_campaign.sh` and `run_fair_scoring_extra_arm.sh`, both manifests, and the S3PL `train.py` comment.
+   - **One correction to the clock instruction:** in Git Bash on this machine, `TZ=Africa/Johannesburg date` prints **UTC** (13:52 when the local time was 15:52), because Git Bash doesn't recognise that zone name. `TZ=SAST-2 date` and PowerShell `Get-Date` both give the correct SAST. `CLAUDE.md` now says to use those. This entry's time comes from `TZ=SAST-2 date`.
+2. **`CLAUDE.md` "Next" replaced:** it now points to Section 6.1, your four entries of 15 October and the agreed order. The "no RCC", "stopped", "key still to fill in" and old uncommitted-list text is gone, with a short "completed earlier" block keeping the confirmed BIC and S3PL wording. The section header is updated.
+3. **Memory:**
+   - `run_fair_scoring_extra_arm.sh` is now 8G: the unchanged evaluator peaked at 0.91 GB (GNU time, all 32 tasks of 66053/66114, GBM22_2 included), and A(a)/A(b) load the same correlations.
+   - `run_rcc_feasibility.sh` is now 8G with no measured peak: `rcc.rda` is 24.8 MB compressed (archive listing). An out-of-memory stop is reported as a failure.
+   - Both justifications are in the headers. The GPU jobs (G 48G and C2 32G, both `--exclusive`) keep the values of the existing attention and S3PL GBM jobs.
+
+Tests re-run locally after the edits: 21/21 pass (`test_centre_masking`, `test_fair_scoring_arms`, `test_fair_scoring_summary`).
+Next: Zayd commits and syncs → `sha256sum` check against `HEAD` → cluster test job on `bigbatch` → A pilot, with Zayd's OK at each step.
+
+### 2026-10-15 16:13 Code → Supervisor: Test job passed; A pilot submitted (68620)
+Status: INFO
+Context: Zayd committed `496825d` and synced. Logged in protocol 18 Section 10 ("Cluster check and first submissions").
+- **`sha256sum`:** 36/37 files match `HEAD`. `baselines/s3pl/test.py` differs only by CRLF line endings in the working copy (on the cluster since 8 October); with CRLF converted to LF it is identical to `HEAD`, so the code is the same.
+- **Test job 68616** (`bigbatch`): 119/119 passed, none skipped. `test_fair_scoring_arms` (7), `test_centre_masking` (8) and `test_neighbourhood` (12) all ran and passed.
+- **A pilot 68620** (attention, GBM22_2) submitted at 14:12 UTC / 16:12 SAST. Next: on success, ask Zayd for A all (the other 15 sections), then the G pilot.
+
+### 2026-10-15 16:19 Code → Supervisor: A pilot passed; A all (68621) and G pilot (68628) submitted
+Status: INFO
+- **A pilot 68620 (GBM22_2):** exit 0 in 5:05. A(b) reproduction passed; re-evaluated at K_bin 1028; fair scoring complete in both scopes. No scores read.
+- **Submitted at 14:19 UTC / 16:19 SAST with Zayd's OK:** A all **68621** (the other 15 sections) and the **G pilot 68628** (160TopL G1, alone). I'll ask Zayd before the remaining 33 G tasks.
+
+### 2026-10-15 16:23 Code → Supervisor: E audit (68632) and RCC feasibility (68633) submitted
+Status: INFO
+- Submitted at 14:23 UTC / 16:23 SAST with Zayd's OK on `bigbatch`: **E audit 68632** (the four audit sections, windows 3/5/7/9, new output root) and **RCC 68633** (go/no-go due by the end of Friday 16 October).
+- Zayd approved the remaining 33 G tasks and C2 on condition that the G pilot (68628, queued behind A all 68621) passes. I'll submit them after checking the pilot, and post the IDs.
+
+### 2026-10-15 16:30 Code → Supervisor: Submissions so far; RCC no-go is a reading artifact, decision needed on unlabelled pixels
+Status: ANSWERED (see Supervisor entry of 2026-10-15 19:37)
+Context: Zayd's OKs, given before he left: A all, the G pilot then the G rest and C2, the E audit, and RCC. Logged in protocol 18 Section 10.
+
+1. **Done or running:**
+   - **A all 68621:** 15/15 exit 0, `complete` in both scopes, A(b) passed on every GBM section.
+   - **G pilot 68628_9:** passed (training complete, IG valid, evaluation complete, mechanism check valid). **G rest 68643** (33 tasks) is running.
+   - **C2 pilot 68644** is queued.
+   - **E audit 68632:** `valid` on 40TopL, 280TopL and GBM108_positive (windows 3/5/7/9); GBM22_2 is still running.
+   - No scores have been read.
+2. **QOS:** `bigbatch` allows 48 submitted and 6 running jobs per user, so the C2 `afterok` array (15 tasks) was refused while G's 33 tasks were queued. A watcher submits it, still behind the pilot, once the queue drops; nothing changes in the specification. With 6 GPUs at a time, G plus C2 is roughly 40+ GPU-hours, so C3 is unlikely before Tuesday.
+3. **RCC: please decide how to treat the unlabelled pixels.**
+   - Criteria 1 and 2 are met (Cardinal 3.12.1; `rcc.rda` loads, 16,000 px × 10,200 m/z, 8 runs).
+   - **All 8 runs have pixel-level cancer and normal labels** (81–793 px per class), and each also has 609–2,763 pixels with no diagnosis.
+   - My export script counted a run as labelled only if it had **no** unlabelled pixels. That was my reading, stricter than your criterion 3, so nothing was exported and the job wrote "no-go". **I don't think that no-go is a real result.**
+   - Options:
+     - **(a) Recommended:** treat NA as a third class, "unannotated", K = 3, all pixels kept so the spatial grid stays intact. This mirrors CAC, where the background class is part of the references and the class count. The audit spot-check image would show whether NA is the off-tissue border, as expected for these DESI slides; if NA turns out to be unannotated tissue, we report that.
+     - **(b)** Export labelled pixels only. This punches holes in the neighbourhoods; not recommended.
+     - **(c)** Keep all pixels but score only on the labelled ones. This needs new scoring code, which is a new design.
+   - With your choice, the fix is a few lines in `rcc_feasibility_export.R`. Then, with Zayd's OK, the first outputs are moved aside (kept, not deleted) and the job is rerun. It takes about 1 min plus the audit, so this fits the Friday deadline.
+
+### 2026-10-15 17:18 Code → Supervisor: E audit passed; E spec written; two points to confirm (p5 counts, E rule reading)
+Status: ANSWERED (see Supervisor entry of 2026-10-15 19:37)
+Context: **E audit 68632 passed** (`valid` for windows 3/5/7/9 on 40TopL, 280TopL, GBM108_positive and GBM22_2). The E training specification is in protocol 18 Section 6.1 ("Item E, step 2"); the code is ready but uncommitted. C2 remainder **68675** is queued behind the C2 pilot 68644. G: 2/34 done, 6 GPU tasks running.
+
+1. **E code:** `--window-size` and the cache check now allow 7 and 9; `run_window_e79_campaign.sh` trains like `uniform_p5` and evaluates at production K_bin. The extra-arm fair-scoring job takes `uniform_p5|uniform_p7|uniform_p9`.
+2. **Please confirm: `uniform_p5` GBM was also evaluated at the old counts** (530/458/…, the same as attention). This was found from metadata before any p5 score at K_bin existed. I propose the same approved A(a)/(b) route for p5 GBM (reproduce the saved old-count list, then re-evaluate at K_bin into a new folder). CAC p5 is already at K_bin.
+3. **Please confirm the E rule reading:** "≥ +0.02 mean and positive in ≥ 6/8 sections (confirmation sections as before, development reported separately)". I apply the verdict to **all 8 sections** of a collection at **bin level**, and report the 7 confirmation sections and the development section (40TopL / GBM108_positive) separately beside it. p7 and p9 get the verdict; p5 is descriptive. If you meant the verdict on the 7 confirmation sections only (≥ 6/7?), say so before any E output exists.
+4. **Capacity:** E is about 65 GPU-hours; G plus C2 about 45. At 6 GPUs per user on `bigbatch` that's roughly 18 h of wall time if the queue stays free, so E should finish before Tuesday. C3 remains last.
+
+### 2026-10-15 17:50 Code → Supervisor: mscluster72 CUDA failure; failed indices retried (G 68717, C2 68718/68719)
+Status: INFO
+- **20 tasks failed on mscluster72** at the CUDA warm-up ("CUDA unknown error", zero devices; 2–30 s; no data loaded, nothing written): G 68643 tasks 15–33 and the C2 pilot 68644_9. The other nodes are fine, with 10 G section-arms complete and 4 running. This is recorded in `cluster_node_issues.txt`, and mscluster72 is added to the quarantine locally (the cluster copy changes with Zayd's sync).
+- Following your rule (retry only the failed indices), with mscluster72 excluded: **G 68717** (tasks 15–33), **C2 pilot 68718**, **C2 remainder 68719** (`afterok:68718`). The dead remainder 68675 was cancelled. No specification changed.
+
+### 2026-10-15 19:37 Supervisor → Code: Decisions on RCC, p5 counts and the E rule; go-aheads
+Status: OPEN, for Code. Each `sbatch` still needs Zayd's OK.
+
+This was a well-run afternoon: a clean A pilot, the mscluster72 failures retried with only the failed indices, and the p5 count mismatch caught from metadata before any score existed. Thank you.
+
+1. **RCC unlabelled pixels: option (a), predeclared now, before any RCC export or score.**
+   - Treat NA as a third class, `unannotated`. K = 3, and every pixel is kept so the spatial grid stays intact. This mirrors CAC, where background is a scored class.
+   - In the export, criterion 3 means "≥ 4 runs with pixel-level cancer **and** normal labels". Unlabelled pixels don't disqualify a run.
+   - **Report the nature of NA,** descriptively, from the audit spot-check plus per-class TIC. Say whether NA is mainly off-tissue border or unannotated tissue. If it's tissue, the report says so beside every RCC number. It doesn't change the design.
+   - Budget K_bin = |R@0.4| over all three classes, as specified.
+   - **Before rerunning:** move the first RCC outputs aside (keep them, don't delete), log the reading error in Section 10, then rerun with Zayd's OK.
+   - Then write the RCC run specification into Section 6.1 before any RCC training job.
+2. **`uniform_p5` GBM at the old counts: approved.** Use the same A(a)/(b) route: reproduce the saved old-count list, then re-evaluate at K_bin into `peak_evaluation_tuned_count/`. Log that it was found from metadata before any p5 score at K_bin existed.
+3. **E rule: your reading is confirmed, with one addition made now, before any E output, so E matches A and G.**
+   - The verdict uses **all 8 sections** of a collection.
+   - "Helps" requires **mean ≥ +0.02 and positive in ≥ 6/8 sections at bin level *and* under P1.** Within ±0.02 at both scales is "equivalent"; anything else is "mixed".
+   - The 7 confirmation sections and the development section are reported separately beside it.
+   - p7 and p9 get the verdict; p5 is descriptive.
+   - Update Section 6.1 and the test accordingly.
+4. **Your four requests:**
+   - (1) **Commit and sync:** yes, Zayd commits the E code, the mscluster72 quarantine and node-log entries, the summariser and test changes, protocol 18 and this chat.
+   - (2) **G1 fair scoring now: yes.** Submit `submit_fair_scoring_extra_arm.sh attention_centremask_p50 all`; G2 and G3 follow when their training finishes.
+   - (3) **E pilot (40TopL p7):** yes, after the `sha256sum` check against the new commit.
+   - (4) Sync-backs as listed.
+5. **Capacity:** the order is unchanged. If the 6-GPU cap makes E finish after Tuesday 20 October, report the missing sections as not done; don't cut G or C2. C3 stays last and will probably be dropped. That's acceptable; say so in the record.
+
+
+### 2026-10-15 19:50 Supervisor → Code: E rule implemented at both scales (for Codex review)
+Status: INFO
+- `window_rule()` in `summarise_fair_scoring_arms.py` now requires mean ≥ +0.02 and ≥ 6/8 positive sections at bin level **and** P1, as approved at 19:37.
+  - "Equivalent" means |mean| < 0.02 at both scales; anything else is "mixed (does not meet the 'helps' rule)".
+  - The output keys are now `all_8` / `confirmation` / `development`, each with `bin_level` and `P1`.
+- Added the test `test_window_rule_requires_p1_as_well_as_bin_level`. The existing E test now checks both scales. All 9 tests in `test_fair_scoring_arms` pass, run in a clean environment with numpy, h5py and sklearn.
+- Updated the protocol 18 Section 6.1 E rule text. Removed trailing whitespace from this file. No other rule changed.

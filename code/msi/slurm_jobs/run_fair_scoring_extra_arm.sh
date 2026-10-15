@@ -4,11 +4,13 @@
 # code hash equals the existing central_only/uniform_mean campaign.
 #   sbatch --array=LIST slurm_jobs/run_fair_scoring_extra_arm.sh ARM
 # ARM: attention (item A), attention_centremask_p50 / uniform_centremask_p50 /
-# shuffled_attention_centremask_p50 (item G). One task per section; each runs
-# bin level, then the approved partitions.
-# Item A on GBM first runs A(b), the tie-aware reproduction of the saved
-# old-count attention list (exit 4 on failure), then A(a), re-evaluation of the
-# frozen attributions at production K_bin into peak_evaluation_tuned_count/.
+# shuffled_attention_centremask_p50 (item G), uniform_p5 / uniform_p7 /
+# uniform_p9 (item E). One task per section; each runs bin level, then the
+# approved partitions.
+# Frozen arms evaluated at the pre-tuning GBM counts (attention, uniform_p5)
+# first run A(b), the tie-aware reproduction of the saved old-count list (exit
+# 4 on failure), then A(a), re-evaluation of the frozen attributions at
+# production K_bin into peak_evaluation_tuned_count/.
 # CPU only. Scores go to files; the Slurm .out holds status lines only.
 #SBATCH --job-name=fair-extra-arm
 #SBATCH --partition=batch
@@ -47,6 +49,17 @@ case "$ARM" in
         arm_root="$RESULTS/experiments/spatial_centremask_p50/${DATASET}_seed1/$ARM"
         attribution="$arm_root/attribution"
         saved="$arm_root/peak_evaluation" ;;
+    uniform_p5)
+        arm_root="$RESULTS/experiments/spatial_msipl_window_pilot/${DATASET}_seed1/uniform_p5"
+        attribution="$arm_root/attribution"
+        case "$DATASET" in
+            GBM*) saved="$arm_root/peak_evaluation_tuned_count" ;;
+            *)    saved="$arm_root/peak_evaluation" ;;
+        esac ;;
+    uniform_p7|uniform_p9)
+        arm_root="$RESULTS/experiments/spatial_window_e79/${DATASET}_seed1/$ARM"
+        attribution="$arm_root/attribution"
+        saved="$arm_root/peak_evaluation" ;;
     *) echo "Unknown arm: $ARM" >&2; exit 2 ;;
 esac
 OUTPUT_ROOT="$RESULTS/diagnostics/fair_scoring_baselines/extra_arms"
@@ -59,7 +72,7 @@ echo "=== $DATASET $ARM fair scoring on ${SLURMD_NODENAME:-unknown} (job ${SLURM
 grep -q '"status": "valid"' "$attribution/summary.json" \
     || { echo "Attribution is not valid: $attribution" >&2; exit 1; }
 
-if [[ "$ARM" == attention && "$DATASET" == GBM* ]]; then
+if [[ ( "$ARM" == attention || "$ARM" == uniform_p5 ) && "$DATASET" == GBM* ]]; then
     k_bin="$("$PYTHON" -c 'import json,sys; print(int(json.load(open(sys.argv[1]))["unique_nearest_bins"]))' "$legacy/peak_metrics.json")"
     # A(b): the saved old-count list must reproduce before anything else.
     "$PYTHON" -u scripts/check_saved_list_reproduction.py \

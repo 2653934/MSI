@@ -49,7 +49,7 @@ def main():
     parser.add_argument("--checkpoint-output", required=True, type=Path)
     parser.add_argument("--variant", required=True, choices=VARIANTS)
     parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--window-size", type=int, choices=(1, 3, 5), default=3)
+    parser.add_argument("--window-size", type=int, choices=(1, 3, 5, 7, 9), default=3)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--hidden-dim", type=int, default=512)
     parser.add_argument("--latent-dim", type=int, default=5)
