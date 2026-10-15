@@ -14,7 +14,7 @@ This is Zayd's Honours research repository: unsupervised peak learning for mass 
 - `report/draft/`: the LaTeX report being rebuilt. `report/final/` stays empty until the final audit.
 - Raw data and checkpoints exist only on the cluster: `/datasets/zsuliman/msi_data/` and `/datasets/zsuliman/msi_checkpoints/`.
 
-## Current work (state at 09:45 SAST, 10 October 2026: gate (d) pixel count closed, production n=12 stands; supervisor reviewed; BIC approved to start)
+## Current work (state at 13:21 SAST, 15 October 2026: BIC and S3PL seed 2 complete, synced and logged; supervisor confirmed; work stopped until the Hairong meeting, Monday 19 October)
 
 Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) run specification and its amendments, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
 
@@ -48,26 +48,24 @@ Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) r
 ### Next
 Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both.
 
-Done on 9 October: the 40TopL outcomes and the supervisor's fixes were logged in protocol 18 Section 10. The staging change was approved (chat, 22:55), committed and checked. Stage 1 passed and was posted to the supervisor chat (entry 21:25 UTC). The BIC specification was approved with changes (protocol 18 Section 6).
+The governing brief is the supervisor chat entry of **15 October, 14:00** ("Finish and curate everything before Zayd meets Hairong"). The target is everything synced and logged by **Saturday 17 October**. Its don'ts: no changes to protocol 18 rules; no new claims in `report/draft/` or `planning/claim_map.md`; no RCC; no new architectures.
 
-1. **Done: all GBM108_positive gate (d) jobs completed with exit 0, by 21:18 UTC / 23:18 SAST on 9 October.**
-   - IG 66399–66402 took 5:56 to 7:08 elapsed. IG time barely grew with n, as on 40TopL.
-   - Evaluations 66404 (central_only) and 66405 (uniform_mean) have status `complete`, so all run-validity checks and both n=12 gates passed. Their `.err` files are empty.
-   - Summary 66406 wrote `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json`.
-   - **No values were read before the sync** (except the evaluation `.out` exposure noted in item 4).
-2. These ran as an `afterok` chain queued at 23:17 SAST with Zayd's OK (logged in protocol 18 Section 10 and the supervisor chat).
-3. **Next session:**
-   - Check `sacct -j 66399,66400,66401,66402,66404,66405,66406` (State, Elapsed, ExitCode), and read the short `.out`/`.err` logs on the cluster. Don't print scores from the logs.
-   - Then Zayd syncs (cluster-to-local pull, `docs/operations/cluster_sync.md`).
-   - **Only after the sync**, read `results/diagnostics/gate_d_pixel_counts/summary_66406/decisions.json` and the two `GBM108_positive_seed1/<arm>/evaluation/summary.json` files locally.
-4. **Done 10 October:** decision table posted (chat 09:30) and **confirmed by the supervisor (chat 09:45)**. No trigger; production n=12 stands in both arms. Wording to use: "Gate (d) attribution-pixel count: production n = 12 stands in both arms (no setting reached +0.02 on both development sections); no 16-section rerun; reported descriptively."
-   - **To do:** add the supervisor's two descriptive sentences (chat 09:45, item 1a/1b) to protocol 18 Section 10 and `docs/research/01 Results Record.md`. The key one: the pixel-count gains on GBM108_positive (+0.005 to +0.017) are about ten times smaller than the IG − posterior-|PCC| gap (−0.16 to −0.18), so undersampled attribution pixels do not explain why IG trails the correlation ranking.
-5. **BIC: approved to start** under protocol 18 Section 6 ("BIC run specification"): descriptive per section-arm, no verdict, **no GPU IG** at any BIC or forced K, and the optional labelled CPU posterior-|PCC| sensitivity only if it's a small script.
-   - Write the job script and tests, run the cluster test job, then submit with Zayd's OK.
-   - No supervisor review of the script is needed unless it departs from the specification; post any departure to the chat first.
-   - Post the per-section-arm results to the chat after Zayd syncs, then stop for review.
-5b. **Housekeeping:** add a "Claude Code cluster access" section to `docs/operations/cluster_sync.md` (chat 09:45, item 3). Ask Zayd for details you don't know; don't guess.
-6. **Uncommitted (Zayd commits):** `CLAUDE.md`, protocol 18 Section 10, `docs/supervision/supervisor_chat.md`, `results/validation/fair_scoring_env_tests/66389_*`, `results/diagnostics/gate_d_pixel_counts/GBM108_positive_seed1/` and `summary_66406/`.
+1. **Complete, synced and logged (15 October):**
+   - **BIC 68496:** K = 6 in all four section-arms, which is the largest candidate. BIC is still falling at K = 6, so the minimum is at the boundary. It does not support production K (2 for GBM108_positive, 3 for 40TopL).
+     - Sensitivity at K = 6 changes posterior-|PCC| by −0.30 on GBM108_positive and +0.001 / −0.021 on 40TopL.
+     - Word it as "no minimum within K ≤ 6", never "six clusters". This is descriptive, with no verdict.
+   - **S3PL seed 2 (68500/68501):** the two-seed rule is **supported**: 8/8 sections in both seeds, +0.413 and +0.438. The harder-target caveat always goes with it.
+   - **Confirmed by the supervisor (chat, 15:30 SAST).** BIC wording to use: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count."
+   - **Stopped until after the Hairong meeting (19 October).** No report or claim-map edits until Hairong has responded to the framing.
+   - Job scripts: `slurm_jobs/run_/submit_gate_d_bic.sh`, `scripts/bic_segmentation_sensitivity.py`, `slurm_jobs/run_/submit_/check_s3pl_cac_centre_control_seed2.sh`. After any new sync, rebuild the tables with `python scripts/build_current_evidence_tables.py`.
+2. **Slurm email is not used.** Test job 68526 sent nothing (`MailProg` is `/bin/mail`, which is absent on the login node), and Zayd decided to drop it. Track jobs by polling `sacct`.
+3. **Done 15 October:**
+   - The Results Record has a dated supersession note, a corrected IG bullet, and new sections for fair scoring, gate (d) and the S3PL controls.
+   - Investigation 15 is marked complete.
+   - The curated tables and their README index are in `results/publication/current_evidence/`.
+   - The 10 October supervisor confirmation and sentences are in Section 10.
+   - The cluster-access section in `docs/operations/cluster_sync.md` is drafted. **Zayd still has to fill in the key location and type, and how it was authorised** (Claude must not inspect the keys).
+4. **Uncommitted (Zayd commits):** everything since `234873b`. This is the new BIC, S3PL seed-2 and table scripts; the synced `results/diagnostics/gate_d_bic/` and `reproducibility/s3pl_cac_centre_control/`; `results/validation/fair_scoring_env_tests/68489_*`; the test changes; `CLAUDE.md`; protocol 18; the Results Record; investigation 15; `cluster_sync.md`; `supervisor_chat.md`; `results/publication/current_evidence/`; `results/validation/fair_scoring_env_tests/66389_*`; and the gate (d) GBM108_positive results and `summary_66406/`.
 
 ## Scientific rules
 
@@ -82,7 +80,7 @@ Done on 9 October: the 40TopL outcomes and the supervisor's fixes were logged in
 ## Cluster rules
 
 - **No scientific computation on the login node.** File checks and `sbatch` only. HDF5 reading, model loading and scoring happen inside Slurm jobs.
-- **Partitions:** CPU jobs use `--partition=batch` with small memory requests (the fair-scoring tasks peak below 1 GB). `bigbatch` is reserved for long training or demonstrated high memory.
+- **Partitions:** CPU jobs use `--partition=batch` with small memory requests (the fair-scoring tasks peak below 1 GB). `bigbatch` is reserved for long training or demonstrated high memory. **If `batch` is down,** CPU jobs may go to `bigbatch` only with Zayd's OK. Set the partition at submit time (`--partition=bigbatch` or `SBATCH_PARTITION=bigbatch`), don't edit the script, and log the move in protocol 18 Section 10. This happened on 15 October: `batch` has been down since 13 October 07:05 UTC.
 - **Python:** use `$HOME/miniconda3/envs/s3pl_env/bin/python` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0) and set the thread environment variables.
 - **GPU jobs** (for example Integrated Gradients) must do the real CUDA warm-up and exclude the nodes listed in `code/msi/slurm_jobs/gpu_cuda_quarantine.txt`. Record new node failures in `code/msi/cluster_node_issues.txt`.
 - **Arrays:** use one array task per section. Make concurrency a submit-time option, and use `sbatch --parsable` to print the real job ID.
@@ -94,6 +92,7 @@ Done on 9 October: the 40TopL outcomes and the supervisor's fixes were logged in
   - Every `sbatch` and every cluster file move needs Zayd's explicit OK.
   - Before submitting, check that the cluster copies of changed files match the local commit (compare `sha256sum`).
 - **SSH from this machine:** use WSL, which has the passwordless key: `wsl.exe -e ssh -o BatchMode=yes zsuliman@146.141.21.100 '...'`. Git Bash has no key and no rsync. For multi-line remote commands, pipe a heredoc to `ssh ... bash -s`. The login node sometimes drops connections; before retrying a submit, check `sacct` to see whether the job was already created.
+- **The artifact pull overwrites locally edited files under `results/`.** On 15 October it replaced the edited `results/publication/current_evidence/README.md` with the older cluster copy. After every pull, check `git status`/`git diff` for local `results/` edits and restore them (commit them first so `git checkout` can recover them). Re-run `build_current_evidence_tables.py` after a pull.
 - **Concurrent array tasks** can race when creating a shared parent folder (66114: `mkdir: Already exists`). Create shared output folders before submitting.
 - **Timing:** read the authoritative timing with `sacct -j <id> --format=JobID,State,Elapsed,MaxRSS,ReqMem,NodeList,ExitCode`.
 

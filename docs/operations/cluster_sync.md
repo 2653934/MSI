@@ -204,3 +204,33 @@ rsync -avz --progress \
 
 Do not add `--delete` casually. It turns a copy command into a mirror operation
 and can remove files on the destination.
+
+## Claude Code cluster access
+
+Claude Code (the VS Code agent) reaches the cluster from this Windows machine
+through WSL, which holds a passwordless SSH key:
+
+```bash
+wsl.exe -e ssh -o BatchMode=yes zsuliman@146.141.21.100 '...'
+```
+
+Git Bash has no key and no rsync. For multi-line commands, Claude pipes a
+heredoc to `ssh ... bash -s`.
+
+- **Key location and type in WSL:** _to be filled in by Zayd_ (not guessed).
+- **How it was authorised:** the public key was added to
+  `~/.ssh/authorized_keys` on the cluster account `zsuliman`. _Date and method to
+  be confirmed by Zayd._
+- **What Claude may do** (as in `CLAUDE.md`):
+  - poll `squeue`/`sacct`;
+  - read short logs (unit-test logs, Slurm `.out`/`.err`);
+  - run file checks such as `ls`, `test -f` and `sha256sum`;
+  - run `sbatch`, `scancel` and cluster file moves **only with Zayd's explicit
+    OK for that action**.
+- **What Claude does not do:** scientific computation on the login node; reading
+  scientific results (`summary.json`, decision tables, CSVs) on the cluster
+  before Zayd syncs them; any rsync (Zayd runs every transfer himself).
+- **How to revoke:** on the cluster, delete that key's line from
+  `~/.ssh/authorized_keys`. Find it by its comment or fingerprint
+  (`ssh-keygen -lf ~/.ssh/authorized_keys`). Removing the private key from WSL
+  also ends access from this machine.

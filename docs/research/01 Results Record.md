@@ -1,6 +1,8 @@
 # Results Record
 
-Last updated: 2026-10-04
+Last updated: 2026-10-15
+
+> **Note (15 October 2026): this executive summary is superseded in part by the 9–10 October fair-scoring results.** See [Fair-scoring gates (a)/(b)](#fair-scoring-gates-ab-9-october-2026) and [Gate (d) attribution-pixel count](#gate-d-attribution-pixel-count-910-october-2026) at the end of this record. Under fair scoring, IG still beats legacy msiPL, but it does not beat the no-IG posterior-correlation baseline, which ranks bins by correlation with the same GMM posterior. The claims below are not rewritten yet; the framing waits for the supervisor meeting on 19 October.
 
 This is the main results ledger. Values are copied from the committed JSON and
 CSV outputs. “Complete” means the planned computation and audit finished; it
@@ -23,7 +25,12 @@ does not automatically mean the scientific hypothesis was supported.
 - Across all eight GBM sections, nonlinear Integrated Gradients from both the
   spatial and centre-only VAEs selected better peaks than legacy msiPL.
 - The matched centre-only control found no consistent peak-selection advantage
-  from neighbourhood context; the robust gain comes from nonlinear attribution.
+  from neighbourhood context. *(Corrected 15 October 2026.)* The IG gain over
+  legacy msiPL holds under fair scoring (8/8 sections in every arm and
+  collection). But IG does not beat the no-IG posterior-|PCC| baseline, which
+  ranks bins by correlation with the same GMM posterior: it is below that
+  baseline in all 32 section-arms at bin level. So the gain cannot be credited
+  to nonlinear attribution itself.
 
 ## Dataset validation
 
@@ -766,3 +773,189 @@ than an equal-work efficiency result because S3PL uses 10 epochs and the VAE
 
 The exact tables, figures, reporting rule and decision are in the
 [stability/runtime synthesis](investigations/16%20S3PL%20GBM%20Stability%20and%20Runtime%20Synthesis.md).
+
+## Fair-scoring gates (a)/(b) (9 October 2026)
+
+**Protocol:** [protocol 18](18%20Fair%20Scoring%20and%20Simple%20Baselines%20Protocol.md) (v3.2), seed 1, all 16 sections in both arms. Two kinds of comparison:
+- **Bin level at K_bin** (budget multiplier m = 1): array 66053, decision table 66097.
+- **Approved peak partitions** (P1 on GBM; P1 and P3 on CAC, which are identical to bin level there): arrays 66114 and 66179, decision table 66238.
+
+The question: does IG add value beyond its own segmentation target? The no-IG baseline answers it. It ranks bins by the absolute Pearson correlation of their TIC-normalised intensity with the soft GMM posterior maps, balanced across components. That is the same label-free segmentation IG explains, with no gradients at all ("posterior-|PCC|").
+
+**Result (wording from protocol 18 Section 7.1):** neither predeclared verdict applies, because IG scored below posterior-|PCC| in every section (bin level: 0/8 sections positive in each of the four collection-arms). The summariser prints "mixed / not resolved by the predeclared rule". That label is a fall-through, not a mixed result: the rule has no "IG worse" category, and none is added after the fact. Under P1, one section-arm out of 32 goes the other way: CAC 280TopL, uniform_mean, +0.058 at K_peak 70.
+
+**IG versus legacy msiPL** is positive in 8/8 sections in every collection-arm, both at bin level and in the K_bin collapse diagnostic. The rule's budget-stability clause cannot be assessed, because legacy is scored at m = 1 only. So this is reported as **two of three clauses met**, not as the rule being met. Legacy is not K_peak-matched, so the peak-level IG-versus-legacy comparison is a collapse diagnostic only.
+
+Collection summary at bin level, K_bin (IG minus each baseline; "IG ahead" counts sections where IG is higher):
+
+| Collection, arm | IG mean | Posterior mean | IG − posterior: mean / median / IG ahead | IG − legacy: mean / IG ahead | IG − mean intensity: mean / IG ahead | IG − Moran's I: mean / IG ahead |
+|---|---:|---:|---|---|---|---|
+| GBM central_only | 0.518 | 0.743 | −0.225 / −0.233 / 0/8 | +0.104 / 8/8 | +0.035 / 8/8 | −0.166 / 0/8 |
+| GBM uniform_mean | 0.511 | 0.744 | −0.233 / −0.229 / 0/8 | +0.097 / 8/8 | +0.028 / 5/8 | −0.173 / 0/8 |
+| CAC central_only | 0.528 | 0.606 | −0.078 / −0.073 / 0/8 | +0.126 / 8/8 | −0.084 / 0/8 | −0.077 / 0/8 |
+| CAC uniform_mean | 0.560 | 0.607 | −0.047 / −0.042 / 0/8 | +0.157 / 8/8 | −0.053 / 0/8 | −0.046 / 1/8 |
+
+**GBM patient grouping.** There are 8 sections from 4 patients, two sections each, so sections are not independent patients. Per-patient means of IG − posterior-|PCC| at bin level:
+- central_only: patient 108 −0.174, 12 −0.185, 22 −0.248, 39 −0.293. All four are negative; the mean over patients is −0.225.
+- uniform_mean: 108 −0.166, 12 −0.289, 22 −0.209, 39 −0.269. All four are negative; the mean over patients is −0.233.
+
+Under P1 the GBM means are −0.201 (central_only) and −0.213 (uniform_mean), with 0/8 sections positive in each. CAC under P1/P3 gives −0.092 (central_only, 0/8) and −0.039 (uniform_mean, 1/8).
+
+Per section (mSCF1 at K_bin, m = 1). The last column is IG − posterior-|PCC| at the matched P1 K_peak. Legacy, mean intensity, Moran's I and the oracle do not depend on the arm. The oracle is a supervised ceiling (maximum signed expert-class PCC) and cannot be deployed. "(dev)" marks development sections, which are not confirmation evidence.
+
+| Section | Patient | Arm | K_bin | IG | Posterior-\|PCC\| | IG − posterior | Legacy | Mean intensity | Moran's I | Oracle | IG − posterior, P1 |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| GBM108_positive (dev) | 108 | central_only | 584 | 0.508 | 0.692 | −0.184 | 0.410 | 0.450 | 0.590 | 0.724 | −0.160 |
+| GBM108_positive (dev) | 108 | uniform_mean | 584 | 0.533 | 0.705 | −0.172 | 0.410 | 0.450 | 0.590 | 0.724 | −0.153 |
+| GBM108_negative | 108 | central_only | 940 | 0.654 | 0.818 | −0.164 | 0.548 | 0.603 | 0.672 | 0.821 | −0.131 |
+| GBM108_negative | 108 | uniform_mean | 940 | 0.659 | 0.818 | −0.159 | 0.548 | 0.603 | 0.672 | 0.821 | −0.132 |
+| GBM12_1 | 12 | central_only | 691 | 0.291 | 0.406 | −0.115 | 0.245 | 0.283 | 0.561 | 0.767 | −0.090 |
+| GBM12_1 | 12 | uniform_mean | 691 | 0.279 | 0.629 | −0.350 | 0.245 | 0.283 | 0.561 | 0.767 | −0.308 |
+| GBM12_2 | 12 | central_only | 986 | 0.569 | 0.824 | −0.255 | 0.478 | 0.539 | 0.741 | 0.830 | −0.231 |
+| GBM12_2 | 12 | uniform_mean | 986 | 0.595 | 0.823 | −0.228 | 0.478 | 0.539 | 0.741 | 0.830 | −0.214 |
+| GBM22_1 | 22 | central_only | 834 | 0.520 | 0.804 | −0.285 | 0.381 | 0.474 | 0.710 | 0.820 | −0.266 |
+| GBM22_1 | 22 | uniform_mean | 834 | 0.538 | 0.807 | −0.270 | 0.381 | 0.474 | 0.710 | 0.820 | −0.252 |
+| GBM22_2 (dev) | 22 | central_only | 1028 | 0.611 | 0.822 | −0.211 | 0.469 | 0.587 | 0.700 | 0.831 | −0.196 |
+| GBM22_2 (dev) | 22 | uniform_mean | 1028 | 0.527 | 0.676 | −0.149 | 0.469 | 0.587 | 0.700 | 0.831 | −0.145 |
+| GBM39_1 | 39 | central_only | 695 | 0.421 | 0.746 | −0.325 | 0.315 | 0.385 | 0.718 | 0.821 | −0.303 |
+| GBM39_1 | 39 | uniform_mean | 695 | 0.429 | 0.737 | −0.308 | 0.315 | 0.385 | 0.718 | 0.821 | −0.283 |
+| GBM39_2 | 39 | central_only | 911 | 0.568 | 0.830 | −0.262 | 0.469 | 0.545 | 0.781 | 0.854 | −0.232 |
+| GBM39_2 | 39 | uniform_mean | 911 | 0.530 | 0.759 | −0.229 | 0.469 | 0.545 | 0.781 | 0.854 | −0.219 |
+| 40TopL (dev) | – | central_only | 315 | 0.680 | 0.727 | −0.047 | 0.478 | 0.729 | 0.731 | 0.756 | −0.046 |
+| 40TopL (dev) | – | uniform_mean | 315 | 0.683 | 0.745 | −0.062 | 0.478 | 0.729 | 0.731 | 0.756 | −0.041 |
+| 160TopL (dev) | – | central_only | 210 | 0.480 | 0.525 | −0.045 | 0.358 | 0.523 | 0.512 | 0.527 | −0.064 |
+| 160TopL (dev) | – | uniform_mean | 210 | 0.483 | 0.522 | −0.039 | 0.358 | 0.523 | 0.512 | 0.527 | −0.044 |
+| 200TopL | – | central_only | 221 | 0.623 | 0.677 | −0.054 | 0.426 | 0.675 | 0.674 | 0.682 | −0.081 |
+| 200TopL | – | uniform_mean | 221 | 0.633 | 0.677 | −0.044 | 0.426 | 0.675 | 0.674 | 0.682 | −0.085 |
+| 240TopL | – | central_only | 255 | 0.566 | 0.694 | −0.127 | 0.398 | 0.678 | 0.677 | 0.715 | −0.141 |
+| 240TopL | – | uniform_mean | 255 | 0.608 | 0.647 | −0.039 | 0.398 | 0.678 | 0.677 | 0.715 | −0.016 |
+| 280TopL | – | central_only | 245 | 0.376 | 0.403 | −0.028 | 0.319 | 0.415 | 0.387 | 0.438 | −0.052 |
+| 280TopL | – | uniform_mean | 245 | 0.387 | 0.398 | −0.011 | 0.319 | 0.415 | 0.387 | 0.438 | +0.058 |
+| 360TopL | – | central_only | 247 | 0.495 | 0.601 | −0.106 | 0.401 | 0.634 | 0.585 | 0.678 | −0.112 |
+| 360TopL | – | uniform_mean | 247 | 0.565 | 0.595 | −0.030 | 0.401 | 0.634 | 0.585 | 0.678 | −0.020 |
+| 400TopL | – | central_only | 133 | 0.362 | 0.487 | −0.125 | 0.326 | 0.491 | 0.524 | 0.608 | −0.161 |
+| 400TopL | – | uniform_mean | 133 | 0.398 | 0.478 | −0.080 | 0.326 | 0.491 | 0.524 | 0.608 | −0.078 |
+| 520TopL | – | central_only | 232 | 0.645 | 0.736 | −0.091 | 0.512 | 0.755 | 0.750 | 0.827 | −0.079 |
+| 520TopL | – | uniform_mean | 232 | 0.719 | 0.790 | −0.072 | 0.512 | 0.755 | 0.750 | 0.827 | −0.088 |
+
+**Provisional reading (the framing waits for the 19 October meeting).** On GBM, the label-free GMM segmentation plus a correlation ranking comes close to the supervised oracle (0.743 versus 0.809 mean). On CAC, the same baseline is only comparable to mean intensity and Moran's I (0.606 versus 0.612 and 0.605). IG trails the correlation ranking in both collections. Spatial context was not tested by this gate. **Qualification (supervisor, 15 October):** The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count. See [the BIC result](#gate-d-bic-selected-k-15-october-2026).
+
+Artifacts: `code/msi/results/diagnostics/fair_scoring_baselines/bin_level_only/` (per-section `summary.json`, `summary_66097/decisions.json`) and `.../with_approved_partitions/` (`summary_66238/decisions.json`). Curated tables: `code/msi/results/publication/current_evidence/fair_scoring_bin_level_sections.csv`, `fair_scoring_collection_summary.csv` and `fair_scoring_partition_sections.csv`, all built by `code/msi/scripts/build_current_evidence_tables.py` and cross-checked against both decision tables.
+
+## Gate (d) attribution-pixel count (9–10 October 2026)
+
+**Question:** is IG's deficit an artifact of sampling only 12 attribution pixels per GMM component? The test reruns IG with 48 and 192 nested pixels (12 ⊂ 48 ⊂ 192), on the two development sections GBM108_positive and 40TopL, in both arms. The decision rule was fixed beforehand (protocol 18 Section 6): a 16-section rerun is triggered only if the change in mSCF1 at K_bin is ≥ +0.02 on **both** sections for an arm.
+
+**Run validity:**
+- Every n = 12 rerun reproduced the saved production bin set, with mSCF1 difference 0.0.
+- GMM labels were aligned to production: the identity everywhere except the 40TopL central_only permutation {0→0, 1→2, 2→1}, adopted before any central_only score existed.
+- IG status was `valid`, and every count was distinct from the next smaller one.
+- Jobs: 40TopL 66324–66332; GBM108_positive 66390–66393, then 66399–66406.
+
+**Result:** "Gate (d) attribution-pixel count: production n = 12 stands in both arms (no setting reached +0.02 on both development sections); no 16-section rerun; reported descriptively."
+
+| Section | Arm | n | IG mSCF1 at K_bin | Change vs saved n = 12 | Jaccard vs n = 12 | IG − posterior-\|PCC\| | Verdict |
+|---|---|---:|---:|---:|---:|---:|---|
+| GBM108_positive | central_only | 12 | 0.508 | +0.000 | 1.000 | −0.184 | reference (saved production n = 12) |
+| GBM108_positive | central_only | 48 | 0.520 | +0.011 | 0.881 | −0.172 | production n=12 stands |
+| GBM108_positive | central_only | 192 | 0.525 | +0.017 | 0.872 | −0.166 | production n=12 stands |
+| GBM108_positive | uniform_mean | 12 | 0.533 | +0.000 | 1.000 | −0.172 | reference (saved production n = 12) |
+| GBM108_positive | uniform_mean | 48 | 0.537 | +0.005 | 0.878 | −0.168 | production n=12 stands |
+| GBM108_positive | uniform_mean | 192 | 0.547 | +0.015 | 0.863 | −0.158 | production n=12 stands |
+| 40TopL | central_only | 12 | 0.680 | +0.000 | 1.000 | −0.047 | reference (saved production n = 12) |
+| 40TopL | central_only | 48 | 0.679 | −0.001 | 0.795 | −0.048 | production n=12 stands |
+| 40TopL | central_only | 192 | 0.705 | +0.024 | 0.805 | −0.023 | production n=12 stands |
+| 40TopL | uniform_mean | 12 | 0.683 | +0.000 | 1.000 | −0.062 | reference (saved production n = 12) |
+| 40TopL | uniform_mean | 48 | 0.674 | −0.008 | 0.853 | −0.071 | production n=12 stands |
+| 40TopL | uniform_mean | 192 | 0.686 | +0.003 | 0.848 | −0.059 | production n=12 stands |
+
+Descriptive, no verdict (supervisor, 10 October):
+- On GBM108_positive, every larger count improved slightly, by +0.005 to +0.017, and more at n = 192 than at n = 48 in both arms. More attribution pixels give a small, consistent gain that stays below the practical threshold.
+- **That gain is about ten times smaller than the IG − posterior-|PCC| gap on the same section (−0.16 to −0.18 at K_bin). So undersampled attribution pixels do not explain why IG trails the correlation ranking.**
+- IG − posterior-|PCC| stays negative at every n and every budget multiplier on both sections. The 40TopL central_only n = 192 change (+0.024) is from one section and one seed, with bin-set Jaccard of about 0.8 between counts.
+
+Artifacts: `code/msi/results/diagnostics/gate_d_pixel_counts/<section>_seed1/<arm>/evaluation/summary.json` and `summary_66406/decisions.json`. Curated table: `code/msi/results/publication/current_evidence/gate_d_pixel_counts.csv`.
+
+### Gate (d) BIC-selected K (15 October 2026)
+
+**Question (protocol 18 Section 6, "BIC run specification"):** is the production K supported by BIC, or arbitrary? This is descriptive per section-arm: there is no verdict, and production K stays the reported setting whatever BIC shows.
+
+**Run:**
+- CPU array 68496 on `bigbatch` (`batch` was down), run on the saved production latents, with no labels read.
+- Settings: K ∈ {1, …, 6}, StandardScaler, full covariance, `n_init` 20, seed 1. The rule is the smallest K within ΔBIC < 10 of the minimum.
+- Refitting production K reproduced the saved assignment (ARI 1.0) in all four section-arms.
+- Test job 68489 passed 92/92.
+
+**Primary result (wording confirmed by the supervisor, 15 October):** "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count." Production K is 2 for GBM108_positive and 3 for 40TopL. Every candidate converged.
+
+**Read this with care:** K = 6 is the *largest candidate*. BIC drops by at least 314 at every added component, far beyond the 10-point tie margin, and is still falling at K = 6. So the BIC minimum is not reached within the predeclared range: BIC favours "more components than 6" rather than identifying a particular K. With thousands of pixels and a full-covariance model, that is common for BIC. It says the latent distribution is not well described by a few Gaussian clusters; it does not say six tissue classes exist. Candidates above 6 were not predeclared and were not run.
+
+"BIC-K segmentation sensitivity, descriptive" (no trigger, no verdict): the GMM was refitted at K = 6 with the production settings, and posterior-|PCC| was rescored at K_bin. Before that, each run reproduced the saved production-K score exactly.
+
+| Section | Arm | Production K | BIC-selected K | BIC decrease per added component (1→2 … 5→6) | Refit ARI vs saved | Posterior-\|PCC\|, production K | at K = 6 | Change | ARI / NMI vs labels, production K | at K = 6 |
+|---|---|---:|---:|---|---:|---:|---:|---:|---|---|
+| GBM108_positive | central_only | 2 | 6 | 2680, 1181, 666, 314, 476 | 1.0 | 0.692 | 0.391 | −0.300 | 0.559 / 0.448 | 0.249 / 0.297 |
+| GBM108_positive | uniform_mean | 2 | 6 | 2254, 1094, 911, 582, 472 | 1.0 | 0.705 | 0.406 | −0.299 | 0.644 / 0.545 | 0.219 / 0.314 |
+| 40TopL | central_only | 3 | 6 | 10900, 3608, 2325, 2486, 1601 | 1.0 | 0.727 | 0.729 | +0.001 | 0.435 / 0.465 | 0.340 / 0.461 |
+| 40TopL | uniform_mean | 3 | 6 | 11392, 3535, 1964, 2677, 1550 | 1.0 | 0.745 | 0.724 | −0.021 | 0.624 / 0.525 | 0.352 / 0.469 |
+
+- **GBM108_positive:** the six-component segmentation makes the correlation ranking much worse (−0.30 in both arms), and it agrees less with the expert labels (ARI 0.56–0.64 at production K, 0.22–0.25 at K = 6).
+- **40TopL:** the ranking barely changes (+0.001 and −0.021); label agreement also falls (ARI 0.43–0.62 at production K, 0.34–0.35 at K = 6).
+- So the posterior-|PCC| baseline's strength at production K does not come from a BIC-supported cluster count. On GBM it depends on using a coarse two-component segmentation. These are development sections, one seed, and descriptive only.
+- No IG was run at any BIC or forced K (specification item a).
+
+Artifacts: `code/msi/results/diagnostics/gate_d_bic/<section>_seed1/<arm>/bic_selection.json` and `.../bic_k_sensitivity/summary.json`. Curated table: `code/msi/results/publication/current_evidence/gate_d_bic.csv`.
+
+## S3PL CAC spatial-input controls (7–15 October 2026)
+
+All eight CAC sections. Original S3PL architecture: 10 epochs, patch size 9, `reference_spatial_max`, matched peak counts (40TopL 315, 160TopL 210, 200TopL 221, 240TopL 255, 280TopL 245, 360TopL 247, 400TopL 133, 520TopL 232). Details are in [investigation 15](investigations/15%20Overnight%20S3PL%20CAC%20Controls%20-%207%20October%202026.md). There are two kinds of control:
+
+- **Retrained tile-centre (seed 1):** a separate model is trained with every patch position replaced by the normalised centre spectrum, while still reconstructing the real patch. It is evaluated the same way.
+- **Frozen interventions on the original real-input checkpoint** (out-of-distribution sensitivity tests, not spatial-benefit ablations):
+  - `s3pl_cac_frozen_context`: zero the neighbours, or tile the centre;
+  - `s3pl_cac_frozen_topology`: rotate the patch 90°, or cyclically shift positions within each Chebyshev ring.
+  - Each frozen campaign re-evaluated the real input on the same node ("fresh real"). Each intervention is compared against its own campaign's fresh real. Status `valid_pair_with_prior_drift` means the fresh real selected set differs slightly from the historical matched-count set. On 240TopL, the two campaigns' fresh real values themselves differ (0.672 versus 0.670), so both are shown.
+
+| Section | Peaks | Real input | Retrained tile-centre | Real − retrained | Frozen: fresh real | Frozen: tile centre | Frozen: zero neighbours | Topology: fresh real | Rotate 90° | Ring shift | Status (context / topology) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 40TopL | 315 | 0.715 | 0.177 | +0.538 | 0.715 | 0.626 | 0.048 | 0.715 | 0.715 | 0.714 | valid_pair_with_prior_drift / valid_pair_with_prior_drift |
+| 160TopL | 210 | 0.495 | 0.130 | +0.365 | 0.495 | 0.456 | 0.015 | 0.495 | 0.494 | 0.495 | valid / valid |
+| 200TopL | 221 | 0.665 | 0.356 | +0.309 | 0.665 | 0.605 | 0.008 | 0.665 | 0.662 | 0.665 | valid / valid |
+| 240TopL | 255 | 0.670 | 0.144 | +0.526 | 0.672 | 0.642 | 0.015 | 0.670 | 0.665 | 0.672 | valid_pair_with_prior_drift / valid_pair_with_prior_drift |
+| 280TopL | 245 | 0.378 | 0.168 | +0.210 | 0.378 | 0.377 | 0.007 | 0.378 | 0.378 | 0.378 | valid / valid |
+| 360TopL | 247 | 0.643 | 0.149 | +0.494 | 0.643 | 0.601 | 0.009 | 0.643 | 0.643 | 0.643 | valid / valid |
+| 400TopL | 133 | 0.459 | 0.143 | +0.315 | 0.459 | 0.436 | 0.002 | 0.461 | 0.460 | 0.452 | valid / valid_pair_with_prior_drift |
+| 520TopL | 232 | 0.707 | 0.163 | +0.544 | 0.707 | 0.668 | 0.005 | 0.708 | 0.716 | 0.711 | valid / valid_pair_with_prior_drift |
+
+**Summary (seed 1):**
+- **Retrained tile-centre:** the real-input model beats it in 8/8 sections, by +0.210 to +0.544 (mean 0.592 versus 0.179).
+- **Frozen tile-centre:** it costs the frozen checkpoint +0.001 to +0.089, mean 0.040.
+- **Frozen zero neighbours:** this collapses the frozen model (mean 0.014), which shows it relies on non-zero neighbour input.
+- **Rotation and ring shift:** these change mSCF1 by at most 0.009 in either direction. The frozen ranking is largely insensitive to these particular rearrangements. That is not evidence of general position invariance.
+
+**Caveat to carry everywhere:** the tile-centre model still reconstructs the real patch, so its training target is harder. This is not a pure information ablation. Also, normalisation happens before tiling, so the centre value can still reflect neighbouring intensities through its scale.
+
+**Two-seed rule (predeclared on 15 October, before any seed-2 output):** "S3PL benefits from real neighbourhood input during training" is reported as **supported** only if real beats tile-centre by ≥ 0.02 mSCF1 on ≥ 7/8 sections **in both seeds**, and the mean paired difference is ≥ 0.02 in both seeds. Otherwise it is reported as mixed, with per-section values. Seed 1 meets its half (8/8, mean +0.413). Seed 1 used the released code path, so the two seeds also differ in sample order. Both arms within a seed share the same handling.
+
+**Seed 2 (15 October; initialization seed 2, sample-order seed 1):**
+- Jobs: pilot 68500 (160TopL), then 68501. All 16 runs exited 0 on RTX 3090 nodes after the CUDA warm-up, and none had to be retried.
+- The status-only checker verified 16/16: checkpoint, configuration (seeds, epochs, patch size, matched count) and input-mode labels.
+
+| Section | Peaks | Seed 1 real | Seed 1 retrained tile | Seed 1 difference | Seed 2 real | Seed 2 retrained tile | Seed 2 difference |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 40TopL | 315 | 0.715 | 0.177 | +0.538 | 0.700 | 0.188 | +0.511 |
+| 160TopL | 210 | 0.495 | 0.130 | +0.365 | 0.493 | 0.130 | +0.363 |
+| 200TopL | 221 | 0.665 | 0.356 | +0.309 | 0.657 | 0.149 | +0.508 |
+| 240TopL | 255 | 0.670 | 0.144 | +0.526 | 0.673 | 0.144 | +0.529 |
+| 280TopL | 245 | 0.378 | 0.168 | +0.210 | 0.381 | 0.159 | +0.222 |
+| 360TopL | 247 | 0.643 | 0.149 | +0.494 | 0.632 | 0.150 | +0.482 |
+| 400TopL | 133 | 0.459 | 0.143 | +0.315 | 0.478 | 0.139 | +0.339 |
+| 520TopL | 232 | 0.707 | 0.163 | +0.544 | 0.712 | 0.165 | +0.547 |
+
+**Two-seed rule outcome: supported.** Real input beats the retrained tile-centre model by ≥ 0.02 in **8/8 sections in both seeds**:
+- seed 1: mean 0.591 versus 0.179, paired difference +0.413;
+- seed 2: mean 0.591 versus 0.153, paired difference +0.438.
+
+The real-input scores are stable across seeds (per-section change at most 0.019). The tile-centre scores are also stable, except 200TopL (0.356 in seed 1, 0.149 in seed 2). Reported wording: "S3PL benefits from real neighbourhood input during training (supported under the predeclared two-seed rule)". It always carries the caveat below. It concerns S3PL's own training, not the VAE, and does not explain the S3PL–VAE gap.
+
+Artifacts: `code/msi/results/baselines/s3pl/<section>_..._matched_<count>peaks/metrics.json` (real), `.../<section>_..._train_tile_centre/metrics.json` (retrained), `code/msi/results/diagnostics/s3pl_cac_frozen_context/<section>.json` and `.../s3pl_cac_frozen_topology/<section>.json`. Seed 2: `code/msi/reproducibility/s3pl_cac_centre_control/seed2_init2_order1/results/baselines/s3pl/*/metrics.json`. Curated: `code/msi/results/publication/current_evidence/s3pl_cac_controls.csv` and `s3pl_cac_seed_rule.json`. The table uses unrounded mSCF1 (the mean of the four mixed-F1 values, which is checked to round to the stored 3-decimal value).

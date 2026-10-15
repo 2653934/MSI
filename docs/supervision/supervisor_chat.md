@@ -364,7 +364,7 @@ Evidence: `code/msi/results/diagnostics/gate_d_pixel_counts/summary_66406/decisi
 2. Confirm that BIC can now start under the approved protocol 18 Section 6 specification. I'll write the job script after your review; the run still needs Zayd's OK.
 
 ### 2026-10-10 09:45 Supervisor → Code: Gate (d) pixel count confirmed; BIC may proceed
-Status: OPEN, for Code
+Status: SUPERSEDED by entry of 2026-10-15 (item 2 there)
 Context: I checked `summary_66406/decisions.json` and both GBM108_positive `evaluation/summary.json` files.
 - All four verdicts and all eight changes match your table.
 - K_bin is 584.
@@ -390,4 +390,134 @@ The disclosure about the `.out` files is accepted. The jobs had finished and no 
    - Ask Zayd for any detail you don't know. Don't guess.
 
 Do not commit, push or submit without Zayd's OK.
+
+### 2026-10-15 14:00 Supervisor → Code: Finish and curate everything before Zayd meets Hairong (Monday 19 October)
+Status: DONE (items 1–5; cluster-key details pending from Zayd)
+Context: Zayd moved the Hairong meeting to Monday 19 October so the experimental record is complete first. Nothing has been committed since `234873b` (10 October). The Supervisor is drafting the results chapter and the meeting summary in `docs/meetings/hairong_update_2026-10-11/`. Your job is the experiments and the curated record they cite. **Target: everything synced and logged by Saturday 17 October.**
+
+**1. BIC (approved specification, protocol 18 Section 6).**
+- Write the job script and tests, run the cluster test job, then submit with Zayd's OK.
+- CPU, `batch`, one array task per section-arm (4 tasks), `--parsable`, output folders created before submission.
+- Optional: the CPU posterior-|PCC| "BIC-K segmentation sensitivity, descriptive", only if it's a small script reusing existing functions.
+- Post the per-section-arm results here after the sync.
+
+**2. S3PL CAC retrained-centre control, second seed (new; predeclared here before any seed-2 output exists).**
+- **Why:** this is the one positive spatial result (seed 1: real 9×9 input 0.592 mean mSCF1 vs retrained centre-tiled input 0.179, 8/8 sections), and it rests on one seed.
+- **Design:** for all 8 CAC sections, train **both** arms at **initialization seed 2**:
+  - real patch input (the original protocol);
+  - centre-tiled input (`_train_tile_centre`, exactly as seed 1).
+  - Everything else is identical to seed 1: 10 epochs, patch size 9, `reference_spatial_max`, the matched peak counts already used (40TopL 315, 160TopL 210, 200TopL 221, 240TopL 255, 280TopL 245, 360TopL 247, 400TopL 133, 520TopL 232) and the same sample-order handling as the GBM initialization screen.
+  - Use new, distinct checkpoint and result names containing `seed2`. Never overwrite seed 1.
+- **Decision rule, fixed now:** "S3PL benefits from real neighbourhood input during training" is reported as **supported** only if real beats tile-centre by ≥ 0.02 mSCF1 on ≥ 7/8 sections **in both seeds**, and the mean paired difference is ≥ 0.02 in both seeds. Otherwise report it as mixed, with per-section values.
+- **Caveat to carry everywhere:** the tile-centre model still reconstructs the real patch, so the target is harder. This is not a pure information ablation.
+- Excluding `mscluster82` is already in the quarantine. Report CUDA-warm-up failures as node failures and retry only the failed indices.
+- If the existing scripts can't take an initialization seed without a change, post the smallest diff here first.
+
+**3. Bring the Results Record up to date** (`docs/research/01 Results Record.md`). It stops at 8 October and its executive summary is now wrong.
+- Add sections for:
+  - (a) the fair-scoring gate (a)/(b): bin level and approved partitions, using the Section 7.1 wording, with per-section values and the GBM patient grouping;
+  - (b) the gate (d) pixel count, including the supervisor's "about ten times smaller than the gap" sentence;
+  - (c) the S3PL CAC controls on all 8 sections: frozen zero and frozen tile (`s3pl_cac_frozen_context`), frozen rotate and ring-shift (`s3pl_cac_frozen_topology`, including the `valid_pair_with_prior_drift` sections), and retrained tile-centre seed 1. Later add seed 2 and BIC.
+- **Executive summary:** do not rewrite the claims yet; the framing waits for Hairong. Add a dated note at the top: "Superseded in part by the 9–10 October fair-scoring results; see section X." Correct the bullet that says "the robust gain comes from nonlinear attribution", so it says the IG gain over legacy holds but IG does not beat the no-IG posterior-correlation baseline.
+- Also update `docs/research/investigations/15 Overnight S3PL CAC Controls - 7 October 2026.md`. It still says "partial" and "pending submission", but all 8 sections are complete for both campaigns.
+
+**4. Curated tables for the report** (put in `code/msi/results/publication/current_evidence/`, plus a README entry):
+- `fair_scoring_bin_level_sections.csv`: section, collection, patient, arm, and each method's mSCF1 at K_bin;
+- `fair_scoring_collection_summary.csv`: the mean, median and wins of IG versus each baseline per collection-arm, plus the patient-grouped GBM means;
+- `s3pl_cac_controls.csv`: per section and seed, real / retrained tile / frozen tile / frozen zero / rotate / ring;
+- `gate_d_pixel_counts.csv`.
+
+Each table is produced by a script from the saved JSON, never by hand.
+
+**5. Housekeeping:** the cluster-access note in `docs/operations/cluster_sync.md` (from 10 October), and `CLAUDE.md` "Current work".
+
+**Don'ts:**
+- no changes to `docs/research/18` rules;
+- no new claims in `report/draft/` or `planning/claim_map.md` (they wait for Hairong);
+- no RCC;
+- no new architectures.
+
+Post here when items 1 and 2 are submitted, and again when they are synced and logged.
+
+
+### 2026-10-15 12:58 Code → Supervisor: Items 1 and 2 submitted; items 3–5 drafted
+Status: INFO (one point for your awareness in 2b; no approval is needed to continue)
+Context: submitted 10:55 UTC / 12:55 SAST with Zayd's OK. The `batch` partition is down (since 13 October, 07:05 UTC), so the CPU jobs were moved to `bigbatch` at submit time, as you approved; no script was changed. Logged in protocol 18 Section 10 (entry of 15 October).
+Evidence: protocol 18 Section 10; `code/msi/results/validation/fair_scoring_env_tests/68489_unittest.log`; `code/msi/reproducibility/s3pl_cac_centre_control/seed2_init2_order1/provenance/`.
+
+1. **BIC: array 68496** (4 section-arms), CPU on `bigbatch`.
+   - `select_gmm_k_bic.py` is unchanged, run as specified.
+   - The new `scripts/bic_segmentation_sensitivity.py` covers item (b). It does nothing when BIC supports the production K. Otherwise it must first reproduce the saved production-K posterior-|PCC| to 1e-12, or it stops. It reports ARI and NMI only, with null verdict and trigger.
+   - Test job 68489: 92/92 passed, none skipped, including the six new BIC tests.
+   - Both scripts print status lines only, so the outcome is read from the JSON after the sync.
+   - No departure from the Section 6 specification other than the partition.
+2. **S3PL seed 2: pilot 68500** (160TopL, both arms), then **68501** (the other 14 tasks, `afterok`).
+   - a. No S3PL code change was needed: `--initialization_seed 2 --sample_order_seed 1`, as in the GBM screen, with `--number_peaks` set to the matched count.
+   - The artifacts are in a separate `seed2_init2_order1` root. S3PL training names don't contain the seed, so a seed-2 real-input run in the default folder would have **overwritten seed 1**.
+   - b. **For your awareness:** CAC seed 1 used the released RNG path. Seed 2 uses the controlled sample-order stream you specified. So the seeds also differ in sample order, not only initialization. Within each seed both arms share identical handling, which is what the paired rule compares. I'll report it as written unless you say otherwise.
+3. **Results Record:**
+   - Dated supersession note added at the top, and the "nonlinear attribution" bullet corrected.
+   - New sections: fair-scoring (a)/(b), using the Section 7.1 wording, per-section values and the GBM patient grouping; gate (d) pixel count, with your "about ten times smaller" sentence; S3PL CAC controls on 8/8 sections.
+   - The 10 October confirmation and sentences (a)/(b) are now also in protocol 18 Section 10.
+   - Investigation 15 has been updated: both campaigns are complete, with retries 65436 and 65437.
+4. **Tables:** `results/publication/current_evidence/` now has the four tables you asked for, plus `fair_scoring_partition_sections.csv`, `s3pl_cac_seed_rule.json`, and `gate_d_bic.csv` once BIC is synced.
+   - All of them come from `scripts/build_current_evidence_tables.py`, which cross-checks against decision tables 66097 and 66406 (it passes) and records unrounded S3PL mSCF1.
+   - The README has a dated caution above its old "Primary result", plus a table index.
+   - One finding: on 240TopL, the two frozen campaigns' fresh real values differ (0.672 vs 0.670), so each intervention is compared with its own campaign's reference.
+5. **Housekeeping:** the cluster-access section is drafted in `cluster_sync.md`. The key location and type, and how the key was authorised, are left for Zayd to fill in rather than guessed. CLAUDE.md gains the "if `batch` is down" rule.
+
+Next: I'll post again when both campaigns have been synced and logged, with the per-section-arm BIC results and the two-seed rule outcome, then stop for review.
+
+### 2026-10-15 13:21 Code → Supervisor: BIC and S3PL seed 2 synced and logged; stopping for review
+Status: ANSWERED (see entry of 2026-10-15 15:30)
+Context:
+- BIC 68496 and S3PL seed 2 (68500, 68501) all exited 0; no retries, no node failures. The seed-2 checker verified 16/16.
+- Zayd synced, and values were read locally after that.
+- All curated tables were rebuilt by `scripts/build_current_evidence_tables.py`, and its cross-checks passed.
+- Logged in protocol 18 Section 10, the Results Record (new "Gate (d) BIC-selected K" subsection; seed 2 added to the S3PL section) and investigation 15.
+Evidence: `code/msi/results/publication/current_evidence/gate_d_bic.csv`, `s3pl_cac_controls.csv`, `s3pl_cac_seed_rule.json`; `code/msi/results/diagnostics/gate_d_bic/`; `code/msi/reproducibility/s3pl_cac_centre_control/seed2_init2_order1/`.
+
+**BIC, per section-arm (descriptive, no verdict; production K stays the reported setting):**
+
+| Section-arm | Production K | BIC K | Smallest BIC drop per added K | Posterior-\|PCC\| at K_bin: production K → K = 6 | ARI vs labels: production K → K = 6 |
+|---|---:|---:|---:|---|---|
+| GBM108_positive / central_only | 2 | 6 | 314 | 0.692 → 0.391 (−0.300) | 0.559 → 0.249 |
+| GBM108_positive / uniform_mean | 2 | 6 | 472 | 0.705 → 0.406 (−0.299) | 0.644 → 0.219 |
+| 40TopL / central_only | 3 | 6 | 1601 | 0.727 → 0.729 (+0.001) | 0.435 → 0.340 |
+| 40TopL / uniform_mean | 3 | 6 | 1550 | 0.745 → 0.724 (−0.021) | 0.624 → 0.352 |
+
+- **BIC does not support the production K in any section-arm.** It selects K = 6, the **largest predeclared candidate**, and it is still falling there: the minimum is at the boundary, not inside the range. I've worded it as "BIC prefers more than the production number of components, with no minimum found within K ≤ 6", **not** "six clusters". I did not run K > 6, since it was not predeclared.
+- All refits converged, the production refit ARI is 1.0, and every sensitivity run reproduced the saved production-K posterior-|PCC| exactly before scoring K = 6. No IG was run.
+- **What the sensitivity suggests (development sections, one seed, descriptive):** the posterior-|PCC| baseline's strength does not rest on a BIC-supported cluster count. On GBM108_positive it depends on the coarse two-component segmentation: K = 6 costs about 0.30. On 40TopL it hardly matters.
+
+**S3PL two-seed rule (predeclared on 15 October): supported.**
+- Real input beats the retrained tile-centre model by ≥ 0.02 in 8/8 sections in both seeds.
+- Seed 1: 0.591 vs 0.179 (+0.413). Seed 2: 0.591 vs 0.153 (+0.438). Seed-2 per-section differences range from +0.222 to +0.547.
+- The real-input scores moved by at most 0.019 per section between seeds. One tile-centre score moved a lot (200TopL: 0.356 → 0.149).
+- The caveats carry over: the target is harder (not a pure information ablation), and seed 1 used the released RNG path while seed 2 used the controlled sample-order stream.
+- This is about S3PL's own training. It does not explain the S3PL–VAE gap.
+
+**Slurm email: tested and dropped.**
+- Zayd's test job 68526 (`--mail-type=BEGIN,END`, to his Wits address) completed with exit 0, but no email arrived.
+- Slurm's `MailProg` is `/bin/mail`, which is not installed on the login node. I can't see the controller host, so this is likely but not proven to be the cause.
+- **Zayd decided not to use Slurm email.** Job tracking stays with `sacct` polling from Code. Logged in Section 10.
+
+**Requests:**
+1. Confirm the BIC wording: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only."
+2. Confirm "supported" for the S3PL two-seed rule, with the caveats as worded in the Results Record S3PL section.
+3. Items 3–5 of your 15 October entry are done, except the cluster-access key details, which Zayd still has to fill in. Is anything else needed before the 19 October meeting?
+
+### 2026-10-15 15:30 Supervisor → Code: BIC and S3PL seed 2 confirmed; record complete for the meeting
+Status: DONE by Code (point 1 edits made 15 October; Code stopped until after the 19 October meeting)
+Context: I checked `gate_d_bic.csv`, all four `bic_selection.json` files (every K converged; production refit ARI 1.0; BIC falls monotonically from K = 1 to K = 6 in every section-arm) and `s3pl_cac_seed_rule.json`. All values match your entry. Good, careful work, including keeping seed 2 in its own folder so it couldn't overwrite seed 1.
+
+1. **BIC wording: confirmed**, with one sentence added. Use: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count."
+   - In the Results Record, put that last sentence next to the fair-scoring results as well as the BIC subsection, since it qualifies the "label-free" description there too.
+   - Don't characterise the K = 6 sensitivity beyond what you wrote; it's descriptive, on development sections only.
+2. **S3PL two-seed rule: "supported" is confirmed**, with both caveats as you worded them: the harder target, and the sample-order difference between the seeds. Your sentence "this is about S3PL's own training, it does not explain the S3PL–VAE gap" is right; keep it.
+3. **Nothing else before the meeting.** After the edit in point 1:
+   - Zayd commits (scripts, tests, tables, Results Record, protocol 18, investigation 15, CLAUDE.md, the chat).
+   - The 240TopL fresh-real drift (0.672 vs 0.670) is handled correctly by comparing within each campaign. Leave it.
+   - Then stop. No report or claim-map edits until Hairong has responded to the framing on 19 October.
+   - The cluster-key details in `cluster_sync.md` stay for Zayd.
 
