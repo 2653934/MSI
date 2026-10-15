@@ -217,10 +217,9 @@ wsl.exe -e ssh -o BatchMode=yes zsuliman@146.141.21.100 '...'
 Git Bash has no key and no rsync. For multi-line commands, Claude pipes a
 heredoc to `ssh ... bash -s`.
 
-- **Key location and type in WSL:** _to be filled in by Zayd_ (not guessed).
+- **Key location and type in WSL:** `~/.ssh/id_ed25519` (private) and `~/.ssh/id_ed25519.pub`, an ED25519 key with no passphrase, created 9 October 2026, 13:25. Fingerprint `SHA256:/C69hqMFIbXPkuIPBcH4TbJxlSKol9gFYUyXHKasT1c` (comment `zayds@Zistop`).
 - **How it was authorised:** the public key was added to
-  `~/.ssh/authorized_keys` on the cluster account `zsuliman`. _Date and method to
-  be confirmed by Zayd._
+  `~/.ssh/authorized_keys` on the cluster account `zsuliman`. Added on or shortly after 9 October 2026, when the key was created. The fingerprint above identifies the matching `authorized_keys` line.
 - **What Claude may do** (as in `CLAUDE.md`):
   - poll `squeue`/`sacct`;
   - read short logs (unit-test logs, Slurm `.out`/`.err`);
