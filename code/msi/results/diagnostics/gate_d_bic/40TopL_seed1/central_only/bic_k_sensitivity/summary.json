@@ -1,0 +1,110 @@
+{
+  "status": "complete",
+  "provenance": {
+    "sensitivity_version": 1,
+    "label": "BIC-K segmentation sensitivity, descriptive",
+    "dataset": "40TopL",
+    "parameters": {
+      "production_k": 3,
+      "target_k": 6,
+      "seed": 1,
+      "n_init": 20,
+      "chunk_size": 1024,
+      "score_tolerance": 1e-12
+    },
+    "input": {
+      "path": "/datasets/zsuliman/msi_data/cac_msipl/40TopL.h5",
+      "bytes": 27854880,
+      "sha256": "d4c8249370885836cd0211b47c67c5214ac7d983e6e5f8934668d96f126a7b8b"
+    },
+    "source_artifacts": {
+      "latent_mean.npy": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/latent_mean.npy",
+        "bytes": 93848,
+        "sha256": "a0a84f5d7c511ff30b827de911943e6c8896d8bd88dc63cc7f3b43be068e1890"
+      },
+      "coordinates_and_gmm.npz": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/coordinates_and_gmm.npz",
+        "bytes": 132216,
+        "sha256": "505f36100f065e48aca3dde6fcf3c40df032f1aeea2e2cf23340e5e7c2e53b72"
+      },
+      "gmm_parameters.npz": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/gmm_parameters.npz",
+        "bytes": 2330,
+        "sha256": "5f6ae4d7c0d4b710a8dddc81844415b12eb259c4eb2db0392a203c7dcebbed0f"
+      },
+      "bic_selection": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/gate_d_bic/40TopL_seed1/central_only/bic_selection.json",
+        "bytes": 2364,
+        "sha256": "b2b2f0d625f20e44036cdd3e92fda2fe2df9c655dccc4a6be91ef15f6ccb4bbb"
+      },
+      "fair_scoring_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/fair_scoring_baselines/bin_level_only/40TopL_seed1/central_only/summary.json",
+        "bytes": 308378,
+        "sha256": "814f7ce9f79f1ab81444ca11ac690e66afd7878f924d3ab08f1af37ebf2a8813"
+      }
+    },
+    "code": {
+      "bic_segmentation_sensitivity.py": "eff5e45110909d16c4df760ca8bad6deafabcbf52e38f5a218503113530253e1",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "simple_baselines.py": "1fc8bd4492e96039ec60df8b37801edcc77541525ee068b6a3e7f74a7b7379ee",
+      "evaluate_fair_scoring_baselines.py": "cd88bd02a1aaf642bc2c9976390770a429d5549388f16bc6f4fc44e0372ccb6f",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "2c33904f917cf394e45249e73cd290a7b89f5c5da17a622c94628199342c6dc4"
+    }
+  },
+  "label": "BIC-K segmentation sensitivity, descriptive",
+  "dataset": "40TopL",
+  "production_k": 3,
+  "bic_selected_k": 6,
+  "tested_k": 6,
+  "verdict": null,
+  "trigger": null,
+  "applicable": true,
+  "K_bin": 315,
+  "budget_multiplier": "1.0",
+  "checks": {
+    "production_posterior_max_abs_difference": 1.3471762850825186e-06,
+    "production_k_mSCF1_reproduced": {
+      "posterior_abs_pcc_balanced": 0.7272305097268011,
+      "hard_assignment_abs_pcc_balanced": 0.7272305097268011
+    }
+  },
+  "refit": {
+    "converged": true,
+    "n_iter": 36,
+    "bic": 40172.47992210842,
+    "component_counts": [
+      539,
+      1028,
+      803,
+      925,
+      812,
+      579
+    ],
+    "empty_components": 0
+  },
+  "label_agreement": {
+    "tested_k_hard_assignment": {
+      "ari": 0.3400471471286428,
+      "nmi": 0.460644640702751
+    },
+    "production_k_saved_assignment": {
+      "ari": 0.43493225106948546,
+      "nmi": 0.4653178892872395
+    },
+    "note": "ARI and NMI only; no balanced accuracy when K differs from the class count"
+  },
+  "mSCF1_at_K_bin": {
+    "posterior_abs_pcc_balanced": {
+      "production_k_mSCF1": 0.7272305097268011,
+      "tested_k_mSCF1": 0.7286441457206178,
+      "tested_minus_production": 0.0014136359938166088
+    },
+    "hard_assignment_abs_pcc_balanced": {
+      "production_k_mSCF1": 0.7272305097268011,
+      "tested_k_mSCF1": 0.7286441457206178,
+      "tested_minus_production": 0.0014136359938166088
+    }
+  }
+}

@@ -504,6 +504,117 @@ class FairScoringPipelineTests(unittest.TestCase):
         self.assertTrue(record["ig_vs_posterior_verdict"].startswith("incomplete collection"))
         self.assertIn("not a matched", record["legacy_note"])
 
+    # --- Gate (d) BIC selection and "BIC-K segmentation sensitivity, descriptive". ---
+    def bic_inputs(self, name):
+        """A real BIC selection and gate (a)/(b) summary on the synthetic section."""
+        root = self.root / name
+        fair = root / "fair"
+        run("evaluate_fair_scoring_baselines.py", *self.common(fair))
+        run("select_gmm_k_bic.py", "--attribution-dir", self.attribution,
+            "--production-k", 2, "--n-init", 2, "--output", root / "bic",
+            "--allow-outside-slurm")
+        return root / "bic" / "bic_selection.json", fair / "summary.json"
+
+    def forced_bic(self, path, selected, k_ge_2=None):
+        record = json.loads(path.read_text())
+        record["selected_k"] = selected
+        record.pop("sensitivity_k_ge_2", None)
+        if k_ge_2 is not None:
+            record["sensitivity_k_ge_2"] = k_ge_2
+        forced = path.with_name(f"forced_{selected}_{k_ge_2}.json")
+        forced.write_text(json.dumps(record))
+        return forced
+
+    def sensitivity(self, bic, fair, output, check=True):
+        return run("bic_segmentation_sensitivity.py", "--input", self.input,
+                   "--attribution-dir", self.attribution, "--bic-selection", bic,
+                   "--fair-scoring-summary", fair, "--output", output,
+                   "--chunk-size", 64, "--allow-outside-slurm", check=check)
+
+    def test_bic_selection_checks_refit_and_reads_no_labels(self):
+        bic, _ = self.bic_inputs("bic_basic")
+        record = json.loads(bic.read_text())
+        self.assertEqual(record["status"], "complete")
+        self.assertGreaterEqual(record["production_refit_ari_to_saved"], 0.999)
+        self.assertFalse(record["labels_read"])
+        self.assertEqual([r["k"] for r in record["records"]], [1, 2, 3, 4, 5, 6])
+
+    def test_bic_selection_refuses_outside_slurm(self):
+        environment = dict(os.environ)
+        environment.pop("SLURM_JOB_ID", None)
+        environment["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(SCRIPTS)])
+        never = self.root / "never"
+        calls = {
+            "select_gmm_k_bic.py": ["--attribution-dir", self.attribution,
+                                    "--production-k", "2", "--output", never],
+            "bic_segmentation_sensitivity.py": [
+                "--input", self.input, "--attribution-dir", self.attribution,
+                "--bic-selection", never / "b.json", "--fair-scoring-summary",
+                never / "f.json", "--output", never],
+        }
+        for script, arguments in calls.items():
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / script), *map(str, arguments)],
+                env=environment, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("outside a Slurm job", result.stderr)
+            self.assertFalse(never.exists())
+
+    def test_sensitivity_computes_nothing_when_bic_supports_production_k(self):
+        bic, fair = self.bic_inputs("bic_same")
+        output = self.root / "bic_same" / "sensitivity"
+        self.sensitivity(self.forced_bic(bic, 2), fair, output)
+        record = json.loads((output / "summary.json").read_text())
+        self.assertFalse(record["applicable"])
+        self.assertIn("BIC supports the production K", record["reason"])
+        self.assertNotIn("mSCF1_at_K_bin", record)
+
+    def test_sensitivity_at_other_k_reproduces_production_and_has_no_verdict(self):
+        bic, fair = self.bic_inputs("bic_other")
+        output = self.root / "bic_other" / "sensitivity"
+        self.sensitivity(self.forced_bic(bic, 3), fair, output)
+        record = json.loads((output / "summary.json").read_text())
+        saved = json.loads(fair.read_text())["bin_level"]
+        self.assertTrue(record["applicable"])
+        self.assertEqual(record["tested_k"], 3)
+        self.assertIsNone(record["verdict"])
+        self.assertIsNone(record["trigger"])
+        self.assertEqual(record["label"], "BIC-K segmentation sensitivity, descriptive")
+        for name in ("posterior_abs_pcc_balanced", "hard_assignment_abs_pcc_balanced"):
+            comparison = record["mSCF1_at_K_bin"][name]
+            self.assertEqual(comparison["production_k_mSCF1"], saved[name]["1.0"]["mSCF1"])
+            self.assertAlmostEqual(comparison["tested_minus_production"],
+                                   comparison["tested_k_mSCF1"]
+                                   - comparison["production_k_mSCF1"], places=12)
+        self.assertEqual(len(record["refit"]["component_counts"]), 3)
+        self.assertNotIn("balanced_accuracy", json.dumps(record["label_agreement"]))
+        # Restart: identical provenance is reused; an altered result is stale.
+        self.sensitivity(self.forced_bic(bic, 3), fair, output)
+        (output / "summary.json").write_text(json.dumps(dict(record, status="partial")))
+        result = self.sensitivity(self.forced_bic(bic, 3), fair, output, check=False)
+        self.assertEqual(result.returncode, 3, result.stderr)
+
+    def test_sensitivity_after_k1_uses_recorded_best_k_ge_2(self):
+        bic, fair = self.bic_inputs("bic_one")
+        output = self.root / "bic_one" / "sensitivity"
+        self.sensitivity(self.forced_bic(bic, 1, k_ge_2=3), fair, output)
+        record = json.loads((output / "summary.json").read_text())
+        self.assertEqual(record["bic_selected_k"], 1)
+        self.assertEqual(record["tested_k"], 3)
+
+    def test_sensitivity_refuses_a_bic_selection_on_another_latent(self):
+        bic, fair = self.bic_inputs("bic_other_latent")
+        record = json.loads(bic.read_text())
+        record["provenance"]["source_artifacts"]["latent_mean.npy"]["sha256"] = "0" * 64
+        record["selected_k"] = 3
+        tampered = bic.with_name("tampered.json")
+        tampered.write_text(json.dumps(record))
+        output = self.root / "bic_other_latent" / "sensitivity"
+        result = self.sensitivity(tampered, fair, output, check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("different latent_mean.npy", result.stderr)
+        self.assertFalse((output / "summary.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
