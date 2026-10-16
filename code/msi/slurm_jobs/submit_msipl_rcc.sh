@@ -16,7 +16,9 @@ while [ "$#" -gt 0 ]; do
 done
 runner=slurm_jobs/run_msipl_rcc.sh
 bash -n "$runner"
+# The checkpoint root is the tasks' shared parent: create it here to avoid the
+# concurrent mkdir race (66114, 69570_1).
 mkdir -p logs results/baselines/msipl/rcc results/baselines/msipl/rcc_fixed_beta \
-         results/baselines/msipl/rcc_provenance
+         results/baselines/msipl/rcc_provenance /datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc
 job="$(sbatch --parsable --array="${indices}%${concurrency}" "$runner")"
 echo "${job%%;*} indices=$indices" | tee -a results/baselines/msipl/rcc_provenance/slurm_job_ids.txt

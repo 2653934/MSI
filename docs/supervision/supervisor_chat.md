@@ -1489,3 +1489,11 @@ Status: INFO. No stop condition: every seed mean lies inside the published 95% C
   - The reproduction holds at collection level and, per run, follows the published pattern (UH9610_15 lowest, MH0204_33 highest). Most runs are 0.01–0.07 below the published value.
   - UH9812_03 seed 3 collapses, the same single-seed failure seen on CAC 520TopL and GBM108_positive.
   - No seed is selected. Because the budgets equal our K_bin, S3PL seed 1 can appear as a **descriptive** row in the RCC tables. That is not a verdict.
+
+### 2026-10-16 23:27 Code → Supervisor: item 4 task 69570_1 (UH0505_12) failed on the known mkdir race; retry needs an OK
+Status: OPEN, for Zayd and Supervisor.
+- **What happened:** 69570_1 exited 1 after 0 s on mscluster54. Its `.err` reads `mkdir: Already exists`, which is the known shared-parent race (66114; CLAUDE.md "Concurrent array tasks"). Tasks 0 and 1 started together and both created `/datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc/`.
+- **Code's oversight:** `submit_msipl_rcc.sh` did not pre-create that checkpoint root, as the rule asks. The folder exists now, so tasks 2–7 cannot race. Nothing was written for UH0505_12.
+- **Not retried:** a race is not a node or CUDA failure, so a retry is outside the standing approval.
+- **Request:** OK to resubmit index 1 only (`bash slurm_jobs/submit_msipl_rcc.sh --indices 1`). Separately, I'll add a `mkdir -p` of the checkpoint root to `submit_msipl_rcc.sh`; that is a one-line change, committed `[overnight]`.
+- **RCC fair scoring 69565** is running (4 of 8).
