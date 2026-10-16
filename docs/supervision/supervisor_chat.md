@@ -1326,3 +1326,17 @@ Status: INFO
   2. **Time:** C2's 160TopL took 12:27 for 100 epochs (68718), so 10 epochs is about 1–3 min per section. Against `--time=02:00:00`.
   3. **Partition and quarantine:** `bigbatch`, `--exclusive`, CUDA warm-up, the 16 quarantined nodes excluded. At most 2 running, so RCC keeps priority and the total stays ≤ 6.
   4. **Outputs:** `reproducibility/s3pl_cac_seeds/seed{2,3}_released/` (new). The seed-1 artifacts in `results/baselines/s3pl/` are untouched, and the job refuses partial artifacts (exit 3).
+
+### 2026-10-16 22:23 Code → Supervisor: [overnight] item 3, S3PL on RCC; diff summary (staging, not a code adapter)
+Status: INFO
+- **How the adapter is done:** S3PL already reads our HDF5 layout (`load_massnet_h5`: `Data`, `mzArray`, `xLocation`, `yLocation`, either orientation). It takes `dataname` from the file stem, which keys `num_GT_peaks` (`MH0204_33` …), and reads `masks/<dataname>_mask.npy`.
+  - Symlinks won't work, because `resolve_data_paths` calls `Path.resolve()`, which follows them back to the `RCC_` name.
+  - So **the adapter is a staging step, not a change to `data_source.py`.** Byte-checked copies (sha256 equal to the source) go to `/datasets/zsuliman/msi_data/rcc_s3pl/{<run>.h5, masks/<run>_mask.npy}`, about 24 MB, in the same layout as `gbm_massnet/`.
+  - **No S3PL code changes, so the GBM/CAC loading paths are untouched by construction.** That deviates in form from "an adapter for `data_source.py`" but meets the bit-identity condition trivially. Tell me if you want a code adapter instead.
+- **Files (new):**
+  - `scripts/check_s3pl_rcc_labels.py`: staging plus the adapter gate. S3PL's own `create_pearson_labels`, with the `PeakEvaluation.get_groundtruth` rule at PCC 0.5, must equal our |R@0.5| from `released_target_budget.json` for every run; otherwise exit 4. It records the difference from `num_GT_peaks` and never overwrites a differing staged file.
+  - `slurm_jobs/run_s3pl_rcc_gate.sh` (CPU), `run_s3pl_rcc.sh` (GPU, 24 tasks: seeds 1–3 × 8 runs; refuses unless the gate passed), `submit_s3pl_rcc.sh gate|train`.
+  - **Settings, as in paper Section 3.3:** p = 5, z = 1024, d1 51, d2 1, 10 epochs, batch 16, lr 1e-2, dropout 0, `reference_spatial_max`, released RNG path, n = `num_GT_peaks`, 3 classes in the order cancer, normal, unannotated.
+  - `src/spatial_msipl/tests/test_s3pl_rcc_adapter.py` (3 tests: pass, fail with exit 4, no overwrite).
+- **Tests:** `test_s3pl_rcc_adapter` 3/3, `test_rcc_pipeline` 12/12, `test_job_scripts` 3/3, all locally.
+- **Order:** the gate job runs first (CPU); training only after `gate.json` says `passed`, and only after the RCC campaign's GPU needs are met.

@@ -700,6 +700,11 @@ A test rebuilds the IG matched groups from these files.
           - **Moved aside** at 21:58 SAST with `mv -n` (refusing an existing target): the 4 checkpoint folders and the 4 result folders of indices 2, 3, 10 and 11, to `/datasets/zsuliman/msi_checkpoints/spatial_msipl/rcc/superseded_streaming/<run>_seed1/<arm>/` and `results/experiments/rcc_spatial_msipl/superseded_streaming/<run>_seed1/<arm>/`. 16 files in all: 4 × `checkpoint_latest.pt`, plus `progress.json`, `training_history.json` and `training_stdout.log` for each.
           - Checked afterwards: no `checkpoint_latest.pt` and no arm result folder remains for those indices; the run-level budget files are untouched.
           - **Cached pilot 69482** submitted 21:59 SAST / 19:59 UTC (`submit_rcc.sh pilot`, indices 2, 3, 10 and 11, `bigbatch`, the 16 quarantined nodes excluded), after the checklist was posted to the chat at 22:00. If a task runs past 1 h, Code stops and reports.
+          - **Overnight queue (supervisor chat 22:07, Zayd-approved; commit permission until Saturday 17 October 12:00 SAST):**
+            - `[overnight]` commit `a609a00` (item 1): RCC summary tables in the GBM/CAC format.
+            - `[overnight]` commit `e60f9ea` (item 2): `run_s3pl_cac_seeds.sh` and `submit_s3pl_cac_seeds.sh`.
+            - Upload at 22:16 SAST, `-n` first, 4 files; 4/4 match HEAD.
+            - **69502**, S3PL CAC seeds 2 and 3, submitted 22:16 SAST / 20:16 UTC: 16 tasks, at most 2 running, `bigbatch`, quarantine excluded. The checklist was posted in the chat first. Output `reproducibility/s3pl_cac_seeds/`.
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 
