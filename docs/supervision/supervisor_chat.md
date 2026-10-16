@@ -847,3 +847,131 @@ Status: INFO
   - **68800:** G1 fair scoring (`attention_centremask_p50`, 16 sections, `bigbatch`, at most 2 running at once, so C2 keeps its GPU slots).
   - **68801:** E pilot (task 8, 40TopL `uniform_p7`).
 - **State:** G training is 30/34 (G2 GBM tasks 20–22 and G3 task 33 running). The C2 remainder 68719 is running at the 6-job cap. No new failures.
+
+### 2026-10-15 20:15 Code → Supervisor: RCC rerun submitted (68805) with the unannotated-class rule
+Status: INFO
+- Zayd committed and synced the RCC fix as `22ca398`. The 3 changed files match on the cluster, and the R script parses in `rcc_env`.
+- With Zayd's OK, the 68633 outputs were moved aside, not deleted: `results/validation/rcc_feasibility_superseded_68633/` and the empty `/datasets/zsuliman/msi_data/rcc_cardinal_superseded_68633/`.
+- **68805** (`run_rcc_feasibility.sh`, `bigbatch`) was submitted about 18:15 UTC / 20:15 SAST. The go/no-go is read only after Zayd syncs `results/validation/rcc_feasibility/`.
+
+### 2026-10-15 23:25 Code → Supervisor: Overnight status; RCC rerun reports go; G2/G3 scoring submitted
+Status: INFO
+- Zayd authorized Code to resubmit failures and submit the remaining approved jobs overnight. No rule or specification changes.
+- **E pilot 68801_8** (40TopL p7): complete in 6:57, with training, checkpoint, IG and peak evaluation all done. **G1 fair scoring 68800:** 16/16 exit 0. **G training:** 34/34 complete. **C2:** 14/16 complete, 2 running.
+- **RCC rerun 68805:** completed. The job log reports 8 runs exported and audited, decision **go**. Code has not read the report; the NA-nature description and the RCC run specification follow after Zayd syncs, and that specification goes into Section 6.1 before any RCC training job.
+- **Submitted:** G2 fair scoring **68890** (16 sections) and G3 fair scoring **68893** (GBM22_2, 160TopL).
+- **Next, automatic once the 48-job cap allows:** the E remainder (31 tasks, at most 5 running), then the p5 A(a)/(b) re-evaluation (`uniform_p5 all`). The IDs will be logged in Section 10.
+
+### 2026-10-16 00:35 Code → Supervisor: E remainder (68900) and p5 re-evaluation (68940) submitted; C2 and G scoring complete
+Status: INFO
+- **Submitted automatically once the 48-job cap allowed:**
+  - **68900:** E remainder, 31 tasks, at most 5 running; 21:30 UTC / 23:30 SAST.
+  - **68940:** p5 A(a)/(b) via `uniform_p5 all`; 22:31 UTC / 00:31 SAST.
+- **Complete, every task exit 0:**
+  - C2: 16/16 (68718, 68719).
+  - G2 fair scoring 68890: 16/16.
+  - G3 fair scoring 68893: 2/2.
+- **Waiting for Zayd's sync before any reading:** G1, G2 and G3 fair scoring, C2 epoch checkpoints, and the RCC report. The C2 epoch-checkpoint evaluation (`evaluate_s3pl_epoch_checkpoints.py`) was run inside the training jobs. Code will confirm its status after the sync.
+
+### 2026-10-16 08:42 Code → Supervisor: p5 re-evaluation complete; E p7 complete; p7 fair scoring submitted (69076)
+Status: INFO
+- **p5 A(a)/(b) 68940:** 16/16, exit 0.
+- **E:**
+  - p7 is complete, 16/16.
+  - p9 has 1/16 complete, 5 running and 10 pending. The estimated finish is about 16:00–16:30 SAST today.
+- **With Zayd's OK:** p7 fair scoring **69076** (16 sections, `bigbatch`) was submitted at 06:40 UTC / 08:40 SAST.
+- p9 fair scoring follows once every p9 task completes; Zayd authorized that and resubmission of any failed tasks.
+- Zayd will sync results later today. RCC reading, the NA-nature write-up and the RCC run specification follow the sync, and all of this is before the end of today's go/no-go deadline.
+
+### 2026-10-16 16:37 Code → Supervisor: E complete (32/32); p7 scoring complete; p9 scoring submitted (69370)
+Status: INFO
+- **E training:** 32/32 complete, every task exit 0. p9 GBM took 4.1–8.2 h.
+- **p7 fair scoring 69076:** 16/16 complete.
+- **p9 fair scoring 69370:** submitted 14:35 UTC / 16:35 SAST under Zayd's standing OK. This is the last job of the round.
+- **C3:** not run, as you accepted on 15 October 19:37.
+- **Next:** once 69370 finishes and Zayd syncs, run `summarise_fair_scoring_arms.py` for the A, G and E verdicts, and read the C2 and RCC outputs. The RCC go/no-go and the NA write-up are due today, and both need the sync.
+
+### 2026-10-16 16:55 Code → Supervisor: p9 scoring complete; all cluster jobs of the round are done
+Status: INFO
+- **p9 fair scoring 69370:** 16/16 complete. Every job of the final round has now finished (A, G1–G3, C2, E p7/p9, p5, RCC rerun). No scores have been read; the summariser and the RCC write-up follow Zayd's sync.
+
+### 2026-10-16 17:28 Code → Supervisor: Round results (A, G, E, C2); RCC is GO; RCC run specification for approval
+Status: ANSWERED (see Supervisor entry of 2026-10-16 17:36). Details are in protocol 18 Section 6.1 item D and the Section 10 log of 16 October.
+
+**1. RCC go/no-go: GO** (68805, `go_no_go.json`).
+- All 4 criteria are met: 8/8 runs have cancer and normal labels, and 8/8 exports are audit `valid`. Runs have 972–3,564 px, and m/z runs 150–1000 in 10,200 bins.
+- **Nature of NA (descriptive):**
+  - Each run is a fully measured rectangle. Cancer and normal are each one compact region, separated by a gap, and NA fills the rest.
+  - NA is the largest class in every run (45–78% of pixels). Only 10–25% of NA lies on the image edge, and 8–22% touches an annotated pixel.
+  - NA's TIC is not near zero: its median is 82–94% of the annotated classes'. The intensities are small integers with TIC about 5,000 in every class, so the release may be processed and TIC cannot separate glass from tissue.
+  - **Reading: the layout looks like off-tissue background around two tissue pieces, but "off-tissue" is not established.** Following your rule, every RCC number carries "the unannotated class (45–78% of pixels) may include tissue; not established".
+
+**2. A, G and E decision table** (`summarise_fair_scoring_arms.py`, run locally on the synced JSON; one evaluator hash per scope). A(b) reproduction passed 16/16. Values are mean IG mSCF1 difference at K_bin, with positive sections out of 8, given as bin / P1.
+- **A, attention vs uniform_mean:** **equivalent** on GBM (+0.011, 6/8 / +0.010, 6/8) and on CAC (−0.006, 4/8 / −0.005, 2/8).
+- **G1 vs attention:** GBM label "mixed", but the numbers are **below** attention: −0.039, 1/8 / −0.040, 1/8. CAC **equivalent**. G1 vs G2 is equivalent on both collections.
+- **G3:** +0.021 on 160TopL, −0.011 on GBM22_2, so the rule is not met.
+- **G mechanism:** median entropy 0.998–0.999 with masking, so **attention stayed near-uniform**.
+- **E:** p7 and p9 on GBM are labelled "mixed", but both are below 3×3: −0.035, 2/8 at both scales, and confirmation-only −0.03. On CAC both are **equivalent**. p5 (descriptive): GBM −0.018, CAC −0.006.
+- **IG vs its own posterior-|PCC|:** 0/8 positive in **all 14** extra collection-arms (GBM −0.22 to −0.29, CAC −0.05 to −0.08), with the Section 7.1 fall-through label.
+- **Wording question:** the A/G/E rules have no "worse" category, just as Section 7 has none (Section 7.1). I've recorded consistently negative "mixed" results by their numbers, for example "below 3×3 in 6/8 GBM sections, mean −0.035", and added no category. Please confirm that wording.
+
+**3. C2, S3PL 100 epochs** (descriptive).
+- Epoch 10 reproduces the existing 10-epoch mSCF1 in 16/16 sections (200TopL 0.671 vs 0.672).
+- CAC mean 0.591 / 0.413 / 0.382 / 0.336 and GBM 0.316 / 0.212 / 0.209 / 0.212 at epochs 10 / 25 / 50 / 100.
+- **10 epochs is the best of the four points in 15/16 sections** (the exception is GBM108_positive, 0.033 → about 0.16). So longer training does not help S3PL, and the 10-epoch comparison does not handicap it.
+
+**4. Proposed RCC run specification** (to go into Section 6.1 once approved; nothing is coded or submitted):
+- **Data:** the 8 exported runs, all treated as confirmation sections, because there was no RCC development use. Each run is treated as one patient (MH and UH codes); I'll check this against the Cardinal metadata before any scoring.
+- **Training:** frozen pipeline as on GBM, `central_only` and `uniform_mean`, 100 epochs, seed 1. Streaming loader, since the runs are small. GMM K = 3 (cancer, normal, unannotated), disclosed as class-informed.
+- **Budget:** K_bin = |R@0.4| over all three classes.
+- **Partitions:** the P1 structural audit (Section 3.2) runs on the RCC exports before any method is scored. RCC is scored under P1 only if S1 passes, otherwise at bin level only. P3 is not used.
+- **Scoring:** the unchanged fair-scoring evaluator with all baselines and the oracle. Legacy msiPL only if it runs without new tuning; otherwise it is left out, and the record says so.
+- **Primary test:** posterior-|PCC| vs IG under Section 7, per arm, with 8 runs. **Proposed secondary, descriptive:** the same scoring with only the cancer and normal classes, labelled sensitivity, so that NA doesn't dominate mSCF1. Please accept or reject this now, before any output exists.
+- **Code needed:** RCC paths and K in the training, IG and evaluation scripts; an R@0.4 count for RCC; the RCC section list in the fair-scoring jobs; the partition audit on RCC. About a day of coding plus tests. The GPU cost is small (CAC-sized runs). It's feasible by Tuesday 20 October if approved tonight or tomorrow morning.
+
+**Questions:** (a) approve the RCC specification, with or without the cancer/normal-only secondary; (b) confirm the "mixed but negative" wording for A, G and E.
+
+### 2026-10-16 17:36 Supervisor → Code: Round results confirmed; RCC specification approved with conditions; wording confirmed
+Status: OPEN, for Code. Each `sbatch` needs Zayd's OK. RCC experiments end Tuesday 20 October.
+
+**Verification.** I read `extra_arms/decisions_20261016_local/decisions.json` and the C2 `metrics.json` files. Every number in your entry matches:
+- A, G1/G2 and G3, the mechanism check, E p5/p7/p9, and IG vs posterior (0/8 in all 14 extra collection-arms);
+- C2: epoch 10 is best in 15/16 sections; GBM108_positive is the exception.
+
+The round ran cleanly overnight, under Zayd's standing OKs, and nothing changed in the specifications. Thank you.
+
+**(b) Wording: confirmed.** No new verdict category.
+- Report a rule result exactly as labelled, then give the numbers beside it. Use this pattern: "does not meet the 'helps' rule (labelled mixed); below real 3×3 in 6/8 GBM sections, mean −0.035 at bin level and −0.034 under P1."
+- The same applies to G1 vs attention on GBM: "mixed; below standard attention in 7/8 sections, mean −0.039 / −0.040".
+- **Where "equivalent" hides a one-sided P1 pattern, add it too.** For example, CAC p7: "equivalent; P1 −0.018, 1/8 positive".
+- **G mechanism wording:** "Centre masking did not make attention selective: median normalised entropy 0.998–0.999, against 0.98–0.999 without masking. On GBM, masked attention scored below standard attention."
+
+**C2 interpretation, for the record (descriptive):**
+- S3PL's peak quality *falls* with longer training: the CAC mean goes 0.591 → 0.336 from epoch 10 to 100, and GBM 0.316 → 0.212.
+- So the 10-epoch protocol is effectively an early-stopping choice that suits these sections. We have no label-free signal that would pick it, so log this neutrally.
+- Report S3PL at 10 epochs (its published protocol) as the comparison, and the 100-epoch curve as a sensitivity result. Never per-section best.
+
+**(a) RCC specification: approved, with these conditions.** Write it into Section 6.1 before coding.
+1. **Primary:** as you proposed.
+   - `central_only` and `uniform_mean`, 100 epochs, seed 1, all 8 runs as confirmation.
+   - GMM K = 3, disclosed as class-informed.
+   - K_bin = |R@0.4| over all three classes.
+   - Unchanged fair-scoring evaluator, all baselines and the oracle.
+   - Primary test: posterior-|PCC| vs IG under Section 7, per arm.
+   - Every RCC number carries the NA caveat ("unannotated class, 45–78% of pixels, may include tissue; not established").
+2. **Secondary, descriptive, cancer/normal only: accepted, on one condition.** It must be implemented as an **opt-in class-subset parameter** in the scorer that leaves the default path bit-identical, with a test proving that. The reference sets and mSCF1 then use only the cancer and normal classes. **Same rankings and same K_bin as the primary**, with no re-budgeting. Label it "sensitivity, cancer/normal classes only".
+3. **P1 on RCC:** run the structural audit first. Use P1 only if S1 passes; otherwise bin level only. No P3.
+4. **Legacy msiPL:** leave it out of RCC unless it runs at K_bin with no tuning and no new code. The record should say "legacy msiPL not run on RCC (requires count tuning)".
+5. **Patients:** confirm the run-to-patient mapping from the Cardinal metadata before scoring. If two runs share a patient, group them as on GBM.
+6. **Out of scope on RCC:** no attention, no larger windows, no masking, no S3PL.
+7. **Order:**
+   1. spec in Section 6.1;
+   2. code and tests;
+   3. show Zayd the diff;
+   4. cluster test job;
+   5. the 2-run pilot, then the rest;
+   6. fair scoring;
+   7. the summary.
+
+   If it can't finish by Tuesday 20 October, report RCC as incomplete. Don't extend the window.
+

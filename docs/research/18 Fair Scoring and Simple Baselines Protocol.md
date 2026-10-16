@@ -283,6 +283,16 @@ The rules below are copied from the chat entries, which fixed them before any ou
   - The budget is K_bin = |R@0.4| over all three classes, as specified.
   - Implementation: `scripts/rcc_feasibility_export.R` and `slurm_jobs/run_rcc_feasibility.sh`. Test: `test_rcc_labels_must_be_consecutive_classes` now also checks that a K = 3 export passes the audit.
   - The first outputs (68633) are moved aside, not deleted, before the rerun; the rerun needs Zayd's OK.
+- **Outcome, rerun 68805 (read 16 October after Zayd's sync): GO.** `results/validation/rcc_feasibility/go_no_go.json`.
+  - All four criteria are met: Cardinal 3.12.1 in `rcc_env`; `rcc.rda` loads (Cardinal `MSImagingExperiment`, 16,000 pixels × 10,200 m/z, m/z 150.08–1000); 8/8 runs have pixel-level cancer **and** normal labels; and 8/8 exported HDF5s pass the data-contract audit (`valid`).
+  - The 8 runs are MH0204_33, UH0505_12, UH0710_33, UH9610_15, UH9812_03, UH9905_18, UH9911_05 and UH9912_01. They have 972–3,564 pixels each, with cancer 81–608, normal 190–793 and unannotated 609–2,763.
+  - **Nature of NA (descriptive; `export_report.json` plus the 8 audit spot-checks):**
+    - Every run is a fully measured rectangular grid: no unmeasured holes, so "touching unmeasured grid" equals "on the image edge".
+    - Cancer and normal are each one compact region, the two separated by a gap. NA fills everything else.
+    - NA is the largest class in every run (45–78% of pixels). Only 10–25% of NA pixels lie on the image edge, and only 8–22% touch an annotated pixel. So NA is mostly a large surrounding and separating region, not a thin edge strip or a margin around the annotations.
+    - The per-pixel TIC of NA is not near zero: its median is 82–94% of the annotated classes' medians (about 4,500–5,500 vs 5,200–6,300). The intensities are small integers, with TIC about 5,000 in every class, which suggests the released data may already be processed. In that case TIC cannot separate glass from tissue.
+    - **Reading:** the layout is consistent with off-tissue background around two tissue pieces, but the signal level does not show that NA is empty. **Whether NA is off-tissue or unannotated tissue is not established from these descriptors.** Following the 19:37 rule, every RCC number is reported with the note "the third class (unannotated, the largest class: 45–78% of pixels) may include tissue; not established".
+  - **Next:** the RCC run specification is drafted for the supervisor in the chat entry of 16 October. No RCC training job has been prepared or submitted.
 - The RCC run specification (if go) is written here before any RCC training job.
 
 ## 7. Decision thresholds
@@ -538,6 +548,48 @@ A test rebuilds the IG matched groups from these files.
       5. **Capacity:** the order is unchanged. If the 6-GPU cap makes E finish after Tuesday 20 October, the missing sections are reported as not done; G and C2 are not cut. C3 stays last and will probably be dropped, which is acceptable and will be recorded as such.
     - **Pre-submit check:** all 10 files from commits `bde92e6`/`7eda6df` matched on the cluster by `sha256sum` (`cluster_node_issues.txt` differs by CRLF only).
     - **Submitted with Zayd's OK at 18:02 UTC / 20:02 SAST:** **68800**, G1 fair scoring (`attention_centremask_p50`, indices 0–15, `bigbatch`, `--max-concurrent 2`), and **68801**, the E pilot (task 8, 40TopL `uniform_p7`).
+    - **RCC rerun (commit `22ca398`; the 3 changed files matched on the cluster by `sha256sum`; the R script parse-checked in `rcc_env` on the login node):** with Zayd's OK, the 68633 outputs were moved aside, not deleted, to `results/validation/rcc_feasibility_superseded_68633/` and `/datasets/zsuliman/msi_data/rcc_cardinal_superseded_68633/` (empty). **68805** was submitted on `bigbatch` at about 18:15 UTC / 20:15 SAST.
+    - **Overnight, 15–16 October (Zayd authorized Code at about 18:30 UTC / 20:30 SAST to resubmit failed tasks and submit the remaining approved jobs while he slept; no rule or specification changes):**
+      - **About 21:15 UTC / 23:15 SAST:**
+        - G1 fair scoring 68800 completed 16/16, every task exit 0.
+        - The E pilot 68801_8 (40TopL p7) completed in 6:57 on mscluster43: CUDA warm-up passed, training finished, the checkpoint verified, and IG and peak evaluation ran ("complete").
+        - G training is complete, 34/34. C2 has 14/16 complete, with 68719_5 and _6 running.
+        - **RCC rerun 68805** completed in 4:56. The job log reports 8 exports audited and decision `go`. The details are read only after Zayd syncs.
+      - **Submitted:** **68890**, G2 fair scoring (`uniform_centremask_p50`, 0–15, `--max-concurrent 2`), and **68893**, G3 fair scoring (`shuffled_attention_centremask_p50`, indices 5 and 9), both on `bigbatch`.
+      - **Queued behind the `MaxSubmitPU` 48 cap:** an automated loop submits the E remainder (indices 0–7 and 9–31, `--concurrency 5`, leaving one running slot for CPU jobs) once at most 16 jobs are queued. It then submits the approved p5 A(a)/(b) route (`uniform_p5 all`). Each submit checks the job-ID file first, so a dropped connection cannot double-submit. The job IDs are recorded when they are issued.
+      - **Issued by that loop:** **68900**, the E remainder (indices 0–7 and 9–31, at most 5 running), submitted 21:30 UTC / 23:30 SAST, and **68940**, p5 A(a)/(b) (`uniform_p5`, 0–15, at most 2 running), submitted 22:31 UTC / 00:31 SAST on 16 October.
+      - **By 22:31 UTC:** C2 (68718, 68719) completed 16/16. G2 fair scoring 68890 completed 16/16 and G3 fair scoring 68893 completed 2/2, every task exit 0.
+    - **16 October, 06:35 UTC / 08:35 SAST:**
+      - p5 A(a)/(b) 68940 completed 16/16.
+      - E: p7 is complete 16/16 (68801_8 plus 68900_0–15; GBM 2.3–5.1 h, CAC about 6 min). p9 has 1/16 complete (GBM 3.6 h, 1.55× its p7 counterpart), 5 running and 10 pending. The estimated end of E is about 14:00–14:30 UTC / 16:00–16:30 SAST.
+      - **With Zayd's OK, submitted 06:40 UTC / 08:40 SAST:** **69076**, p7 fair scoring (`uniform_p7`, 0–15, `bigbatch`, `--max-concurrent 2`).
+      - Zayd authorized p9 fair scoring once every p9 task completes, and resubmission of any failed tasks.
+    - **16 October, 14:35 UTC / 16:35 SAST:**
+      - **E is complete, 32/32.** p9 GBM took 4.1–8.2 h and CAC 7–10 min; every log ends "complete".
+      - p7 fair scoring 69076: 16/16 exit 0.
+      - **Submitted** under Zayd's standing OK: **69370**, p9 fair scoring (`uniform_p9`, 0–15, `bigbatch`, `--max-concurrent 4`; the GPU jobs are finished, so no slots need holding back).
+      - **C3 was not run.** The remaining time goes to reading and logging the round, as the supervisor accepted on 15 October 19:37.
+    - **16 October, about 14:54 UTC / 16:54 SAST:** p9 fair scoring 69370 completed 16/16. **Every job in the final round is now complete.** No scores have been read; reading waits for Zayd's sync.
+    - **16 October, after Zayd's pull:** the pull reverted the edited `results/publication/current_evidence/README.md` to the older cluster copy, as on 15 October, and it was restored with `git checkout`. **RCC: GO** (Section 6.1 item D gives the outcome and the NA description).
+    - **Decision table for A, G and E** (16 October, run locally on the synced JSON): `scripts/summarise_fair_scoring_arms.py --output results/diagnostics/fair_scoring_baselines/extra_arms/decisions_20261016_local/`. All summaries share one evaluator code hash per scope (the script refuses otherwise). A(b) saved-list reproduction **passed in 16/16** (attention and p5 on GBM). IG mSCF1 at K_bin; differences are mean, with positive sections out of 8, given as bin level / P1.
+      - **A, attention vs uniform_mean:** GBM **equivalent** (+0.011, 6/8 / +0.010, 6/8); CAC **equivalent** (−0.006, 4/8 / −0.005, 2/8).
+      - **G, rule 2:**
+        - G1 vs attention: GBM label "mixed" (−0.039, 1/8 / −0.040, 1/8; that is, centre masking is **below** standard attention on 7/8 sections, but the rule has no "worse" category, so Section 7.1 wording applies); CAC **equivalent** (−0.007, 4/8 / −0.002, 3/8).
+        - G1 vs G2: **equivalent** on GBM (−0.003 / −0.002) and on CAC (+0.009 / +0.016).
+      - **G3** (descriptive, two development sections): G1 − shuffled = +0.021 on 160TopL and −0.011 on GBM22_2, so "real-context masked attention does not beat shuffled by ≥ 0.02 on both sections".
+      - **G mechanism:** median normalised attention entropy 0.999 (160TopL) and 0.998 (GBM22_2) with masking, vs 0.999 and 0.982 unmasked. **Attention stayed near-uniform**, so masking did not make it selective.
+      - **E, larger windows vs real 3×3:**
+        - p7: GBM label "mixed" (−0.035, 2/8 / −0.032, 2/8; below 3×3); CAC **equivalent** (−0.007, 3/8 / −0.018, 1/8).
+        - p9: GBM label "mixed" (−0.035, 2/8 / −0.034, 2/8; below 3×3); CAC **equivalent** (−0.007, 2/8 / −0.005, 2/8).
+        - The confirmation-only figures (7 sections) agree in sign: GBM p7 −0.032, p9 −0.031.
+        - p5 is descriptive: GBM −0.018 (3/8), CAC −0.006 (3/8).
+      - **IG vs each arm's own posterior-|PCC|:** IG is below posterior in **every** extra arm and section: 0/8 positive in all 14 collection-arms. GBM ranges −0.22 to −0.29 and CAC −0.05 to −0.08. The label is the Section 7.1 fall-through "mixed / not resolved".
+      - **Wording rule:** a "mixed" label here means "does not meet 'improves/helps'". Where the numbers are consistently negative, the record gives them as such (for example, "below 3×3 in 6/8 GBM sections, mean −0.035"). No verdict category is added after the fact.
+    - **C2, S3PL 100 epochs** (read 16 October; descriptive, no verdict; `reproducibility/s3pl_e100/seed1_released/`). mSCF1 at the default count, epochs 10 / 25 / 50 / 100.
+      - **Validation:** the epoch-10 checkpoint reproduces the existing 10-epoch mSCF1 in 16/16 sections to the third decimal, except 200TopL (0.671 vs 0.672, within the known GPU drift). The CAC matched-count values also reproduce.
+      - **CAC mean:** 0.591 / 0.413 / 0.382 / 0.336. **GBM mean:** 0.316 / 0.212 / 0.209 / 0.212.
+      - **10 epochs is the best of the four points in 15/16 sections.** The exception is GBM108_positive (0.033 at 10 epochs, about 0.16 later). So longer training lowers S3PL's score; it does not raise it. Reporting S3PL at its published 10 epochs does not handicap it.
+      - The loss curves (last-batch and epoch-mean) are not yet tabulated.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
