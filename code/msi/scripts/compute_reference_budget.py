@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""RCC bin budget: K_bin = |R@0.4| over all label classes (protocol 18 Section 6.1).
+"""RCC bin budget (protocol 18 Section 6.1, item D step 2).
 
 Computes, with the existing nearest-threshold rule on raw-intensity class PCCs,
-the size of the mixed reference set at every threshold and takes K_bin as its
-size at PCC 0.4. The sizes for a descriptive class subset (cancer/normal on
-RCC) are recorded beside it and are never a budget. Reads Data, mzArray and
-Class_Label only. An existing result is reused only if its provenance block is
-identical; otherwise the script stops (exit 3).
+the size of the mixed reference set |R_t| over all label classes at every
+threshold.
+
+- Default (the first version, 16 October 18:10): K_bin = |R@0.4|.
+- --released-target-config/--released-target-key (spec correction, supervisor
+  chat 2026-10-16 19:47): K_bin = the released S3PL target num_GT_peaks[key]
+  from baselines/s3pl/data_configs.py, the same convention as GBM/CAC. The
+  paper sets the RCC budget at PCC 0.5, so |R@0.5| and its difference from
+  the target are recorded beside it; |R@0.4| is descriptive only.
+
+The sizes for a descriptive class subset (cancer/normal on RCC) are recorded
+too and are never a budget. Reads Data, mzArray and Class_Label only; the
+config file is parsed with ast, never executed. An existing result is reused
+only if its provenance block is identical; otherwise the script stops (exit 3).
 """
 
 import argparse
+import ast
 import sys
 import time
 from pathlib import Path
@@ -34,6 +44,7 @@ BUDGET_VERSION = 1
 PROTOCOL = "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.2), Section 6.1 item D step 2"
 BUDGET_THRESHOLD = 0.4
 COMPLETE = "complete"
+RELEASED_TARGET_THRESHOLD = 0.5  # the paper's RCC budget threshold (Weigand et al., Table 3)
 
 
 def parse_arguments():
@@ -43,10 +54,29 @@ def parse_arguments():
     parser.add_argument("--descriptive-class-subset", type=int, nargs="+",
                         help="raw Class_Label values whose reference sizes are recorded "
                              "descriptively; never used as a budget")
+    parser.add_argument("--released-target-config", type=Path,
+                        help="baselines/s3pl/data_configs.py; K_bin = num_GT_peaks[key]")
+    parser.add_argument("--released-target-key",
+                        help="run name in num_GT_peaks (e.g. MH0204_33)")
     parser.add_argument("--chunk-size", type=int, default=1024)
     parser.add_argument("--allow-outside-slurm", action="store_true",
                         help="tests only; real sections must run inside Slurm")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if (args.released_target_config is None) != (args.released_target_key is None):
+        parser.error("--released-target-config and --released-target-key go together")
+    return args
+
+
+def released_targets(path):
+    """num_GT_peaks from the released S3PL config, read as a literal (never executed)."""
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "num_GT_peaks"
+                for target in node.targets):
+            values = ast.literal_eval(node.value)
+            return {str(k): int(v) for k, v in values.items()}
+    raise ValueError(f"{path}: no num_GT_peaks assignment")
 
 
 def reference_sizes(correlations, classes):
@@ -66,15 +96,29 @@ def main():
         Path(m.__file__).resolve()
         for m in (provenance, evaluate_msipl_massnet_peaks,
                   evaluate_spatial_msipl_attributed_peaks)]
+    parameters = {"thresholds": list(THRESHOLDS), "budget_threshold": BUDGET_THRESHOLD,
+                  "descriptive_class_subset": args.descriptive_class_subset}
+    target = None
+    if args.released_target_config is not None:
+        targets = released_targets(args.released_target_config)
+        if args.released_target_key not in targets:
+            raise ValueError(f"{args.released_target_key} not in num_GT_peaks")
+        target = targets[args.released_target_key]
+        parameters = {"thresholds": list(THRESHOLDS),
+                      "budget": "released S3PL target num_GT_peaks",
+                      "released_target_key": args.released_target_key,
+                      "reference_threshold": RELEASED_TARGET_THRESHOLD,
+                      "descriptive_class_subset": args.descriptive_class_subset}
     expected = {
         "budget_version": BUDGET_VERSION,
         "protocol": PROTOCOL,
         "dataset": args.input.stem,
-        "parameters": {"thresholds": list(THRESHOLDS), "budget_threshold": BUDGET_THRESHOLD,
-                       "descriptive_class_subset": args.descriptive_class_subset},
+        "parameters": parameters,
         "input": file_record(args.input),
         "code": code_record(code),
     }
+    if target is not None:
+        expected["released_target_config"] = file_record(args.released_target_config)
     try:
         state = check_existing(args.output, expected, COMPLETE)
     except StaleResultError as error:
@@ -103,6 +147,17 @@ def main():
         "reference_set_sizes_per_class": {
             str(c): reference_sizes(correlations, [c]) for c in classes},
     }
+    if target is not None:
+        reference = all_classes[str(RELEASED_TARGET_THRESHOLD)]
+        summary["K_bin"] = target
+        summary["rule"] = ("K_bin = released S3PL target num_GT_peaks (baselines/s3pl/"
+                           "data_configs.py), the GBM/CAC convention; the paper sets the RCC "
+                           "budget at PCC 0.5 (spec correction, supervisor chat 2026-10-16 "
+                           "19:47); |R@0.4| is descriptive only")
+        summary["released_target"] = {
+            "key": args.released_target_key, "num_GT_peaks": target,
+            "our_R_at_0.5": reference, "target_minus_our_R_at_0.5": target - reference,
+            "our_R_at_0.4_descriptive": all_classes["0.4"]}
     if args.descriptive_class_subset is not None:
         missing = sorted(set(args.descriptive_class_subset) - set(classes))
         if missing:

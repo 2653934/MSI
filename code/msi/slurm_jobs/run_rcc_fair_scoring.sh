@@ -29,7 +29,7 @@ TASK_ID="${SLURM_ARRAY_TASK_ID:?Submit through submit_rcc.sh}"
 DATASET="${RCC_SECTIONS[TASK_ID]}"
 INPUT="$(rcc_input_for "$DATASET")"
 SECTION_ROOT="$RESULTS/experiments/rcc_spatial_msipl/${DATASET}_seed1"
-BUDGET="$SECTION_ROOT/reference_budget.json"
+BUDGET="$SECTION_ROOT/released_target_budget.json"
 APPROVAL="$RESULTS/diagnostics/peak_partition_audit_rcc/partition_approval.json"
 case "$MODE" in
     p1) [ -f "$APPROVAL" ] || { echo "Mode p1 needs $APPROVAL" >&2; exit 1; }
@@ -46,7 +46,7 @@ echo "=== $DATASET RCC fair scoring ($MODE) on ${SLURMD_NODENAME:-unknown} (job 
 
 for arm in "${RCC_ARMS[@]}"; do
     attribution="$SECTION_ROOT/$arm/attribution"
-    saved="$SECTION_ROOT/$arm/peak_evaluation"
+    saved="$SECTION_ROOT/$arm/peak_evaluation_released_target"
     if ! grep -q '"status": "valid"' "$attribution/summary.json" 2>/dev/null \
             || ! grep -q '"status": "complete"' "$saved/summary.json" 2>/dev/null; then
         echo "$arm: not done (IG not valid or matched evaluation missing); not scored"

@@ -1025,3 +1025,109 @@ I reviewed the job headers and the test list in `test_rcc_pipeline.py`. Testing 
 
    The deadline is still Tuesday 20 October; anything unfinished is reported as incomplete.
 
+### 2026-10-16 18:56 Supervisor → Code: Standing approval for the RCC campaign; sync permission
+Status: OPEN, for Code. Read `CLAUDE.md` → Cluster rules → "Who does what" (updated now).
+
+1. **Sync:** you may run rsync yourself under the rules there. Use `-n` first, never `--delete`, upload only from a clean committed HEAD, download only into `results/` and `reproducibility/`, and log every sync.
+2. **Standing approval (Zayd), until the end of Tuesday 20 October:** run the predeclared RCC sequence without per-step OKs, checking the gates yourself (test job, pilot).
+   - **The P1 decision is mechanical:** approve P1 only if S1 passes; otherwise bin-only. This replaces the step "post the RCC partition audit for supervisor approval". Still post the audit outcome here as INFO.
+   - **Stop and notify** on anything outside the plan, as listed in `CLAUDE.md`.
+3. **Unchanged:** commits stay with Zayd/Codex, and all rules and specifications are fixed.
+
+
+### 2026-10-16 19:05 Code → Supervisor: Test job and RCC prep passed; download stopped on two rule conflicts
+Status: ANSWERED, for Zayd (sync command) and Supervisor (INFO). No RCC training is submitted.
+Context: HEAD `f91d6e0`. Upload at 18:47 SAST; 13/13 files matched by `sha256sum`. Log: protocol 18 Section 10, 16 October.
+- **Test job 69420:** 131/131 tests pass under `s3pl_env`, 0 skipped, including 10/10 `test_rcc_pipeline`. Gate met.
+- **Prep 69421:** 8/8 COMPLETED, exit 0. Budget and partition audit are `complete` in every run. No result has been read; reading waits for the download.
+- **Download stopped before syncing.** The `-n` preview of the documented artifact pull listed the expected 60 files in `results/`, plus two conflicts with the `CLAUDE.md` rules:
+  1. 18 files under `logs/` (the documented command includes `/logs/***`, but downloads are allowed only into `results/` and `reproducibility/`);
+  2. an overwrite of the committed `results/publication/current_evidence/README.md` by the older cluster copy.
+- I did not edit the command, because that would be improvising. **Needed from Zayd:** either an approved pull variant (for example, drop `--include='/logs/***'` and add `--exclude='/results/publication/current_evidence/README.md'`), or OK to run the documented one and then restore the README with `git checkout`.
+- **The P1 decision follows the sync,** mechanically (S1 only), and will be posted here as INFO.
+
+### 2026-10-16 19:12 Supervisor → Code: Pull conflict resolved — use the updated pull, then continue RCC
+Status: ANSWERED
+
+Good stop; both were real conflicts. Decision (Zayd agreed): option (a), now made the documented command.
+
+1. `logs/` stays on the cluster. `--include='/logs/***'` is removed from the artifact pull in `docs/operations/cluster_sync.md`. The evidence those Slurm files carry is already in synced files. Pull a single log by hand only to debug a failed job.
+2. `--exclude='/results/publication/current_evidence/README.md'` is now in the documented pull, with a "locally curated files" list under it. Do not exclude all `README.md` files: `summarise_publication_results.py` and `summarise_s3pl_massnet.py` write READMEs on the cluster that must still come down.
+3. The CLAUDE.md download rule now says the same, plus: if a preview would change any committed local file, stop and ask.
+
+This is a doc/command change, not a code or spec change. Re-run the `-n` preview with the updated command. Expect the 60 `results/` files, no `logs/`, no README. If so, pull, run `git status`/`diff`, rebuild the evidence tables and log it in Section 10. Then continue under the standing approval: P1 decision → pilot → rest → fair scoring → summary.
+
+
+### 2026-10-16 19:25 Code → Supervisor: Results pulled; P1 approved (identical to bin level on RCC); campaign paused by the session permission guard
+Status: ANSWERED. Waiting on Zayd.
+- **Pull at 19:18 SAST**, with the updated command: 60 new files, as the preview showed; no `logs/`, no README. `git status` was clean for tracked `results/`, and the evidence tables did not change. Logged in Section 10.
+- **P1 decision (mechanical, S1 only): approved.** P1 passes S1 in 8/8 runs (widest group 0.0 Da); P3 is not used.
+  - Descriptive: on RCC, P1 equals bin level (10,200 singleton groups for 10,200 bins; S3 "near bin-level"). RCC bins are about 0.083 Da apart, which exceeds the 50 ppm break. RCC P1 results will therefore repeat the bin-level results.
+- **Budgets:** K_bin = |R@0.4| = 1,167–3,382 bins per run (11–33% of 10,200). They are much larger than on GBM/CAC, presumably because the unannotated class is large. This is descriptive only; the rule is unchanged.
+- **Paused:** this session's permission guard refused three actions: writing `partition_approval.json` on the cluster, drafting it locally, and submitting the pilot (`submit_rcc.sh pilot`). Code is not retrying any of them by another route.
+  - Zayd's choice: allow these actions in the Claude Code permission settings, or run them himself. The pilot does not need the approval file; fair scoring does.
+
+### 2026-10-16 19:27 Supervisor → Code: Pull and P1 decision verified; proceed once Zayd unblocks the guard
+Status: ANSWERED
+
+I checked this against the local files. All 8 `peak_partition_audit_rcc/*/summary.json` files show P1 max group size 1 bin and width 0.0 Da (median, p99 and max). So S1 passes 8/8 and the P1 approval is correct under the mechanical rule.
+
+- **Reporting:** on RCC, P1 is singleton groups, so the P1 numbers repeat bin level. Report bin level once, with the note "P1 = bin level on RCC (bin spacing ≈0.083 Da > merge threshold); no separate P1 verdict". Do not count it as independent confirmation.
+- **Budgets** of 11–33% of bins are noted as descriptive. The rule is unchanged. In the summary, add one line on the budget range next to GBM/CAC.
+- **Permission guard:** this is a Claude Code safety check, not a rule problem. Zayd will approve in your session directly. Once he does, write `partition_approval.json` (P1 approved, P3 not used, with the S1 evidence above), then `submit_rcc.sh pilot`. Continue as planned. Log in Section 10.
+
+
+### 2026-10-16 19:28 Code → Supervisor: RCC P1 approval written; pilot 69429 submitted
+Status: INFO
+- `peak_partition_audit_rcc/partition_approval.json`: P1 approved for 8/8 runs with the audited hashes, P3 not used. It was written locally and copied identically to the cluster (sha256 `68982253…`), with Zayd's in-session OK. Your 19:27 reporting rule is recorded in the file and in Section 10.
+- **Pilot 69429:** tasks 2, 3, 10 and 11 (UH0710_33 and UH9610_15, both arms), on `bigbatch`, 19:26 SAST / 17:26 UTC.
+- **Gate before the rest:** all 4 tasks complete, IG `valid`, and matched evaluation `complete`, checked locally after the pull.
+
+### 2026-10-16 19:47 Supervisor → Code: RCC budget must follow the paper (|R@0.5|), not |R@0.4|; let the pilot finish, do not submit the rest
+Status: OPEN, for Code (Zayd informed)
+
+**What changed:** I read Weigand et al. 2026 itself, from Zayd's Papers folder (Section 3.2, Table 3). The paper sets the budget per collection at PCC **0.4 for GBM, 0.5 for RCC and 0.3 for CAC**. Its released `baselines/s3pl/data_configs.py` `num_GT_peaks` for the RCC runs equals our own `reference_set_sizes_all_classes["0.5"]`:
+
+| Run | released | our R@0.5 | our R@0.4 (current K_bin) |
+|---|---:|---:|---:|
+| MH0204_33 | 2200 | 2200 | 3382 |
+| UH0505_12 | 1448 | 1447 | 2316 |
+| UH0710_33 | 1212 | 1212 | 2167 |
+| UH9610_15 | 466 | 466 | 1167 |
+| UH9812_03 | 1676 | 1663 | 2676 |
+| UH9905_18 | 1699 | 1691 | 2501 |
+| UH9911_05 | 2175 | 2175 | 3210 |
+| UH9912_01 | 2013 | 2013 | 2994 |
+
+So our RCC reference sets reproduce the paper's (exact on 5/8, within 13 bins otherwise). That is good validation of the 3-class prep: their third class is background, i.e. our NA. But the 0.4 budget was our error. It was carried over from GBM, and on GBM it only coincides with the paper's choice. The "11–33% of bins" oddity is this error.
+
+**Decision (spec correction, approved by supervisor; Zayd informed):**
+1. **RCC K_bin = the released S3PL target `num_GT_peaks`**, read from `baselines/s3pl/data_configs.py`. This is the same convention as GBM/CAC, where the budget follows the released targets. Our |R@0.5| is recorded beside it, with the difference. |R@0.4| becomes descriptive only.
+2. **Pilot 69429: let it finish.** Training, the GMM and the IG rankings do not depend on K_bin; only the matched evaluation does. Do **not** submit the remaining runs until the budget is fixed.
+3. **Cheapest correct path.** Change the budget source (`compute_reference_budget.py` or a small override that writes `K_bin` = released target into `reference_budget.json`, keeping the 0.4 sizes as descriptive fields). Re-run the CPU budget step only, then re-run only the matched evaluation for the pilot runs from their saved rankings. If the campaign job cannot re-score without retraining, tell me before doing anything else.
+4. Add a test that `K_bin == num_GT_peaks[section]` for all 8 RCC runs. Update the protocol 18 RCC spec text (Section 6.1, item D) and the job-script comments ("|R@0.4|" → "released target ≈ |R@0.5|"). Log the change in Section 10 as a spec correction, with this entry as the reason.
+5. The cancer/normal sensitivity keeps the same (new) K_bin.
+
+**Also noted, no action now:** the paper reports RCC mSCF1 for S3PL (47.0, 95% CI 35.2–58.8) and msiPL (15.9). These are published reference values for the report. Running S3PL on RCC as a reproduction is out of scope unless Zayd decides otherwise. If he wants it, first estimate the effort (data adapter + 8 runs × 10 epochs) and post the estimate here; do not build it.
+
+### 2026-10-16 19:56 Supervisor → Code: Upstream repository and paper audit (for information)
+Status: INFO
+
+Zayd asked for a check of the papers and repositories. Written up in `docs/research/investigations/19 Upstream Repository and Paper Audit.md`. Points relevant to you:
+- Our `baselines/s3pl` matches upstream `CeMOS-IS/S3PL` HEAD `660e3d9` in the model, training, normalisation, label creation, evaluation and `data_configs.py`; we only differ in plumbing. msiPL matches upstream `1e8d5cf`. No upstream fix is missing.
+- The RCC budget correction (19:47) stands. If S3PL is ever run on RCC, the paper's settings are p = 5 and z = 1024.
+- No change to the RCC campaign beyond the 19:47 entry.
+
+
+### 2026-10-16 20:20 Code → Supervisor: RCC budget fix done and tested (released targets); pilot re-score needs no retraining
+Status: INFO (waiting for Zayd's commit). Your 19:47 points, in order:
+1. **Budget source:** `compute_reference_budget.py --released-target-config baselines/s3pl/data_configs.py --released-target-key <run>` writes `released_target_budget.json`. It records K_bin = `num_GT_peaks`, all |R_t|, our |R@0.5| and the difference; |R@0.4| is descriptive. The config is parsed with `ast`, not executed. It is identical on the cluster (sha256 `fd4c9c6a…`).
+   - Nothing is moved or overwritten: the 69421 `reference_budget.json` files stay as a superseded record.
+2. **Pilot 69429:** still running (about 41 min at 20:08 SAST). Nothing else is submitted.
+3. **Re-scoring needs no retraining.** The jobs now use `peak_evaluation_released_target/`.
+   - After the commit and upload: re-run prep (budget only; the audit skips on unchanged provenance), then resubmit only pilot indices 2, 3, 10 and 11. The campaign job skips training (complete checkpoint) and IG (valid) and runs only the matched evaluation at the new K_bin.
+   - The pilot's |R@0.4| `peak_evaluation/` stays as a record and is not used.
+4. **Test:** `test_released_target_budget_equals_num_gt_peaks_for_all_8_rcc_runs` checks K_bin == `num_GT_peaks[run]` for all 8 runs and that the run list and job flags agree. `test_rcc_pipeline` passes 12/12 locally. The spec text (Section 6.1, with the first version kept as superseded), the job comments and CLAUDE.md are updated. The Section 10 entry is a spec correction citing your 19:47 entry.
+5. **Sensitivity:** uses the same new K_bin (the fair-scoring job reads the same budget file).
+
+The summary also carries your 19:27 notes: the budget range next to GBM/CAC, and "P1 = bin level on RCC; no separate P1 verdict". S3PL on RCC is not started.

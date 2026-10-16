@@ -38,7 +38,7 @@ if [[ ! -f "$root/provenance/manifest.txt" ]]; then
         echo "purpose=RCC run (protocol 18 Section 6.1 item D step 2; supervisor chat 2026-10-16 17:36)"
         echo "sections=${RCC_SECTIONS[*]}"
         echo "arms=central_only (tasks 0-7), uniform_mean (tasks 8-15); trained as the CAC production arms"
-        echo "evaluation=GMM K 3; IG 12 px/component; matched count K_bin = |R@0.4| over all three classes; no legacy"
+        echo "evaluation=GMM K 3; IG 12 px/component; matched count K_bin = released S3PL target num_GT_peaks (~|R@0.5|; corrected 2026-10-16 19:47); no legacy"
         echo "created_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
     } > "$root/provenance/manifest.txt"
 fi
@@ -51,7 +51,7 @@ case "$stage" in
     pilot|rest)
         runner=slurm_jobs/run_rcc_campaign.sh
         for section in "${RCC_SECTIONS[@]}"; do
-            grep -q '"status": "complete"' "$root/${section}_seed1/reference_budget.json" 2>/dev/null \
+            grep -q '"status": "complete"' "$root/${section}_seed1/released_target_budget.json" 2>/dev/null \
                 || { echo "Reference budget missing for $section; run prep first" >&2; exit 1; }
             for arm in "${RCC_ARMS[@]}"; do mkdir -p "$root/${section}_seed1/$arm" "$checkpoints/${section}_seed1/$arm"; done
         done

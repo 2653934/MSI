@@ -2,7 +2,11 @@
 # RCC steps 2-4 (protocol 18 Section 6.1, item D step 2): train one run-arm
 # exactly as the CAC production arms (3x3, 100 epochs, seed 1, streaming loader),
 # then GMM K = 3 + IG with the CAC settings, then matched evaluation at
-# K_bin = |R@0.4| (from run_rcc_preparation.sh) without legacy msiPL.
+# K_bin = released S3PL target num_GT_peaks ~ |R@0.5| (released_target_budget.json from
+# run_rcc_preparation.sh; spec correction, supervisor chat 2026-10-16 19:47) without
+# legacy msiPL, into peak_evaluation_released_target/. A rerun of a finished task skips
+# training (complete checkpoint) and IG (valid) and only re-scores; the pilot's first
+# |R@0.4| peak_evaluation/ is kept as a record.
 # Array: 0-7 central_only, 8-15 uniform_mean (rcc_sections.sh). Status lines only;
 # every scientific script logs into the result folder.
 # Predeclared: a GMM component below 44 pixels (12 + 32) stops IG by design; the
@@ -30,7 +34,7 @@ ARM="${RCC_ARMS[TASK_ID / 8]}"
 INPUT="$(rcc_input_for "$DATASET")"
 SECTION_ROOT="$PROJECT_ROOT/results/experiments/rcc_spatial_msipl/${DATASET}_seed1"
 RESULT_ROOT="$SECTION_ROOT/$ARM"
-BUDGET="$SECTION_ROOT/reference_budget.json"
+BUDGET="$SECTION_ROOT/released_target_budget.json"
 CHECKPOINT_DIR="/datasets/zsuliman/msi_checkpoints/spatial_msipl/rcc/${DATASET}_seed1/$ARM"
 CHECKPOINT="$CHECKPOINT_DIR/checkpoint.pt"
 LATEST_CHECKPOINT="$CHECKPOINT_DIR/checkpoint_latest.pt"
@@ -45,7 +49,7 @@ PYTHON="$HOME/miniconda3/envs/s3pl_env/bin/python"
 echo "=== $DATASET $ARM (task $TASK_ID) on ${SLURMD_NODENAME:-unknown}, job ${SLURM_ARRAY_JOB_ID}_${TASK_ID} ==="
 
 K_BIN="$("$PYTHON" -c 'import json,sys; print(int(json.load(open(sys.argv[1]))["K_bin"]))' "$BUDGET")"
-echo "K_bin = |R@0.4| = $K_BIN"
+echo "K_bin = released target num_GT_peaks = $K_BIN"
 "$PYTHON" - <<'PY'
 import sys
 import torch
@@ -105,11 +109,11 @@ if ! grep -q '"status": "valid"' "$RESULT_ROOT/attribution/summary.json" 2>/dev/
 fi
 grep -q '"status": "valid"' "$RESULT_ROOT/attribution/summary.json" \
     || { echo "IG status is not valid; peak evaluation not run" >&2; exit 4; }
-if ! grep -q '"status": "complete"' "$RESULT_ROOT/peak_evaluation/summary.json" 2>/dev/null; then
+if ! grep -q '"status": "complete"' "$RESULT_ROOT/peak_evaluation_released_target/summary.json" 2>/dev/null; then
     "$PYTHON" -u scripts/evaluate_spatial_msipl_attributed_peaks.py \
         --input "$INPUT" --attribution-dir "$RESULT_ROOT/attribution" --no-legacy \
-        --output "$RESULT_ROOT/peak_evaluation" --matched-count "$K_BIN" \
+        --output "$RESULT_ROOT/peak_evaluation_released_target" --matched-count "$K_BIN" \
         --peak-tolerance-ppm 10 --consolidated-candidates 50 \
-        --ion-images 12 --chunk-size 1024 > "$RESULT_ROOT/peak_evaluation_stdout.log"
+        --ion-images 12 --chunk-size 1024 > "$RESULT_ROOT/peak_evaluation_released_target_stdout.log"
 fi
 echo "=== $DATASET $ARM complete ==="

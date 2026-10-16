@@ -43,8 +43,11 @@ If using WSL, the equivalent path normally starts with
 ## Recommended: one quiet cluster-to-local artifact pull
 
 Use this for ordinary downloads. It takes one SSH connection and brings back
-only `results/`, `logs/` and `reproducibility/`; it cannot replace local source
-code. It preserves file modification times for efficient incremental copies,
+only `results/` and `reproducibility/`; it cannot replace local source
+code. Slurm `.out`/`.err` files under `logs/` stay on the cluster (16 Oct): the
+evidence they hold is already in synced files (test logs under
+`results/validation/`, timings in `runtime_metrics.json`, `*_time.txt` and
+`sacct`). Pull a specific log by hand only when debugging a failed job. It preserves file modification times for efficient incremental copies,
 but not directory times, Unix ownership or permissions, which create noisy
 metadata updates on the Windows-backed local folder. The exclude rules precede
 the includes deliberately, so large binary artifacts stay on the cluster.
@@ -65,13 +68,27 @@ rsync -azO --no-perms --no-owner --no-group --info=name1,stats1 \
   --exclude='*.ibd' \
   --exclude='*.zip' \
   --exclude='*.7z' \
+  --exclude='/results/publication/current_evidence/README.md' \
   --include='/results/***' \
-  --include='/logs/***' \
   --include='/reproducibility/***' \
   --exclude='*' \
   zsuliman@146.141.21.100:/home-mscluster/zsuliman/msi/ \
   ./
 ```
+
+**Locally curated files under `results/` (16 Oct).** The upload excludes
+`results/`, so a file edited locally never reaches the cluster, and the next
+pull would bring the older cluster copy back over it. Every hand-written file
+under `results/` therefore gets its own `--exclude` line in the pull above.
+The list is currently:
+
+- `results/publication/current_evidence/README.md`
+
+Do not exclude every `README.md`: several are written by scripts on the
+cluster (`summarise_publication_results.py`, `summarise_s3pl_massnet.py`) and
+must still come down. When a new hand-written file is added under `results/`,
+add it to this list and to the command in the same commit. If a preview still
+shows a committed local file being changed, stop and ask.
 
 There is no `--delete`: locally removed files can still reappear if they remain
 on the cluster. That is deliberate protection against losing research evidence.

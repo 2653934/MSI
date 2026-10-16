@@ -41,6 +41,12 @@ K_DISCLOSURE = ("GMM K = 3 equals the number of label classes: label-free in tra
 SENSITIVITY_LABEL = "sensitivity, cancer/normal classes only"
 SENSITIVITY_CLASSES = [0, 1]
 LEGACY_NOTE = "legacy msiPL not run on RCC (requires count tuning)"
+# Supervisor chat 2026-10-16 19:27 (P1) and 19:47 (budget).
+P1_NOTE = ("P1 = bin level on RCC (bin spacing ~0.083 Da > merge threshold); "
+           "no separate P1 verdict; not independent confirmation")
+BUDGET_RULE = ("K_bin = released S3PL target num_GT_peaks (~|R@0.5|, the paper's RCC "
+               "threshold), the GBM/CAC convention")
+OTHER_BUDGETS = "GBM K_bin 584-1,028 and CAC K_bin 133-315 bins"
 DESCRIPTIVE_METHODS = ("integrated_gradients", "posterior_abs_pcc_balanced", "first_layer_l2",
                        "mean_intensity", "variance", "morans_i", "oracle")
 
@@ -140,6 +146,11 @@ def main():
         record["peak_level_partitions_used"] = partitions
         record["disclosures"] = [NA_CAVEAT, K_DISCLOSURE, LEGACY_NOTE]
         record["limitations"] = [HETEROGENEITY_LIMITATION]
+        budgets = [r["K_bin"] for r in subset]
+        record["budget_note"] = (f"{BUDGET_RULE}: {min(budgets):,}-{max(budgets):,} bins per "
+                                 f"run; {OTHER_BUDGETS}")
+        if partitions:
+            record["p1_note"] = P1_NOTE
         decisions[f"RCC/{arm}"] = record
     decisions["_patients"] = {"mapping": RCC_PATIENT, "source": PATIENT_SOURCE}
     decisions["_campaign_provenance"] = campaign

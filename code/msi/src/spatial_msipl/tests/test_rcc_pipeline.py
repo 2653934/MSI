@@ -326,6 +326,51 @@ class RccPipelineTests(unittest.TestCase):
                     self.budget3, "--chunk-size", 64, "--allow-outside-slurm", check=False)
         self.assertEqual(stale.returncode, 3)
 
+    def test_released_target_budget_equals_num_gt_peaks_for_all_8_rcc_runs(self):
+        """Spec correction (supervisor chat 2026-10-16 19:47): K_bin = num_GT_peaks."""
+        import re
+        from compute_reference_budget import released_targets
+        jobs = ROOT / "slurm_jobs"
+        listed = re.search(r"RCC_SECTIONS=\(([^)]*)\)",
+                           (jobs / "rcc_sections.sh").read_text()).group(1).split()
+        self.assertEqual(tuple(listed), RCC_SECTIONS)
+        config = ROOT / "baselines" / "s3pl" / "data_configs.py"
+        targets = released_targets(config)
+        preparation = (jobs / "run_rcc_preparation.sh").read_text()
+        self.assertIn("--released-target-config baselines/s3pl/data_configs.py", preparation)
+        self.assertIn('--released-target-key "${DATASET#RCC_}"', preparation)
+        for section in RCC_SECTIONS:
+            key = section[len("RCC_"):]
+            output = self.root / "released" / f"{section}.json"
+            run("compute_reference_budget.py", "--input", self.input3, "--output", output,
+                "--descriptive-class-subset", 0, 1, "--chunk-size", 64,
+                "--released-target-config", config, "--released-target-key", key,
+                "--allow-outside-slurm")
+            budget = json.loads(output.read_text())
+            self.assertEqual(budget["K_bin"], targets[key], section)
+            record = budget["released_target"]
+            self.assertEqual(record["num_GT_peaks"], targets[key])
+            self.assertEqual(record["our_R_at_0.5"],
+                             budget["reference_set_sizes_all_classes"]["0.5"])
+            self.assertEqual(record["target_minus_our_R_at_0.5"],
+                             targets[key] - record["our_R_at_0.5"])
+            self.assertEqual(budget["provenance"]["released_target_config"]["sha256"],
+                             hashlib.sha256(config.read_bytes()).hexdigest())
+        self.assertEqual(targets["UH9610_15"], 466)  # spot value from data_configs.py
+
+    def test_released_target_flags_go_together_and_unknown_runs_are_refused(self):
+        config = ROOT / "baselines" / "s3pl" / "data_configs.py"
+        lone = run("compute_reference_budget.py", "--input", self.input3, "--output",
+                   self.root / "lone.json", "--released-target-config", config,
+                   "--allow-outside-slurm", check=False)
+        self.assertNotEqual(lone.returncode, 0)
+        unknown = run("compute_reference_budget.py", "--input", self.input3, "--output",
+                      self.root / "unknown.json", "--released-target-config", config,
+                      "--released-target-key", "NOT_A_RUN", "--allow-outside-slurm",
+                      check=False)
+        self.assertNotEqual(unknown.returncode, 0)
+        self.assertFalse((self.root / "unknown.json").exists())
+
     # ----- 5. RCC summariser -----
     def summary_tree(self, name, source, sections=RCC_SECTIONS):
         root = self.root / name
@@ -348,6 +393,8 @@ class RccPipelineTests(unittest.TestCase):
         self.assertFalse(record["ig_vs_posterior_verdict"].startswith("incomplete"))
         self.assertTrue(any("not independently verified" in d for d in record["disclosures"]))
         self.assertTrue(any("UH0505_12 and UH9905_18" in d for d in record["limitations"]))
+        self.assertIn("released S3PL target", record["budget_note"])
+        self.assertIn("GBM K_bin", record["budget_note"])
         self.assertEqual(len(decisions["_patients"]["mapping"]), 8)
 
         partial = self.summary_tree("tree_partial", primary, RCC_SECTIONS[:7])

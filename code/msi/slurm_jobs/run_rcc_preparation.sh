@@ -1,8 +1,11 @@
 #!/bin/bash
 # RCC step 1 (protocol 18 Section 6.1, item D step 2): per run, the budget
-# K_bin = |R@0.4| over all three classes, then the unchanged P1/P3 structural
-# audit. CPU only, one array task per run (0-7). No training, no method scores.
+# K_bin = released S3PL target num_GT_peaks (~ |R@0.5|; spec correction, supervisor
+# chat 2026-10-16 19:47), with every |R_t| recorded descriptively, then the unchanged
+# P1/P3 structural audit (skipped when its provenance is unchanged). CPU only, one
+# array task per run (0-7). No training, no method scores.
 # Both scripts check provenance before skipping and refuse stale outputs (exit 3).
+# The first |R@0.4| reference_budget.json files (69421) are kept as a descriptive record.
 #   sbatch --array=0-7 slurm_jobs/run_rcc_preparation.sh   (via submit_rcc.sh prep)
 # Resources: the GBM/CAC partition audit peaked at 215 MB; the budget loads one
 # PCC vector per class (3 x 10,200 floats). RCC runs are 972-3,564 px x 10,200 bins.
@@ -25,7 +28,7 @@ if (( TASK_ID < 0 || TASK_ID >= ${#RCC_SECTIONS[@]} )); then
 fi
 DATASET="${RCC_SECTIONS[TASK_ID]}"
 INPUT="$(rcc_input_for "$DATASET")"
-BUDGET="$PROJECT_ROOT/results/experiments/rcc_spatial_msipl/${DATASET}_seed1/reference_budget.json"
+BUDGET="$PROJECT_ROOT/results/experiments/rcc_spatial_msipl/${DATASET}_seed1/released_target_budget.json"
 AUDIT="$PROJECT_ROOT/results/diagnostics/peak_partition_audit_rcc/$DATASET"
 [ -f "$INPUT" ] || { echo "Missing input: $INPUT" >&2; exit 1; }
 mkdir -p "$(dirname "$BUDGET")" "$AUDIT"
@@ -39,8 +42,10 @@ echo "=== $DATASET RCC preparation on ${SLURMD_NODENAME:-unknown} (job ${SLURM_A
 # shellcheck disable=SC2086
 "$PYTHON" -u scripts/compute_reference_budget.py --input "$INPUT" --output "$BUDGET" \
     --descriptive-class-subset $RCC_SENSITIVITY_CLASSES --chunk-size 1024 \
-    > "$(dirname "$BUDGET")/reference_budget_stdout.log"
+    --released-target-config baselines/s3pl/data_configs.py \
+    --released-target-key "${DATASET#RCC_}" \
+    > "$(dirname "$BUDGET")/released_target_budget_stdout.log"
 echo "budget: $(grep -o '"status": "[a-z]*"' "$BUDGET" | head -1)"
 "$PYTHON" -u scripts/audit_peak_partitions.py --input "$INPUT" --output "$AUDIT" \
-    --chunk-size 2048 > "$AUDIT/audit_stdout.log"
+    --chunk-size 2048 >> "$AUDIT/audit_stdout.log"
 echo "partition audit: $(grep -o '"status": "[a-z]*"' "$AUDIT/summary.json" | head -1)"
