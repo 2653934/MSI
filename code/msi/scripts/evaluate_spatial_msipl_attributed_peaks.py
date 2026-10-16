@@ -49,15 +49,26 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--attribution-dir", required=True, type=Path)
-    parser.add_argument("--legacy-peaks", required=True, type=Path)
-    parser.add_argument("--legacy-metrics", required=True, type=Path)
+    parser.add_argument("--legacy-peaks", type=Path, help="required unless --no-legacy")
+    parser.add_argument("--legacy-metrics", type=Path, help="required unless --no-legacy")
+    parser.add_argument(
+        "--no-legacy",
+        action="store_true",
+        help="opt-in (RCC): no legacy msiPL list is read or scored",
+    )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--matched-count", type=int, default=530)
     parser.add_argument("--peak-tolerance-ppm", type=float, default=10.0)
     parser.add_argument("--consolidated-candidates", type=int, default=50)
     parser.add_argument("--ion-images", type=int, default=12)
     parser.add_argument("--chunk-size", type=int, default=1024)
-    return parser.parse_args()
+    args = parser.parse_args()
+    legacy_given = args.legacy_peaks is not None or args.legacy_metrics is not None
+    if args.no_legacy and legacy_given:
+        parser.error("--no-legacy excludes --legacy-peaks/--legacy-metrics")
+    if not args.no_legacy and (args.legacy_peaks is None or args.legacy_metrics is None):
+        parser.error("--legacy-peaks and --legacy-metrics are required unless --no-legacy")
+    return args
 
 
 def read_h5_metadata(path):
@@ -243,14 +254,18 @@ def save_mscf1_plot(methods, matched_count, output):
     x = np.arange(len(labels))
     width = 0.25
     fig, ax = plt.subplots(figsize=(11, 5.5))
-    for offset, method in enumerate(
-        ("legacy_msipl", "integrated_gradients", "first_layer_l2")
-    ):
+    shown = [
+        method
+        for method in ("legacy_msipl", "integrated_gradients", "first_layer_l2")
+        if method in methods
+    ]
+    centre = (len(shown) - 1) / 2
+    for offset, method in enumerate(shown):
         result = methods[method]
         values = [result["mixed_f1"][str(value)] for value in THRESHOLDS]
         values.append(result["mSCF1"])
         ax.bar(
-            x + (offset - 1) * width,
+            x + (offset - centre) * width,
             values,
             width,
             label=DISPLAY_NAMES[method],
@@ -380,14 +395,15 @@ def main():
     first_layer_score = attribution["first_layer_combined_l2"].astype(np.float64)
     l2_indices = np.argsort(first_layer_score)[::-1][: args.matched_count].copy()
 
-    legacy_values = np.genfromtxt(args.legacy_peaks, delimiter=",", names=True)
-    legacy_mz = np.asarray(legacy_values[legacy_values.dtype.names[0]]).reshape(-1)
-    legacy_indices = nearest_unique_indices(mz, legacy_mz)
-    if len(legacy_indices) != args.matched_count:
-        raise ValueError(
-            f"legacy peak list has {len(legacy_indices)} unique bins, expected "
-            f"{args.matched_count}"
-        )
+    if not args.no_legacy:
+        legacy_values = np.genfromtxt(args.legacy_peaks, delimiter=",", names=True)
+        legacy_mz = np.asarray(legacy_values[legacy_values.dtype.names[0]]).reshape(-1)
+        legacy_indices = nearest_unique_indices(mz, legacy_mz)
+        if len(legacy_indices) != args.matched_count:
+            raise ValueError(
+                f"legacy peak list has {len(legacy_indices)} unique bins, expected "
+                f"{args.matched_count}"
+            )
 
     correlations = load_correlations(
         args.input, raw_labels, len(mz), pixels_first, args.chunk_size
@@ -398,13 +414,14 @@ def main():
         ),
         "first_layer_l2": score_indices(l2_indices, correlations, len(mz)),
     }
-    legacy_metrics = json.loads(args.legacy_metrics.read_text(encoding="utf-8"))
-    methods["legacy_msipl"] = {
-        "selected_bins": int(legacy_metrics["unique_nearest_bins"]),
-        "mixed_f1": legacy_metrics["mixed_f1"],
-        "mSCF1": float(legacy_metrics["mSCF1"]),
-        "threshold_results": legacy_metrics["threshold_results"],
-    }
+    if not args.no_legacy:
+        legacy_metrics = json.loads(args.legacy_metrics.read_text(encoding="utf-8"))
+        methods["legacy_msipl"] = {
+            "selected_bins": int(legacy_metrics["unique_nearest_bins"]),
+            "mixed_f1": legacy_metrics["mixed_f1"],
+            "mSCF1": float(legacy_metrics["mSCF1"]),
+            "threshold_results": legacy_metrics["threshold_results"],
+        }
 
     consolidated_indices = ppm_nonmaximum_suppression(
         full_balanced,
@@ -487,10 +504,11 @@ def main():
 
     overlap = {}
     sets = {
-        "legacy_msipl": set(legacy_indices.tolist()),
         "integrated_gradients": set(ig_indices.tolist()),
         "first_layer_l2": set(l2_indices.tolist()),
     }
+    if not args.no_legacy:
+        sets["legacy_msipl"] = set(legacy_indices.tolist())
     for left, right in itertools.combinations(sorted(sets), 2):
         intersection = len(sets[left] & sets[right])
         union = len(sets[left] | sets[right])
@@ -530,7 +548,11 @@ def main():
             "selection": {
                 "integrated_gradients": "deterministic component-balanced round robin over combined absolute IG rankings",
                 "first_layer_l2": "descending combined central-plus-context first-layer L2",
-                "legacy_msipl": "existing LearnPeaks output",
+                "legacy_msipl": (
+                    "not run on RCC (requires count tuning)"
+                    if args.no_legacy
+                    else "existing LearnPeaks output"
+                ),
             },
             "pcc_thresholds": list(THRESHOLDS),
             "methods": methods,

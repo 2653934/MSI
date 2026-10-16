@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""RCC decision table (protocol 18 Section 6.1, item D step 2).
+
+Applies the Section 7 IG-versus-posterior rule per arm over the 8 RCC runs, at
+bin level and under P1 when the RCC partition approval exists. With
+--sensitivity it tabulates the cancer/normal-only analysis, which never gets a
+verdict. Refuses mixed provenance, rows from other collections, and a primary
+root that contains class-subset results (or the reverse). No legacy rule: legacy
+msiPL is not run on RCC.
+"""
+
+import argparse
+import csv
+import json
+from pathlib import Path
+
+import numpy as np
+
+from summarise_fair_scoring_baselines import PRACTICAL, campaign_provenance, paired
+
+RCC_SECTIONS = ("RCC_MH0204_33", "RCC_UH0505_12", "RCC_UH0710_33", "RCC_UH9610_15",
+                "RCC_UH9812_03", "RCC_UH9905_18", "RCC_UH9911_05", "RCC_UH9912_01")
+# CardinalWorkflows 1.44.0, vignettes/MSI-classification.Rmd: "8 matched pairs of
+# human kidney tissue" and "each matched pair of tissues belonging to the same
+# subject are on the same slide (i.e., the same run)". One subject per run.
+RCC_PATIENT = {section: section.replace("RCC_", "") for section in RCC_SECTIONS}
+PATIENT_SOURCE = ("CardinalWorkflows 1.44.0 MSI-classification vignette: each matched "
+                  "pair from one subject is on its own slide (run); 8 runs, 8 subjects")
+NA_CAVEAT = ("the unannotated class (45-78% of pixels) may include tissue; "
+             "not established")
+K_DISCLOSURE = ("GMM K = 3 equals the number of label classes: label-free in training "
+                "and ranking, class-informed in its component count")
+SENSITIVITY_LABEL = "sensitivity, cancer/normal classes only"
+SENSITIVITY_CLASSES = [0, 1]
+LEGACY_NOTE = "legacy msiPL not run on RCC (requires count tuning)"
+DESCRIPTIVE_METHODS = ("integrated_gradients", "posterior_abs_pcc_balanced", "first_layer_l2",
+                       "mean_intensity", "variance", "morans_i", "oracle")
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", required=True, type=Path,
+                        help="folder containing RCC_<run>_seed1/<arm>/summary.json")
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--sensitivity", action="store_true",
+                        help="the cancer/normal-only analysis: tabulated, no verdict")
+    return parser.parse_args()
+
+
+def verdict(scales, sections):
+    if sections != len(RCC_SECTIONS):
+        return f"incomplete; no verdict ({sections}/{len(RCC_SECTIONS)} runs)"
+    if all(s["mean_difference"] >= PRACTICAL and s["positive_sections"] >= 6 for s in scales):
+        return "IG adds value beyond its segmentation target"
+    if all(abs(s["mean_difference"]) < PRACTICAL for s in scales):
+        return "IG equivalent to segment-then-correlate"
+    return "mixed / not resolved by the predeclared rule"
+
+
+def main():
+    args = parse_arguments()
+    rows = []
+    keys = set()
+    for path in sorted(args.root.glob("*_seed1/*/summary.json")):
+        summary = json.loads(path.read_text(encoding="utf-8"))
+        if summary.get("status") != "complete" or "provenance" not in summary:
+            raise SystemExit(f"{path}: not a complete fair-scoring result")
+        section, arm = path.parent.parent.name.replace("_seed1", ""), path.parent.name
+        if section not in RCC_SECTIONS:
+            raise SystemExit(f"{path}: {section} is not an RCC run")
+        prov = summary["provenance"]
+        subset = prov["parameters"].get("class_subset")
+        if args.sensitivity and subset != SENSITIVITY_CLASSES:
+            raise SystemExit(f"{path}: expected class subset {SENSITIVITY_CLASSES}, "
+                             f"found {subset}")
+        if not args.sensitivity and subset is not None:
+            raise SystemExit(f"{path}: class-subset result in the primary table")
+        if summary.get("legacy_msipl") != LEGACY_NOTE:
+            raise SystemExit(f"{path}: not a --no-legacy RCC result")
+        keys.add(json.dumps({
+            "evaluation_version": prov["evaluation_version"],
+            "protocol": prov["protocol"],
+            "parameters": prov["parameters"],
+            "approval": (prov["partition_approval"] or {}).get("sha256"),
+            "code": prov["code"],
+        }, sort_keys=True))
+        row = {"section": section, "arm": arm, "patient": RCC_PATIENT[section],
+               "K_bin": summary["K_bin"]}
+        for name, record in summary["bin_level"].items():
+            if "1.0" in record and "mSCF1" in record["1.0"]:
+                row[f"bin:{name}"] = record["1.0"]["mSCF1"]
+        row["bin:random_mean"] = summary["bin_level"]["random"]["1.0"]["mSCF1_mean"]
+        for partition, record in summary.get("peak_level", {}).items():
+            for name, method in record["methods"].items():
+                matched = method.get("matched_K_peak")
+                if isinstance(matched, dict) and "mSCF1" in matched:
+                    row[f"{partition}:{name}"] = matched["mSCF1"]
+        rows.append(row)
+    if not rows:
+        raise SystemExit(f"no RCC summaries under {args.root}")
+
+    campaign = campaign_provenance({"RCC": keys})
+    decisions = {}
+    for arm in sorted({r["arm"] for r in rows}):
+        subset = sorted((r for r in rows if r["arm"] == arm), key=lambda r: r["section"])
+        record = {
+            "sections": [r["section"] for r in subset],
+            "ig_minus_posterior_bin": paired(
+                [r["bin:integrated_gradients"] for r in subset],
+                [r["bin:posterior_abs_pcc_balanced"] for r in subset]),
+            "mean_mSCF1_bin": {name: float(np.mean([r[f"bin:{name}"] for r in subset]))
+                               for name in DESCRIPTIVE_METHODS + ("random_mean",)},
+            "patient_ig_minus_posterior_bin": {
+                r["patient"]: r["bin:integrated_gradients"] - r["bin:posterior_abs_pcc_balanced"]
+                for r in subset},
+        }
+        partitions = sorted({k.split(":")[0] for r in subset for k in r
+                             if k.startswith("P") and ":" in k})
+        for partition in partitions:
+            if all(f"{partition}:integrated_gradients" in r for r in subset):
+                record[f"ig_minus_posterior_{partition}"] = paired(
+                    [r[f"{partition}:integrated_gradients"] for r in subset],
+                    [r[f"{partition}:posterior_abs_pcc_balanced"] for r in subset])
+        scales = [record["ig_minus_posterior_bin"]] + [
+            record[k] for k in record if k.startswith("ig_minus_posterior_P")]
+        if args.sensitivity:
+            record["label"] = SENSITIVITY_LABEL
+            record["ig_vs_posterior_verdict"] = None
+        else:
+            record["ig_vs_posterior_verdict"] = verdict(scales, len(subset))
+        record["peak_level_partitions_used"] = partitions
+        record["disclosures"] = [NA_CAVEAT, K_DISCLOSURE, LEGACY_NOTE]
+        decisions[f"RCC/{arm}"] = record
+    decisions["_patients"] = {"mapping": RCC_PATIENT, "source": PATIENT_SOURCE}
+    decisions["_campaign_provenance"] = campaign
+
+    args.output.mkdir(parents=True, exist_ok=True)
+    (args.output / "decisions.json").write_text(json.dumps(decisions, indent=2) + "\n",
+                                                encoding="utf-8")
+    fields = sorted({k for r in rows for k in r})
+    with open(args.output / "section_table.csv", "w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+    for key, record in decisions.items():
+        if not key.startswith("_"):
+            print(key, record.get("label") or record["ig_vs_posterior_verdict"])
+
+
+if __name__ == "__main__":
+    main()

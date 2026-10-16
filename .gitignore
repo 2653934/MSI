@@ -44,3 +44,8 @@ report/final/*.toc
 report/final/*.lof
 report/final/*.lot
 report/final/sections/*.aux
+
+# Raw training stdout (tqdm progress bars; ~128 MB for S3PL e100). Kept on disk and on the cluster, not in git:
+# the losses, timings and memory they show are recorded in logs/s3pl/*.json (epoch_details),
+# runtime_metrics.json and the run_logs/*_time.txt files, which stay tracked.
+code/msi/reproducibility/**/run_logs/*_train.log

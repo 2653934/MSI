@@ -94,6 +94,9 @@ SCORE_TOLERANCE = 1e-12
 ORACLE_LABEL = ("supervised oracle ceiling: maximum signed expert-class PCC, the same "
                 "convention as the reference set; not deployable")
 COMPLETE = "complete"
+# Opt-in RCC options (protocol 18 Section 6.1, item D step 2). When they are omitted
+# the provenance, scores and summary are exactly those of the GBM/CAC campaign.
+LEGACY_NOT_RUN = "legacy msiPL not run on RCC (requires count tuning)"
 
 
 def parse_arguments():
@@ -102,8 +105,16 @@ def parse_arguments():
     parser.add_argument("--attribution-dir", required=True, type=Path)
     parser.add_argument("--saved-evaluation-dir", required=True, type=Path,
                         help="existing matched evaluation folder for this arm")
-    parser.add_argument("--legacy-peaks", required=True, type=Path)
-    parser.add_argument("--legacy-metrics", required=True, type=Path)
+    parser.add_argument("--legacy-peaks", type=Path, help="required unless --no-legacy")
+    parser.add_argument("--legacy-metrics", type=Path, help="required unless --no-legacy")
+    parser.add_argument("--no-legacy", action="store_true",
+                        help="opt-in (RCC): no legacy msiPL list; requires --reference-budget")
+    parser.add_argument("--reference-budget", type=Path,
+                        help="compute_reference_budget.py output; K_bin must equal its K_bin")
+    parser.add_argument("--class-subset", type=int, nargs="+",
+                        help="opt-in sensitivity: raw Class_Label values whose PCCs define "
+                             "the reference sets, mSCF1, ceilings and oracle; the "
+                             "reproduction checks still use every class")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--partition-dir", type=Path,
                         help="audit_peak_partitions.py output for this section")
@@ -113,7 +124,22 @@ def parse_arguments():
     parser.add_argument("--chunk-size", type=int, default=1024)
     parser.add_argument("--allow-outside-slurm", action="store_true",
                         help="tests only; real sections must run inside Slurm")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.no_legacy:
+        if args.legacy_peaks is not None or args.legacy_metrics is not None:
+            parser.error("--no-legacy excludes --legacy-peaks/--legacy-metrics")
+        if args.reference_budget is None:
+            parser.error("--no-legacy requires --reference-budget")
+    else:
+        if args.legacy_peaks is None or args.legacy_metrics is None:
+            parser.error("--legacy-peaks and --legacy-metrics are required unless --no-legacy")
+        if args.reference_budget is not None:
+            parser.error("--reference-budget is used only with --no-legacy")
+    if args.class_subset is not None:
+        if len(set(args.class_subset)) != len(args.class_subset):
+            parser.error("--class-subset values must be distinct")
+        args.class_subset = sorted(args.class_subset)
+    return args
 
 
 def code_paths():
@@ -159,6 +185,11 @@ def expected_provenance(args, dataset, approved_hashes, approval_record, source_
         "approved_partition_parameters": {
             name: PARTITION_PARAMETERS[name] for name in sorted(approved_hashes)},
     }
+    # Opt-in keys only, so the default provenance block is unchanged.
+    if args.no_legacy:
+        parameters["legacy"] = LEGACY_NOT_RUN
+    if args.class_subset is not None:
+        parameters["class_subset"] = list(args.class_subset)
     return {
         "evaluation_version": EVALUATION_VERSION,
         "protocol": PROTOCOL,
@@ -234,6 +265,31 @@ def check_legacy(legacy_indices, legacy_metrics, correlations, n_bins, k_bin):
     return rescored, difference
 
 
+def check_reference_budget(path, input_record, k_bin):
+    """With --no-legacy, K_bin must be the precomputed |R@0.4| of this same input."""
+    budget = json.loads(Path(path).read_text(encoding="utf-8"))
+    if budget.get("status") != COMPLETE:
+        raise ValueError(f"reference budget {path} is not complete")
+    if budget["provenance"]["input"]["sha256"] != input_record["sha256"]:
+        raise ValueError("reference budget was computed on a different input")
+    if int(budget["K_bin"]) != k_bin:
+        raise ValueError(f"saved evaluation count {k_bin} differs from the reference "
+                         f"budget K_bin {budget['K_bin']}")
+
+
+def scoring_correlations(correlations, class_subset):
+    """Class PCCs used for scoring: the same dict unless a subset is requested."""
+    if class_subset is None:
+        return correlations
+    missing = sorted(set(class_subset) - set(correlations))
+    if missing:
+        raise ValueError(f"--class-subset values {missing} are not labels of this input "
+                         f"(labels: {sorted(correlations)})")
+    if len(class_subset) == len(correlations):
+        raise ValueError("--class-subset lists every class; omit it for the default path")
+    return {c: correlations[c] for c in class_subset}
+
+
 def main():
     args = parse_arguments()
     require_slurm(args.allow_outside_slurm)
@@ -253,9 +309,12 @@ def main():
         "saved_evaluation_summary": saved_summary_path,
         "saved_ig_list": args.saved_evaluation_dir / f"ig_matched_{k_bin}_bins.csv",
         "saved_l2_list": args.saved_evaluation_dir / f"first_layer_l2_matched_{k_bin}_bins.csv",
-        "legacy_peaks": args.legacy_peaks,
-        "legacy_metrics": args.legacy_metrics,
     }
+    if args.no_legacy:
+        source_paths["reference_budget"] = args.reference_budget
+    else:
+        source_paths["legacy_peaks"] = args.legacy_peaks
+        source_paths["legacy_metrics"] = args.legacy_metrics
     approved_hashes, approval_record = load_approval(args, dataset)
     if approved_hashes:
         source_paths["partitions"] = args.partition_dir / "partitions.npz"
@@ -271,6 +330,9 @@ def main():
     if state == "valid":
         print(f"Existing result matches current provenance; skipped: {summary_path}")
         return
+
+    if args.no_legacy:
+        check_reference_budget(args.reference_budget, expected["input"], k_bin)
 
     mz, raw_labels, x, y, pixels_first = read_h5_metadata(args.input)
     n_bins = len(mz)
@@ -332,14 +394,21 @@ def main():
             raise ValueError(f"{name}: rescored mSCF1 {rescored} != saved {saved}")
         checks[f"{name}_mSCF1_reproduced"] = saved
 
-    legacy_values = np.genfromtxt(args.legacy_peaks, delimiter=",", names=True)
-    legacy_mz = np.asarray(legacy_values[legacy_values.dtype.names[0]]).reshape(-1)
-    legacy_indices = nearest_unique_indices(mz, legacy_mz)
-    legacy_metrics = json.loads(args.legacy_metrics.read_text(encoding="utf-8"))
-    legacy_score, legacy_difference = check_legacy(
-        legacy_indices, legacy_metrics, correlations, n_bins, k_bin)
-    checks["legacy_rescore_minus_saved"] = legacy_difference
-    checks["legacy_unique_snapped_bins"] = int(len(legacy_indices))
+    if not args.no_legacy:
+        legacy_values = np.genfromtxt(args.legacy_peaks, delimiter=",", names=True)
+        legacy_mz = np.asarray(legacy_values[legacy_values.dtype.names[0]]).reshape(-1)
+        legacy_indices = nearest_unique_indices(mz, legacy_mz)
+        legacy_metrics = json.loads(args.legacy_metrics.read_text(encoding="utf-8"))
+        legacy_score, legacy_difference = check_legacy(
+            legacy_indices, legacy_metrics, correlations, n_bins, k_bin)
+        checks["legacy_rescore_minus_saved"] = legacy_difference
+        checks["legacy_unique_snapped_bins"] = int(len(legacy_indices))
+
+    # Every reproduction check above used all classes. From here on, scores use the
+    # requested class subset; without one, `scoring` is the same dict as `correlations`.
+    scoring = scoring_correlations(correlations, args.class_subset)
+    if args.class_subset is not None and not args.no_legacy:
+        legacy_score = score_indices(legacy_indices, scoring, n_bins)
 
     # --- Label-free baselines on TIC-normalised spectra, and the oracle. ---
     components = saved_gmm["component"].astype(np.int64)
@@ -351,32 +420,34 @@ def main():
     rankings["mean_intensity"] = rank_descending(stats["mean_intensity"])
     rankings["variance"] = rank_descending(stats["variance"])
     rankings["morans_i"] = rank_descending(nan_to_lowest(stats["morans_i"]))
-    rankings["oracle"] = supervised_oracle_ranking(correlations)
+    rankings["oracle"] = supervised_oracle_ranking(scoring)
     random_draws = random_rankings(n_bins, args.random_draws)
 
     # --- Bin-level scores at K_bin and budget multipliers. ---
     budget_values = budgets(k_bin, n_bins)
-    bin_level = {name: {m: score_indices(r[:b], correlations, n_bins)
+    bin_level = {name: {m: score_indices(r[:b], scoring, n_bins)
                         for m, b in budget_values.items()}
                  for name, r in rankings.items()}
-    random_scores = {m: [score_indices(r[:b], correlations, n_bins)["mSCF1"]
+    random_scores = {m: [score_indices(r[:b], scoring, n_bins)["mSCF1"]
                          for r in random_draws]
                      for m, b in budget_values.items()}
     bin_level["random"] = {m: {"mSCF1_mean": float(np.mean(v)),
                                "mSCF1_p05": float(np.percentile(v, 5)),
                                "mSCF1_p95": float(np.percentile(v, 95))}
                            for m, v in random_scores.items()}
-    bin_level["legacy_msipl"] = {"1.0": legacy_score}
+    if not args.no_legacy:
+        bin_level["legacy_msipl"] = {"1.0": legacy_score}
 
     reference_bins = {
-        t: set().union(*(true_indices_at_threshold(correlations[c], t)
-                         for c in sorted(correlations)))
+        t: set().union(*(true_indices_at_threshold(scoring[c], t)
+                         for c in sorted(scoring)))
         for t in THRESHOLDS
     }
     ceilings = {m: {str(t): max_attainable_f1(b, len(reference_bins[t])) for t in THRESHOLDS}
                 for m, b in budget_values.items()}
     collapse_rule_a = {name: runs_summary(r[:k_bin]) for name, r in rankings.items()}
-    collapse_rule_a["legacy_msipl"] = runs_summary(legacy_indices)
+    if not args.no_legacy:
+        collapse_rule_a["legacy_msipl"] = runs_summary(legacy_indices)
 
     # --- Peak-level scoring only under reviewer-approved partitions. ---
     peak_level = {}
@@ -407,17 +478,19 @@ def main():
                                    "selected_groups_sha256": array_sha256(matched),
                                    **score_groups(matched.tolist(), reference_groups, n_groups)},
             }
-        legacy_groups = np.asarray(sorted(groups_of_selection(legacy_indices, group_of_bin)),
-                                   dtype=np.int64)
-        selections[f"{partition}__legacy_msipl__collapse_groups"] = legacy_groups
-        record["methods"]["legacy_msipl"] = {
-            "collapse_K_bin": {"distinct_groups": int(len(legacy_groups)),
-                               **score_groups(legacy_groups.tolist(), reference_groups, n_groups)},
-            "matched_K_peak": ("not available: fixed list; requires a Beta re-tune to "
-                               "K_peak. IG-versus-legacy is therefore not a matched "
-                               "peak-level comparison; the collapse diagnostic answers a "
-                               "narrower question"),
-        }
+        if not args.no_legacy:
+            legacy_groups = np.asarray(
+                sorted(groups_of_selection(legacy_indices, group_of_bin)), dtype=np.int64)
+            selections[f"{partition}__legacy_msipl__collapse_groups"] = legacy_groups
+            record["methods"]["legacy_msipl"] = {
+                "collapse_K_bin": {"distinct_groups": int(len(legacy_groups)),
+                                   **score_groups(legacy_groups.tolist(), reference_groups,
+                                                  n_groups)},
+                "matched_K_peak": ("not available: fixed list; requires a Beta re-tune to "
+                                   "K_peak. IG-versus-legacy is therefore not a matched "
+                                   "peak-level comparison; the collapse diagnostic answers "
+                                   "a narrower question"),
+            }
         random_matched = []
         random_consumed = []
         for draw in random_draws:
@@ -437,9 +510,10 @@ def main():
     ranking_record = {name: {"full_ranking_sha256": array_sha256(r),
                              "saved_prefix_length": int(min(prefix_length, len(r)))}
                       for name, r in rankings.items()}
-    np.savez_compressed(args.output / "rankings_prefix.npz",
-                        **{name: r[:prefix_length] for name, r in rankings.items()},
-                        legacy_msipl=legacy_indices)
+    prefixes = {name: r[:prefix_length] for name, r in rankings.items()}
+    if not args.no_legacy:
+        prefixes["legacy_msipl"] = legacy_indices
+    np.savez_compressed(args.output / "rankings_prefix.npz", **prefixes)
     if selections:
         np.savez_compressed(args.output / "peak_level_selections.npz", **selections)
 
@@ -468,6 +542,16 @@ def main():
                     "peak_level_selections": "peak_level_selections.npz" if selections else None},
         "runtime_seconds": time.perf_counter() - started,
     }
+    if args.no_legacy:
+        summary["legacy_msipl"] = LEGACY_NOT_RUN
+    if args.class_subset is not None:
+        summary["class_subset"] = {
+            "classes": list(args.class_subset),
+            "scope": ("reference sets, mSCF1, per-class metrics, F1 ceilings, oracle and "
+                      "peak-level reference groups use only these classes; the rankings, "
+                      "K_bin and every pixel are unchanged; the reproduction checks used "
+                      "every class"),
+        }
     atomic_write_json(summary_path, summary)
     print(json.dumps({name: v["1.0"]["mSCF1"] for name, v in bin_level.items()
                       if "1.0" in v and "mSCF1" in v["1.0"]}, indent=2))

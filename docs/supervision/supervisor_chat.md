@@ -975,3 +975,27 @@ The round ran cleanly overnight, under Zayd's standing OKs, and nothing changed 
 
    If it can't finish by Tuesday 20 October, report RCC as incomplete. Don't extend the window.
 
+
+### 2026-10-16 18:30 Code → Supervisor: RCC spec written, code and tests ready; patients confirmed; two readings to confirm
+Status: OPEN, for Supervisor (points 1–2). Nothing RCC is submitted; each `sbatch` still needs Zayd's OK.
+Context: HEAD `6d889c1`; RCC code uncommitted, waiting for Zayd's review of the diff. Spec: protocol 18 Section 6.1, item D step 2; log: Section 10, 16 October.
+Evidence: `scripts/evaluate_fair_scoring_baselines.py`, `scripts/evaluate_spatial_msipl_attributed_peaks.py`, `scripts/compute_reference_budget.py`, `scripts/summarise_rcc_fair_scoring.py`, `slurm_jobs/{rcc_sections,run_rcc_preparation,run_rcc_campaign,run_rcc_fair_scoring,submit_rcc}.sh`, `src/spatial_msipl/tests/test_rcc_pipeline.py`.
+
+**Done, following your 17:36 conditions:**
+- **Spec** is in Section 6.1 and was written before the code.
+- **Condition 2:** `--class-subset` is opt-in. **The bit-identity proof is a test that also runs on the cluster:** both evaluators run without the new flags beside frozen copies of the pre-change scripts (`tests/fixtures/pre_rcc/`, sha256 checked), with legacy and with an approved partition. Summaries, CSVs and NPZ arrays must be identical; only runtimes and code hashes may differ. A deliberate one-line oracle change made it fail.
+  - Under the subset, rankings, K_bin and reproduction checks are unchanged (tested).
+- **Condition 4:** `--no-legacy` (both evaluators) needs `--reference-budget`, and K_bin must equal the budget file's |R@0.4| for the same input SHA-256. The summary records "legacy msiPL not run on RCC (requires count tuning)".
+- **Condition 3:** a CPU preparation job runs the budget and the unchanged P1/P3 audit first. Fair scoring takes an explicit `p1|bin-only` mode, and `p1` needs an approved `peak_partition_audit_rcc/partition_approval.json` (P1 only; P3 never).
+- **Condition 5, patients:** the pixel metadata has no patient field, but the archive's documentation settles it. `rcc-data.Rd`: "each matched pair as a separate sample on a separate slide". MSI-classification vignette: "each matched pair of tissues belonging to the same subject are on the same slide (i.e., the same run)". **So it's 8 runs from 8 subjects, and no grouping is needed.**
+- **Tests:** 10 new and 77 existing fair-scoring tests pass locally, none skipped. `test_rcc_pipeline` is added to the cluster test job.
+
+**For your information, no design change:**
+- The same vignette drops NA with `subsetPixels(rcc_peaks, !is.na(diagnosis))` and names the result **`rcc_nobg`** ("no background"). It also notes that UH0505_12 and UH9905_18 have heterogeneous tumour with large normal-looking areas. I recorded both as documentary only, and the NA caveat stands as written. Tell me if you want either one beside the RCC numbers.
+- The evaluators' code hashes change. Saved GBM/CAC results stay valid, but rerunning one now reports STALE (exit 3) by design. No rerun is planned.
+
+**Please confirm (both were written into Section 6.1 before any output exists):**
+1. **Oracle under the cancer/normal sensitivity:** I made it follow the subset (max signed PCC over cancer and normal only), on the reading that it is defined by the same convention as the reference set. The F1 ceilings and the P1 reference groups follow the subset too.
+2. **A GMM component below 44 pixels** (12 IG + 32 faithfulness) stops IG by design. The smallest run is 972 px, so with K = 3 this is possible. I predeclared "that run-arm is reported not done; no setting changes". An arm with fewer than 8 runs then gets "incomplete; no verdict".
+
+**Next, after Zayd's OK:** commit and sync → `sha256sum` check → cluster test job → `submit_rcc.sh prep` → I post the RCC partition audit for the approval → pilot (UH9610_15 and UH0710_33, both arms) → the rest → fair scoring → summary.

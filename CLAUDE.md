@@ -14,61 +14,49 @@ This is Zayd's Honours research repository: unsupervised peak learning for mass 
 - `report/draft/`: the LaTeX report being rebuilt. `report/final/` stays empty until the final audit.
 - Raw data and checkpoints exist only on the cluster: `/datasets/zsuliman/msi_data/` and `/datasets/zsuliman/msi_checkpoints/`.
 
-## Current work (state at 16:00 SAST, 15 October 2026: final experiment round coded and tested locally, nothing submitted yet; experiments end Tuesday 20 October)
+## Current work (state at 18:30 SAST, 16 October 2026: final round A–G complete and read; RCC is GO, its specification is in protocol 18 Section 6.1, and the RCC code is written and tested locally; nothing RCC submitted; experiments end Tuesday 20 October)
 
-Protocol 18 (v3.2) is the governing document. Its Section 6 holds the gate (d) run specification and its amendments, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
+Protocol 18 (v3.2) is the governing document. Section 6 holds the gate (d) specification, Section 6.1 the final-round and RCC specifications, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
+
+### Wording rule for every predeclared verdict (supervisor 16 Oct 17:36)
+No rule has a "worse" category and none is added. Report the rule result exactly as labelled, then the numbers beside it: "does not meet the 'helps' rule (labelled mixed); below real 3×3 in 6/8 GBM sections, mean −0.035 at bin level and −0.034 under P1." Where "equivalent" hides a one-sided P1 pattern, add it ("equivalent; P1 −0.018, 1/8 positive"). For IG vs posterior use the Section 7.1 wording.
 
 ### Gates (a)/(b), fair scoring: complete
-- **Runs:** bin level was array 66053 (pilot 66045), with decision table 66097 in `fair_scoring_baselines/bin_level_only/summary_66097/`. Approved partitions were array 66114 plus 66179 (a GBM108_negative rerun after a folder race), with decision table 66238 in `with_approved_partitions/summary_66238/`.
-- **Result:** IG is below posterior-|PCC| in **all 32 section-arms** at bin level (GBM −0.225/−0.233; CAC −0.078/−0.047). Under P1 there is one exception: CAC uniform_mean 280TopL. **Neither predeclared verdict applies** (Section 7.1): the rules have no "IG worse" category, so `decisions.json` prints "mixed / not resolved", which is a fall-through, not a mixed result. Use the wording in Section 7.1, and do not add a verdict category after the fact.
-- **IG vs legacy:** positive in 8/8 sections in every arm at bin level and in the collapse diagnostic. The budget-stability clause cannot be assessed, so report it as 2 of 3 clauses met.
-- **Do not change the report headline or research questions yet** (supervisor). The provisional framing: on GBM, the label-free GMM segmentation plus a correlation ranking approaches the oracle; on CAC it is only comparable to mean intensity and Moran's I; IG underperforms the correlation ranking in both. Spatial context was not tested by this gate.
+- Decision tables: bin level 66097 (`bin_level_only/summary_66097/`), approved partitions 66238 (`with_approved_partitions/summary_66238/`).
+- IG is below posterior-|PCC| in all 32 section-arms at bin level (GBM −0.225/−0.233; CAC −0.078/−0.047); under P1 one exception (CAC uniform_mean 280TopL). Neither predeclared verdict applies (Section 7.1).
+- IG vs legacy: positive 8/8 in every arm at bin level and in the collapse diagnostic; budget-stability clause not assessable, so 2 of 3 clauses met.
+- **Do not change the report headline or research questions yet** (supervisor). Provisional framing: on GBM, label-free GMM + correlation ranking approaches the oracle; on CAC it is only comparable to mean intensity and Moran's I; IG underperforms the correlation ranking in both.
 
-### Gate (d), attribution-pixel count (12/48/192): CLOSED. Production n=12 stands in both arms; no 16-section rerun (supervisor confirmed, chat entry 2026-10-10 09:45)
-- **Specification:** protocol 18 Section 6, decided before any gate (d) output.
-  - Sections: GBM108_positive and 40TopL. Both arms (central_only, uniform_mean), with the rule applied per arm.
-  - Reproduction gate: an identical K_bin bin set plus the saved mSCF1 to 1e-12; order is recorded but not gating.
-  - Run-validity checks: IG status `valid`; run signature equal to n=12; GMM labels aligned to production with a matching reference SHA-256.
-  - Trigger: change ≥ +0.02 on **both** sections for that arm. Resources: `batch` with `--exclusive`, 8G for CAC, 24G for GBM.
-- **Code:** `slurm_jobs/run_gate_d_pixel_count_ig.sh`, `submit_gate_d_pixel_counts.sh pilot|gbm [--counts LIST] [--arms LIST]`, `run_gate_d_evaluation.sh SECTION ARM [n12-only]` (n12-only runs `scripts/check_gate_d_n12_reproduction.py`), `run_gate_d_summary.sh`, `scripts/evaluate_gate_d_pixel_counts.py`, `scripts/summarise_gate_d_pixel_counts.py` and `scripts/check_gate_d_uniform_consistency.py`. The IG script has the opt-in flags `--attribution-total` and `--align-gmm-labels-to-production`; alignment failure exits with code 5.
-- **History:**
-  - Attempt 1 (66286–66291) failed at the unit-test step because `scripts/` was missing from `PYTHONPATH`; this was fixed.
-  - Attempt 2 (66293–66298): the central_only GMM components came out renumbered by the GPU refit, so different attribution pixels were sampled. That led to the label-alignment amendment. The outputs were moved, not deleted, to `gate_d_pixel_counts/superseded_label_order/40TopL_seed1/`.
-  - Attempt 3, aligned (commit `3a9599d`): tests 66324 passed 83/83; IG 66325–66330; evaluations 66331/66332. All passed.
-  - GBM108_positive, staged (commits `6ee2b1e`, `945836a`; 59 cluster files matched `HEAD` by sha256sum). Tests 66389 passed 86/86 with none skipped.
-    - Stage 1: IG n=12 66390/66391 valid, identity alignment, about 7 min each; checks 66392/66393 **passed in both arms** (uniform_mean's version-1 risk did not occur). No scores were read.
-    - Stage 2: IG 66399 (central_only n=48), 66400 (central_only n=192), 66401 (uniform_mean n=48), 66402 (uniform_mean n=192), all started 21:10 UTC (23:10 SAST).
-  - `sacct` MaxRSS is blank for gate (d) jobs and `seff` is not installed, so peak memory is not available.
-- **40TopL results** (in `gate_d_pixel_counts/40TopL_seed1/<arm>/evaluation/summary.json`):
-  - The uniform_mean consistency check **passed** (identity mapping, max difference 0.0). The central_only permutation was {0→0, 1→2, 2→1}.
-  - Change at K_bin: central_only n=48 −0.001, **n=192 +0.024**; uniform_mean n=48 −0.008 (value −0.0085), n=192 +0.003.
-  - IG − posterior-|PCC| stays negative at every n (−0.02 to −0.07).
-  - **So uniform_mean cannot trigger. central_only n=192 depends on GBM108_positive central_only n=192.** That is a single section, single seed, just over the threshold, with bin-set Jaccard about 0.8 between counts.
+### Gate (d), attribution-pixel count: CLOSED. Production n=12 stands in both arms (chat 2026-10-10 09:45).
 
-### Final experiment round (supervisor chat 15 Oct 13:00, 13:30, 15:35, 15:51; experiments end Tuesday 20 October)
-Specifications are in protocol 18 Section 6.1, and the log is in Section 10 ("Final experiment round").
-- **State at 16:00 SAST, 15 October:** nothing has been submitted yet; the 15:51 review fixes (dates, this section, memory requests) are made. Everything below is coded and tested locally and waits for Zayd's commit, sync and per-`sbatch` OK. `batch` is down, so `bigbatch` is approved (CPU jobs via `SBATCH_PARTITION=bigbatch`).
-- **B and C1 are done:** `scripts/build_runtime_and_training_curves.py` produces `runtime_all_sections.csv` and `training_curves_*` in `current_evidence/`. Note that the S3PL `train_history` is the last-batch MSE, not an epoch mean.
-- **A:** the GBM attention evaluations used the old counts. The approved fix is `check_saved_list_reproduction.py`, then re-evaluation at K_bin into `peak_evaluation_tuned_count/`, then the unchanged evaluator. Run with `submit_fair_scoring_extra_arm.sh attention pilot|all`; the summariser is `summarise_fair_scoring_arms.py`.
-- **G:** centre masking with p = 0.5 (`train_vae(centre_mask_probability)`). The zeroed centre also serves as the attention query, which the supervisor confirmed. Run with `submit_centremask_campaign.sh` (34 tasks), then fair scoring with `submit_fair_scoring_extra_arm.sh <G arm>`.
-- **C2:** S3PL 100 epochs, with logging-only `--checkpoint_epochs` in `baselines/s3pl/train.py`. Run with `submit_s3pl_e100.sh`; evaluate with `evaluate_s3pl_epoch_checkpoints.py`.
-- **E:** first the audit with `--windows 3 5 7 9` (`AUDIT_WINDOWS`/`AUDIT_OUTPUT_ROOT` on `audit_spatial_msipl_data_contract.sh`). The E training spec is written only after the audit passes.
-- **D:** `rcc_env` exists (Cardinal 3.12.1). Run `run_rcc_feasibility.sh`; the go/no-go goes in `results/validation/rcc_feasibility/go_no_go.json`, due by the end of Friday 16 October.
-- **C3:** only if GPU time remains.
+### Earlier 15 October results (confirmed)
+- **BIC 68496:** K = 6 (largest candidate) in all four section-arms. Wording: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count." Never write "six clusters".
+- **S3PL CAC seed 2 (68500/68501):** two-seed rule supported (8/8 in both seeds, +0.413 / +0.438), always with the harder-target and sample-order caveats.
+- **B and C1:** `runtime_all_sections.csv` and `training_curves_*` in `current_evidence/` (S3PL `train_history` is last-batch MSE).
+
+### Final round A–G: complete and confirmed (supervisor 16 Oct 17:36; protocol 18 Section 10, 16 October)
+Decision table: `results/diagnostics/fair_scoring_baselines/extra_arms/decisions_20261016_local/decisions.json`. Values: mean IG mSCF1 difference at K_bin, positive sections /8, bin / P1.
+- **A, attention vs uniform_mean:** equivalent on GBM (+0.011, 6/8 / +0.010, 6/8) and CAC (−0.006, 4/8 / −0.005, 2/8). A(b) reproduction passed 16/16.
+- **G1 vs attention:** GBM "mixed; below standard attention in 7/8 sections, mean −0.039 / −0.040"; CAC equivalent. G1 vs G2 equivalent on both. G3: +0.021 (160TopL), −0.011 (GBM22_2), rule not met.
+- **G mechanism:** "Centre masking did not make attention selective: median normalised entropy 0.998–0.999, against 0.98–0.999 without masking. On GBM, masked attention scored below standard attention."
+- **E:** p7 and p9 GBM "mixed", below 3×3 (−0.035, 2/8 at both scales; confirmation-only about −0.03); CAC equivalent (CAC p7: "equivalent; P1 −0.018, 1/8 positive"). p5 descriptive: GBM −0.018, CAC −0.006.
+- **IG vs own posterior-|PCC|:** 0/8 positive in all 14 extra collection-arms (GBM −0.22 to −0.29, CAC −0.05 to −0.08).
+- **C2 (descriptive):** S3PL quality falls with longer training (CAC 0.591 → 0.336, GBM 0.316 → 0.212 from epoch 10 to 100); epoch 10 best in 15/16 (exception GBM108_positive). Report S3PL at 10 epochs as the comparison and the 100-epoch curve as sensitivity; the 10-epoch protocol is effectively an early-stopping choice with no label-free signal to pick it. Never per-section best.
+- **C3:** not run (accepted by the supervisor 15 Oct 19:37).
+
+### RCC (item D → RCC run): GO; specification approved with conditions (supervisor 16 Oct 17:36)
+- **Feasibility 68805: GO** (`results/validation/rcc_feasibility/go_no_go.json`). 8 runs (MH0204_33, UH0505_12, UH0710_33, UH9610_15, UH9812_03, UH9905_18, UH9911_05, UH9912_01), 972–3,564 px, 10,200 bins (m/z 150–1000), all audit `valid`. Labels cancer 0, normal 1, unannotated 2. HDF5s at `/datasets/zsuliman/msi_data/rcc_cardinal/RCC_<run>.h5`.
+- **NA caveat on every RCC number:** "the unannotated class (45–78% of pixels) may include tissue; not established".
+- **Approved specification (written into protocol 18 Section 6.1, item D step 2):** `central_only` and `uniform_mean`, 100 epochs, seed 1, all 8 runs as confirmation; GMM K = 3 (class-informed, disclosed); K_bin = |R@0.4| over all three classes; unchanged fair-scoring evaluator with all baselines and the oracle; primary test posterior-|PCC| vs IG under Section 7 per arm. Secondary, descriptive: "sensitivity, cancer/normal classes only" via an **opt-in class-subset parameter, default path bit-identical with a test proving it**, same rankings and same K_bin. P1 only if the structural audit's S1 passes on RCC, else bin level only; no P3. Legacy msiPL not run ("legacy msiPL not run on RCC (requires count tuning)"). Confirm the run-to-patient mapping before scoring; group runs that share a patient. Out of scope: attention, larger windows, masking, S3PL.
+- **Patients:** 8 runs = 8 subjects (CardinalWorkflows vignette: "each matched pair of tissues belonging to the same subject are on the same slide (i.e., the same run)"); `RCC_PATIENT` in `summarise_rcc_fair_scoring.py`. The vignette calls the NA-removed object `rcc_nobg`; this is documentary only, and the NA caveat stands.
+- **Code (uncommitted, tested locally):** opt-in `--no-legacy`/`--reference-budget`/`--class-subset` in `evaluate_fair_scoring_baselines.py`; `--no-legacy` in `evaluate_spatial_msipl_attributed_peaks.py`; `compute_reference_budget.py`; `summarise_rcc_fair_scoring.py`; `slurm_jobs/rcc_sections.sh`, `run_rcc_preparation.sh` (CPU: budget + partition audit), `run_rcc_campaign.sh` (GPU: train, IG, matched eval; 0–7 central_only, 8–15 uniform_mean), `run_rcc_fair_scoring.sh p1|bin-only` (CPU: primary + cancer/normal sensitivity), `submit_rcc.sh prep|pilot|rest|fair`. Tests: `test_rcc_pipeline.py` (10; bit-identity against the frozen pre-change copies in `tests/fixtures/pre_rcc/`). The evaluator code hashes change, so rerunning a saved GBM/CAC result now reports STALE by design.
+- **Order:** spec ✓ → code and tests ✓ → show Zayd the diff → Zayd commits and syncs, `sha256sum` check → cluster test job (`run_fair_scoring_tests.sh`, `test_rcc_pipeline` must run, not skip) → `submit_rcc.sh prep` → read the RCC partition audits, reviewer writes `peak_partition_audit_rcc/partition_approval.json` (P1 only, only if S1 passes in 8/8) → `pilot` (tasks 2,3,10,11) → `rest` → `fair p1|bin-only` → `summarise_rcc_fair_scoring.py` locally after the sync (primary and `--sensitivity`). If not done by Tuesday 20 October, report RCC as incomplete; don't extend.
 
 ### Next
 Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both. **Take dates from the local clock:** in Git Bash use `TZ=SAST-2 date` (Git Bash ignores `TZ=Africa/Johannesburg` and prints UTC), or PowerShell `Get-Date`.
-
-Governing entries: supervisor chat of 15 October 13:00 (round A–F), 13:30 (item G), 15:35 (answers) and 15:51 (code review). Specifications are in protocol 18 Section 6.1.
-1. Zayd commits and syncs. Then check `sha256sum` against `HEAD` on the cluster.
-2. Run the cluster test job `run_fair_scoring_tests.sh` on `bigbatch`. `test_fair_scoring_arms`, `test_centre_masking` and `test_neighbourhood` must show as run and passed, not skipped.
-3. Submit in order, each with Zayd's OK, posting the job IDs to the chat: A pilot → A all → G pilot (160TopL G1) → G rest → C2 → E audit → E → C3 if time allows. D runs in parallel; its go/no-go is due by the end of Friday 16 October.
-4. Still in force: no new claims in `report/draft/` or `planning/claim_map.md` until Hairong has responded (meeting Monday 19 October). Slurm email is not used; track jobs with `sacct`.
-
-**Completed earlier (15 October; synced, logged and confirmed by the supervisor):**
-- **BIC 68496:** K = 6 (the largest candidate) in all four section-arms. Wording: "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only. The production K equals the number of annotated classes, so the segmentation is label-free in training and ranking but class-informed in its component count." Never write "six clusters".
-- **S3PL CAC seed 2 (68500/68501):** the two-seed rule is supported (8/8 sections in both seeds, +0.413 / +0.438). Always give the harder-target and sample-order caveats with it.
-- The cluster-access details in `docs/operations/cluster_sync.md` are filled in. Claude still does not inspect the keys.
+1. Finish the RCC order above; each `sbatch` with Zayd's OK and the job IDs posted to the chat. `batch` has been down since 13 October; CPU jobs go to `bigbatch` with Zayd's OK (`SBATCH_PARTITION=bigbatch`).
+2. Still in force: no new claims in `report/draft/` or `planning/claim_map.md` until Hairong has responded (meeting Monday 19 October). Slurm email is not used; track jobs with `sacct`.
+3. The cluster-access details are in `docs/operations/cluster_sync.md`. Claude does not inspect the keys.
 
 ## Scientific rules
 

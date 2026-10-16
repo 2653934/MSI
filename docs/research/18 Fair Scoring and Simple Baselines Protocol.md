@@ -295,6 +295,38 @@ The rules below are copied from the chat entries, which fixed them before any ou
   - **Next:** the RCC run specification is drafted for the supervisor in the chat entry of 16 October. No RCC training job has been prepared or submitted.
 - The RCC run specification (if go) is written here before any RCC training job.
 
+**Item D, step 2: RCC run specification** (proposed by Code on 16 October 17:28; approved with conditions by the supervisor on 16 October 17:36; written here on 16 October at about 18:10 SAST / 16:10 UTC, before any RCC code, training job or score existed). If it cannot finish by Tuesday 20 October, RCC is reported as incomplete; the window is not extended.
+
+- **Sections:** the 8 exported runs, in this fixed order: `RCC_MH0204_33`, `RCC_UH0505_12`, `RCC_UH0710_33`, `RCC_UH9610_15`, `RCC_UH9812_03`, `RCC_UH9905_18`, `RCC_UH9911_05`, `RCC_UH9912_01` (`slurm_jobs/rcc_sections.sh`). All 8 are **confirmation** sections, because no RCC run was used for development. Inputs: `/datasets/zsuliman/msi_data/rcc_cardinal/RCC_<run>.h5` (labels cancer 0, normal 1, unannotated 2).
+- **Patients (condition 5), checked 16 October before any RCC code or score:** the Cardinal pixel metadata has only `x`, `y`, `run` and `diagnosis`, so it holds no patient field. The dataset documentation in the verified archive (`CardinalWorkflows_1.44.0.tar.gz`) settles it. `man/rcc-data.Rd` says "Eight matched pairs … with each matched pair as a separate sample on a separate slide", and `vignettes/MSI-classification.Rmd` says "each matched pair of tissues belonging to the same subject are on the same slide (i.e., the same run)". So there are **8 runs from 8 subjects, one run per subject**, and no grouping is needed. The mapping and its source are fixed in `RCC_PATIENT` in `scripts/summarise_rcc_fair_scoring.py`.
+- **Documentary note on NA (descriptive; it changes nothing in the design):** the same vignette removes the NA pixels with `subsetPixels(rcc_peaks, !is.na(diagnosis))` and names the result `rcc_nobg`, which suggests the dataset author regards NA as background. The vignette also notes that runs UH0505_12 and UH9905_18 "have very heterogenous tumor tissues, with what appear to be large sections of normal tissue". Neither statement establishes what NA pixels contain, so the predeclared NA caveat stands unchanged.
+- **Disclosures on every RCC number:**
+  - "the unannotated class (45–78% of pixels) may include tissue; not established";
+  - the GMM uses K = 3, the number of label classes, so the segmentation is label-free in training and ranking but class-informed in its component count.
+- **Step 1, preparation (CPU, one task per run, before training):**
+  - **Budget:** K_bin = |R@0.4|, the size of the mixed reference set at PCC 0.4 over **all three classes**, computed with the existing nearest-threshold rule (`true_indices_at_threshold`) on the raw-intensity class PCCs (`scripts/compute_reference_budget.py`, output `results/experiments/rcc_spatial_msipl/<section>_seed1/reference_budget.json`). |R_t| at every threshold is recorded. The cancer/normal-only sizes are recorded descriptively and are **never** used as a budget.
+  - **Structural audit:** the unchanged `audit_peak_partitions.py` (P1 and P3) into `results/diagnostics/peak_partition_audit_rcc/<section>/`.
+- **Partition approval (condition 3):** P1 is used on RCC only if it passes S1 in all 8 runs. A reviewer then writes `results/diagnostics/peak_partition_audit_rcc/partition_approval.json` listing P1 alone with the audited hashes. If P1 fails S1 in any run, RCC is scored at bin level only and the record says so. **P3 is never used on RCC,** whatever its audit shows.
+- **Step 2, training (GPU, one task per run-arm; 0–7 `central_only`, 8–15 `uniform_mean`):** `train_spatial_msipl_production.py` exactly as the CAC production arms: 3×3 window, 100 epochs, batch 128, hidden 512, latent 5, lr 1e-3, `spatial_lambda` 0, seed 1, checkpoint every 5 epochs, streaming loader (the runs are small). The real CUDA warm-up runs first and the quarantined nodes are excluded. Root `results/experiments/rcc_spatial_msipl/<section>_seed1/<arm>/`; checkpoints `/datasets/zsuliman/msi_checkpoints/spatial_msipl/rcc/<section>_seed1/<arm>/`.
+- **Step 3, GMM and IG:** `run_spatial_msipl_gmm_integrated_gradients.py` with the CAC settings: K = 3, `n_init` 20, 12 attribution and 32 faithfulness pixels per component, 64 steps, seed 1, sampling seed 1.
+  - **Predeclared failure handling:** if a GMM component has fewer than 44 pixels (12 + 32), the IG script stops by design. That run-arm is then reported "not done: GMM component below 44 pixels", and no setting is changed. If the IG status is not `valid`, the run-arm is likewise reported as not done.
+- **Step 4, matched evaluation:** the unchanged-by-default `evaluate_spatial_msipl_attributed_peaks.py` at `--matched-count` K_bin, with the new opt-in flag `--no-legacy` (legacy files are neither required nor read, and legacy rows are omitted). Without the flag, behaviour is unchanged.
+- **Step 5, fair scoring (CPU, one task per run, both arms):** the fair-scoring evaluator, with all baselines and the oracle, at bin level and, only if approved, under P1.
+  - New opt-in flags (each omitted on GBM/CAC, where the default path is unchanged):
+    - `--no-legacy` with `--reference-budget FILE`: no legacy reproduction or legacy rows. K_bin taken from the saved matched evaluation must equal the budget file's K_bin, otherwise the run stops. The summary records "legacy msiPL not run on RCC (requires count tuning)".
+    - `--class-subset 0 1`, used **only** for the secondary analysis below.
+  - Output: `results/diagnostics/fair_scoring_baselines/rcc/{bin_level_only,with_approved_partitions}/<section>_seed1/<arm>/`.
+- **Primary test:** posterior-|PCC| (balanced) vs IG under the Section 7 rules, per arm, over the 8 runs, at bin level and under P1 if approved. It is reported with the Section 7.1 wording and the 16 October wording rule (result as labelled, numbers beside it). A verdict needs all 8 runs of an arm; otherwise "incomplete; no verdict". The IG-vs-legacy rule is not applicable on RCC.
+- **Secondary, descriptive (condition 2): "sensitivity, cancer/normal classes only".**
+  - Same rankings and the same K_bin as the primary, with no re-budgeting.
+  - With `--class-subset 0 1`, the reference sets, mSCF1, per-class metrics, the F1 ceilings, the oracle and (under P1) the reference groups use only the cancer and normal PCCs. Every pixel is kept and each class PCC is unchanged (class vs rest over all pixels).
+  - The IG/L2/posterior reproduction checks still use all three classes, because they reproduce the saved all-class matched evaluation.
+  - Output: `results/diagnostics/fair_scoring_baselines/rcc_cancer_normal_sensitivity/{bin_level_only,with_approved_partitions}/...`. It gets no verdict.
+  - **Default path bit-identical:** a test shows that the evaluator without the flag gives the same summary as before the change, apart from runtime and code hashes, and that the subset equal to all classes reproduces the default scores.
+- **Out of scope on RCC (condition 6):** attention, larger windows, centre masking and S3PL. Legacy msiPL is not run (condition 4).
+- **Decision table:** `scripts/summarise_rcc_fair_scoring.py`. It refuses mixed provenance, reports per-run and per-patient values and the two disclosures, and gives no verdict for the sensitivity analysis.
+- **Order (condition 7):** this specification → code and tests → Zayd sees the diff → cluster test job → preparation (8 CPU tasks), then the partition approval → 2-run pilot (UH9610_15, the largest at 3,564 px, and UH0710_33, the smallest at 972 px; both arms, 4 tasks) → the other 12 tasks → fair scoring → summary. Each `sbatch` needs Zayd's OK.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -590,6 +622,17 @@ A test rebuilds the IG matched groups from these files.
       - **CAC mean:** 0.591 / 0.413 / 0.382 / 0.336. **GBM mean:** 0.316 / 0.212 / 0.209 / 0.212.
       - **10 epochs is the best of the four points in 15/16 sections.** The exception is GBM108_positive (0.033 at 10 epochs, about 0.16 later). So longer training lowers S3PL's score; it does not raise it. Reporting S3PL at its published 10 epochs does not handicap it.
       - The loss curves (last-batch and epoch-mean) are not yet tabulated.
+    - **Supervisor, 16 October 17:36:** every round number confirmed against the saved artifacts. The wording rule was confirmed: report the result as labelled, numbers beside it, no new category. The RCC run specification was approved with conditions.
+    - **RCC, 16 October, about 18:10–18:30 SAST / 16:10–16:30 UTC (nothing submitted):**
+      - The specification was written into Section 6.1 (item D, step 2) before any RCC code existed.
+      - The patient mapping was checked from the archive's documentation: 8 runs from 8 subjects (Section 6.1). Code read two text files from the verified archive on the login node; no data was read.
+      - Code and tests written:
+        - opt-in `--no-legacy`, `--reference-budget` and `--class-subset` in `evaluate_fair_scoring_baselines.py`, and `--no-legacy` in `evaluate_spatial_msipl_attributed_peaks.py`;
+        - new `compute_reference_budget.py` and `summarise_rcc_fair_scoring.py`;
+        - jobs `rcc_sections.sh`, `run_rcc_preparation.sh`, `run_rcc_campaign.sh`, `run_rcc_fair_scoring.sh` and `submit_rcc.sh`.
+      - **Default path bit-identical:** `test_rcc_pipeline.py` (10 tests) runs both evaluators without the new flags beside frozen copies of the pre-change scripts (commit `6d889c1`, sha256 checked in the test) and requires identical summaries, CSVs and NPZ arrays, with legacy and with an approved partition; only runtimes and code hashes may differ. A deliberate one-line change to the oracle made that test fail, and the change was reverted.
+      - Locally (Python 3.14.5, NumPy 2.4.4, h5py 3.16.0, sklearn 1.9.1): the 10 new tests and the 77 existing fair-scoring tests all pass, with none skipped. `test_rcc_pipeline` was added to `run_fair_scoring_tests.sh`.
+      - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
