@@ -1497,3 +1497,51 @@ Status: OPEN, for Zayd and Supervisor.
 - **Not retried:** a race is not a node or CUDA failure, so a retry is outside the standing approval.
 - **Request:** OK to resubmit index 1 only (`bash slurm_jobs/submit_msipl_rcc.sh --indices 1`). Separately, I'll add a `mkdir -p` of the checkpoint root to `submit_msipl_rcc.sh`; that is a one-line change, committed `[overnight]`.
 - **RCC fair scoring 69565** is running (4 of 8).
+
+### 2026-10-16 23:50 Code → Supervisor: RCC campaign summary (item 1), with item 4 legacy msiPL results
+Status: OPEN, for Supervisor review (one reporting point, below). Every number is from local files after the 23:43 pull.
+**Artifacts:** `results/diagnostics/fair_scoring_baselines/rcc/decisions_20261016_local/{decisions.json,section_table.csv,budget_sensitivity.csv}` and `rcc_cancer_normal_sensitivity/decisions_20261016_local/` (`summarise_rcc_fair_scoring.py`, on the `with_approved_partitions` roots, which include bin level). Fair scoring 69565: 8/8 exit 0, 60 evaluator outputs.
+**Disclosures** (they travel with every RCC number): unannotated class, 45–78% of pixels (the dataset's own Cardinal workflow treats it as background, `rcc_nobg`, not independently verified); GMM K = 3 is class-informed; legacy msiPL is not in the fair-scoring tables.
+
+**1. Primary test, posterior-|PCC| vs IG (Section 7)**
+- **`central_only`** (8/8 runs): rule result "mixed / not resolved by the predeclared rule" (the Section 7.1 fall-through). **IG is below posterior-|PCC| in 0/8 runs**: mean −0.156 (median −0.150) at bin level and −0.179 under P1. Per run: −0.256, −0.059, −0.069, −0.184, −0.066, −0.115, −0.212, −0.282.
+- **`uniform_mean`**: "incomplete; no verdict (7/8 runs)". UH0505_12 is "not done (IG completeness failed at 64 steps)": median normalised residual 0.00019 (≤ 0.05), 95th percentile **0.175** (> 0.15). On the 7 runs, IG is below posterior in 0/7: mean −0.185 at bin level and −0.211 under P1.
+
+**2. Mean mSCF1 at K_bin** (bin level; `central_only` / `uniform_mean`):
+
+| Method | central_only | uniform_mean |
+|---|---:|---:|
+| IG | 0.412 | 0.410 |
+| posterior-\|PCC\| | 0.568 | 0.596 |
+| Moran's I | **0.631** | 0.635 |
+| variance | 0.508 | 0.504 |
+| mean intensity | 0.498 | 0.499 |
+| first-layer L2 | 0.115 | 0.084 |
+| random | 0.171 | 0.173 |
+| oracle (not deployable) | 0.756 | 0.755 |
+
+- **Descriptive reference rows at the same budgets:** S3PL seed 1 **0.441** (seeds 2 and 3: 0.427, 0.406; published 0.470); legacy msiPL **0.160** on 7 runs (published 0.159). Both are scored with the S3PL/legacy evaluators' identical nearest-threshold rule.
+- **Reading (descriptive, provisional framing unchanged):**
+  - On RCC, as on GBM and CAC, IG is below its own segmentation's correlation ranking in every run.
+  - The best label-free ranking is Moran's I, above posterior-|PCC|.
+  - IG (0.41) sits between legacy msiPL (0.16) and S3PL (0.44 / 0.47 published).
+
+**3. Sensitivity, cancer/normal classes only** (descriptive, no verdict; same rankings and K_bin): IG − posterior is −0.045 (3/8 positive) for `central_only` and −0.077 (1/7) for `uniform_mean`. With unannotated removed from the reference, the gap shrinks a lot and IG is above posterior in 3 runs. The oracle, the ceilings and the P1 groups follow the subset (as in the caption).
+
+**4. One reporting point to confirm, P1 on RCC:** P1 does **not** repeat bin level any more.
+- The P1 groups are still singletons, but peak-level scoring uses its own budget, K_peak = the reference-group count at PCC 0.4 (≈ |R@0.4|). Bin level now uses the released target (≈ |R@0.5|), since the 19:47 correction.
+- So the P1 numbers equal bin-level scoring at the |R@0.4| budget, not at K_bin. Your 19:27 note "P1 = bin level on RCC" was right before the budget correction.
+- **Proposed wording:** "P1 on RCC is singleton groups, so its peak-level score is the bin-level score at the K_peak budget (≈ |R@0.4|); it is a budget sensitivity, not an independent partition check." The P1 verdict scale (0/8 at −0.179) agrees in sign. Please confirm or reword.
+
+**5. Budgets:** K_bin = released `num_GT_peaks` = 466–2,200 bins per run (GBM 584–1,028; CAC 133–315). `budget_sensitivity.csv` has every method at 0.5–2.0 × K_bin.
+
+**6. Runtime:** cached training 69–260 s per run-arm. IG streams the HDF5 and is the dominant cost on m/z-major RCC (up to about 24 min, on UH9610_15). This is a possible later fix, not a result.
+
+**Item 4, legacy msiPL on RCC (69570; descriptive):**
+- 7/8 runs. **UH0505_12 not run** (mkdir race; retry awaiting an OK, 23:27).
+- **Count gate:** only 2/7 reached ±50 (UH0710_33: 1,208 bins vs 1,212; UH9610_15: 470 vs 466). The other 5 are **"count not reached"**: the nearest counts on the existing 0.0–2.5 grid were 1,054–1,248 bins against targets of 1,676–2,200. The grid was not widened.
+- **mSCF1 per run** (published): MH0204_33 0.180 (0.18), UH0710_33 0.147 (0.14), UH9610_15 0.118 (0.13), UH9812_03 0.166 (0.17), UH9905_18 0.149 (0.15), UH9911_05 0.180 (0.18), UH9912_01 0.177 (0.18).
+- **Mean 0.160 on 7 runs** (published 0.159, CI 0.141–0.176). The reproduction holds per run within 0.012, including the count-not-reached runs.
+- Artifacts: `results/baselines/msipl/rcc/RCC_<run>/{peak_metrics.json,beta_selection.json}`.
+
+**Next (overnight list):** item 5 (BIC on RCC, 16 CPU tasks) and item 6 (ion-image export) now, since fair scoring is done. The legacy index-1 retry waits for an OK.
