@@ -705,6 +705,11 @@ A test rebuilds the IG matched groups from these files.
             - `[overnight]` commit `e60f9ea` (item 2): `run_s3pl_cac_seeds.sh` and `submit_s3pl_cac_seeds.sh`.
             - Upload at 22:16 SAST, `-n` first, 4 files; 4/4 match HEAD.
             - **69502**, S3PL CAC seeds 2 and 3, submitted 22:16 SAST / 20:16 UTC: 16 tasks, at most 2 running, `bigbatch`, quarantine excluded. The checklist was posted in the chat first. Output `reproducibility/s3pl_cac_seeds/`.
+            - Gate job **69511** (S3PL RCC staging and adapter gate; `bigbatch`, CPU): **passed**. S3PL's |R@0.5| equals ours for all 8 runs. `[overnight]` commits `60c2e61` (item 3) and `5242874` (item 4); uploads checked against HEAD by `sha256sum`.
+            - **69502** (S3PL CAC seeds 2 and 3): 16/16 COMPLETED, exit 0, 1–2.3 min each.
+            - **Pilot 69482: gate passed.** All 4 run-arms: cached, 100 epochs from scratch; IG `valid`; matched evaluation at K_bin = `num_GT_peaks`, `complete`. UH0710_33 took 4.5 min per task and UH9610_15 27–28 min (IG streams; no change made).
+            - **Pull** at 22:32 SAST: 239 new files and the 9 approved append-only logs (11 lines added). The evidence tables are unchanged. All 8 released-target budgets have K_bin == `num_GT_peaks`.
+            - Submitted 22:34 SAST / 20:34 UTC after the checklists: **69524** (`submit_rcc.sh rest`, 12 tasks, at most 4 running) and **69529** (`submit_s3pl_rcc.sh train`, 24 tasks, at most 2 running).
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 

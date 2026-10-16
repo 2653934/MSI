@@ -1362,3 +1362,46 @@ Status: INFO
 - **Found, no change made:** `run_spatial_msipl_gmm_integrated_gradients.py` always uses the streaming loader; it has no cache option.
   - On the m/z-major RCC exports, IG is therefore slow too. UH0710_33's IG took about 2.5 min; UH9610_15's IG has run more than 20 min with no output yet (it prints only at the end).
   - That is well within `--time=04:00:00`, so the pilot continues. Adding a cache path to IG would be a code change, so it is not done overnight. The predicted IG time for the other 12 run-arms is under 1 h each.
+
+### 2026-10-16 22:35 Code → Supervisor: RCC pilot gate passed; checklists for the RCC remainder and S3PL-RCC training
+Status: INFO
+- **Pull at 22:32 SAST:** 124 RCC files, 114 S3PL CAC seed files and the S3PL gate result are new. Only the 9 approved append-only logs changed (11 lines). The evidence tables are unchanged.
+- **Budgets:** all 8 `released_target_budget.json` have K_bin == `num_GT_peaks`. Our |R@0.5| differs by 0 (5 runs), +1 (UH0505_12), +8 (UH9905_18) and +13 (UH9812_03).
+- **Pilot 69482 gate: passed.** All 4 run-arms:
+  - trained 100 epochs from scratch, `cached_float32`, not resumed, in 69 s (UH0710_33) and 251–260 s (UH9610_15);
+  - IG `valid`, with GMM components 142–2,138 px (none below 44);
+  - matched evaluation `complete` at count = target (1212, 466); legacy recorded as "not run on RCC (requires count tuning)".
+  - The UH9610_15 tasks took 27–28 min in total, almost all of it streaming IG.
+- **S3PL adapter gate 69511:** passed. S3PL's |R@0.5| equals ours for all 8 runs (difference from the released targets 0 to −13).
+- **Checklist, RCC remainder** (`submit_rcc.sh rest`, the 12 tasks 0, 1, 4–9, 12–15):
+  1. **Loader:** cached training (`--cache-spectra`); IG streams, as in the pilot.
+  2. **Time:** the pilot gives 4.5–28 min per task, the largest run being UH9610_15. The other runs are 1,462–2,618 px, so under 30 min each, against `--time=04:00:00`.
+  3. **Partition:** `bigbatch`, `--exclusive`, quarantine excluded, at most 4 running.
+  4. **Outputs:** the empty arm folders and new checkpoint folders. Nothing is overwritten (no checkpoint exists for these indices).
+- **Checklist, S3PL-RCC training** (`submit_s3pl_rcc.sh train`, 24 tasks):
+  1. **Loader:** S3PL `load_massnet_h5` on the staged copies.
+  2. **Time:** S3PL CAC 10 epochs took 1–2.3 min (69502). RCC has more bins (10,200) and z = 1024, so I expect under 15 min each, against 2 h.
+  3. **Partition:** `bigbatch`, `--exclusive`, quarantine excluded, at most 2 running, so the total stays at 6.
+  4. **Outputs:** `reproducibility/s3pl_rcc/seed{1,2,3}_released/` (new).
+
+### 2026-10-16 22:38 Code → Supervisor: [overnight] item 2 complete, S3PL CAC seeds 1/2/3 vs published (descriptive)
+Status: INFO. No stop condition: every seed mean lies inside the published 95% CI.
+- **Artifact:** `results/comparisons/s3pl_seed_stability/cac/{section_table.csv,summary.json}`, built locally by the new `scripts/summarise_s3pl_seed_runs.py`. mSCF1 is recomputed unrounded as the mean of the 4 mixed F1 values. Inputs: seed 1 `results/baselines/s3pl/`; seeds 2 and 3 `reproducibility/s3pl_cac_seeds/` (69502).
+- **Collection mean** (published 0.601, CI 0.506–0.697): seed 1 **0.591**, seed 2 **0.582**, seed 3 **0.511**. Seed 3 is just inside the lower bound, and only because of 520TopL. Picked peaks equal `num_GT_peaks` in every run.
+- **Per section** (published, seeds 1 / 2 / 3):
+
+| Section | Published | Seeds 1 / 2 / 3 |
+|---|---:|---|
+| 40TopL | 0.68 | 0.687 / 0.662 / 0.687 |
+| 160TopL | 0.53 | 0.508 / 0.500 / 0.422 |
+| 200TopL | 0.61 | 0.672 / 0.669 / 0.674 |
+| 240TopL | 0.67 | 0.669 / 0.670 / 0.665 |
+| **280TopL** | 0.63 | **0.386 / 0.387 / 0.384** |
+| 360TopL | 0.64 | 0.644 / 0.633 / 0.646 |
+| **400TopL** | 0.35 | **0.456 / 0.432 / 0.402** |
+| **520TopL** | 0.70 | 0.704 / 0.702 / **0.203** |
+
+- **Reading (descriptive):**
+  - The two gaps noted in investigation 19 are **not seed effects**. 280TopL is about 0.39 in all three seeds, against a published 0.63, with a seed range of only 0.003. 400TopL is above the published 0.35 in all three seeds.
+  - S3PL can fail on a single seed: 520TopL seed 3 is 0.203, against 0.70 for the others, like GBM108_positive seed 1 earlier.
+  - No seed is selected. The seed-1 comparison used in the report stands, and these two seeds are the seed-stability evidence.
