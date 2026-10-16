@@ -729,6 +729,9 @@ A test rebuilds the IG matched groups from these files.
               - Count gate: 2/7 within ±50; 5/7 "count not reached" (nearest 1,054–1,248 bins against targets 1,676–2,200); the grid was not widened.
               - mSCF1 mean 0.160 on 7 runs (published 0.159), each run within 0.012.
             - Submitted 23:45 SAST / 21:45 UTC, after the checklist, on `bigbatch`: **69583** (RCC BIC, 16 tasks, output parents pre-created) and **69588** (ion-image export).
+            - **69583, BIC (descriptive):** 15/16 tasks; task 9 exited by design (UH0505_12 `uniform_mean` not done). BIC selects K = 6, the largest candidate, in all 15 run-arms, with refit ARI 1.000. Posterior-|PCC| at K = 6 minus K = 3: −0.061 (`central_only`) and −0.115 (`uniform_mean`).
+            - **69588, ion-image export:** 2 files in `results/visualisations/rcc/`.
+            - Pulled at 23:48 SAST. **End of overnight queue:** items 1–6 done; open points are the legacy UH0505_12 retry and the P1 wording.
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 
