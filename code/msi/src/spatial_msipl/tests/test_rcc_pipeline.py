@@ -375,6 +375,27 @@ class RccPipelineTests(unittest.TestCase):
         self.assertNotEqual(unknown.returncode, 0)
         self.assertFalse((self.root / "unknown.json").exists())
 
+    def test_ion_image_export_reads_saved_rankings_and_refuses_rerun(self):
+        """Supervisor chat 2026-10-16 20:41, item 2: read-only export for the figures."""
+        fair = self.root / "export_fair"
+        self.fair3(fair)
+        output = self.root / "export" / "RCC_SYN_uniform_mean.npz"
+        arguments = ["--input", self.input3, "--attribution-dir", self.attribution3,
+                     "--fair-scoring-dir", fair, "--output", output, "--chunk-size", 64,
+                     "--allow-outside-slurm"]
+        run("export_rcc_ion_images.py", *arguments)
+        exported = np.load(output)
+        prefixes = np.load(fair / "rankings_prefix.npz")
+        for method in ("integrated_gradients", "posterior_abs_pcc_balanced", "oracle"):
+            np.testing.assert_array_equal(exported[f"{method}__bins"], prefixes[method][:6])
+            self.assertEqual(exported[f"{method}__ion_values"].shape, (150, 6))
+            self.assertEqual(exported[f"{method}__pcc_per_class"].shape, (6, 3))
+        self.assertEqual(exported["label_mask"].shape, (10, 15))
+        self.assertEqual(sorted(np.unique(exported["label_mask"]).tolist()), [0, 1, 2])
+        self.assertEqual(exported["gmm_assignment_map"].shape, (10, 15))
+        again = run("export_rcc_ion_images.py", *arguments, check=False)
+        self.assertEqual(again.returncode, 3)
+
     # ----- 5. RCC summariser -----
     def summary_tree(self, name, source, sections=RCC_SECTIONS):
         root = self.root / name

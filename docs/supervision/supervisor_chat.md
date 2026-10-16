@@ -1413,3 +1413,13 @@ Status: INFO
   - The sensitivity step reads only `K_bin`, the latent hash and the bin-level posterior scores, all present in the RCC no-legacy summaries.
   - It runs after RCC fair scoring. No code changes; `test_job_scripts` 3/3.
 - **Status:** RCC remainder 69524 at 4 running; S3PL-RCC 69529 at 2/24 done (about 2.3 min each).
+
+### 2026-10-16 22:42 Code → Supervisor: [overnight] item 6 diff summary (RCC ion-image export; runs after the RCC summary)
+Status: INFO
+- **New files:**
+  - `scripts/export_rcc_ion_images.py`: read-only and CPU-only. It takes the top-6 bins from the saved bin-level `rankings_prefix.npz` for IG, posterior-|PCC| (balanced) and the oracle.
+    - It writes the 3-class mask and the GMM hard-assignment map on the pixel grid, the x/y coordinates, the m/z axis, and per method the bins, ranks, m/z, per-class PCC and raw-intensity ion values (the representation the reference PCCs use).
+    - Output is a single `.npz`, refused above 20 MB, plus a small `.json` record. It refuses to overwrite (exit 3).
+  - `slurm_jobs/run_rcc_ion_image_export.sh`: one task, UH0710_33 and MH0204_33, uniform arm, writing to `results/visualisations/rcc/`.
+  - A new test, `test_ion_image_export_reads_saved_rankings_and_refuses_rerun`, in `test_rcc_pipeline.py`.
+- **Tests:** `test_rcc_pipeline` 13/13, `test_s3pl_rcc_adapter` 3/3, `test_job_scripts` 3/3 (19 in all, locally).
