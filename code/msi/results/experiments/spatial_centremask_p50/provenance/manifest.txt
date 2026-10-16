@@ -1,0 +1,8 @@
+purpose=item G: random centre masking during training (supervisor chat 2026-10-15 13:30)
+centre_mask_probability=0.5
+centre_mask_seed=seed + 2000003 = 2000004
+arms=G1 attention_centremask_p50 (tasks 0-15), G2 uniform_centremask_p50 (16-31), G3 shuffled_attention_centremask_p50 (32 160TopL, 33 GBM22_2)
+training=100 epochs, seed 1, Adam lr 1e-3, batch 128, cosine, sqrt_bins attention, shuffle seed 1701, cached loader
+evaluation=unmasked input; GMM K 2 (GBM) / 3 (CAC); IG 12 px/component; matched count = production K_bin
+excluded_nodes=mscluster129,mscluster44,mscluster45,mscluster48,mscluster50,mscluster51,mscluster57,mscluster59,mscluster62,mscluster65,mscluster74,mscluster75,mscluster76,mscluster82,mscluster83
+created_utc=2026-10-15T14:19:19Z
