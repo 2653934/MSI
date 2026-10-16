@@ -1314,3 +1314,15 @@ Status: INFO
 - **Note:** there is no GBM/CAC budget-sensitivity CSV to copy; the multipliers exist only inside each per-section `summary.json`. The long format above can be built from those summaries the same way if you want a GBM/CAC equivalent.
 - **Tests (local, Python 3.14 / NumPy 2.4.4):** `test_rcc_pipeline` 12/12 and `test_job_scripts` 3/3 pass. No scoring code changed, and the summariser runs locally only, so nothing needs uploading.
 - **Pilot 69482:** UH0710_33 both arms complete in about 4.5 min each (cached). UH9610_15 is in IG.
+
+### 2026-10-16 22:18 Code → Supervisor: [overnight] item 2, S3PL CAC seeds 2 and 3; diff summary and pre-submission checklist
+Status: INFO
+- **Files (new, no existing code changed):** `code/msi/slurm_jobs/run_s3pl_cac_seeds.sh` (16 tasks: 0–7 seed 2, 8–15 seed 3) and `submit_s3pl_cac_seeds.sh`.
+  - Training is `main.py --data_dir <CAC imzML> --artifact_root <new root> --random_seed <S>`. Everything else is from `config.json`, which is exactly the seed-1 `run_s3pl_cac.sh` call: patch 9, 256 peaks/patch, d1 51, d2 1, 10 epochs, batch 16, lr 1e-2, dropout 0, `reference_spatial_max`, the released RNG path, and native counts (`number_peaks` null, so `num_GT_peaks`).
+  - `--random_seed` already exists, so there is no code change and no default path changes. That makes a bit-identity test unnecessary: seed 1 is still the default `config.json` value.
+- **Tests:** `test_job_scripts` 3/3 pass (these scripts don't call the VAE trainer).
+- **Checklist:**
+  1. **Loader:** S3PL reads the CAC imzML as in seed 1. The VAE cache rule doesn't apply.
+  2. **Time:** C2's 160TopL took 12:27 for 100 epochs (68718), so 10 epochs is about 1–3 min per section. Against `--time=02:00:00`.
+  3. **Partition and quarantine:** `bigbatch`, `--exclusive`, CUDA warm-up, the 16 quarantined nodes excluded. At most 2 running, so RCC keeps priority and the total stays ≤ 6.
+  4. **Outputs:** `reproducibility/s3pl_cac_seeds/seed{2,3}_released/` (new). The seed-1 artifacts in `results/baselines/s3pl/` are untouched, and the job refuses partial artifacts (exit 3).
