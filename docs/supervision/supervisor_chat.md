@@ -1545,3 +1545,26 @@ Status: OPEN, for Supervisor review (one reporting point, below). Every number i
 - Artifacts: `results/baselines/msipl/rcc/RCC_<run>/{peak_metrics.json,beta_selection.json}`.
 
 **Next (overnight list):** item 5 (BIC on RCC, 16 CPU tasks) and item 6 (ion-image export) now, since fair scoring is done. The legacy index-1 retry waits for an OK.
+
+### 2026-10-16 23:52 Code → Supervisor: checklists for item 5 (RCC BIC) and item 6 (ion-image export)
+Status: INFO
+- **Item 5** (`run_rcc_bic.sh`, 16 tasks):
+  1. **Loader:** none (CPU, saved latents and HDF5).
+  2. **Time:** the GBM/CAC BIC tasks took minutes against a 1 h limit, and RCC is smaller.
+  3. **Partition:** `--partition=bigbatch` at submit time (`batch` is down), at most 4 running.
+  4. **Outputs:** `results/diagnostics/gate_d_bic_rcc/<run>_seed1/<arm>/` (new). The parent folders are pre-created to avoid the mkdir race. The UH0505_12 `uniform_mean` task will exit 1 by design, because that arm has no fair-scoring summary; it is not done.
+- **Item 6** (`run_rcc_ion_image_export.sh`, 1 task):
+  1. **Loader:** none.
+  2. **Time:** two HDF5 reads plus 18 ion images, about a minute, against 30 min.
+  3. **Partition:** `--partition=bigbatch`.
+  4. **Outputs:** `results/visualisations/rcc/` (new). The job refuses to overwrite.
+
+### 2026-10-16 23:53 Code → Supervisor: items 5 and 6 complete; overnight queue done except the legacy UH0505_12 retry
+Status: INFO. (My 23:50 and 23:52 entries were stamped a few minutes ahead of the local clock; the work they describe happened at about 23:43–23:45.)
+- **Item 5, BIC on RCC (69583; descriptive):** 15/16 tasks. Task 9 (UH0505_12 `uniform_mean`) exited 1 by design: that arm is not done, so it has no fair-scoring summary.
+  - **BIC selects K = 6, the largest candidate (range 1–6), in all 15 run-arms**, with no minimum inside the range, the same as GBM/CAC. The refit reproduces the saved K = 3 GMM (ARI 1.000) in all 15.
+  - The BIC-K sensitivity (descriptive) gives posterior-|PCC| at K = 6 minus at K = 3: `central_only` mean −0.061 (lower in 6/8); `uniform_mean` mean −0.115 (lower in 7/7).
+  - **Wording, as on GBM/CAC:** "BIC does not support the production K; it selects the largest candidate (K = 6), with no minimum within the predeclared range; descriptive only." The production K = 3 equals the number of label classes.
+  - Artifacts: `results/diagnostics/gate_d_bic_rcc/<run>_seed1/<arm>/{bic_selection.json,bic_k_sensitivity/summary.json}`.
+- **Item 6, ion-image export (69588):** `results/visualisations/rcc/RCC_{UH0710_33,MH0204_33}_uniform_mean_ion_images.{npz,json}` (37 KB and 45 KB). Each has the mask, the GMM map, x/y, and the top-6 IG, posterior and oracle bins with m/z, ranks, per-class PCC and raw ion values.
+- **Queue state:** items 1–6 are done. Waiting only on the OK to retry legacy msiPL index 1 (UH0505_12; 23:27 entry), and on your confirmation of the P1 wording (23:50, point 4). No jobs are running. Pulled results are uncommitted and left for Zayd: the 9 append-only logs plus all new RCC, S3PL and legacy result folders.

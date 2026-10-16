@@ -710,6 +710,25 @@ A test rebuilds the IG matched groups from these files.
             - **Pilot 69482: gate passed.** All 4 run-arms: cached, 100 epochs from scratch; IG `valid`; matched evaluation at K_bin = `num_GT_peaks`, `complete`. UH0710_33 took 4.5 min per task and UH9610_15 27–28 min (IG streams; no change made).
             - **Pull** at 22:32 SAST: 239 new files and the 9 approved append-only logs (11 lines added). The evidence tables are unchanged. All 8 released-target budgets have K_bin == `num_GT_peaks`.
             - Submitted 22:34 SAST / 20:34 UTC after the checklists: **69524** (`submit_rcc.sh rest`, 12 tasks, at most 4 running) and **69529** (`submit_s3pl_rcc.sh train`, 24 tasks, at most 2 running).
+            - Further `[overnight]` commits, each uploaded from the clean HEAD (`-n` first) and checked with `sha256sum`:
+              - `f1bd2b2`: S3PL seed summariser plus `results/comparisons/s3pl_seed_stability/cac/`. Seed means 0.591 / 0.582 / 0.511, all inside the published CI.
+              - `8e04ee8`: `run_rcc_bic.sh`.
+              - `c3e2058`: RCC ion-image export and its test.
+              - Local tests: `test_rcc_pipeline` 13/13, `test_s3pl_rcc_adapter` 3/3, `test_job_scripts` 3/3.
+            - **RCC remainder 69524:** 11/12 complete. **69524_9** (UH0505_12 `uniform_mean`) failed with exit 4: IG `needs_more_ig_steps` at 64 steps (median normalised residual 0.00019 ≤ 0.05; 95th percentile 0.175 > 0.15).
+              - Code stopped and posted (22:55). The supervisor (22:57) applied the predeclared rule: "not done (IG completeness failed at 64 steps)", no rerun, and `uniform_mean` is 7/8, "incomplete; no verdict".
+            - **S3PL-RCC 69529:** 24/24 complete. Seed means 0.441 / 0.427 / 0.406 (published 0.470, CI 0.352–0.588); `[overnight]` `151ef59`.
+            - **Pulls** at 23:19 and 23:43 SAST (new files only, plus append-only job-ID logs).
+            - **RCC fair scoring 69565** (`fair p1`, `bigbatch`, after the checklist): 8/8 exit 0, 60 evaluator outputs; the UH0505_12 `uniform_mean` arm skipped as not done.
+            - **Decision tables** (local, `[overnight]` `028491a`):
+              - `central_only`: "mixed / not resolved by the predeclared rule" (Section 7.1 fall-through). IG below posterior-|PCC| in 0/8 runs; mean −0.156 at bin level, −0.179 under P1.
+              - `uniform_mean`: "incomplete; no verdict (7/8 runs)", 0/7 positive, mean −0.185.
+              - Sensitivity (cancer/normal only, descriptive): −0.045 (3/8) and −0.077 (1/7).
+              - P1 on RCC is singleton groups at the K_peak (≈ |R@0.4|) budget, not at K_bin. Wording sent to the supervisor (23:50 entry).
+            - **Legacy msiPL 69570:** 7/8 complete; 69570_1 failed on the known mkdir race (the submitter did not pre-create the checkpoint root). It was posted, not retried, and the submitter fixed (`[overnight]` `62884f2`).
+              - Count gate: 2/7 within ±50; 5/7 "count not reached" (nearest 1,054–1,248 bins against targets 1,676–2,200); the grid was not widened.
+              - mSCF1 mean 0.160 on 7 runs (published 0.159), each run within 0.012.
+            - Submitted 23:45 SAST / 21:45 UTC, after the checklist, on `bigbatch`: **69583** (RCC BIC, 16 tasks, output parents pre-created) and **69588** (ion-image export).
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 
