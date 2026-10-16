@@ -1276,7 +1276,7 @@ Done:
 **Gap, flagged, not improvised:** 21:42 point 1's per-run `validate_spatial_window_cache.py` check is not in the committed script. The validator only accepts window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it is a code change. I'm proceeding without it, relying on investigation 10. Tell me if you want it added before the remaining 12 tasks.
 
 ### 2026-10-16 22:07 Supervisor → Code: Overnight queue (Zayd-approved), with specs, gates and temporary commit permission
-Status: OPEN, for Code
+Status: ANSWERED (in progress)
 
 Zayd approved this list before going to sleep. Commit rules are in `CLAUDE.md` → "Overnight queue and temporary commit permission" (valid until Sat 17 Oct 12:00 SAST). Before the first `sbatch` of each item, post the pre-submission checklist (loader, time per run vs `--time`, partition/quarantine, outputs). Work in priority order; later items may fill free slots, but the RCC campaign always has priority. All outputs go to new roots; nothing overwrites an earlier result.
 
@@ -1423,3 +1423,69 @@ Status: INFO
   - `slurm_jobs/run_rcc_ion_image_export.sh`: one task, UH0710_33 and MH0204_33, uniform arm, writing to `results/visualisations/rcc/`.
   - A new test, `test_ion_image_export_reads_saved_rankings_and_refuses_rerun`, in `test_rcc_pipeline.py`.
 - **Tests:** `test_rcc_pipeline` 13/13, `test_s3pl_rcc_adapter` 3/3, `test_job_scripts` 3/3 (19 in all, locally).
+
+### 2026-10-16 22:55 Code → Supervisor: RCC stop condition: UH0505_12 uniform_mean IG `needs_more_ig_steps` (69524_9, exit 4); fair scoring held
+Status: ANSWERED. No retry, no setting changed.
+- **What happened:** 69524_9 (UH0505_12, `uniform_mean`) trained 100 epochs cached and passed the checkpoint check. The IG run then wrote `attribution/summary.json` with `status: needs_more_ig_steps` (the IG completeness check failed at 64 steps). The job stopped before the matched evaluation (exit 4), as designed.
+- **Predeclared handling (Section 6.1, confirmed by you 18:34):** "If the IG status is not `valid`, the run-arm is reported as not done; no setting changes." An arm with fewer than 8 runs gets "incomplete; no verdict", with per-run differences reported descriptively and with n. So `uniform_mean` would be 7/8 and incomplete; `central_only` could still get a verdict if its 8 runs are valid.
+- **Why I stopped:** the standing approval lists "a failure other than a node or CUDA failure" as a stop condition. I have not retried, and I haven't changed IG steps, pixels or seed.
+- **State:**
+  - RCC remainder 69524: 7 tasks complete (0, 1, 4, 5, 6, 8 and the failed 9); 7, 12, 13, 14 running; 15 pending. These are left to finish.
+  - **RCC fair scoring is held** until you reply.
+  - S3PL-RCC 69529: 15/24 done. Item 4 (legacy msiPL) is still to run; independent items continue.
+- **Decision needed:**
+  - (a) Accept "not done" for UH0505_12 `uniform_mean` and run fair scoring now? The fair-scoring job skips any run-arm whose IG isn't valid.
+  - (b) Or do you want a separately labelled rerun with more IG steps? That would be a change of setting, so it would need a new predeclaration.
+
+### 2026-10-16 22:57 Supervisor → Code: Overnight review; IG stop on UH0505_12 → option (a); continue
+Status: ANSWERED
+
+**IG stop (22:55): option (a).** That was the right stop. The predeclared rule applies exactly as written: UH0505_12 `uniform_mean` is **"not done (IG completeness failed at 64 steps)"**. No rerun with more steps tonight; that is a setting change, and a descriptive extra run is not worth the complexity overnight. Run RCC fair scoring now. If the rest stay valid, `uniform_mean` is 7/8 → "incomplete; no verdict", with per-run numbers and n, and `central_only` gets a verdict if 8/8 are valid. Report the completeness residuals (median and 95th percentile of the normalised residual against 0.05/0.15) for that run in the summary, so the reader sees how far off it was. If a **second** run-arm fails the same way, stop again.
+
+**Reviewed, no objections:**
+- **Item 1 (22:16):** table formats are fine. A GBM/CAC long-format budget-sensitivity CSV is not needed tonight; I will build it from the summaries if the figure needs it.
+- **Item 2 (22:38):** read and accepted as descriptive. 280TopL is about 0.39 in every seed (not seed noise); 400TopL is above the published value in every seed; 520TopL seed 3 collapses to 0.20. No seed is selected. I will add this to investigation 19 in the morning.
+- **Item 3 (22:23–22:35):** the staging approach is better than a code adapter: no S3PL code touched. The gate passed (|R@0.5| identical for 8/8). Continue.
+- **Item 4 (22:27):** the CAC procedure with RCC paths, a fixed grid and `closest_outside_tolerance` recorded. Fine; run it after S3PL-RCC.
+- **Items 5–6:** fine; they run after fair scoring and the summary respectively.
+- **IG streaming (22:27):** correct not to change it tonight. Note it in the summary's runtime section ("IG streams HDF5; dominant cost on m/z-major RCC"); it is a possible later fix, not a result.
+
+
+### 2026-10-16 23:21 Code → Supervisor: Option (a) applied; checklists for RCC fair scoring and item 4 (legacy msiPL)
+Status: INFO
+- **RCC campaign:** 15/16 run-arms have IG `valid` and a complete matched evaluation. Only UH0505_12 `uniform_mean` is "not done (IG completeness failed at 64 steps)".
+  - Its completeness record: median normalised residual 0.00019 (≤ 0.05, passes); 95th percentile **0.175** (> 0.15, fails); max absolute residual 0.00095. This goes into the summary.
+- **S3PL-RCC 69529:** 24/24 complete. Pulled at 23:19 SAST (450 new files plus 2 append-only job-ID logs).
+- **Checklist, RCC fair scoring** (`submit_rcc.sh fair p1`, 8 CPU tasks):
+  1. **Loader:** none (CPU evaluator on the saved artifacts).
+  2. **Time:** each task runs 2 arms × 2 analyses × 2 scopes. The evaluator peaked at 0.91 GB and took minutes on GBM22_2 (4,524 × 85,062), and RCC is at most 3,564 × 10,200, so under 15 min per task against `--time=01:00:00`. The UH0505_12 task skips `uniform_mean` (not done).
+  3. **Partition:** `SBATCH_PARTITION=bigbatch` (`batch` is down), at most 4 running.
+  4. **Outputs:** `fair_scoring_baselines/rcc/` and `rcc_cancer_normal_sensitivity/` (new, empty).
+- **Checklist, item 4** (`submit_msipl_rcc.sh`, 8 tasks):
+  1. **Loader:** the legacy loader reads the HDF5 in full (TensorFlow env); the VAE cache rule doesn't apply.
+  2. **Time:** like the CAC legacy job (same 100-epoch VAE on comparable sizes), well within `--time=04:00:00`.
+  3. **Partition:** `bigbatch`, `--exclusive`, at most 2 running, for 6 in total.
+  4. **Outputs:** `results/baselines/msipl/rcc{,_fixed_beta}/RCC_<run>/` and `/datasets/.../msipl/rcc/` (new).
+
+### 2026-10-16 23:24 Code → Supervisor: [overnight] item 3 complete, S3PL on RCC reproduces the paper's 0.470 (descriptive)
+Status: INFO. No stop condition: every seed mean lies inside the published 95% CI.
+- **Run:** 69529, 24/24 complete, about 2.3 min each. Settings: p = 5, z = 1024, n = `num_GT_peaks` (picked = target in every run), staged inputs, adapter gate passed.
+- **Artifact:** `results/comparisons/s3pl_seed_stability/rcc/{section_table.csv,summary.json}` (`summarise_s3pl_seed_runs.py --collection rcc`).
+- **Collection mean** (published 0.470, CI 0.352–0.588): seed 1 **0.441**, seed 2 **0.427**, seed 3 **0.406**.
+- **Per run** (published, seeds 1 / 2 / 3):
+
+| Run | Published | Seeds 1 / 2 / 3 |
+|---|---:|---|
+| MH0204_33 | 0.56 | 0.570 / 0.568 / 0.580 |
+| UH0505_12 | 0.44 | 0.412 / 0.432 / 0.395 |
+| UH0710_33 | 0.48 | 0.474 / 0.470 / 0.479 |
+| UH9610_15 | 0.14 | 0.104 / 0.102 / 0.131 |
+| **UH9812_03** | 0.50 | 0.491 / 0.504 / **0.195** |
+| UH9905_18 | 0.51 | 0.445 / 0.396 / 0.467 |
+| UH9911_05 | 0.56 | 0.502 / 0.488 / 0.487 |
+| UH9912_01 | 0.57 | 0.534 / 0.458 / 0.512 |
+
+- **Reading (descriptive):**
+  - The reproduction holds at collection level and, per run, follows the published pattern (UH9610_15 lowest, MH0204_33 highest). Most runs are 0.01–0.07 below the published value.
+  - UH9812_03 seed 3 collapses, the same single-seed failure seen on CAC 520TopL and GBM108_positive.
+  - No seed is selected. Because the budgets equal our K_bin, S3PL seed 1 can appear as a **descriptive** row in the RCC tables. That is not a verdict.
