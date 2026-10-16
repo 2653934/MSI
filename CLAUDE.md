@@ -89,6 +89,10 @@ Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both. **Take date
     - **Log every sync** in protocol 18 Section 10: time (SAST), direction, paths and file count.
     - If anything looks wrong (an unexpected file list in `-n`, files outside the allowed folders, local edits being overwritten), stop and tell Zayd instead of syncing.
   - Commits stay with Zayd/Codex.
+  - **Overnight queue and temporary commit permission** (Zayd, 2026-10-16 22:07 SAST; valid until **Saturday 17 October 12:00 SAST**). The work list, priorities, specs and gates are in the supervisor chat entry "2026-10-16 22:07 … Overnight queue". Within that list only:
+    - **You may commit locally** (never push, never amend or rewrite earlier commits). Only when: every relevant test passes, including bit-identity of any shared default path; the change matches the chat spec; and you post a diff summary (files, test counts, commit hash) to the chat before uploading. One commit per item, message prefixed `[overnight]`. Zayd/Codex review all `[overnight]` commits in the morning.
+    - You may submit, sync and continue along the list under the same rules and stop conditions as the RCC standing approval below. The RCC campaign always has priority for GPU slots. Stay within 6 running jobs.
+    - Anything not on the list, any change to an existing scientific default, or any failed gate: stop, post in the chat and do not commit.
   - **Standing approval for the RCC campaign** (Zayd, 2026-10-16 18:56 SAST; valid until the end of Tuesday 20 October). You may submit, sync and continue **without asking Zayd at each step**, but only along the predeclared sequence in protocol 18 Section 6.1 (RCC) and the supervisor chat:
     1. cluster test job;
     2. `submit_rcc.sh prep`;

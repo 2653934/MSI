@@ -400,6 +400,19 @@ class RccPipelineTests(unittest.TestCase):
         self.assertIn("released S3PL target", record["budget_note"])
         self.assertIn("GBM K_bin", record["budget_note"])
         self.assertEqual(len(decisions["_patients"]["mapping"]), 8)
+        import csv
+        with open(self.root / "d_full" / "section_table.csv", newline="") as stream:
+            table = list(csv.DictReader(stream))
+        self.assertEqual(len(table), 16)
+        self.assertEqual({r["collection"] for r in table}, {"RCC"})
+        for column in ("collection", "section", "arm", "patient", "bin:integrated_gradients",
+                       "bin:posterior_abs_pcc_balanced", "bin:oracle", "bin:random_mean",
+                       "ig_above_posterior_all_budgets"):
+            self.assertIn(column, table[0])
+        with open(self.root / "d_full" / "budget_sensitivity.csv", newline="") as stream:
+            budgets = list(csv.DictReader(stream))
+        self.assertEqual({r["multiplier"] for r in budgets}, {"0.5", "0.75", "1.0", "1.5", "2.0"})
+        self.assertIn("random", {r["method"] for r in budgets})
 
         partial = self.summary_tree("tree_partial", primary, RCC_SECTIONS[:7])
         run("summarise_rcc_fair_scoring.py", "--root", partial, "--output", self.root / "d_7")
@@ -413,6 +426,9 @@ class RccPipelineTests(unittest.TestCase):
         self.assertIsNone(record["ig_vs_posterior_verdict"])
         self.assertEqual(record["label"], "sensitivity, cancer/normal classes only")
         self.assertIn("supervised oracle", record["caption"])
+        with open(self.root / "d_s" / "section_table.csv", newline="") as stream:
+            self.assertEqual({r["collection"] for r in csv.DictReader(stream)},
+                             {"RCC_cancer_normal"})
 
         refused = run("summarise_rcc_fair_scoring.py", "--root", sens, "--output",
                       self.root / "d_bad", check=False)

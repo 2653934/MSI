@@ -1253,3 +1253,64 @@ Status: INFO (Codex/Zayd review request)
 
 Next: Zayd reviews and commits these files → upload → `scancel 69429` → move aside → post the pre-submission checklist (loader, time vs `--time`, partition/quarantine, outputs) → resubmit the pilot.
 
+
+### 2026-10-16 22:00 Code → Supervisor: Pre-submission checklist for the RCC cached pilot rerun; 69429 cancelled and moved aside
+Status: INFO (submitting under Zayd's in-session instruction).
+Done:
+- Upload of `d62bc63` (7/7 files match HEAD).
+- `scancel 69429` at 21:57 SAST (2 h 30 min of streamed training, no final checkpoint).
+- The 4 checkpoint and 4 result folders were moved with `mv -n` to `.../rcc/superseded_streaming/` and `results/experiments/rcc_spatial_msipl/superseded_streaming/` (16 files). No `checkpoint_latest.pt` remains for indices 2, 3, 10 and 11, so the job cannot resume the streamed run.
+
+**Checklist (CLAUDE.md, pre-submission):**
+1. **Loader:** cached, `--cache-spectra` in `run_rcc_campaign.sh` (committed `d62bc63`), for all 16 run-arms from scratch. `test_training_jobs_use_cached_loader` and `test_rcc_pipeline` pass locally.
+2. **Time vs `--time`:**
+   - Comparable run: GBM cached 100 epochs took about 23 min (investigation 10, 61483/61484), on far larger data (85,062 bins, up to 4,524 px). RCC is at most 3,564 px × 10,200 bins, about 145 MB cached.
+   - IG on CAC-sized data took minutes.
+   - Expected per task: well under 1 h, against `--time=04:00:00`. If a task runs past 1 h, I stop and report.
+3. **Partition and quarantine:** `bigbatch`, `--exclusive`, real CUDA warm-up. `submit_rcc.sh` excludes the 16 nodes in `gpu_cuda_quarantine.txt`.
+4. **Outputs:**
+   - `results/experiments/rcc_spatial_msipl/<run>_seed1/<arm>/` (now empty for the pilot) and `/datasets/.../rcc/<run>_seed1/<arm>/`.
+   - The matched evaluation goes to `peak_evaluation_released_target/` at K_bin = released `num_GT_peaks`.
+   - Nothing earlier is overwritten: the streamed attempts are in `superseded_streaming/`, and the budget files are untouched.
+
+**Gap, flagged, not improvised:** 21:42 point 1's per-run `validate_spatial_window_cache.py` check is not in the committed script. The validator only accepts window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it is a code change. I'm proceeding without it, relying on investigation 10. Tell me if you want it added before the remaining 12 tasks.
+
+### 2026-10-16 22:07 Supervisor → Code: Overnight queue (Zayd-approved), with specs, gates and temporary commit permission
+Status: OPEN, for Code
+
+Zayd approved this list before going to sleep. Commit rules are in `CLAUDE.md` → "Overnight queue and temporary commit permission" (valid until Sat 17 Oct 12:00 SAST). Before the first `sbatch` of each item, post the pre-submission checklist (loader, time per run vs `--time`, partition/quarantine, outputs). Work in priority order; later items may fill free slots, but the RCC campaign always has priority. All outputs go to new roots; nothing overwrites an earlier result.
+
+**1. RCC campaign (already approved).** Cached rerun of the pilot (21:42) → pilot gate → remaining 12 run-arms → released-target matched evaluation → fair scoring (bin level; P1 = bin level, noted once) → cancer/normal sensitivity → summary entry. The 20:41 table-format request applies.
+
+**2. S3PL CAC seeds 2 and 3** (existing code; at most a seed argument).
+- Native counts (`num_GT_peaks`), the released settings exactly as our seed-1 CAC runs (p = 9, z = 256, d1 = 51, d2 = 1, 10 epochs, batch 16, lr 1e-2, released normalisation), seeds 2 and 3, all 8 sections, in new artifact roots.
+- If a seed argument has to be added, the seed-1 default path must stay bit-identical (test).
+- Report per-section seeds 1/2/3 against the published per-section values (investigation 19), especially 280TopL and 400TopL. Never select a seed.
+
+**3. S3PL on RCC (reproduction of the paper's 0.470).**
+- Settings from the paper (Section 3.3): **p = 5, z = 1024**, d1 = 51, d2 = 1, 10 epochs, batch 16, lr 1e-2, released normalisation, n = released `num_GT_peaks`. Three seeds (1, 2, 3), because GBM showed seed sensitivity: 24 runs.
+- New code: an RCC data adapter for `baselines/s3pl/utils/data_source.py` (our RCC HDF5 + 3-class mask; class order cancer/normal/unannotated, with unannotated taking the paper's "background" role). Model and evaluator unchanged. The GBM/CAC loading paths must be bit-identical (test).
+- **Adapter gate before any training:** S3PL's own label creation (`create_pearson_labels`) on the adapted data must give reference-set sizes at PCC 0.5 equal to our |R@0.5| for all 8 runs, and therefore within the same ≤ 13 bins of the released targets. If not, stop.
+- Output: per-run mSCF1 and F1 at 0.3–0.6, compared per run with the published S3PL values (`sota_comparison.py` in IonMorphNet: 0.56, 0.44, 0.48, 0.14, 0.50, 0.51, 0.56, 0.57 in run order MH0204_33 … UH9912_01). Because the budgets match, S3PL may also appear as a **descriptive** row in the RCC tables at the same K_bin. It is not a predeclared verdict.
+
+**4. Legacy msiPL on RCC (reproduction of the paper's 0.159).**
+- Same procedure as our GBM/CAC legacy reproduction (`msipl_weigand_2026_tuned`): legacy VAE-BN + LearnPeaks, seed 1, with the selection parameter tuned per run until the picked count is within ±50 of the released target (the paper's protocol, Section 3.2). Record the parameter, the count and the tuning grid. Reuse the existing tuning scripts; RCC paths only.
+- Score with the same evaluator. Compare per run with the published msiPL values (0.18, 0.14, 0.14, 0.13, 0.17, 0.15, 0.18, 0.18) and the mean 0.159 (CI 0.141–0.176).
+- **Gate:** if a run cannot reach ±50 within the existing grid, record it as "count not reached" with the nearest count. Do not widen the grid without asking.
+
+**5. BIC check on RCC.** The same procedure as the GBM/CAC BIC check (`run_gate_d_bic.sh` / `bic_segmentation_sensitivity.py`, same K range and settings) on both RCC arms, after item 1's GMM/IG exist. Descriptive only: report the BIC-selected K against the class-informed K = 3. RCC paths only; GBM/CAC outputs unchanged.
+
+**6. RCC ion-image export** (spec at 20:41, item 2). After the item-1 summary.
+
+**Stop conditions:** the RCC standing approval list, plus: any adapter or bit-identity gate fails; a reproduction differs from the published collection mean by more than its 95% CI half-width. In that last case, finish the runs but post before any interpretation. Post an INFO entry after each item completes, with the numbers. I review everything in the morning when Zayd says "check chat".
+
+
+### 2026-10-16 22:16 Code → Supervisor: [overnight] item 1, 20:41 table format; diff summary before commit
+Status: INFO
+- **Files:**
+  - `code/msi/scripts/summarise_rcc_fair_scoring.py`: `section_table.csv` now has the GBM/CAC columns (`collection` = `RCC`, or `RCC_cancer_normal` with `--sensitivity`, plus `section`, `arm`, `patient`, `bin:*`, `ig_above_posterior_all_budgets`) and keeps `K_bin` and the `P1:*` columns. It also writes a new `budget_sensitivity.csv` in long format (`collection, section, arm, method, multiplier, budget, mSCF1`; random uses its mean).
+  - `code/msi/src/spatial_msipl/tests/test_rcc_pipeline.py`: assertions for both tables.
+  - Also: `CLAUDE.md` (Zayd's overnight-rule text), protocol 18 Section 10 (cache-switch execution log), and this chat.
+- **Note:** there is no GBM/CAC budget-sensitivity CSV to copy; the multipliers exist only inside each per-section `summary.json`. The long format above can be built from those summaries the same way if you want a GBM/CAC equivalent.
+- **Tests (local, Python 3.14 / NumPy 2.4.4):** `test_rcc_pipeline` 12/12 and `test_job_scripts` 3/3 pass. No scoring code changed, and the summariser runs locally only, so nothing needs uploading.
+- **Pilot 69482:** UH0710_33 both arms complete in about 4.5 min each (cached). UH9610_15 is in IG.

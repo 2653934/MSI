@@ -74,6 +74,9 @@ def verdict(scales, sections):
 def main():
     args = parse_arguments()
     rows = []
+    budget_rows = []
+    # Same section_table.csv columns as the GBM/CAC tables (supervisor chat 2026-10-16 20:41).
+    collection = "RCC_cancer_normal" if args.sensitivity else "RCC"
     keys = set()
     for path in sorted(args.root.glob("*_seed1/*/summary.json")):
         summary = json.loads(path.read_text(encoding="utf-8"))
@@ -98,12 +101,26 @@ def main():
             "approval": (prov["partition_approval"] or {}).get("sha256"),
             "code": prov["code"],
         }, sort_keys=True))
-        row = {"section": section, "arm": arm, "patient": RCC_PATIENT[section],
-               "K_bin": summary["K_bin"]}
+        row = {"collection": collection, "section": section, "arm": arm,
+               "patient": RCC_PATIENT[section], "K_bin": summary["K_bin"]}
         for name, record in summary["bin_level"].items():
             if "1.0" in record and "mSCF1" in record["1.0"]:
                 row[f"bin:{name}"] = record["1.0"]["mSCF1"]
         row["bin:random_mean"] = summary["bin_level"]["random"]["1.0"]["mSCF1_mean"]
+        multipliers = sorted(summary["bin_level"]["integrated_gradients"], key=float)
+        row["ig_above_posterior_all_budgets"] = all(
+            summary["bin_level"]["integrated_gradients"][m]["mSCF1"]
+            > summary["bin_level"]["posterior_abs_pcc_balanced"][m]["mSCF1"]
+            for m in multipliers)
+        for name, record in summary["bin_level"].items():
+            for multiplier, value in record.items():
+                score = value.get("mSCF1", value.get("mSCF1_mean"))
+                if score is None:
+                    continue
+                budget_rows.append({
+                    "collection": collection, "section": section, "arm": arm,
+                    "method": name, "multiplier": multiplier,
+                    "budget": summary["budgets"][multiplier], "mSCF1": score})
         for partition, record in summary.get("peak_level", {}).items():
             for name, method in record["methods"].items():
                 matched = method.get("matched_K_peak")
@@ -163,6 +180,13 @@ def main():
         writer = csv.DictWriter(stream, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
+    budget_rows.sort(key=lambda r: (r["section"], r["arm"], r["method"], float(r["multiplier"])))
+    with open(args.output / "budget_sensitivity.csv", "w", newline="",
+              encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["collection", "section", "arm", "method",
+                                                    "multiplier", "budget", "mSCF1"])
+        writer.writeheader()
+        writer.writerows(budget_rows)
     for key, record in decisions.items():
         if not key.startswith("_"):
             print(key, record.get("label") or record["ig_vs_posterior_verdict"])
