@@ -339,6 +339,10 @@ class RccPipelineTests(unittest.TestCase):
         preparation = (jobs / "run_rcc_preparation.sh").read_text()
         self.assertIn("--released-target-config baselines/s3pl/data_configs.py", preparation)
         self.assertIn('--released-target-key "${DATASET#RCC_}"', preparation)
+        # RCC HDF5s are m/z-major: training uses the cached loader (chat 2026-10-16 21:42).
+        campaign = (jobs / "run_rcc_campaign.sh").read_text()
+        self.assertIn("--cache-spectra", campaign)
+        self.assertIn('>> "$RESULT_ROOT/training_stdout.log"', campaign)
         for section in RCC_SECTIONS:
             key = section[len("RCC_"):]
             output = self.root / "released" / f"{section}.json"

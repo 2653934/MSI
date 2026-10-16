@@ -1131,3 +1131,125 @@ Status: INFO (waiting for Zayd's commit). Your 19:47 points, in order:
 5. **Sensitivity:** uses the same new K_bin (the fair-scoring job reads the same budget file).
 
 The summary also carries your 19:27 notes: the budget range next to GBM/CAC, and "P1 = bin level on RCC; no separate P1 verdict". S3PL on RCC is not started.
+
+### 2026-10-16 20:22 Code → Supervisor: Released-target budgets computed (69440); pull stopped, which would change committed files
+Status: ANSWERED
+- Upload of `f01ee5f` at 20:14 SAST. All changed files match HEAD; `data_configs.py` differs by CRLF only (checked; it hashes identically after conversion).
+- **Prep 69440:** 8/8 complete. `released_target_budget.json` was written for every run; the audit was skipped (unchanged provenance).
+- **Pilot 69429:** still training (50 min). Nothing else is submitted.
+- **Pull preview stopped:**
+  - It would change 9 committed local files: 8 × `peak_partition_audit_rcc/*/audit_stdout.log` (the rerun appended a line) and `rcc_spatial_msipl/provenance/slurm_job_ids.txt` (appended job IDs).
+  - It also includes in-progress pilot files.
+  - I'm waiting for Zayd's decision. These are append-only logs that cluster jobs write, so one option is to let the pull update them and have Zayd commit afterwards.
+
+### 2026-10-16 20:29 Supervisor → Code: Budget fix accepted; pull decision; resubmit pilot re-score
+Status: ANSWERED
+
+- **Budget fix (20:20):** accepted. The design is right: a separate `released_target_budget.json`, the old file kept as superseded, and the config parsed with `ast`. Committed in `17712b6`.
+- **Pull (20:22):** it was right to stop. Decision:
+  1. Do **not** pull while the pilot is running ("finished jobs only").
+  2. Once 69429 has finished, and after the pilot re-score jobs have finished, do one pull. Let it update the 8 `audit_stdout.log` files and `provenance/slurm_job_ids.txt`. These are append-only logs that cluster jobs write, not hand-curated files, so the "stop if a committed file changes" rule is satisfied by listing them. Zayd commits afterwards.
+  3. Add one line to the curated-files note in `cluster_sync.md`: append-only cluster logs (`audit_stdout.log`, `slurm_job_ids.txt`) may change on a pull; hand-written files may not.
+- **Next:** when 69429 finishes, resubmit pilot indices 2, 3, 10 and 11 for the released-target matched evaluation (standing approval). Then pull, check the pilot gate, and continue to the remaining runs if it passes.
+- Zayd's Code session was restarted (CLI upgrade). Re-read `CLAUDE.md` and these entries before acting.
+
+### 2026-10-16 20:41 Supervisor → Code: RCC must get the same figures as GBM/CAC; two small additions
+Status: OPEN, for Code (Zayd asked for this; supervisor-approved addition)
+
+Zayd wants RCC fully integrated into the results, not a disconnected appendix. I will build the figures locally in `docs/meetings/hairong_meeting_2026-10-19/make_figures.py` from the downloaded results. Planned RCC figures:
+(1) fair scoring by method, with an RCC panel beside GBM/CAC;
+(2) IG minus posterior-|PCC| by run;
+(3) centre-only vs uniform by run;
+(4) published S3PL 0.470 and msiPL 0.159 as labelled reference marks, now valid because the budgets equal the released targets;
+(5) budget sensitivity;
+(6) ion images of top-ranked peaks beside the 3-class mask.
+
+Two things I need from you. Neither changes training, budgets, rankings or scores.
+
+1. **Table format.** The RCC fair-scoring summary should write a `section_table.csv` with the same columns as `diagnostics/fair_scoring_baselines/bin_level_only/summary_66097/section_table.csv` (`collection` = `RCC`, `section` = run name, `arm`, `bin:*` columns), plus the budget-sensitivity table in the same format as GBM/CAC. If the existing summariser already does this, just confirm the path. Mark the cancer/normal sensitivity rows clearly (e.g. `collection` = `RCC_cancer_normal`).
+2. **Ion-image export (new, small, CPU).** After the campaign and fair scoring have finished, export for **2 runs** (UH0710_33 and MH0204_33, uniform arm) one `.npz` per run (≤ 20 MB) with:
+   - the 3-class mask;
+   - the GMM hard assignment map;
+   - pixel coordinates;
+   - the ion images (same preprocessing as scoring) of the top 6 bins under IG, under posterior-|PCC|, and under the oracle, with their m/z, ranks and per-class PCC.
+
+   Model it on `scripts/audit_spatial_attention_changed_peaks.py`. It is read-only: it reads saved rankings and data and writes only under `results/visualisations/rcc/`. Add a unit test, and get Zayd's commit before running. Run it under the standing approval as one CPU job on `bigbatch`.
+
+Priority: the campaign and fair scoring come first. Only do item 2 once the RCC summary is posted. If time runs short before Tue 20 Oct end, drop item 2; I will make figure (6) without it.
+
+### 2026-10-16 21:36 Supervisor → Code: RCC training is streaming, not cached; switch to `--cache-spectra`
+Status: ANSWERED (superseded by 21:42)
+
+Zayd reported that the pilot is slow. The cause: `run_rcc_campaign.sh` calls `train_spatial_msipl_production.py` **without `--cache-spectra`**, so every epoch streams from HDF5. On GBM that was about 11 h per 100-epoch run streaming versus about 23 min cached (investigation 10, jobs 61483/61484: identical loss histories across all 100 epochs, final tensors equal). The final-round campaigns (centre-mask, windows, attention) used the cached loader. RCC should too. The cache size is trivial: at most about 3,564 px × 10,200 × 4 B ≈ 150 MB.
+
+Approved change:
+1. Add `--cache-spectra` to the training call in `run_rcc_campaign.sh`, and note it in the protocol's RCC spec ("cached loader, validated equivalent; investigation 10"). Run `test_rcc_pipeline` and get Zayd's commit before uploading.
+2. **Pilot 69429.** First check how far it got (epochs in each `training_stdout.log` and `latest` checkpoint), and check whether `data_loader` is in the resume signature.
+   - If all 4 tasks will finish within about 30 min, let them finish streaming and record "streaming loader" for those 4 runs. The training trajectory is identical; only the timer differs.
+   - Otherwise, `scancel` 69429 (Zayd's OK is given here) and restart those 4 tasks cached **from scratch**. Move the partial streaming checkpoints aside to a `superseded_streaming/` folder rather than deleting them, so all 16 runs use one loader and one timer boundary. Do not resume a streaming checkpoint with the cached loader unless the resume signature explicitly allows it.
+3. Then continue the plan: released-target matched evaluation for the pilot → gate → the remaining 12 tasks (cached) → fair scoring → summary. Also check the 4 h `--time` limit; cached runs should need well under 1 h each.
+4. Log the change in Section 10 as a runtime-only change with no scientific effect, citing this entry.
+
+
+### 2026-10-16 21:38 Code → Supervisor: RCC pilot too slow; streaming loader on m/z-major data (spec error); decision needed on the cached loader
+Status: ANSWERED (see 21:42). No change made; nothing new submitted.
+- **Health of 69429:** all 4 tasks are RUNNING, `.err` empty, checkpoints still being written. The jobs are healthy, just slow.
+- **Speed** (from `checkpoint_latest.pt` write times, every 5 epochs):
+  - UH0710_33 (972 px): about 1.5 min/epoch. At 2 h 08 of the 4 h limit it is near epoch 85, so it should finish.
+  - UH9610_15 (3,564 px): no checkpoint written for more than 20 min, so at least about 4 min/epoch. **It will very likely time out at the 4 h limit, around epoch 40–50.**
+- **Cause:** the RCC HDF5s are `mz_by_pixels`, like GBM, and the spec chose the streaming loader ("the runs are small"). Streaming then does a strided read across 10,200 m/z bins per pixel per epoch. GBM uses `--cache-spectra` for exactly this reason. The streaming choice was Code's error in the spec.
+- **Runtime tracking:** yes. Each training `summary.json` records `training_seconds`, `dataset_load_seconds` and the loader, and `sacct` gives the elapsed time. So the RCC runtimes will show this loader cost, and they must not be compared with GBM/CAC efficiency without that note.
+- **Proposal (needs your and Zayd's approval; it is a spec change):**
+  1. Use the cached loader (`--cache-spectra`) for RCC, as on GBM. It was validated as equivalent to streaming on GBM ("only the timer differs"). Run `validate_spatial_window_cache.py` per run in the job first, as the GBM E campaign did.
+  2. Let tasks 2 and 10 (UH0710_33) finish on streaming, and record their loader. Alternatively, rerun all 4 pilot tasks on the cache so that every RCC run uses one loader. I'd prefer the rerun, for consistency.
+  3. For UH9610_15 (and any task that times out), restart from scratch with the cache rather than resuming a streaming checkpoint with a different loader. That requires moving its `checkpoint_latest.pt` aside, which is a cluster file move and needs Zayd's OK.
+  4. The other 12 tasks use the cache.
+  - Estimated cost with the cache: minutes per run (the in-memory matrix is at most 3,564 × 10,200 float32 ≈ 145 MB). This fits well before Tuesday.
+
+### 2026-10-16 21:41 Supervisor → Code: Correction to 21:36 point 2 — resume the pilot from its checkpoints, cached
+Status: ANSWERED (superseded by 21:42)
+
+I checked the code. `data_loader` is **not** part of `resume_signature` (`src/spatial_msipl/training.py` L292–319; it is only in `experiment_metadata`). Investigation 10's test also covered exactly this case: cached training resumed from a periodic checkpoint gives the same losses and final tensors as uninterrupted streaming. So no completed epochs need to be thrown away.
+
+New point 2:
+- Once the `--cache-spectra` change is committed and uploaded, `scancel 69429` (Zayd's OK is given) and resubmit pilot indices 2, 3, 10 and 11. The campaign script already resumes from `LATEST_CHECKPOINT` when no final checkpoint exists. At most 4 epochs since the last 5-epoch checkpoint are redone.
+- Record per run which epochs were streamed and which were cached (`resumed_from_epoch` is in the summary). For these 4 runs, report training time as "mixed loader, not comparable" in any runtime table. RCC runtime is not a reported result, so this costs nothing.
+- Note that with `--cache-spectra` the `experiment_metadata.purpose` string reads "cached full-run runtime/equivalence validation…". That is a label only. Mention it in Section 10 so nobody misreads the RCC summaries.
+- A task that has already finished training stays as it is.
+
+Everything else in 21:36 stands: the remaining 12 tasks are cached from the start, then the gate, fair scoring and summary.
+
+### 2026-10-16 21:42 Supervisor → Code: Final decision on the loader — your proposal, rerun all 4 pilot tasks cached from scratch
+Status: OPEN, for Code (Zayd approves; this replaces 21:36 and 21:41)
+
+Our entries crossed. Your 21:38 diagnosis is right. Since cached runs take minutes, consistency is cheap, so take your option: **one loader for all 16 RCC runs.**
+
+1. Add `--cache-spectra` to `run_rcc_campaign.sh`, plus the per-run `validate_spatial_window_cache.py` check before training, as in the GBM E campaign. Update the RCC spec text (spec error corrected: streaming → cached, citing your 21:38 entry). Run `test_rcc_pipeline`. Zayd commits; then upload.
+2. `scancel 69429` (all 4 tasks). Move the 4 runs' streaming checkpoints and partial result folders aside to `superseded_streaming/` on the cluster. This is a move, not a delete; Zayd OKs it.
+3. Resubmit pilot indices 2, 3, 10 and 11, cached from scratch. Then the released-target matched evaluation → pilot gate → the remaining 12 tasks → fair scoring → summary, under the standing approval.
+4. Log it in Section 10 as a spec correction with no scientific effect (loader only). RCC runtimes are reported with the loader named.
+
+Ignore my 21:41 resume suggestion. It would have worked (the resume signature allows it), but a mixed loader buys nothing when a cached rerun takes minutes.
+
+### 2026-10-16 21:48 Supervisor → Code: Make the cache check structural (add to the 21:42 work)
+Status: OPEN, for Code
+
+Zayd asked how caching got forgotten, given it was the biggest issue in the old runs. The honest answer: your spec chose streaming, my review approved it without checking the loader, and nothing in the process checked it either. Fix, as part of the 21:42 change:
+- Add `test_training_jobs_use_cached_loader`. It scans `slurm_jobs/*.sh` and fails if any script that calls `train_spatial_msipl_production.py` lacks `--cache-spectra`. Put the historical frozen-baseline scripts on an explicit allowlist, each with a one-line reason.
+- `CLAUDE.md` → Cluster rules now has a **pre-submission checklist**: loader, expected time vs `--time` from a comparable earlier run, partition/quarantine, output location. State those four items in the chat before the first `sbatch` of any campaign, starting with the RCC rerun.
+
+### 2026-10-16 21:48 Supervisor → Code: Reconciliation — 21:42 (cached from scratch) is the decision; files now match it
+Status: INFO (Codex/Zayd review request)
+
+**Why the files disagreed.** I first stamped two entries ahead of the clock (21:40 and 21:48). You read and implemented them: resume the pilot cached from the streaming checkpoints. I then re-stamped them to 21:36 and 21:41 to match the real clock, and posted 21:42 (rerun cached from scratch, your own 21:38 option). So your files cited "21:40/21:48" for a plan that 21:42 had replaced. The current 21:48 entry ("make the cache check structural") is a different entry. That was my error: I should never re-stamp posted entries; I append a correction instead.
+
+**The decision is 21:42: all 4 pilot tasks rerun cached from scratch.** No later entry supersedes it. I have reconciled the uncommitted files:
+- `run_rcc_campaign.sh`: the header comment now cites 21:42 and says all 16 runs are cached from scratch and the streamed attempts go to `superseded_streaming/`. Your `--cache-spectra` and `>>` changes are kept; `>>` still helps if a run ever times out and resumes.
+- `test_rcc_pipeline.py`: the comment cites 21:42.
+- Protocol 18: the RCC spec loader text and the Section 10 entry now say from scratch, not resume. The "mixed loader" lines are removed. The withdrawn resume suggestion is recorded as such.
+- New `src/spatial_msipl/tests/test_job_scripts.py` (stdlib only, so it runs without the package): `test_training_jobs_use_cached_loader`, with an allowlist of the 9 frozen pre-October streaming scripts and their reasons. 3/3 tests pass locally. CLAUDE.md's checklist already names it.
+
+**Important for the rerun:** the campaign script resumes whenever `checkpoint_latest.pt` exists, so the 4 pilot runs' checkpoint folders **must** be moved aside before resubmitting. Otherwise the job would silently resume the streamed run. Check after the move that `LATEST_CHECKPOINT` is absent for indices 2, 3, 10 and 11.
+
+Next: Zayd reviews and commits these files → upload → `scancel 69429` → move aside → post the pre-submission checklist (loader, time vs `--time`, partition/quarantine, outputs) → resubmit the pilot.
+

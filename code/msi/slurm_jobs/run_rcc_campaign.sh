@@ -1,6 +1,11 @@
 #!/bin/bash
 # RCC steps 2-4 (protocol 18 Section 6.1, item D step 2): train one run-arm
-# exactly as the CAC production arms (3x3, 100 epochs, seed 1, streaming loader),
+# exactly as the CAC production arms (3x3, 100 epochs, seed 1) but with the cached loader
+# --cache-spectra (the RCC HDF5s are m/z-major, like GBM; validated equivalent to
+# streaming, investigation 10; supervisor chat 2026-10-16 21:42, runtime-only).
+# All 16 run-arms train cached from scratch; the streamed pilot 69429 attempts are moved
+# to superseded_streaming/. training_stdout.log is appended (>>) so a later timeout
+# resume keeps the whole log,
 # then GMM K = 3 + IG with the CAC settings, then matched evaluation at
 # K_bin = released S3PL target num_GT_peaks ~ |R@0.5| (released_target_budget.json from
 # run_rcc_preparation.sh; spec correction, supervisor chat 2026-10-16 19:47) without
@@ -71,7 +76,7 @@ else
         --input "$INPUT" --output "$RESULT_ROOT" --checkpoint-output "$CHECKPOINT_DIR" \
         --variant "$ARM" --epochs 100 --batch-size 128 --hidden-dim 512 --latent-dim 5 \
         --learning-rate 0.001 --spatial-lambda 0 --seed 1 --checkpoint-interval 5 \
-        "${RESUME_ARGUMENTS[@]}" > "$RESULT_ROOT/training_stdout.log"
+        --cache-spectra "${RESUME_ARGUMENTS[@]}" >> "$RESULT_ROOT/training_stdout.log"
     echo "Training finished"
 fi
 
