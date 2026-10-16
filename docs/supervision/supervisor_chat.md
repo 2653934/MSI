@@ -1340,3 +1340,25 @@ Status: INFO
   - `src/spatial_msipl/tests/test_s3pl_rcc_adapter.py` (3 tests: pass, fail with exit 4, no overwrite).
 - **Tests:** `test_s3pl_rcc_adapter` 3/3, `test_rcc_pipeline` 12/12, `test_job_scripts` 3/3, all locally.
 - **Order:** the gate job runs first (CPU); training only after `gate.json` says `passed`, and only after the RCC campaign's GPU needs are met.
+
+### 2026-10-16 22:24 Code → Supervisor: [overnight] item 3 pre-submission checklist (adapter gate job)
+Status: INFO. Upload of `60c2e61`: 5/5 files match HEAD.
+1. **Loader:** S3PL's own `load_massnet_h5` on the staged copies. No VAE training in this job.
+2. **Time:** one CPU task. Copying 24 MB and 8 × 3 PCC passes over at most 3,564 × 10,200 is minutes; RCC prep took 8–38 s per run. Against `--time=00:30:00`.
+3. **Partition:** `SBATCH_PARTITION=bigbatch` (CPU; `batch` is down). No GPU, so no quarantine needed. Running jobs: 5 of the 6 cap.
+4. **Outputs:** new `/datasets/zsuliman/msi_data/rcc_s3pl/` (copies plus `labels/`), and `results/validation/s3pl_rcc_adapter_gate/gate.json`. The RCC exports are only read.
+
+### 2026-10-16 22:27 Code → Supervisor: [overnight] item 3 gate passed; item 4 diff summary; IG on RCC is streaming (no change made)
+Status: INFO
+- **Item 3, adapter gate 69511:** passed in 8 s. S3PL's own `create_pearson_labels` reproduces our |R@0.5| for all 8 runs (job `.out`: "adapter gate: passed"). The details are in `results/validation/s3pl_rcc_adapter_gate/gate.json`, which I'll read after the pull. Training waits for free GPU slots, with RCC first.
+- **Item 4 files (new):** `slurm_jobs/run_msipl_rcc.sh` and `submit_msipl_rcc.sh`. They are an exact copy of the `run_msipl_cac_section.sh` procedure with RCC paths:
+  - fixed Beta 2.5, 100 epochs, batch 128, latent 5, intermediate 512, seed 1337;
+  - `tune_msipl_massnet_beta.py` over the existing CAC grid (0.0–2.5, step 0.05), tolerance 50, toward `num_GT_peaks` (parsed from `data_configs.py`, not executed);
+  - then `evaluate_msipl_massnet_peaks.py`.
+  - No adapter is needed: the legacy loader orients either layout, and the RCC export has `Data`/`mzArray`.
+  - A run outside ±50 is written by the tuner as `closest_outside_tolerance`, and the grid is never widened.
+  - Outputs: `results/baselines/msipl/rcc{,_fixed_beta}/RCC_<run>/` and `/datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc/`.
+  - `test_job_scripts` 3/3 pass.
+- **Found, no change made:** `run_spatial_msipl_gmm_integrated_gradients.py` always uses the streaming loader; it has no cache option.
+  - On the m/z-major RCC exports, IG is therefore slow too. UH0710_33's IG took about 2.5 min; UH9610_15's IG has run more than 20 min with no output yet (it prints only at the end).
+  - That is well within `--time=04:00:00`, so the pilot continues. Adding a cache path to IG would be a code change, so it is not done overnight. The predicted IG time for the other 12 run-arms is under 1 h each.
