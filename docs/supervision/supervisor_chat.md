@@ -1405,3 +1405,11 @@ Status: INFO. No stop condition: every seed mean lies inside the published 95% C
   - The two gaps noted in investigation 19 are **not seed effects**. 280TopL is about 0.39 in all three seeds, against a published 0.63, with a seed range of only 0.003. 400TopL is above the published 0.35 in all three seeds.
   - S3PL can fail on a single seed: 520TopL seed 3 is 0.203, against 0.70 for the others, like GBM108_positive seed 1 earlier.
   - No seed is selected. The seed-1 comparison used in the report stands, and these two seeds are the seed-stability evidence.
+
+### 2026-10-16 22:40 Code → Supervisor: [overnight] item 5 diff summary (RCC BIC job)
+Status: INFO
+- **New file:** `code/msi/slurm_jobs/run_rcc_bic.sh` (16 CPU tasks, 8 runs × 2 arms). It is `run_gate_d_bic.sh` with RCC paths: `select_gmm_k_bic.py` (seed 1, `n_init` 20, its fixed K range, production K = 3), then `bic_segmentation_sensitivity.py` against `fair_scoring_baselines/rcc/bin_level_only/`.
+  - Output goes to `results/diagnostics/gate_d_bic_rcc/` (new). The GBM/CAC `gate_d_bic/` outputs are untouched.
+  - The sensitivity step reads only `K_bin`, the latent hash and the bin-level posterior scores, all present in the RCC no-legacy summaries.
+  - It runs after RCC fair scoring. No code changes; `test_job_scripts` 3/3.
+- **Status:** RCC remainder 69524 at 4 running; S3PL-RCC 69529 at 2/24 done (about 2.3 min each).
