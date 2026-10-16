@@ -1,0 +1,86 @@
+{
+  "status": "complete",
+  "provenance": {
+    "budget_version": 1,
+    "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.2), Section 6.1 item D step 2",
+    "dataset": "RCC_UH0710_33",
+    "parameters": {
+      "thresholds": [
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ],
+      "budget_threshold": 0.4,
+      "descriptive_class_subset": [
+        0,
+        1
+      ]
+    },
+    "input": {
+      "path": "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_UH0710_33.h5",
+      "bytes": 1475666,
+      "sha256": "552d16a71001c09f69b5d051722f95192c6f7364681ae21f7b0ab511d6c72ef9"
+    },
+    "code": {
+      "compute_reference_budget.py": "6cfe667091597219a85bb804ea4ef3235aeeefd9030f48923ffdc1551578f73f",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "bf5e4e118d2fc3092e13a1e14b51604970f62761b64cf343f2d1137de2ef32f4"
+    }
+  },
+  "dataset": "RCC_UH0710_33",
+  "K_bin": 2167,
+  "rule": "K_bin = |R@0.4|: size of the mixed reference set at PCC 0.4 over all label classes, existing nearest-threshold rule on raw-intensity PCC",
+  "classes": [
+    0,
+    1,
+    2
+  ],
+  "pixels_per_class": {
+    "0": 161,
+    "1": 202,
+    "2": 609
+  },
+  "spectral_bins": 10200,
+  "reference_set_sizes_all_classes": {
+    "0.3": 3445,
+    "0.4": 2167,
+    "0.5": 1212,
+    "0.6": 517
+  },
+  "reference_set_sizes_per_class": {
+    "0": {
+      "0.3": 989,
+      "0.4": 521,
+      "0.5": 274,
+      "0.6": 147
+    },
+    "1": {
+      "0.3": 960,
+      "0.4": 537,
+      "0.5": 258,
+      "0.6": 111
+    },
+    "2": {
+      "0.3": 1824,
+      "0.4": 1171,
+      "0.5": 680,
+      "0.6": 259
+    }
+  },
+  "reference_set_sizes_descriptive_subset": {
+    "classes": [
+      0,
+      1
+    ],
+    "sizes": {
+      "0.3": 1621,
+      "0.4": 996,
+      "0.5": 532,
+      "0.6": 258
+    },
+    "use": "descriptive only; never a budget (the sensitivity analysis keeps K_bin)"
+  },
+  "runtime_seconds": 3.423463225364685
+}
