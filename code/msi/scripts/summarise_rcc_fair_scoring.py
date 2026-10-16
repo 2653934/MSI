@@ -26,8 +26,16 @@ RCC_SECTIONS = ("RCC_MH0204_33", "RCC_UH0505_12", "RCC_UH0710_33", "RCC_UH9610_1
 RCC_PATIENT = {section: section.replace("RCC_", "") for section in RCC_SECTIONS}
 PATIENT_SOURCE = ("CardinalWorkflows 1.44.0 MSI-classification vignette: each matched "
                   "pair from one subject is on its own slide (run); 8 runs, 8 subjects")
-NA_CAVEAT = ("the unannotated class (45-78% of pixels) may include tissue; "
-             "not established")
+# Wording fixed by the supervisor, chat 2026-10-16 18:34 (documentary notes).
+NA_CAVEAT = ("unannotated class, 45-78% of pixels; the dataset's own Cardinal workflow "
+             "treats these pixels as background (rcc_nobg), but this was not "
+             "independently verified")
+HETEROGENEITY_LIMITATION = ("per the dataset documentation, UH0505_12 and UH9905_18 "
+                            "contain heterogeneous tumour with large normal-looking areas "
+                            "(descriptive; no exclusion, no separate analysis)")
+SENSITIVITY_CAPTION = ("sensitivity, cancer/normal classes only: the reference sets, mSCF1, "
+                       "F1 ceilings, P1 reference groups and the supervised oracle all use "
+                       "the cancer and normal PCCs only; rankings and K_bin as the primary")
 K_DISCLOSURE = ("GMM K = 3 equals the number of label classes: label-free in training "
                 "and ranking, class-informed in its component count")
 SENSITIVITY_LABEL = "sensitivity, cancer/normal classes only"
@@ -125,11 +133,13 @@ def main():
             record[k] for k in record if k.startswith("ig_minus_posterior_P")]
         if args.sensitivity:
             record["label"] = SENSITIVITY_LABEL
+            record["caption"] = SENSITIVITY_CAPTION
             record["ig_vs_posterior_verdict"] = None
         else:
             record["ig_vs_posterior_verdict"] = verdict(scales, len(subset))
         record["peak_level_partitions_used"] = partitions
         record["disclosures"] = [NA_CAVEAT, K_DISCLOSURE, LEGACY_NOTE]
+        record["limitations"] = [HETEROGENEITY_LIMITATION]
         decisions[f"RCC/{arm}"] = record
     decisions["_patients"] = {"mapping": RCC_PATIENT, "source": PATIENT_SOURCE}
     decisions["_campaign_provenance"] = campaign

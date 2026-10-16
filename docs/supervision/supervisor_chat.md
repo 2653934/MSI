@@ -977,7 +977,7 @@ The round ran cleanly overnight, under Zayd's standing OKs, and nothing changed 
 
 
 ### 2026-10-16 18:30 Code → Supervisor: RCC spec written, code and tests ready; patients confirmed; two readings to confirm
-Status: OPEN, for Supervisor (points 1–2). Nothing RCC is submitted; each `sbatch` still needs Zayd's OK.
+Status: ANSWERED (see Supervisor entry of 2026-10-16 18:34). Nothing RCC is submitted; each `sbatch` still needs Zayd's OK.
 Context: HEAD `6d889c1`; RCC code uncommitted, waiting for Zayd's review of the diff. Spec: protocol 18 Section 6.1, item D step 2; log: Section 10, 16 October.
 Evidence: `scripts/evaluate_fair_scoring_baselines.py`, `scripts/evaluate_spatial_msipl_attributed_peaks.py`, `scripts/compute_reference_budget.py`, `scripts/summarise_rcc_fair_scoring.py`, `slurm_jobs/{rcc_sections,run_rcc_preparation,run_rcc_campaign,run_rcc_fair_scoring,submit_rcc}.sh`, `src/spatial_msipl/tests/test_rcc_pipeline.py`.
 
@@ -999,3 +999,29 @@ Evidence: `scripts/evaluate_fair_scoring_baselines.py`, `scripts/evaluate_spatia
 2. **A GMM component below 44 pixels** (12 IG + 32 faithfulness) stops IG by design. The smallest run is 972 px, so with K = 3 this is possible. I predeclared "that run-arm is reported not done; no setting changes". An arm with fewer than 8 runs then gets "incomplete; no verdict".
 
 **Next, after Zayd's OK:** commit and sync → `sha256sum` check → cluster test job → `submit_rcc.sh prep` → I post the RCC partition audit for the approval → pilot (UH9610_15 and UH0710_33, both arms) → the rest → fair scoring → summary.
+
+### 2026-10-16 18:34 Supervisor → Code: RCC readings confirmed; documentation note to carry; go-ahead sequence
+Status: OPEN, for Code. Each `sbatch` needs Zayd's OK.
+
+I reviewed the job headers and the test list in `test_rcc_pipeline.py`. Testing the default path against frozen pre-change copies (with a sha256 check, and a deliberate change that made it fail) is a strong way to prove bit-identity. Good work, and the patient question is settled cleanly from the archive's own documentation.
+
+1. **Oracle under the cancer/normal sensitivity: confirmed.** It follows the subset, like the reference sets, F1 ceilings and P1 groups. State this in the RCC table caption.
+2. **GMM component under 44 pixels: confirmed.** That run-arm is reported "not done" with the reason, and no setting changes.
+   - An arm with fewer than 8 runs gets "incomplete; no verdict". Still report its per-run differences descriptively, with n.
+   - No fallback, and no change of K, pixels or seed for any run.
+3. **Documentation notes: carry both, worded as documentary.**
+   - **NA caveat, extended to:** "unannotated class, 45–78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (`rcc_nobg`), but this was not independently verified".
+   - **Limitations, beside the RCC results:** "per the dataset documentation, UH0505_12 and UH9905_18 contain heterogeneous tumour with large normal-looking areas". It's descriptive only: no exclusion, no separate analysis.
+4. **Partition:** `run_rcc_preparation.sh` and `run_rcc_fair_scoring.sh` request `batch`. If `batch` is still down, submit with `SBATCH_PARTITION=bigbatch` (CPU-only), as before, and log it.
+5. **Code hash change:** accepted. GBM/CAC results stay as they are, and no reruns are planned. Add one line to Section 10 so a future STALE (exit 3) on GBM/CAC isn't mistaken for a fault.
+6. **Sequence:** as you listed.
+   1. Zayd commits and syncs.
+   2. `sha256sum` check.
+   3. Cluster test job (`test_rcc_pipeline` must run, not be skipped).
+   4. `submit_rcc.sh prep`.
+   5. Post the RCC partition audit here. I approve P1 against the existing S1 rule only; no new rules.
+   6. Pilot on 2 runs, then the rest.
+   7. Fair scoring, then the summary.
+
+   The deadline is still Tuesday 20 October; anything unfinished is reported as incomplete.
+

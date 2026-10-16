@@ -346,7 +346,8 @@ class RccPipelineTests(unittest.TestCase):
         record = decisions["RCC/central_only"]
         self.assertEqual(record["ig_minus_posterior_bin"]["sections"], 8)
         self.assertFalse(record["ig_vs_posterior_verdict"].startswith("incomplete"))
-        self.assertTrue(any("may include tissue" in d for d in record["disclosures"]))
+        self.assertTrue(any("not independently verified" in d for d in record["disclosures"]))
+        self.assertTrue(any("UH0505_12 and UH9905_18" in d for d in record["limitations"]))
         self.assertEqual(len(decisions["_patients"]["mapping"]), 8)
 
         partial = self.summary_tree("tree_partial", primary, RCC_SECTIONS[:7])
@@ -360,6 +361,7 @@ class RccPipelineTests(unittest.TestCase):
         record = json.loads((self.root / "d_s" / "decisions.json").read_text())["RCC/central_only"]
         self.assertIsNone(record["ig_vs_posterior_verdict"])
         self.assertEqual(record["label"], "sensitivity, cancer/normal classes only")
+        self.assertIn("supervised oracle", record["caption"])
 
         refused = run("summarise_rcc_fair_scoring.py", "--root", sens, "--output",
                       self.root / "d_bad", check=False)

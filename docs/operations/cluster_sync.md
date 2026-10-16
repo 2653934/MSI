@@ -228,7 +228,7 @@ heredoc to `ssh ... bash -s`.
     OK for that action**.
 - **What Claude does not do:** scientific computation on the login node; reading
   scientific results (`summary.json`, decision tables, CSVs) on the cluster
-  before Zayd syncs them; any rsync (Zayd runs every transfer himself).
+  (they are read only from local files, after a download sync). Since 16 October Claude may run rsync itself, but only under the rules in `CLAUDE.md` (Cluster rules → Who does what): `-n` preview first, no `--delete`, uploads only from a clean committed HEAD, downloads only into `results/` and `reproducibility/`, and every sync logged in protocol 18 Section 10.
 - **How to revoke:** on the cluster, delete that key's line from
   `~/.ssh/authorized_keys`. Find it by its comment or fingerprint
   (`ssh-keygen -lf ~/.ssh/authorized_keys`). Removing the private key from WSL
