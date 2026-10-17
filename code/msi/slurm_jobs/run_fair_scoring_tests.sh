@@ -49,5 +49,8 @@ PY
     spatial_msipl.tests.test_rcc_pipeline \
     spatial_msipl.tests.test_spatial_segmentation \
     spatial_msipl.tests.test_test_r \
+    spatial_msipl.tests.test_ranking_stage_runtime \
+    spatial_msipl.tests.test_runtime_v2 \
+    spatial_msipl.tests.test_segmentation_control_v \
     2>&1 | tee "$RECORD_DIR/${SLURM_JOB_ID}_unittest.log"
 echo "All fair-scoring tests passed under s3pl_env."

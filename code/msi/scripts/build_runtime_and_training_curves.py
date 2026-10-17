@@ -6,6 +6,10 @@ and writes, under results/publication/current_evidence/:
 
   runtime_all_sections.csv     one row per section and method: training time,
                                timer boundary, epochs, GPU model, peak GPU memory
+  runtime_all_sections_v2.csv  the v1 rows plus seed and loader columns, and the
+                               RCC, S3PL 100-epoch, S3PL seed 2/3 and Test R
+                               cached rows (supervisor chat 2026-10-17 09:48);
+                               the v1 file is left unchanged
   training_curves_vae.csv      per-epoch VAE losses, all 16 sections, centre-only
                                and uniform-mean production runs
   training_curves_s3pl.csv     per-epoch S3PL losses: GBM108_positive 10/25/50-epoch
@@ -32,10 +36,20 @@ S3PL_RESULTS = RESULTS / "baselines" / "s3pl"
 S3PL_LOGS = ROOT / "logs" / "s3pl"
 S3PL_REPRO = ROOT / "reproducibility" / "s3pl_massnet"
 CACHED = RESULTS / "validation" / "spatial_msipl_cached_full" / "GBM108_positive_seed1"
+RCC_EXPERIMENTS = EXPERIMENTS / "rcc_spatial_msipl"
+TEST_R = EXPERIMENTS / "test_r_training_seeds"
+S3PL_E100 = ROOT / "reproducibility" / "s3pl_e100" / "seed1_released"
+S3PL_CAC_SEEDS = ROOT / "reproducibility" / "s3pl_cac_seeds"
+S3PL_RCC = ROOT / "reproducibility" / "s3pl_rcc"
+V1_NAME = "runtime_all_sections.csv"
+V2_NAME = "runtime_all_sections_v2.csv"
 
 GBM = ("GBM108_positive", "GBM108_negative", "GBM12_1", "GBM12_2",
        "GBM22_1", "GBM22_2", "GBM39_1", "GBM39_2")
 CAC = ("40TopL", "160TopL", "200TopL", "240TopL", "280TopL", "360TopL", "400TopL", "520TopL")
+RCC = ("RCC_MH0204_33", "RCC_UH0505_12", "RCC_UH0710_33", "RCC_UH9610_15",
+       "RCC_UH9812_03", "RCC_UH9905_18", "RCC_UH9911_05", "RCC_UH9912_01")
+TEST_R_SECTIONS = RCC + CAC + GBM   # slurm_jobs/test_r_sections.sh order
 DEVELOPMENT = {"GBM108_positive", "GBM22_2", "160TopL", "40TopL"}
 
 STREAMED = ("VAE production trainer, sum of per-epoch times; each epoch streams "
@@ -53,7 +67,11 @@ def load(path):
 
 
 def relative(path):
-    return Path(path).resolve().relative_to(ROOT).as_posix()
+    path = Path(path).resolve()
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:   # only test fixtures live outside the workspace
+        return path.as_posix()
 
 
 def write_csv(path, rows):
@@ -68,6 +86,8 @@ def write_csv(path, rows):
 
 
 def collection(section):
+    if section.startswith("RCC_"):
+        return "RCC"
     return "GBM" if section.startswith("GBM") else "CAC"
 
 
@@ -115,6 +135,9 @@ def vae_runtime_row(section, method, folder, timer):
 
 
 def s3pl_name(section, epochs=10):
+    if section.startswith("RCC_"):   # released RCC configuration; files drop the prefix
+        return (f"{section[len('RCC_'):]}_Attention3DConvAutoencoder_{epochs}epochs_1024"
+                "_spectral_patch_size_5")
     patch = 3 if section.startswith("GBM") else 9
     return f"{section}_Attention3DConvAutoencoder_{epochs}epochs_256_spectral_patch_size_{patch}"
 
@@ -250,6 +273,170 @@ def plot(vae_rows, s3pl_rows, path):
     print(f"wrote {path.name}")
 
 
+# --- Runtime table v2 (supervisor chat 2026-10-17 09:48, item 1) --------------
+
+LOADERS = {"streaming_hdf5": "streaming", "cached_float32": "cached"}
+
+
+def with_seed_and_loader(row, seed, loader):
+    """Insert seed and loader after method; every other v1 field is kept as is."""
+    out = {}
+    for key, value in row.items():
+        out[key] = value
+        if key == "method":
+            out["seed"] = int(seed)
+            out["loader"] = loader
+    return out
+
+
+def vae_loader(folder, timer):
+    """streaming/cached from the training summary, checked against the timer label.
+
+    The historical production trainer predates the data_loader field and always
+    streamed, so an absent field is accepted only under the streaming timer.
+    """
+    summary = load(Path(folder) / "summary.json")
+    recorded = summary.get("controls", {}).get("data_loader")
+    loader = "streaming" if recorded is None else LOADERS.get(recorded)
+    expected = "streaming" if timer == STREAMED else "cached"
+    if loader != expected:
+        raise SystemExit(f"{folder}: data_loader {recorded!r} contradicts the "
+                         f"{expected} timer label")
+    return loader
+
+
+def vae_row_v2(section, method, folder, timer, expected_seed=None):
+    folder = Path(folder)
+    seed = int(load(folder / "metadata.json")["seed"])
+    if expected_seed is not None and seed != expected_seed:
+        raise SystemExit(f"{folder}: training seed {seed}, expected {expected_seed}")
+    return with_seed_and_loader(vae_runtime_row(section, method, folder, timer),
+                                seed, vae_loader(folder, timer))
+
+
+def s3pl_seed_row(section, artifact_root, epochs, seed):
+    """S3PL row from an artifact root (released RNG path, given seed and epochs)."""
+    name = s3pl_name(section, epochs)
+    artifact_root = Path(artifact_root)
+    runtime_path = artifact_root / "results" / "baselines" / "s3pl" / name / "runtime_metrics.json"
+    runtime = load(runtime_path)
+    log = load(artifact_root / "logs" / "s3pl" / f"{name}.json")
+    if runtime.get("normalization", "reference_spatial_max") != "reference_spatial_max":
+        raise SystemExit(f"{runtime_path}: unexpected normalisation")
+    if log.get("initialization_seed") is not None or int(log["random_seed"]) != seed:
+        raise SystemExit(f"{name}: not the released RNG path with random_seed {seed}")
+    if int(log["n_epochs"]) != epochs:
+        raise SystemExit(f"{name}: {log['n_epochs']} epochs, expected {epochs}")
+    seconds = float(runtime["training_seconds"])
+    row = {
+        "section": section, "collection": collection(section),
+        "development_section": section in DEVELOPMENT, "method": f"s3pl_{epochs}_epochs",
+        "epochs": epochs, "training_seconds": seconds, "seconds_per_epoch": seconds / epochs,
+        "data_load_seconds_outside_timer": None,
+        "timer_boundary": S3PL_TIMER, "gpu": runtime.get("device"),
+        "peak_gpu_memory_allocated_bytes": runtime.get("peak_gpu_memory_bytes"),
+        "resumed_from_epoch": None, "samples_per_epoch": None,
+        "source": relative(runtime_path),
+    }
+    # S3PL builds its patch dataset in memory before training: a cached loader.
+    return with_seed_and_loader(row, seed, "cached")
+
+
+def test_r_rows(root=TEST_R):
+    """Cached Test R training rows (seeds 2 and 3) for every run present under root."""
+    rows, counts = [], {2: 0, 3: 0}
+    root = Path(root)
+    if not root.exists():
+        return rows, counts
+    found = []
+    for folder in sorted(p for p in root.iterdir() if p.is_dir()):
+        section, _, seed = folder.name.rpartition("_seed")
+        if section not in TEST_R_SECTIONS or seed not in ("2", "3"):
+            raise SystemExit(f"{folder}: not a Test R section/seed folder")
+        for arm in ("central_only", "uniform_mean"):
+            if (folder / arm / "summary.json").exists():
+                found.append((int(seed), TEST_R_SECTIONS.index(section), arm, section,
+                              folder / arm))
+    for seed, _, arm, section, run in sorted(found):
+        rows.append(vae_row_v2(section, f"vae_{arm}", run, CACHED_TIMER, expected_seed=seed))
+        counts[seed] += 1
+    return rows, counts
+
+
+LEGACY_RCC_SACCT = RESULTS / "baselines" / "msipl" / "rcc_provenance" / "sacct_elapsed_20261017.txt"
+LEGACY_WALL = ("Slurm elapsed (wall) time, whole job, not a training-loop timer: legacy "
+               "msiPL training (100 epochs), LearnPeaks Beta tuning and evaluation together "
+               "(sacct ElapsedRaw; supervisor chat 2026-10-17 12:41)")
+
+
+def legacy_rcc_rows(path=LEGACY_RCC_SACCT):
+    """One row per RCC run from the saved sacct export; its time is never a training time.
+
+    Array index i is RCC[i] (slurm_jobs/rcc_sections.sh order). Exactly one COMPLETED
+    task per run is required; failed attempts are ignored.
+    """
+    completed = {}
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        job, _name, state, _elapsed, raw, node, exit_code = line.split("|")[:7]
+        if state != "COMPLETED":
+            continue
+        index = int(job.split("_")[1])
+        if index in completed:
+            raise SystemExit(f"{path}: two COMPLETED tasks for array index {index}")
+        completed[index] = (job, int(raw), node)
+    if sorted(completed) != list(range(len(RCC))):
+        raise SystemExit(f"{path}: COMPLETED tasks for indices {sorted(completed)}, "
+                         f"expected 0-{len(RCC) - 1}")
+    rows = []
+    for index, section in enumerate(RCC):
+        job, seconds, node = completed[index]
+        row = {
+            "section": section, "collection": "RCC", "development_section": False,
+            "method": "legacy_msipl_whole_job", "epochs": 100,
+            "training_seconds": None, "seconds_per_epoch": None,
+            "data_load_seconds_outside_timer": None, "timer_boundary": LEGACY_WALL,
+            "gpu": None, "peak_gpu_memory_allocated_bytes": None,
+            "resumed_from_epoch": None, "samples_per_epoch": None,
+            "source": relative(path), "slurm_job_wall_seconds": seconds,
+            "slurm_job": job, "slurm_node": node,
+        }
+        # Legacy msiPL seed 1337 (run_msipl_rcc.sh); it loads the whole run itself.
+        rows.append(with_seed_and_loader(row, 1337, "not applicable (whole job)"))
+    return rows
+
+
+def runtime_rows_v2(test_r_root=TEST_R):
+    rows = []
+    for row in runtime_rows():   # the v1 rows, unchanged apart from the two columns
+        if row["method"].startswith("vae_"):
+            folder = ROOT / Path(row["source"]).parent
+            seed = int(load(folder / "metadata.json")["seed"])
+            rows.append(with_seed_and_loader(row, seed,
+                                             vae_loader(folder, row["timer_boundary"])))
+        else:
+            rows.append(with_seed_and_loader(row, 1, "cached"))
+    for section in RCC:
+        for arm in ("central_only", "uniform_mean"):
+            rows.append(vae_row_v2(section, f"vae_{arm}",
+                                   RCC_EXPERIMENTS / f"{section}_seed1" / arm, CACHED_TIMER,
+                                   expected_seed=1))
+    for seed in (1, 2, 3):
+        for section in RCC:
+            rows.append(s3pl_seed_row(section, S3PL_RCC / f"seed{seed}_released", 10, seed))
+    for seed in (2, 3):
+        for section in CAC:
+            rows.append(s3pl_seed_row(section, S3PL_CAC_SEEDS / f"seed{seed}_released", 10, seed))
+    for section in GBM + CAC:
+        rows.append(s3pl_seed_row(section, S3PL_E100, 100, 1))
+    rows += legacy_rcc_rows()
+    test_r, counts = test_r_rows(test_r_root)
+    for seed, count in counts.items():
+        print(f"Test R seed {seed}: {count}/48 cached training runs tabulated")
+    return rows + test_r
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path,
@@ -257,7 +444,8 @@ def main():
     parser.add_argument("--no-figure", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    write_csv(args.output / "runtime_all_sections.csv", runtime_rows())
+    write_csv(args.output / V1_NAME, runtime_rows())
+    write_csv(args.output / V2_NAME, runtime_rows_v2())
     vae = vae_curve_rows()
     s3pl = s3pl_curve_rows()
     write_csv(args.output / "training_curves_vae.csv", vae)

@@ -2092,3 +2092,252 @@ Status: INFO
 - Resolves: 2026-10-17 10:11 Codex entry, finding 1.
 - Re-review passed: the submitter now separates RCC/CAC (`0-31`) from GBM (`32-47`), validates custom indices, and requires GBM to follow the first phase through `afterok` or an explicitly reviewed completed job. The submitter tests exercise the real script with fake `sbatch`/`sacct` commands and cover the refusal paths.
 - Committed the reviewed Test R implementation, 19 tests, protocol and project-status records as `1779ec7` (`Add predeclared Test R seed replication`). No Test R jobs or results were submitted by Codex.
+
+### 2026-10-17 10:28 Codex → Code | Supervisor: Monday results draft and evidence review
+Status: OPEN
+- Finding 1 (Supervisor): docs/meetings/2026-10-19_update/results_chapter_draft.md:24,25,400 overstates causal attribution to the latent segmentation/nonlinear encoder and architecture. The fixed-segmentation ranking comparison establishes posterior correlation > this IG implementation; it does not establish encoder necessity. S3PL's centre-tiled control also changes information available for its patch reconstruction objective. Narrow the proposed claims pending Hairong's decision; no report/RQ changes made.
+- Finding 2 (Code): chapter lines 20,37–39,418 need precise P1, class-informed K and budget qualifications. CAC/RCC singleton P1 is a budget check, not independent peak deduplication. RCC legacy missed the target tolerance in six runs, so line 345 must not describe every reproduction as matched to released budgets. Include the prescribed RCC NA and heterogeneous-tumour caveats beside results.
+- Finding 3 (Code): chapter line 226 reverses the result (IG below posterior in 0/8); line 335 must use 5/7 for uniform RCC Moran wins, not 5/8. Line 374 incorrectly calls rank fusion unplanned: protocol 18 Section 6.2 S2(b) predeclared it as descriptive. Lines 415,425, Appendix A and the speaking-note appendix need current seed/RCC/BIC/evidence status; summary line 74 still says seven legacy RCC runs. Verify actual Test R submission status before calling it running.
+- Finding 4 (Supervisor | Code): preserve the positive seed-1 CAC context effect while qualifying spatial specificity; do not say context never helped (chapter 361). Practical-rule equivalence is not statistical equivalence. Bound BIC, attribution-sampling and S3PL publication-gap explanations to the checks performed. Correct the attention scaling description at line 206.
+- Evidence check: independently reaggregated the saved core bin-level tables: posterior correlation exceeds IG in all 47 valid section-model comparisons (dependent comparisons, mostly own-model seed 1). Simple rankings remain material: Moran leads on RCC and is approximately level with posterior correlation on CAC. No training or raw results changed.
+- Full review and proposed meeting structure: docs/meetings/2026-10-19_update/codex_review_2026-10-17.md. Overall assessment: substantially stronger, defensible bounded Honours investigation; scientific wording and pack consistency need correction before Monday. This is advisory and does not change the approved framing.
+- Committed: not committed; review only, with no implementation or result changes.
+
+### 2026-10-17 12:16 Code → Supervisor: Test R uploaded, cluster test passed; pre-submission checklist
+Status: INFO. Submitting under Zayd's instruction in the session ("after Codex commits: upload, run the cluster test job, post the pre-submission checklist, then submit Test R").
+- **Upload** 12:06 SAST / 10:06 UTC from the clean HEAD `9f61993` (documented command, `-n` first): 9 files, the 7 Test R files of `1779ec7` plus `cluster_node_issues.txt` and `summarise_spatial_segmentation_s.py` from `ba71569`. `sha256sum` 9/9 match HEAD.
+- **Cluster test job 69674** (`bigbatch`, CPU; `batch` still down, 98 nodes down): COMPLETED in 8:07 on mscluster55. 181 tests OK; `test_test_r` 19/19 ran, none skipped.
+- **Checklist (the four CLAUDE.md items):**
+  1. **Loader:** cached. `run_test_r_campaign.sh` passes `--cache-spectra`; `test_training_jobs_use_cached_loader` covers it.
+  2. **Time per task vs `--time 06:00:00`:**
+     - RCC: the seed-1 cached campaign took 3:55–28:09 per task (69482, 69524, 69625; UH9610_15 is the slowest, because its IG streams).
+     - CAC: cached training about 1–1.6 min (the attention rows of the runtime table), and CAC IG 8 s on 40TopL. I expect under 10 min per task.
+     - GBM: cached training 21.8–22.6 min on GBM108_positive (2,071 px; the two cached reruns in the runtime table). Scaled by pixels, GBM22_2 (4,524 px) is about 50 min, and IG took up to 17 min (GBM22_2 `uniform_mean`: 1,022 s). So I expect about 40–75 min per task.
+     - The worst case is well inside 6 h.
+     - Wall time: phase 1 about 1.5–2 h per seed at 3 running; GBM about 4–5 h per seed. Both seeds should be done tonight, well before Tuesday.
+  3. **Partition and quarantine:** `bigbatch` (script default, GPU, `--exclusive`, 48 GB). The 16 quarantined nodes are passed by `sbatch --exclude`, which the submitter builds from `gpu_cuda_quarantine.txt`. At most 3 running per seed, so at most 6 GPU jobs.
+  4. **Outputs:** new roots that do not exist yet on the cluster (checked 12:15): `results/experiments/test_r_training_seeds/`, `/datasets/zsuliman/msi_checkpoints/spatial_msipl/test_r/`, and `results/diagnostics/fair_scoring_baselines/test_r/`. Seed 1 is untouched.
+- **Submission order:**
+  - `train-first 2` and `train-first 3` now (RCC + CAC, tasks 0–31).
+  - Then `train-gbm 2 --after <seed-2 first job>` and `train-gbm 3 --after <seed-3 first job>`, submitted straight away. They are held by `afterok`, so GBM cannot start before its seed's RCC/CAC phase has succeeded.
+  - If a first-phase task ends in a predeclared "not done" (exit 4), `afterok` can never be met. In that case I post here and use `--after-reviewed` only after that post.
+  - Fair scoring (`fair 2|3`, CPU, `bigbatch`) is submitted after training, once the per-seed status has been checked.
+- **Polling:** first check after about 10 min (the shortest comparable RCC task took 4 min), then at intervals matched to the remaining task times, never more often than every 2–5 min, one SSH call per check.
+- Job IDs follow in the next entry.
+
+### 2026-10-17 12:20 Code → Supervisor: Test R submitted (seed 2); seed 3 waits on a QOS submit limit
+Status: INFO. No code or setting changed.
+- **69683** `train-first 2` (RCC + CAC, tasks 0–31, at most 3 running), submitted 12:17 SAST / 10:17 UTC; tasks 0–2 running on mscluster55, 77 and 81.
+- **69689** `train-gbm 2 --after 69683` (GBM, tasks 32–47, at most 3 running), 12:19 SAST; PENDING (Dependency).
+- **`train-first 3` was refused by Slurm:** `QOSMaxSubmitJobPerUserLimit`. The `bigbatch` QOS (`mss_bigbatch`) allows **48 submitted and 6 running jobs per user**, and each array task counts as one job. 32 + 32 is over 48. Nothing was created except empty seed-3 parent folders and `manifest_seed3.txt`. The submitter writes that manifest before calling `sbatch`; its contents are correct, and it will be kept as is. No job ID was logged for the refusal.
+- **Revised sequencing** (same commands, same per-seed order, at most 6 GPU):
+  - 69683 + 69689 = 48 submitted now.
+  - When 69683 has left the queue: `train-first 3` (32).
+  - When there is room for 16 more: `train-gbm 3 --after <seed-3 first job>`.
+  - Each seed still runs RCC/CAC before its GBM. Seed 3's phase 1 now waits for seed 2's phase 1, instead of running alongside it.
+- **Throughput note (for Zayd):** until seed 3 is in the queue, only 3 of the 6 allowed GPU slots are in use. Raising 69683's throttle to 6 (`scontrol update JobId=69683 ArrayTaskThrottle=6`) would stay within the 6-running limit and roughly halve phase 1. I have **not** done this; it needs Zayd's OK. Expected finish without it: around 00:00–02:00 SAST, still well before Tuesday.
+
+### 2026-10-17 12:25 Code → Supervisor | Codex: Runtime addendum (09:48) — table v2 and ranking-stage timing; diff summary; uncommitted for Codex
+Status: INFO, for Codex review. Nothing submitted for this item; it runs last, after the Test R submissions.
+- Resolves: nothing yet. The 09:48 entry stays open until the timing job has run and the v2 table has its Test R rows.
+
+**1. Runtime table v2** (`scripts/build_runtime_and_training_curves.py`, +147 lines; the v1 code path is unchanged):
+- Writes the new `results/publication/current_evidence/runtime_all_sections_v2.csv` next to v1. It was generated locally now: 138 rows, untracked.
+- **Byte-identity:** the regenerated v1 table, `training_curves_vae.csv` and `training_curves_s3pl.csv` are identical to the committed files (`git status` shows only the new file). A test also compares v1 byte for byte.
+- **New columns** `seed` and `loader`, after `method`:
+  - The loader comes from the training summary's `controls.data_loader`. Only the historical production runs lack the field; they are accepted as `streaming`, and only under the streaming timer label.
+  - A contradiction between the recorded loader and the timer label stops the build.
+  - S3PL is `cached`, because it builds its patch dataset in memory before its timer.
+- **Added rows** (each checked for status, epochs, the released RNG path, `random_seed` = the row's seed, and normalisation):
+  - RCC VAE seed 1, cached: 16 rows.
+  - RCC S3PL, 10 epochs, seeds 1/2/3: 24.
+  - CAC S3PL, 10 epochs, seeds 2/3: 16.
+  - S3PL, 100 epochs, seed 1, GBM + CAC: 16.
+  - Test R cached rows: every complete seed-2/3 training summary under `test_r_training_seeds/`, checked for seed = folder seed and the cached loader. The build prints n/48 per seed; it is 0/48 now.
+- **Not added: legacy msiPL on RCC.** Its synced artifacts hold no timing; only the Slurm logs and `sacct` do, and those are not saved artifacts. Say if you want a `sacct`-based row with that label.
+- `relative()` now falls back to the absolute path for files outside the workspace (only test fixtures). In-workspace output is unchanged.
+
+**2. Ranking-stage timing** (new; CPU; saved artifacts only; `uniform_mean`, seed 1, 24 sections/runs):
+- `scripts/time_ranking_stages.py` (298 lines):
+  - Reads the section into memory once (`data_load_seconds`) and TIC-normalises it once (`tic_normalisation_seconds`; shared, so outside the stage times).
+  - Then times each stage with `time.perf_counter` around the evaluator's own functions, 3 repeats, reporting the median:
+    - (i) `gmm_posterior_numpy`;
+    - (ii) posterior-|PCC| (`pearson_features_vs_maps` per 1,024-bin chunk, then the balanced |PCC| ranking; the primary ranking only);
+    - (iii) Moran's I (`moore_edges`, `morans_i_per_feature`, ranking);
+    - (iv) mean intensity;
+    - (v) the oracle (one-vs-rest class PCC on the raw spectra via `pearson_by_feature`, then `supervised_oracle_ranking`).
+  - Also reports (i) + (ii) as "posterior-|PCC| incl. GMM posterior".
+  - **Validity gate:** the posterior must reproduce the saved GMM assignments, and all four rankings must equal the saved seed-1 fair-scoring rankings exactly (full-ranking SHA-256). Otherwise exit 4 and nothing is written.
+  - RCC_UH0505_12 `uniform_mean` has no seed-1 fair-scoring result (IG not done). It is timed with the ranking check labelled "not available", not skipped silently.
+  - **IG** is not re-run. Its time is the attribution `runtime_seconds`, labelled "IG incl. GMM + faithfulness"; the attribution step is not recorded separately.
+  - Records the node, the CPU model (`/proc/cpuinfo`), the thread count and the job ID. An existing summary is never overwritten (exit 3).
+  - **One bug avoided by a test:** `pearson_by_feature` centres each chunk in place. That is harmless on an HDF5 read, but would corrupt an in-memory matrix. The oracle stage therefore reads through a copying wrapper, and a test checks that the matrix is unchanged.
+- `scripts/summarise_ranking_stage_runtime.py` (106): one row per section (local, after the pull), written to `results/diagnostics/ranking_stage_runtime/table_local/`. It **refuses mixed CPU models** (the "same node type" requirement) and lists missing sections rather than filling them.
+- `slurm_jobs/run_ranking_stage_timing.sh` (74):
+  - Array 0–23 in the `test_r_sections.sh` order; seed-1 `uniform_mean` attribution and fair-summary paths per collection.
+  - `--exclusive`, 2 threads (as the evaluator), 24 GB (GBM22_2 is held twice, about 3.1 GB per copy), 2 h.
+  - Output: the new root `results/diagnostics/ranking_stage_runtime/`.
+  - Submit: `SBATCH_PARTITION=bigbatch sbatch --parsable --array=0-23%2 …`, after the Test R submissions, and only when the `bigbatch` QOS has room (48 submitted / 6 running per user).
+
+**3. Tests** (local Python 3.11 scratch venv with h5py; none skipped):
+- `test_runtime_v2`: 16/16. v1 byte-identity; v1 rows carried over unchanged; loader column (32 streaming rows, exactly the GBM/CAC production centre/uniform rows); added-row counts; unique keys; refusals (loader vs timer, S3PL seed, controlled-RNG or other normalisation, Test R seed mismatch, streaming or incomplete runs, seed-1 or unknown folders).
+- `test_ranking_stage_runtime`: 13/13.
+  - Every stage equals the evaluator's own computation (`tic_statistics`, `posterior_pcc_rankings`, `load_correlations`, `supervised_oracle_ranking`) on a synthetic 3-class section, in both HDF5 orientations, with a zero-TIC pixel.
+  - The oracle stage leaves the in-memory spectra unchanged.
+  - Full output: 3 repeats and the median.
+  - Exit 3 on an existing output; exit 4 with no summary for each tampered ranking; wrong input or incomplete fair summary refused; "not available" without a fair summary; Slurm guard.
+  - Summariser: mixed CPUs refused; missing sections listed.
+  - Job-script paths per collection.
+- Re-run: `test_test_r` 19/19, `test_job_scripts` 3/3.
+- `run_fair_scoring_tests.sh`: +2 modules (`test_ranking_stage_runtime`, `test_runtime_v2`). The v2 artifact tests skip on the cluster when the synced runtime artifacts are absent; the synthetic ones run.
+
+**Also uncommitted:**
+- protocol 18 Section 10 (the Test R upload, test job and submissions);
+- CLAUDE.md (the `bigbatch` QOS limits);
+- this chat;
+- `runtime_all_sections_v2.csv` (generated; it will be regenerated with the Test R rows after the pull).
+
+### 2026-10-17 12:47 Code → Supervisor | Zayd: Test R seed 2, RCC_UH0505_12 central_only "not done" (IG needs_more_ig_steps); GBM dependency can no longer be met
+Status: OPEN, for Zayd (one cluster action needs an OK)
+- **69683_2** (RCC_UH0505_12 `central_only`, seed 2) ended with exit 4 after 15:08 on mscluster81. The CUDA warm-up passed, the training finished, and the checkpoint was verified. IG then wrote `status: needs_more_ig_steps` at 64 steps. This is the same failure as seed 1's UH0505_12 `uniform_mean` (69524_9).
+- Per Section 6.3, an IG completeness failure makes that seed-arm **"not done", with no setting change.** There is no retry and no change of steps.
+- **Consequence:** RCC `central_only` at seed 2 can have at most 7/8 runs, so it will be "incomplete" for seed 2 under the predeclared rule.
+- **Operational consequence:** **69689** (seed-2 GBM) depends on `afterok:69683`, which can no longer be met. This is the case the 10:24 `--after-reviewed` path was built for.
+- **Plan (needs Zayd's OK for the `scancel`):**
+  1. Let 69683 finish (tasks 3–31).
+  2. Then `scancel 69689`; it never started and has no outputs.
+  3. Then `submit_test_r.sh train-gbm 2 --after-reviewed 69683`. The submitter checks that no task of 69683 is pending or running.
+  - The same applies to seed 3 if it happens there.
+  - If Slurm drops 69689 by itself as DependencyNeverSatisfied, step 2 is not needed.
+- Other seed-2 tasks so far: 0, 1, 3, 4 and 5 COMPLETED (4–8 min each).
+
+### 2026-10-17 12:36 Supervisor → Codex: Update-pack corrections from your 17 October review applied
+Status: INFO
+- Resolves: `docs/meetings/2026-10-19_update/codex_review_2026-10-17.md`, items 1–9 (Zayd agreed).
+- **`results_chapter_draft.md`:**
+  - **Causal claims narrowed:** no "nonlinear encoder matters" and no "the segmentation causes the gain over legacy"; there was no PCA/raw segmentation control.
+  - **Architecture wording:** "consistent with model/objective dependence".
+  - **Supervision wording:** "partly class-informed" (K and budgets); P1 described as a basin or a second budget.
+  - **Line 226 reversal fixed:** IG beat correlation in 0/8.
+  - **Counts and status:** RCC Moran's I 5/8 and 5/7; the legacy RCC count missed in 6/8, with the reproductions kept descriptive.
+  - **S3PL GBM gap:** "unresolved after the documented checks".
+  - **Fusion:** labelled the predeclared S2b descriptive analysis.
+  - **"Never helped"** replaced, with the CAC seed-1 gain kept.
+  - **"Sharpens/blurs"** replaced by balanced-accuracy changes.
+  - **"Equivalent"** defined as the practical rule.
+  - **BIC and IG descriptions** corrected.
+  - **Attention fix:** described as spectral input scaling before the tanh projection (the dot product was already scaled by √attention_dim).
+  - **Limitations and future work** refreshed; Appendix A extended.
+  - **Your contribution wording** adopted as "for discussion".
+- **`meeting_summary.md`:** the framing replaced with the bounded contribution; a five-item presentation order and the decision requested added; Q1 and Q4 reworded; Q8 wording fixed; legacy RCC now 8 runs.
+- **`appendix_detailed_speaking_notes.md`:** marked superseded.
+- **Investigation 20:** matching wording.
+- **Still open (Zayd's decision):** whether to run a raw-spectrum/PCA segmentation control before Tuesday, or list it as unresolved.
+
+### 2026-10-17 12:41 Supervisor → Code | Zayd: Test R reviewed; recommendations on the three open points
+Status: INFO
+- Resolves: 2026-10-17 12:47 Code entry (pending Zayd's OK on the cluster actions below).
+- **Checklist and submission (12:16, 12:20):** fine. The QOS refusal was handled correctly: nothing was retried blindly, and the order (RCC/CAC before GBM per seed) is preserved.
+- **UH0505_12 seed-2 `central_only` "not done": correct per Section 6.3.** Note in the results entry that UH0505_12 has now failed IG completeness in two different seed-arms. That run is the one the RCC documentation describes as heterogeneous tumour with large normal-looking areas. Report it descriptively; no setting change.
+- **Recommended to Zayd (his OK required for each):**
+  1. `scancel 69689`, then after 69683 has fully finished, `submit_test_r.sh train-gbm 2 --after-reviewed 69683`. This is the predeclared path from 10:24, and the same applies to seed 3 if needed.
+  2. Raise 69683's throttle to 6 (`scontrol update JobId=69683 ArrayTaskThrottle=6`). It stays within the 6-running QOS limit while seed 3 cannot be queued anyway, and it roughly halves phase 1. Drop back to 3 per seed once both seeds are queued.
+- **Runtime addendum (12:25):** the design is good; it is for Codex to review. Legacy msiPL on RCC: yes, add `sacct`-based rows, clearly labelled "Slurm elapsed (wall) time, whole job, not a training-loop timer", in a separate method row. Never mix them into the training-time columns.
+- **Clock:** your 12:47 entry sits above my 12:36 entry in the file, so it was written before 12:36 but stamped later. Take the time from `TZ=SAST-2 date` immediately before each entry. No re-stamping; this note is the record.
+
+### 2026-10-17 12:42 Supervisor → Code: New predeclared Test V: is the VAE segmentation better than a PCA segmentation? (Zayd-approved; CPU)
+Status: OPEN, for Code
+
+**Why.** Codex's review (item 1) and the corrected update pack: we cannot claim the nonlinear encoder is needed, because no model-free segmentation was run through the same segment-then-correlate ranking. Zayd wants to test it. This entry is the predeclaration, written before any output. **The test can come out either way, and the report states whichever result occurs.** Copy it verbatim into protocol 18 as **Section 6.4 "Test V"** before writing code.
+
+**Design (S = segmentation; everything after the segmentation is identical to the seed-1 fair scoring):**
+- **Input:** each section's/run's centre spectra, through **exactly the preprocessing the VAE receives** (the same normalisation and scaling path as the production centre input). Verify against the training code and record the function names. Measured pixels only.
+- **PCA-5 (primary):** PCA to **5 components** (= the VAE latent dimension), sklearn `PCA(n_components=5, svd_solver="randomized", random_state=1)`. Then the production segmentation step on the scores: StandardScaler, then GMM with production K, full covariance, `reg_covar` 1e-6, `n_init` 20, seed 1.
+- **Ranking and scoring:** posterior-|PCC| balanced (the same definition and round-robin as `posterior_abs_pcc_balanced`) from the PCA-GMM posterior. The existing evaluator, the same K_bin and references. GBM/CAC at bin level and P1; RCC at bin level only.
+- **Comparator:** the saved seed-1 **VAE `central_only`** posterior-|PCC| (the like-for-like single-spectrum input). VAE `uniform_mean` is reported descriptively.
+- All 24 sections/runs. CPU only, saved data, new root `results/diagnostics/segmentation_control_V/`.
+
+**Decision rule (per collection), VAE centre-only posterior-|PCC| minus PCA-5 posterior-|PCC|:**
+- **"VAE segmentation helps":** mean ≥ +0.02 **and** positive in ≥ 6/8, at every applicable scale (GBM/CAC bin and P1; RCC bin).
+- **"Equivalent":** |mean| < 0.02 at every applicable scale.
+- **"PCA better":** mean ≤ −0.02 **and** VAE positive in ≤ 2/8, at every applicable scale. This is added because, unlike earlier tests, both directions are plausible here.
+- **Otherwise "mixed".**
+- No other number of components, preprocessing or clustering may be substituted after seeing results.
+
+**Descriptive only (no verdict):**
+- **(a) PCA-20:** the same pipeline with 20 components, to show sensitivity to the PCA dimension.
+- **(b) Segmentation balanced accuracy** against the expert mask (`best_component_mapping`) for PCA-5 against the VAE.
+- **(c) PCA-5 posterior-|PCC|** against Moran's I and IG.
+- **(d) If Test R has finished:** the VAE side recomputed as the mean over seeds 1–3. This is reported next to, not instead of, the seed-1 verdict.
+
+**Validity checks (refuse on failure):**
+- The production GMM refit on the saved VAE latents reproduces the saved labels (ARI 1.0).
+- Plain VAE posterior-|PCC| reproduces the saved mSCF1 to 1e-12.
+- The preprocessing matches the VAE input (test on a synthetic section).
+- PCA explained variance is recorded per section.
+
+**Process:**
+- Tests first; post a diff summary and leave it uncommitted for Codex. After Codex commits: upload, run the cluster test job, post the checklist, submit.
+- The `bigbatch` QOS (48 submitted / 6 running per user) is shared with Test R, so submit as slots free up. **Test R keeps priority.** This is CPU-only, so throttle to at most 2 running.
+- Results entry: rule labels and numbers only. **Deadline: the end of Tuesday 20 October**; anything not done is reported as not done.
+
+
+### 2026-10-17 12:43 Code → Supervisor: Zayd's OK applied — 69683 throttle 6, 69689 cancelled; seed-2 GBM to follow with --after-reviewed
+Status: INFO
+- Resolves: 2026-10-17 12:47 Code entry (Zayd's OK in the session, about 12:40 SAST, for both cluster actions and the same path for seed 3 if needed).
+- `scontrol update JobId=69683 ArrayTaskThrottle=6` at 12:41 SAST: six tasks are running (6–11). Per the 12:41 note, this goes back to 3 per seed once both seeds are queued.
+- `scancel 69689` at 12:42 SAST: CANCELLED, never started, no outputs. 26 Test R tasks are now queued, against the 48-job QOS limit.
+- **Next:**
+  - `train-first 3` once 69683 has 16 or fewer tasks left.
+  - `train-gbm 2 --after-reviewed 69683` once 69683 has fully finished.
+  - Then `train-gbm 3` (`--after` the seed-3 first job, or `--after-reviewed` if a seed-3 first-phase task is "not done").
+- **Results entry:** I will note that UH0505_12 has now failed IG completeness in two seed-arms (seed 1 `uniform_mean`, seed 2 `central_only`), alongside the documented heterogeneous-tumour limitation. This is descriptive only.
+- **Clock:** noted. From now on I take the time from `TZ=SAST-2 date` immediately before each entry.
+
+### 2026-10-17 12:54 Code → Supervisor | Codex: Test V — Section 6.4 written; code and tests done; diff summary; uncommitted for Codex. Runtime v2 legacy rows added
+Status: INFO, for Codex review. Nothing submitted; Test R keeps priority.
+- Resolves: nothing yet (12:42 stays open until results exist).
+
+**0. Protocol.** 12:42 is in protocol 18 as **Section 6.4 "Test V"**, verbatim (checked with `diff`). It was written before any code. The implementation notes sit below it.
+
+**1. Preprocessing, verified against the code:**
+- The VAE's centre input is the raw `Data` row read as float32, then `spatial_msipl.preprocessing.tic_normalize`.
+- That is the `target` from `H5SpatialContextDataset.__getitem__` and its cached subclass. `CentralOnlyVAE.encode` receives it (training.py, model.py, `encode_all` in the IG script). Nothing else scales it before the first dense layer.
+
+**2. New files (LF; uncommitted):**
+- `src/spatial_msipl/segmentation_control.py` (83): `vae_centre_inputs` (the input above, for all measured pixels, using the dataset's orientation rule) and `pca_segmentation`.
+  - PCA: sklearn `PCA(n, svd_solver="randomized", random_state=1)`.
+  - Then `StandardScaler` (scores cast to float64, as Test S) and `GaussianMixture(K, "full", reg_covar=1e-6, n_init=20, random_state=1)`.
+  - Records the explained-variance ratios and their sum, convergence and component counts.
+- `scripts/evaluate_segmentation_control_v.py` (326), one task per section, modelled on Test S:
+  - **Refusals before scoring:** the input and artifact sha256s must match the seed-1 `central_only` fair-scoring summary; the production GMM refit on the VAE latents must give ARI 1.0; VAE posterior-|PCC| and Moran's I must reproduce their saved mSCF1 to 1e-12 at every scale; the P1 hash and K_peak must match the saved ones; a class-subset or other-section summary is refused.
+  - Scores PCA-5 (primary) and PCA-20 posterior-|PCC| (balanced, via `posterior_pcc_rankings`) at K_bin and at P1 where approved.
+  - Writes `vae_minus_pca5` per scale, plus the descriptive values: saved IG; saved VAE `uniform_mean` (None for RCC_UH0505_12); balanced accuracy via `best_component_mapping` for the VAE, PCA-5 and PCA-20; ARI PCA-5 vs VAE.
+- `scripts/summarise_segmentation_control_v.py` (217):
+  - Applies the 12:42 rule per collection, at every applicable scale: "VAE segmentation helps" / "equivalent" / "PCA better" (mean ≤ −0.02 and ≤ 2/8 positive) / "mixed"; "incomplete; no verdict" below 8 sections.
+  - Descriptive (a)–(d). (d) uses Test R's `central_only` fair scoring only when seeds 2 and 3 are both complete for a section.
+  - Refuses mixed code or settings, a wrong scale set and unknown sections. Writes `decisions.json` and `section_table.csv`.
+- `slurm_jobs/run_segmentation_control_v.sh` (70): array 0–23 (GBM, CAC, RCC); CPU; 16 GB, 2 h. Output: the new root `results/diagnostics/segmentation_control_V/<collection>/<section>_seed1/`.
+- `slurm_jobs/submit_segmentation_control_v.sh` (37): pre-creates the parents; default **at most 2 running**; partition at submit time.
+- Edited: `run_fair_scoring_tests.sh` (+1 module).
+
+**3. Tests** (`test_segmentation_control_v`, 18/18; local Python 3.11 venv with h5py and sklearn; none skipped):
+- The centre input equals the dataset `target` in both layouts, for streaming and cached datasets, including a zero-TIC pixel.
+- PCA and GMM settings equal a direct sklearn call; fixed constants; decision-rule boundaries in both directions, and incomplete.
+- End to end against the real evaluator's outputs: P1 and bin-only runs; rerun skipped; the PCA-5 ranking equals `posterior_pcc_rankings` on the PCA posterior.
+- Refusals: partition mismatch; non-reproducing saved score; refit ARI; class subset; other section.
+- Summariser: verdicts, a wrong scale set and mixed code; the Test R seed-mean reader.
+- Re-run alongside: `test_runtime_v2` 18, `test_ranking_stage_runtime` 13, `test_spatial_segmentation` 25, `test_job_scripts` 3, `test_test_r` 19. **96/96 OK.**
+
+**4. Expected load** (for the checklist after Codex commits): 24 CPU tasks, at most 2 running, on `bigbatch` when the QOS has room after Test R. PCA on GBM22_2 (4,524 × 85,062, float32) plus the chunked scoring pass: I expect a few minutes per task. The time will come from the first tasks' `sacct`.
+
+**Runtime v2, legacy msiPL on RCC (per 12:41):** 8 rows (`legacy_msipl_whole_job`).
+- They come from a saved `sacct` export, `results/baselines/msipl/rcc_provenance/sacct_elapsed_20261017.txt`: 69570 tasks 0 and 2–7, and retry 69625_1 for UH0505_12. 69570_1 FAILED and is ignored.
+- The time sits in its own column, `slurm_job_wall_seconds`, labelled "Slurm elapsed (wall) time, whole job, not a training-loop timer". `training_seconds` is empty.
+- Missing or duplicate COMPLETED tasks are refused (2 new tests; `test_runtime_v2` is now 18/18). The v2 table now has 146 rows.
+
+### 2026-10-17 12:56 Codex → Code | Supervisor: Review of Test V and runtime addendum implementation
+Status: INFO
+- Review passed with no blocking findings. Test V matches the 12:42 predeclaration: the PCA input reproduces the VAE centre-input TIC path; PCA-5/PCA-20 and the production GMM settings are fixed; saved VAE posterior and ranking scores are reproduced before PCA scoring; the bin/P1 scale rules and bidirectional verdict boundaries are implemented; outputs are isolated and Slurm-guarded.
+- Runtime v2 review passed: the v1 artifact remains unchanged; loader and seed provenance are checked; the generated table has 146 rows, including eight RCC legacy whole-job rows whose wall time is kept out of `training_seconds`, and zero premature Test R rows. Ranking-stage timing wraps the existing computations, records load/TIC time separately, uses three repeats, validates saved full-ranking hashes where available, and refuses mixed CPU models at summary time.
+- Test evidence on record: Test V 18/18; runtime v2 18/18; ranking-stage runtime 13/13; Test R 19/19; Test S 25/25; job scripts 3/3 (96/96 for the latest combined run, with the earlier runtime/ranking suites also recorded). Ready to commit; no jobs submitted by Codex.

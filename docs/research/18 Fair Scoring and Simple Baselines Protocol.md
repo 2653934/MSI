@@ -429,6 +429,58 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
   - the seed-1 GBM/CAC models were trained with the streaming loader (September); seeds 2 and 3 use the cached loader, validated equivalent in investigation 10 (identical loss histories and final tensors);
   - the seed-1 GBM `uniform_mean` attributions are IG `attribution_version` 1 (before the 20 September refactor `9f7408f`, which added the centre-only path and relabelled `valid_pilot` as `valid`); all other seed-1 attributions and all seed-2/3 attributions use version 2.
 
+### 6.4 Test V: VAE segmentation vs a PCA segmentation (supervisor chat 17 October 12:42, Zayd-approved; predeclared before any output exists)
+
+The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-17 12:42 Supervisor → Code: New predeclared Test V". It was written into this protocol on 17 October before any Test V code was written or run. Later notes are added below it, never inside it.
+
+**Why.** Codex's review (item 1) and the corrected update pack: we cannot claim the nonlinear encoder is needed, because no model-free segmentation was run through the same segment-then-correlate ranking. Zayd wants to test it. This entry is the predeclaration, written before any output. **The test can come out either way, and the report states whichever result occurs.** Copy it verbatim into protocol 18 as **Section 6.4 "Test V"** before writing code.
+
+**Design (S = segmentation; everything after the segmentation is identical to the seed-1 fair scoring):**
+- **Input:** each section's/run's centre spectra, through **exactly the preprocessing the VAE receives** (the same normalisation and scaling path as the production centre input). Verify against the training code and record the function names. Measured pixels only.
+- **PCA-5 (primary):** PCA to **5 components** (= the VAE latent dimension), sklearn `PCA(n_components=5, svd_solver="randomized", random_state=1)`. Then the production segmentation step on the scores: StandardScaler, then GMM with production K, full covariance, `reg_covar` 1e-6, `n_init` 20, seed 1.
+- **Ranking and scoring:** posterior-|PCC| balanced (the same definition and round-robin as `posterior_abs_pcc_balanced`) from the PCA-GMM posterior. The existing evaluator, the same K_bin and references. GBM/CAC at bin level and P1; RCC at bin level only.
+- **Comparator:** the saved seed-1 **VAE `central_only`** posterior-|PCC| (the like-for-like single-spectrum input). VAE `uniform_mean` is reported descriptively.
+- All 24 sections/runs. CPU only, saved data, new root `results/diagnostics/segmentation_control_V/`.
+
+**Decision rule (per collection), VAE centre-only posterior-|PCC| minus PCA-5 posterior-|PCC|:**
+- **"VAE segmentation helps":** mean ≥ +0.02 **and** positive in ≥ 6/8, at every applicable scale (GBM/CAC bin and P1; RCC bin).
+- **"Equivalent":** |mean| < 0.02 at every applicable scale.
+- **"PCA better":** mean ≤ −0.02 **and** VAE positive in ≤ 2/8, at every applicable scale. This is added because, unlike earlier tests, both directions are plausible here.
+- **Otherwise "mixed".**
+- No other number of components, preprocessing or clustering may be substituted after seeing results.
+
+**Descriptive only (no verdict):**
+- **(a) PCA-20:** the same pipeline with 20 components, to show sensitivity to the PCA dimension.
+- **(b) Segmentation balanced accuracy** against the expert mask (`best_component_mapping`) for PCA-5 against the VAE.
+- **(c) PCA-5 posterior-|PCC|** against Moran's I and IG.
+- **(d) If Test R has finished:** the VAE side recomputed as the mean over seeds 1–3. This is reported next to, not instead of, the seed-1 verdict.
+
+**Validity checks (refuse on failure):**
+- The production GMM refit on the saved VAE latents reproduces the saved labels (ARI 1.0).
+- Plain VAE posterior-|PCC| reproduces the saved mSCF1 to 1e-12.
+- The preprocessing matches the VAE input (test on a synthetic section).
+- PCA explained variance is recorded per section.
+
+**Process:**
+- Tests first; post a diff summary and leave it uncommitted for Codex. After Codex commits: upload, run the cluster test job, post the checklist, submit.
+- The `bigbatch` QOS (48 submitted / 6 running per user) is shared with Test R, so submit as slots free up. **Test R keeps priority.** This is CPU-only, so throttle to at most 2 running.
+- Results entry: rule labels and numbers only. **Deadline: the end of Tuesday 20 October**; anything not done is reported as not done.
+
+**Notes added after the predeclaration (17 October, before any Test V output existed):**
+- **Preprocessing, verified against the code:**
+  - The VAE's centre input is the raw `Data` row read as float32 and passed through `spatial_msipl.preprocessing.tic_normalize`. That is the `target` returned by `H5SpatialContextDataset.__getitem__` (and its cached subclass); `CentralOnlyVAE.encode` receives it, and `run_spatial_msipl_gmm_integrated_gradients.encode_all` uses the same tensor.
+  - No further scaling is applied before the first dense layer.
+  - `segmentation_control.vae_centre_inputs` reproduces this for all measured pixels. A test checks it is element-for-element equal to the dataset's `target`, in both HDF5 layouts, for the streaming and the cached dataset.
+- **GMM:**
+  - `reg_covar` 1e-6 is sklearn's default and the production value (the production call does not set it).
+  - The PCA scores are cast to float64 before `StandardScaler`, as in Test S's `fit_gmm`.
+  - n_init 20 and seed 1 are fixed constants, not read from the section.
+- **Comparator and references:** the seed-1 `central_only` fair-scoring summaries (`with_approved_partitions` for GBM/CAC, `rcc/bin_level_only` for RCC).
+  - They supply K_bin, P1 and the input and artifact hashes.
+  - They also supply the descriptive IG values. VAE `uniform_mean` is read from the matching `uniform_mean` summary; RCC_UH0505_12 has none (IG not done), so its value is None.
+- Moran's I is also checked to reproduce its saved mSCF1 to 1e-12, as in Test S.
+- **(d)** reads Test R's `central_only` fair-scoring results when both seeds 2 and 3 are complete for a section; otherwise it is left empty.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -852,6 +904,13 @@ A test rebuilds the IG matched groups from these files.
                 - RCC `central_only` "equivalent" (bin −0.012, 5/8);
                 - RCC `uniform_mean` "incomplete; no verdict (7/8 runs)" (−0.023, 4/7).
                 - S2 is descriptive; see the supervisor chat entry of 09:17.
+            - **Test R (Section 6.3; supervisor chat 09:45, 09:59, 10:11, 10:24, 10:26):** code committed by Codex as `1779ec7` (record `9f61993`).
+              - **Upload** 12:06 SAST / 10:06 UTC (local → cluster, documented command, `-n` first, from the clean HEAD `9f61993`): 9 files (the 7 Test R files from `1779ec7`, plus `cluster_node_issues.txt` and `summarise_spatial_segmentation_s.py` from `ba71569`); `sha256sum` 9/9 match HEAD.
+              - **Cluster test job 69674** (`bigbatch`, CPU; `batch` still down): COMPLETED in 8:07 on mscluster55, 181 tests OK, `test_test_r` 19/19 run (none skipped).
+              - Checklist posted (chat 12:16). **69683** `train-first 2` submitted 12:17 SAST / 10:17 UTC (tasks 0–31, at most 3 running). **69689** `train-gbm 2 --after 69683` submitted 12:19 SAST (tasks 32–47, `afterok`).
+              - `train-first 3` was refused by Slurm (`QOSMaxSubmitJobPerUserLimit`: the `mss_bigbatch` QOS allows 48 submitted and 6 running jobs per user, counting each array task). Only empty seed-3 parent folders and `manifest_seed3.txt` (correct contents) were left behind; no job was created. Seed 3 is submitted once seed 2's first phase has left the queue (chat 12:20).
+              - **69683_2** (RCC_UH0505_12 `central_only`, seed 2): exit 4 after 15:08. Training and the checkpoint check passed; IG `needs_more_ig_steps` at 64 steps. Under Section 6.3 this seed-arm is **"not done"**, with no setting change. As a result, 69689's `afterok` can no longer be met; the plan is in the chat entry headed 12:47, actually posted 12:35 SAST (`scancel 69689`, then `--after-reviewed`, once Zayd has OK'd it).
+              - Zayd's OK (session, about 12:40 SAST; supervisor recommendation 12:41): `scontrol update JobId=69683 ArrayTaskThrottle=6` at 12:41 SAST, until seed 3 is queued; `scancel 69689` at 12:42 SAST (CANCELLED, never started). Seed-2 GBM will be resubmitted with `--after-reviewed 69683` once 69683 has finished; seed 3 follows the same path if needed.
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 
