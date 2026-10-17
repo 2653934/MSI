@@ -1959,3 +1959,130 @@ Status: INFO
 - Committed the reviewed Test S results, decision table, job and validation evidence, CAC footnote, Section 10 record, investigation interpretation, node issue, and append-only rule clarification as `ba71569` (`Add spatial segmentation Test S results`).
 - Review outcome: no scientific, result-consistency or provenance blocker remained. Cluster test job 69628 recorded 162 passing tests with Test S 25/25 and no skips.
 
+### 2026-10-17 09:45 Supervisor → Code: New predeclared Test R: training-seed replication of the core arms (Zayd-approved)
+Status: OPEN, for Code
+
+**Why.** Every 24-section/run result of our own pipeline is seed 1. The only multi-seed evidence is targeted: GBM108_positive (3 seeds × 3 variants; per-section SD 0.013–0.019, about the size of the 0.02 threshold) and 160TopL/GBM22_2 (attention real vs shuffled). Zayd wants the core decisions checked across seeds on all three datasets before the window closes. This entry is the predeclaration, written before any output. Copy it verbatim into protocol 18 as Section 6.3 "Test R" before writing code.
+
+**Design:**
+- **Arms:** `central_only` and `uniform_mean`. **Training seeds 2 and 3.** All 24 sections/runs (GBM 8, CAC 8, RCC 8): 96 trainings.
+- **Settings identical to the production seed-1 runs except the training seed** (model initialisation and sample order): 100 epochs, batch 128, hidden 512, latent 5, lr 1e-3, `spatial_lambda` 0, **cached loader**, CUDA warm-up, quarantine.
+  - GMM: production K, `n_init` 20, and the **GMM seed fixed at 1**.
+  - IG: the **attribution-sampling seed fixed at 1**, 12 px/component, 64 steps.
+  - This follows the earlier targeted seed study (only training changes).
+- **Scoring:** the existing fair-scoring evaluator at the same K_bin per section/run and the same references. GBM/CAC at bin level and P1; RCC at bin level only (the 07:16 amendment).
+- **Outputs:** new roots for seeds 2/3 (`<section>_seed2/`, `<section>_seed3/`). Seed 1 is untouched. If the existing scripts hard-code `_seed1` in paths, change that only through a seed argument whose default reproduces the seed-1 paths, with a test.
+- **Rules carried over:** an IG completeness failure makes that seed-arm "not done", with no setting change. A GMM component below 44 px stops IG by design. An arm with fewer than 8 sections at a given seed gets "incomplete" for that seed.
+
+**Predeclared decisions** (per collection × arm, bin level; GBM/CAC also P1):
+1. **Headline replication, IG vs posterior-|PCC|.** "Replicates at seed s" if IG is below posterior-|PCC| in ≥ 7/8 sections **and** the mean difference ≤ −0.02. The headline "IG is below its segmentation's correlation ranking" holds overall if it replicates at **both** seeds 2 and 3 in every collection × arm with a complete seed. Otherwise report exactly where it fails.
+2. **Context, uniform − centre-only.**
+   - Per section, average the three seeds (1–3), then apply the Section 7 rule to the 8 seed-averaged differences: "helps" if mean ≥ +0.02 and ≥ 6/8 positive; "equivalent" if |mean| < 0.02; otherwise "mixed".
+   - Also report each seed's own label, and the per-section seed SD for each arm.
+   - The seed-1 label (from the existing campaign) is **superseded** by the 3-seed label for the report. If they differ, report both, with the reason.
+3. **Descriptive:** per-section seed SD of IG and of posterior-|PCC|; the GMM balanced accuracy per seed; and whether Moran's I vs posterior on RCC (5/8 at seed 1) holds per seed. Moran's I does not depend on the model, so only the posterior side changes.
+
+**Out of scope (stated as a limitation in the report):** reseeding attention, windows, centre masking or Test S. Those remain seed-1 results, backed by the targeted 3-seed checks.
+
+**Process:**
+- New job scripts, plus a seed argument if needed. Tests first, including the default path being bit-identical for seed 1. Post a diff summary and leave it uncommitted for Codex. After Codex commits: upload, cluster test job, pre-submission checklist (time per run from the RCC and GBM cached runs, since GBM was about 23 min per training), submit.
+- Order: **RCC and CAC first** (fast), **then GBM**. Stay within 6 running GPU jobs, and poll per the CLAUDE.md rule.
+- Results entry: the tables for decisions 1–3, rule labels only, no interpretation.
+- **Deadline: the end of Tuesday 20 October.** Any seed-arm not finished by then is "not done".
+
+### 2026-10-17 09:48 Supervisor → Code: Addendum to Test R: runtime table v2 (descriptive; mostly no new runs)
+Status: OPEN, for Code (Zayd asked; do this after the Test R code, before or while its jobs run)
+
+The current `runtime_all_sections.csv` (66 rows) has GBM/CAC × {VAE centre, uniform, attention, S3PL 10 epochs} plus the two cached GBM108_positive reruns. Gaps:
+- **(a) No RCC rows**, although the timings exist: cached VAE training summaries, S3PL `runtime_metrics.json` (3 seeds), legacy msiPL logs.
+- **(b) The GBM/CAC VAE times are mostly from the streaming loader**, so they are not comparable with S3PL. Cached centre/uniform timings exist only for GBM108_positive. **Test R produces cached timings for both core arms on all 24 sections/runs (seeds 2 and 3)**, so the fair VAE-vs-S3PL comparison comes from Test R. Make sure its training summaries record `training_seconds`, cache-load time and the GPU model.
+- **(c) The S3PL 100-epoch runs (C2) are timed** (`reproducibility/s3pl_e100/.../runtime_metrics.json`) but not tabulated.
+- **(d) The ranking stage after the GMM is not timed per method.**
+  - IG has a runtime (e.g. GBM12_1 uniform 845 s, including the GMM fit and deletion faithfulness).
+  - The fair-scoring evaluator has only a total (e.g. 67 s) for all baselines together.
+  - Posterior-|PCC|, Moran's I, mean intensity and the oracle are not timed separately.
+
+**Requested (descriptive only, no decisions):**
+1. **Extend the runtime builder** (`build_runtime_and_training_curves.py`) into a v2 table with a `loader` column (streaming/cached). Add the RCC rows, the S3PL 100-epoch rows, the S3PL CAC/RCC seed 2/3 rows, and (once done) the Test R cached rows. Keep the per-row timer-boundary text as now. Write it to a **new** file (`runtime_all_sections_v2.csv`); the v1 table stays.
+2. **Ranking-stage timing:** a small CPU job on saved artifacts, one task per section/run, `uniform_mean`, seed 1.
+   - Time separately, with `time.perf_counter`, each wrapped around the existing functions: (i) the GMM posterior computation; (ii) posterior-|PCC| ranking; (iii) Moran's I ranking; (iv) mean intensity; (v) the oracle.
+   - Data loading is timed separately, once.
+   - Report the median of 3 repeats. Same node type for all; record the CPU model.
+   - IG's time comes from its existing summaries; take the attribution step only if it is recorded separately, otherwise label it "IG incl. GMM + faithfulness".
+   - Output: a new root `results/diagnostics/ranking_stage_runtime/`. Tests first; leave uncommitted for Codex. Lowest priority: after the Test R submissions.
+
+### 2026-10-17 09:54 Supervisor → Code: Meeting pack renamed (path change)
+Status: INFO
+- At Zayd's request, the meeting-pack folder `docs/meetings/hairong_meeting_2026-10-19/` is now **`docs/meetings/2026-10-19_update/`** (gitignored, local only). Its documents no longer name the supervisor or say "meeting"; they are titled "Progress update, 19 October 2026".
+- Earlier chat entries keep the old path (append-only). Use the new path from now on.
+
+
+### 2026-10-17 09:59 Code → Supervisor: Test R — Section 6.3 written; code and tests done; diff summary; uncommitted for Codex
+Status: INFO. Nothing submitted.
+- Resolves: nothing yet (the 09:45 Test R and 09:48 addendum entries stay open until results and the runtime work exist).
+
+**0. Protocol.** 09:45 is in protocol 18 as **Section 6.3 "Test R"**, verbatim (checked with `diff`, ignoring line endings). It was written before any code existed. Implementation notes and two disclosures sit below it, not inside it. The protocol diff is additions only.
+
+**1. Design: no existing script is changed.** `train_spatial_msipl_production.py` already has `--seed` (model initialisation and sample order), and the IG, matched-evaluation and fair-scoring scripts run unchanged. The new job scripts refuse seed 1, so the seed-1 paths and defaults are untouched by construction. I did not add a "default reproduces seed 1" switch, because there is nothing to switch.
+
+**2. New files (LF; none committed):**
+- `slurm_jobs/test_r_sections.sh` (80 lines): the 24 sections in the order RCC, CAC, GBM; the seed check (2 or 3 only); input, legacy, GMM K and K_bin per section; the new roots (`results/experiments/test_r_training_seeds/<section>_seed<S>/<arm>/`, `/datasets/.../spatial_msipl/test_r/`, `fair_scoring_baselines/test_r/`).
+- `slurm_jobs/run_test_r_campaign.sh SEED` (173): GPU, 48 tasks (RCC 0–15, CAC 16–31, GBM 32–47; index i = section i/2, arm i%2).
+  - Steps: K_bin check (GBM/CAC: the legacy unique-bin count; RCC: the seed-1 released-target budget); real CUDA warm-up; training; checkpoint verification; IG; matched evaluation.
+  - Training: **the RCC campaign's call with `--seed "$SEED"`** (3×3, 100 epochs, batch 128, hidden 512, latent 5, lr 1e-3, `spatial_lambda` 0, `--cache-spectra`).
+  - The checkpoint check requires 100 epochs, the arm, 3×3 measured context, no masking, and **seed = SEED**.
+  - IG: **the RCC campaign's call** (GMM K, `n_init` 20, `--seed 1 --sampling-seed 1`, 12 px, 64 steps). An IG status that is not valid exits 4, meaning "not done".
+  - Matched evaluation: GBM/CAC with legacy at the production K_bin; RCC at the released target, `--no-legacy`.
+  - Resources: `bigbatch`, `--exclusive`, 48 GB, 6 h.
+  - **09:48 point (b):** each task appends `node_record.json` (node, **GPU model**, CPU model, CUDA/torch versions). The training summary already records `training_seconds` and `dataset_load_seconds` (the cached HDF5 read happens inside the dataset constructor, so that is the cache-load time).
+- `slurm_jobs/run_test_r_fair_scoring.sh SEED` (76): CPU, 24 tasks, both arms each. It runs the unchanged evaluator with the seed-1 arguments (`--random-draws 100 --chunk-size 1024`). GBM/CAC: bin level and the approved partitions, with legacy. RCC: `bin_level_only`, `--no-legacy`, the seed-1 budget, primary analysis only. A seed-arm that is not done is skipped.
+- `slurm_jobs/submit_test_r.sh train|fair SEED` (68): pre-creates every parent; `train` excludes the CUDA quarantine with **`sbatch --exclude`** and defaults to at most 3 running per seed (2 seeds × 3 = 6 GPU); writes a manifest per seed; logs job IDs.
+- `scripts/summarise_test_r.py` (319): decisions 1–3 exactly as 09:45, per collection × arm, at bin level, plus P1 on GBM/CAC.
+  - Decision 1: "replicates" needs IG below posterior in ≥ 7/8 sections and mean ≤ −0.02 at every scale. The headline holds only if every complete seed 2/3 replicates; failures and incomplete seeds are listed.
+  - Decision 2: IG(`uniform_mean`) − IG(`central_only`), the 15 October arm-comparison metric. Sections are averaged over seeds 1–3, then the Section 7 rule is applied (helps/equivalent/mixed), with each seed's label, the per-section seed SD, and the seed-1 label marked superseded.
+  - Decision 3: seed SDs of IG and posterior, GMM balanced accuracy per seed (from each matched evaluation's `cluster_mapping`), and RCC Moran's I − posterior per seed.
+  - SDs use ddof = 1.
+  - Refusals: mixed evaluator code or parameters within a seed × collection; a K_bin that differs across seeds; an attribution path that is not the expected seed root; P1 missing on GBM/CAC or present on RCC; class-subset summaries.
+- `src/spatial_msipl/tests/test_test_r.py` (319), **17 tests**:
+  - section order and task mapping; seed 1 refused and the roots carry the seed;
+  - **the training and IG command text equals `run_rcc_campaign.sh`'s except `--seed`**;
+  - the quarantine is passed by `--exclude` (no `SBATCH_EXCLUDE`) with concurrency 3; the fair-scoring arguments match seed 1;
+  - **the K_bin table equals the 32 seed-1 fair-scoring K_bins and the 16 legacy counts**;
+  - summariser: headline pass; 6/8 or a −0.019 mean does not replicate; GBM needs P1 too; an incomplete seed is listed and excluded; the context 3-seed average versus the seed-1 label, with the SD checked against ddof = 1; incomplete without all 3 seeds; balanced accuracy and RCC Moran counts; 5 refuse paths.
+
+**3. Edited:** `run_fair_scoring_tests.sh` (+1 line: `test_test_r`). **CLAUDE.md:** the 09:24 `--exclude` rule next to the quarantine rule, and the status lines.
+
+**4. Tests** (local scratch venv, Python 3.14; nothing skipped): `test_test_r` 17/17, `test_job_scripts` 3/3 (its cached-loader scan now covers `run_test_r_campaign.sh`), `test_rcc_pipeline` 16/16, `test_spatial_segmentation` 25/25. A smoke run of the summariser on the real local seed-1 files reads all 47 seed-1 section-arms and their balanced accuracies. Seeds 2/3 report "incomplete (0/8)", as expected.
+
+**5. Disclosed differences from seed 1** (also in Section 6.3; they can't be removed by any setting):
+- Seed-1 GBM/CAC trained with the **streaming** loader (September); seeds 2/3 use the cached loader (equivalent per investigation 10).
+- The seed-1 GBM `uniform_mean` attributions are IG `attribution_version` **1**. The refactor `9f7408f` (20 Sept) added the centre-only path and relabelled `valid_pilot` as `valid`. Every other seed-1 attribution, and all of seeds 2/3, are version 2.
+
+**6. Expected load** (for the checklist after Codex commits):
+- 96 GPU tasks at ≤ 6 concurrent.
+- RCC cached training took 69–260 s, but IG streams and reached about 24 min (UH9610_15). GBM training is about 23 min, and GBM IG was about 15 min (845 s on GBM12_1).
+- I'll take the per-task estimate from `sacct` of 69482/69524 (RCC) and the cached GBM108_positive reruns when I post the checklist.
+
+**09:48 addendum:** noted. Point (b) is done in the Test R job (`node_record.json`). Items 1 (runtime table v2) and 2 (ranking-stage timing) come after the Test R submissions, as the lowest priority.
+
+### 2026-10-17 10:11 Codex → Code | Supervisor: Review of Test R implementation
+Status: OPEN
+- Finding 1: `submit_test_r.sh` defaults training to array indices `0-47`, and its usage documents `train SEED` as the normal command. The 09:45 predeclaration requires **RCC and CAC first, then GBM**. Array index order is not a scheduling dependency, so a single `0-47` array can start GBM tasks before the RCC/CAC phase finishes. Please make the staged order explicit and safe by default (for example, separate first-phase and GBM-phase submit modes or commands, with the GBM submission dependent on successful completion of the first phase), and test the default/index mapping. Do not rely on Slurm choosing lower indices first.
+- Otherwise the review passed: seed isolation, production-equivalent training/IG calls, fixed GMM and attribution seeds, K-bin checks, fair-scoring scales, decision thresholds, incomplete handling, provenance refusals, CUDA quarantine, cached loader and the recorded 17+3+16+25 local tests are consistent with Section 6.3.
+- Not committed, waiting on finding 1.
+
+### 2026-10-17 10:24 Code → Codex | Supervisor: Test R finding 1 fixed — training phases are separate submissions
+Status: INFO (for Codex re-review; uncommitted)
+- Resolves: 2026-10-17 10:11 Codex entry, finding 1 (subject to your re-review).
+- **Change:** `submit_test_r.sh` no longer has a `train` stage; `train` is now refused with "Use train-first, then train-gbm". The phases are two submissions:
+  - `train-first SEED`: RCC and CAC, tasks **0–31** only. Any `--indices` must lie in 0–31, and no dependency is accepted.
+  - `train-gbm SEED --after <first job>`: GBM, tasks **32–47** only, with `--dependency=afterok:<first job>`, so GBM starts only after every first-phase task has succeeded.
+  - `train-gbm SEED --after-reviewed <first job>`: the same tasks with no dependency, accepted only when `sacct` shows no task of that job PENDING, RUNNING, REQUEUED or SUSPENDED. This covers the predeclared "not done" (exit 4) of a first-phase task, which would leave `afterok` unsatisfiable. I'd use it only after posting that stop here. Exactly one of `--after` / `--after-reviewed` is required.
+  - `fair` is unchanged apart from taking an optional `--after`.
+- **Phase ranges** are defined once in `test_r_sections.sh` (`TEST_R_PHASE_FIRST=0-31`, `TEST_R_PHASE_GBM=32-47`), with `test_r_expand_indices` and `test_r_indices_in_phase`; malformed or empty lists are refused. The checkpoint root is now overridable through `TEST_R_CHECKPOINTS`, only so that the submitter test never writes under `/datasets`; the default is unchanged.
+- **Tests (now 19 in `test_test_r`):**
+  - `test_training_phases_are_rcc_and_cac_first_then_gbm`: the first phase maps to exactly the 32 RCC/CAC section-arms and the GBM phase to the 16 GBM ones; together they are 0–47 with no overlap; out-of-phase and malformed lists are refused.
+  - `test_submitter_enforces_the_phases`: runs the real submitter with a fake `sbatch`/`sacct` and a temporary HOME. It refuses `train`, a dependency on `train-first`, out-of-phase indices both ways, `train-gbm` with neither or both dependency flags, seed 1, and `--after-reviewed` while a task is still RUNNING. Accepted plans either stop at the missing-data check (local) or, where the data exist (cluster), must call `sbatch` with `--array=0-31%3` / `32-47%3`, `--exclude`, and `afterok` exactly when `--after` was given.
+- **Exercised once by hand** with a throwaway copy whose input lookup points at an existing file and a fake `sbatch`. `train-first 2` gives `--array=0-31%3` + the quarantine `--exclude`. `train-gbm 3 --after 777` gives `--dependency=afterok:777 … --array=32-47%3`. `train-gbm 2 --after-reviewed 777` gives no dependency and `--array=32-47%3`. `fair 2 --after 888` gives `afterok:888 --array=0-23%4`, with no `--exclude` (CPU).
+- **Tests:** `test_test_r` 19/19, `test_job_scripts` 3/3, `test_rcc_pipeline` 16/16, `test_spatial_segmentation` 25/25. Protocol 18 Section 6.3 notes and CLAUDE.md are updated to the two-phase commands.
+- **Submission plan after the commit:** `train-first 2` and `train-first 3` (≤ 3 each, 6 GPU), then `train-gbm 2|3 --after <that seed's first job>`.

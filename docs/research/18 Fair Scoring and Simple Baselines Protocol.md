@@ -387,6 +387,48 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
   - Tests: `test_spatial_segmentation.py` (25).
 - **Observation sent to the supervisor (08:14), not a change:** on CAC, P1 is also singleton groups (1,481 groups for 1,481 bins; K_peak 70–239 against K_bin 133–315). So CAC "P1" is the bin-level score at the K_peak budget, as on RCC. The rule is implemented as written (bin level and P1 for CAC) unless the supervisor rules otherwise before results.
 
+### 6.3 Test R: training-seed replication of the core arms (supervisor chat 17 October 09:45, Zayd-approved; predeclared before any output exists)
+
+The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-17 09:45 Supervisor → Code: New predeclared Test R". It was written into this protocol on 17 October before any Test R code was written or run. Later notes are added below it, never inside it.
+
+**Why.** Every 24-section/run result of our own pipeline is seed 1. The only multi-seed evidence is targeted: GBM108_positive (3 seeds × 3 variants; per-section SD 0.013–0.019, about the size of the 0.02 threshold) and 160TopL/GBM22_2 (attention real vs shuffled). Zayd wants the core decisions checked across seeds on all three datasets before the window closes. This entry is the predeclaration, written before any output. Copy it verbatim into protocol 18 as Section 6.3 "Test R" before writing code.
+
+**Design:**
+- **Arms:** `central_only` and `uniform_mean`. **Training seeds 2 and 3.** All 24 sections/runs (GBM 8, CAC 8, RCC 8): 96 trainings.
+- **Settings identical to the production seed-1 runs except the training seed** (model initialisation and sample order): 100 epochs, batch 128, hidden 512, latent 5, lr 1e-3, `spatial_lambda` 0, **cached loader**, CUDA warm-up, quarantine.
+  - GMM: production K, `n_init` 20, and the **GMM seed fixed at 1**.
+  - IG: the **attribution-sampling seed fixed at 1**, 12 px/component, 64 steps.
+  - This follows the earlier targeted seed study (only training changes).
+- **Scoring:** the existing fair-scoring evaluator at the same K_bin per section/run and the same references. GBM/CAC at bin level and P1; RCC at bin level only (the 07:16 amendment).
+- **Outputs:** new roots for seeds 2/3 (`<section>_seed2/`, `<section>_seed3/`). Seed 1 is untouched. If the existing scripts hard-code `_seed1` in paths, change that only through a seed argument whose default reproduces the seed-1 paths, with a test.
+- **Rules carried over:** an IG completeness failure makes that seed-arm "not done", with no setting change. A GMM component below 44 px stops IG by design. An arm with fewer than 8 sections at a given seed gets "incomplete" for that seed.
+
+**Predeclared decisions** (per collection × arm, bin level; GBM/CAC also P1):
+1. **Headline replication, IG vs posterior-|PCC|.** "Replicates at seed s" if IG is below posterior-|PCC| in ≥ 7/8 sections **and** the mean difference ≤ −0.02. The headline "IG is below its segmentation's correlation ranking" holds overall if it replicates at **both** seeds 2 and 3 in every collection × arm with a complete seed. Otherwise report exactly where it fails.
+2. **Context, uniform − centre-only.**
+   - Per section, average the three seeds (1–3), then apply the Section 7 rule to the 8 seed-averaged differences: "helps" if mean ≥ +0.02 and ≥ 6/8 positive; "equivalent" if |mean| < 0.02; otherwise "mixed".
+   - Also report each seed's own label, and the per-section seed SD for each arm.
+   - The seed-1 label (from the existing campaign) is **superseded** by the 3-seed label for the report. If they differ, report both, with the reason.
+3. **Descriptive:** per-section seed SD of IG and of posterior-|PCC|; the GMM balanced accuracy per seed; and whether Moran's I vs posterior on RCC (5/8 at seed 1) holds per seed. Moran's I does not depend on the model, so only the posterior side changes.
+
+**Out of scope (stated as a limitation in the report):** reseeding attention, windows, centre masking or Test S. Those remain seed-1 results, backed by the targeted 3-seed checks.
+
+**Process:**
+- New job scripts, plus a seed argument if needed. Tests first, including the default path being bit-identical for seed 1. Post a diff summary and leave it uncommitted for Codex. After Codex commits: upload, cluster test job, pre-submission checklist (time per run from the RCC and GBM cached runs, since GBM was about 23 min per training), submit.
+- Order: **RCC and CAC first** (fast), **then GBM**. Stay within 6 running GPU jobs, and poll per the CLAUDE.md rule.
+- Results entry: the tables for decisions 1–3, rule labels only, no interpretation.
+- **Deadline: the end of Tuesday 20 October.** Any seed-arm not finished by then is "not done".
+
+**Notes added after the predeclaration (17 October, before any Test R output existed):**
+- **No existing script is changed.** Training already takes `--seed` (model initialisation and sample order); the IG, matched-evaluation and fair-scoring scripts run unchanged. Seeds 2 and 3 use new job scripts (`slurm_jobs/test_r_sections.sh`, `run_test_r_campaign.sh`, `run_test_r_fair_scoring.sh`, `submit_test_r.sh`), which refuse seed 1. So the seed-1 paths and defaults are untouched by construction, and no "default reproduces seed 1" switch is needed.
+- **Calls:** the training and IG calls are the RCC campaign's, apart from `--seed SEED` (checked by a test that compares the command text). The GMM seed and the IG sampling seed stay at 1. Matched evaluation: GBM/CAC at the production K_bin with the legacy list (as the 15 October extra arms); RCC at the released target without legacy. Fair scoring: GBM/CAC at bin level and P1; RCC at bin level only, primary analysis.
+- **Roots:** `results/experiments/test_r_training_seeds/<section>_seed<S>/<arm>/`, checkpoints `/datasets/zsuliman/msi_checkpoints/spatial_msipl/test_r/`, and fair scoring `results/diagnostics/fair_scoring_baselines/test_r/`. Each training task appends `node_record.json` (node, GPU model, CPU model) for the 09:48 runtime table. The training summary already records `training_seconds` and `dataset_load_seconds` (the cached HDF5 read).
+- **Decision table:** `scripts/summarise_test_r.py`. Decision 2 uses IG mSCF1 at K_bin (and P1 matched K_peak), uniform_mean − central_only, the metric of the 15 October arm comparisons. The seed-1 label is computed from the seed-1 fair-scoring summaries. Seed SDs are sample SDs (ddof = 1). Tests: `test_test_r.py` (19).
+- **Training phases (Codex review 10:11):** a single array does not order its tasks, so `submit_test_r.sh` submits `train-first SEED` (RCC and CAC, tasks 0–31), then `train-gbm SEED --after <first job>` (GBM, tasks 32–47, `afterok`). If a first-phase task ends in the predeclared "not done" (exit 4), `afterok` can never be met; then GBM is submitted with `--after-reviewed <first job>`, which only proceeds once `sacct` shows the first phase finished.
+- **Disclosed differences from seed 1, which no setting can remove:**
+  - the seed-1 GBM/CAC models were trained with the streaming loader (September); seeds 2 and 3 use the cached loader, validated equivalent in investigation 10 (identical loss histories and final tensors);
+  - the seed-1 GBM `uniform_mean` attributions are IG `attribution_version` 1 (before the 20 September refactor `9f7408f`, which added the centre-only path and relabelled `valid_pilot` as `valid`); all other seed-1 attributions and all seed-2/3 attributions use version 2.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
