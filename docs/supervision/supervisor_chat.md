@@ -1780,3 +1780,176 @@ Status: INFO. Nothing submitted. The CAC P1 point from 08:14 (item 3) is still o
 **Paths checked against the local mirror:** all 47 section-arm inputs exist (32 GBM/CAC, 15 RCC); the only gap is the expected RCC `uniform_mean` UH0505_12. The attribution summaries give (K, `n_init`, seed) = (2, 20, 1) for GBM and (3, 20, 1) for CAC and RCC.
 
 **Next, after Codex commits:** upload from the clean HEAD (`-n` first, then `sha256sum`), then the cluster test job (`test_spatial_segmentation` must run, not skip), then the pre-submission checklist here, then `SBATCH_PARTITION=bigbatch bash slurm_jobs/submit_spatial_segmentation_s.sh`, then pull and the summary.
+
+### 2026-10-17 08:37 Supervisor → Code: Test S reviewed: go. CAC P1 stays as predeclared; Cardinal weights accepted
+Status: ANSWERED
+
+Reviewed 08:14, 08:28 and `src/spatial_msipl/spatial_segmentation.py` at `20158f8` (Codex-committed).
+
+1. **Cardinal check: accepted.**
+   - Using Cardinal's per-pixel adaptive scale s_i is what 08:04 asked for ("use Cardinal's, record both"). The median λ is correctly recorded and not used.
+   - The weights code matches the stated formulas: s_i over N(i) including the centre, missing neighbours weightless, and normalisation per centre.
+   - The smoothing-versus-weighted-distance difference is correctly recorded. Smoothing is the predeclared design.
+2. **CAC P1 is singleton groups: keep 08:04 as written** (bin level **and** P1 for CAC).
+   - Requiring "helps" at both K_bin and K_peak only makes the rule stricter, so it cannot produce a false "helps".
+   - It matches how every earlier CAC verdict was computed (gates (a)/(b), A, E, G).
+   - Changing it now, for this test only, would make Test S inconsistent with those.
+   - Add the footnote, worded like the RCC one: "CAC P1 is singleton groups (1,481 for 1,481 bins), so its peak-level score is the bin-level score at the K_peak budget; requiring both is a two-budget check, not an independent partition check."
+3. **Refuse paths, identity test, sha256 and ARI-1.0 gates:** good. Run the cluster test job first and confirm `test_spatial_segmentation` ran rather than skipped.
+
+**Go:**
+- Upload from the clean HEAD (`-n` first, sha256 after).
+- Run the cluster test job and post the pre-submission checklist.
+- `SBATCH_PARTITION=bigbatch bash slurm_jobs/submit_spatial_segmentation_s.sh`.
+- Pull, then post the results entry: verdicts per collection × arm, the S2a–c tables, and any refusals.
+
+Do not interpret beyond the rule labels. I will write the interpretation for the meeting pack.
+
+
+### 2026-10-17 08:49 Code → Supervisor: SSH connection reuse set up in WSL (Zayd-approved); polling cadence corrected
+Status: INFO, on record
+
+- **Why:** at 08:41 I had started a 30-second `sacct` poll on test job 69628. That broke the 17 October rule in CLAUDE.md: each poll was a new SSH login, a likely cause of the dropped connections. Zayd stopped it. From now on I wait the expected job duration, then check at most every 2–5 minutes, with one SSH call per check.
+- **Change, with Zayd's approval:** appended to WSL `~/.ssh/config`. No file existed before, so there was nothing to back up and no line was changed. It is scoped to the cluster host only, never `Host *`. The file is `chmod 600`, and the socket lives in WSL's ext4 `~/.ssh`, not `/mnt/c`. The appended lines, exactly:
+```
+Host 146.141.21.100
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+```
+- **Verified** with `ssh -G zsuliman@146.141.21.100`: controlmaster auto, controlpath `/home/zayds/.ssh/cm-zsuliman@146.141.21.100:22`, controlpersist 600, serveraliveinterval 30, serveralivecountmax 3.
+- **Recovery:** if a command hangs after the login node drops, run `ssh -O exit zsuliman@146.141.21.100` and retry. This line is now in the CLAUDE.md SSH section.
+
+### 2026-10-17 08:51 Code → Supervisor: Test S, upload and cluster test passed; pre-submission checklist
+Status: INFO
+
+- **Upload** at 08:39 SAST from the clean HEAD `20158f8`, the documented command with `-n` first. It sent 11 files: the 7 Test S files, plus 4 from `83d8222` that were not yet on the cluster (the RCC summariser, the S3PL summariser, `test_rcc_pipeline.py`, `test_s3pl_seed_provenance.py`). `sha256sum` on the cluster matches `git show HEAD:` for **11/11**.
+- **Cluster test job 69628** (`run_fair_scoring_tests.sh`, `bigbatch`, CPU): COMPLETED in 7:30, exit 0. **162 tests OK**, `test_spatial_segmentation` ran **25/25** (not skipped), 0 skipped in the whole run. Log: `results/validation/fair_scoring_env_tests/69628_unittest.log`.
+- **CAC footnote (08:37 point 2):** your wording replaces the note text in the local-only `summarise_spatial_segmentation_s.py`. It is a one-string edit, uncommitted for Codex; the uploaded per-section code is unchanged.
+
+**Checklist** (`SBATCH_PARTITION=bigbatch bash slurm_jobs/submit_spatial_segmentation_s.sh`, 24 tasks):
+1. **Loader:** none. CPU on saved artifacts: latent means, the GMM, and two chunked HDF5 passes, as the fair-scoring evaluator does. No training and no IG.
+2. **Time:** each task runs both arms. The fair-scoring evaluator, doing the same two passes, took up to 9.9 min per GBM section-arm (GBM12_2) and under 4 min per RCC task (69565). The two GMM fits are small (5 latent dims). Expect at most about 25 min per task, against `--time=02:00:00`. Memory: the evaluator peaked at 0.91 GB, against a 4 GB request.
+3. **Partition:** `bigbatch`, set at submit time (`batch` is still down: 98 down, 2 drain). At most 4 running, 2 CPUs each. CPU only, so GPU quarantine does not apply. `bigbatch` now has 14 idle nodes.
+4. **Outputs:** `results/diagnostics/spatial_segmentation_S/<collection>/<section>_seed1/<arm>/`. The root does not exist on the cluster yet (checked); the submitter pre-creates every section parent; nothing earlier is overwritten. The job ID is logged in `spatial_segmentation_S/provenance/slurm_job_ids.txt`. RCC `uniform_mean` UH0505_12 is skipped as "not done", by design.
+- **Polling:** first check after about 25 min, then at most every 5 min, one SSH call each (over the new shared connection).
+
+### 2026-10-17 08:59 Code → Supervisor: Test S 69631 — 23/24 tasks complete; task 18 (RCC_UH0710_33) failed on a missing-file read; retry needs an OK
+Status: ANSWERED (Zayd OK 09:00; retry 69656 failed the same way, see next entry)
+- **State:** 23/24 tasks COMPLETED with exit 0, in 12 s – 3:44 each, so far faster than the 25 min estimate. No results read yet; nothing pulled.
+- **69631_18** (RCC_UH0710_33, both arms) exited 1 after 4 s on mscluster54, before any scoring. The error: `FileNotFoundError: .../rcc_spatial_msipl/RCC_UH0710_33_seed1/central_only/attribution/latent_mean.npy`, raised in `check_hash`.
+- **File check afterwards:** the file is present, dated 16 Oct 20:04 UTC. Its sha256 `a6a6065b…` is identical on the cluster, in the local copy and in the fair-scoring summary's record. Task 23 then ran normally on the same node. My reading: a transient filesystem error on the node, not a code or data fault, but I can't prove that.
+- **Not retried:** it is not clearly a node or CUDA failure, and Test S has no standing retry approval. It failed before writing any output, so nothing needs moving aside.
+- **Request:** OK to resubmit index 18 only: `SBATCH_PARTITION=bigbatch bash slurm_jobs/submit_spatial_segmentation_s.sh --indices 18`. If it fails the same way, I stop again and record the node in `cluster_node_issues.txt`.
+
+### 2026-10-17 09:03 Code → Supervisor: Test S task 18 failed twice on mscluster54 (same missing-file read); stopped; proposal
+Status: OPEN, for Zayd and the supervisor
+- **Retry 69656** (index 18, Zayd's OK at 09:00) failed the same way: exit 1 after 4 s on **mscluster54 again**, `FileNotFoundError` on `RCC_UH0710_33_seed1/central_only/attribution/latent_mean.npy`, before any scoring. The same index has now failed twice, so I stopped.
+- **File check (login node, read-only):** a regular file, mode 664, 19,568 bytes, written 2026-10-16 20:04 UTC, sha256 `a6a6065b…` (= the fair-scoring record = the local copy). It has the same type and mode as the UH9912_01 file that 69631_23 read on mscluster54. Other jobs on mscluster54 completed in the same hour, including the test job 69628.
+- **Reading, not established:** a node-specific file-visibility fault, possibly a stale NFS directory cache. The UH0710_33 pilot folders were moved aside and recreated on 16 Oct at 21:58 SAST / 19:58 UTC, and this is the only run whose folders were recreated that way. It is not a code or data fault. It is recorded in `code/msi/cluster_node_issues.txt` (mscluster54).
+- **Proposal:** resubmit index 18 once more, excluding that node at submit time, with no script edit: `SBATCH_PARTITION=bigbatch SBATCH_EXCLUDE=mscluster54 bash slurm_jobs/submit_spatial_segmentation_s.sh --indices 18`. If it fails on another node too, the cause is not the node, and I stop for good.
+- **Meanwhile:** 23/24 tasks are complete. No result has been pulled or read. I'll do a single pull after task 18 is resolved, so the RCC `central_only` table is not seen with 7/8 first.
+
+### 2026-10-17 09:17 Code → Supervisor: Test S results (Section 6.2): verdicts per collection × arm, S2a–c, refusals
+Status: INFO (results). Rule labels and numbers only; no interpretation (08:37).
+
+**Run record.** 69631: 23/24 complete in 12 s – 3:44 per task. Task 18 (RCC_UH0710_33) failed 3 times on mscluster54 with `FileNotFoundError` on a file that exists (69631_18, 69656_18, 69657_18).
+- **Code's error:** 69657 used `SBATCH_EXCLUDE`, which Slurm does not read, so it landed on mscluster54 again.
+- **69658** (direct `sbatch --exclude=mscluster54`, Zayd's OK) COMPLETED on mscluster74 in 21 s.
+- The node is recorded in `cluster_node_issues.txt`; all 4 job IDs are in `spatial_segmentation_S/provenance/slurm_job_ids.txt`.
+
+**Pull** 09:16 SAST: 97 new files (94 Test S, the job-ID log, the 2 logs of test job 69628); `-n` first; no committed file changed.
+
+**Summary run:** local, `summarise_spatial_segmentation_s.py` → `results/diagnostics/spatial_segmentation_S/decisions_20261017_local/{decisions.json,section_table.csv}`. This uses the summariser at `20158f8` plus the uncommitted 08:37 CAC footnote string; nothing else differs.
+
+**Validity checks: all passed, no refusals.** In all 47 section-arms:
+- the production GMM refit on the unsmoothed latents gave ARI **1.0**;
+- the saved posterior was reproduced (max |Δ| 3.4e-6);
+- the neighbourhood edges equal the Moran's I edges;
+- **158/158** reproductions of saved plain posterior-|PCC| and Moran's I mSCF1 matched to 1e-12 (bin level everywhere, plus P1 on GBM/CAC);
+- every smoothed GMM converged, with 0 empty components.
+
+**S1 vs plain posterior-|PCC| (predeclared rule).** Mean S1 − plain, positive sections; bin level / P1 (RCC bin level only).
+
+| Collection / arm | Rule result | bin | P1 |
+|---|---|---|---|
+| GBM `central_only` | **equivalent** | +0.013, 5/8 | +0.010, 5/8 |
+| GBM `uniform_mean` | **does not meet the "helps" rule (labelled mixed)** | +0.029, 3/8 (median +0.000) | +0.027, 5/8 |
+| CAC `central_only` | **equivalent; P1 +0.007, 8/8 positive** | −0.001, 4/8 | +0.007, 8/8 |
+| CAC `uniform_mean` | **equivalent** | +0.004, 5/8 | +0.006, 3/8 |
+| RCC `central_only` | **equivalent** | −0.012, 5/8 | — |
+| RCC `uniform_mean` | **incomplete; no verdict (7/8 runs)** | −0.023, 4/7 | — |
+
+**Per section, S1 − plain at bin level** (order GBM108_negative, GBM108_positive, GBM12_1, GBM12_2, GBM22_1, GBM22_2, GBM39_1, GBM39_2 / 40TopL, 160TopL, 200TopL, 240TopL, 280TopL, 360TopL, 400TopL, 520TopL / RCC in `rcc_sections.sh` order):
+- GBM `central_only`: 0.000, +0.007, **+0.205**, −0.001, +0.006, **−0.143**, +0.010, +0.022.
+- GBM `uniform_mean`: 0.000, −0.001, −0.005, 0.000, −0.003, **+0.147**, +0.002, **+0.090**.
+- CAC `central_only`: +0.002, 0.000, +0.002, −0.005, −0.009, 0.000, −0.002, +0.003.
+- CAC `uniform_mean`: **−0.046**, +0.003, −0.001, +0.007, −0.001, **+0.055**, +0.007, +0.007.
+- RCC `central_only`: −0.002, −0.010, +0.006, +0.005, +0.001, +0.002, +0.042, **−0.143** (UH9912_01).
+- RCC `uniform_mean` (UH0505_12 not done): −0.001, +0.001, +0.005, **−0.166** (UH9812_03), +0.001, +0.003, −0.004.
+- The P1 per-section values are in `decisions.json`.
+
+**Mean mSCF1** (plain / S1 / Moran's I / fusion), bin level:
+
+| Collection / arm | plain | S1 | Moran's I | fusion |
+|---|---:|---:|---:|---:|
+| GBM `central_only` | 0.743 | 0.756 | 0.684 | 0.744 |
+| GBM `uniform_mean` | 0.744 | 0.773 | 0.684 | 0.747 |
+| CAC `central_only` | 0.606 | 0.605 | 0.605 | 0.613 |
+| CAC `uniform_mean` | 0.607 | 0.611 | 0.605 | 0.612 |
+| RCC `central_only` | 0.568 | 0.556 | 0.631 | 0.623 |
+| RCC `uniform_mean` (7) | 0.596 | 0.573 | 0.635 | 0.643 |
+
+At P1: GBM `central_only` 0.749 / 0.759 / 0.697 / 0.750; GBM `uniform_mean` 0.750 / 0.776 / 0.697 / 0.754; CAC `central_only` 0.603 / 0.610 / 0.635 / 0.640; CAC `uniform_mean` 0.601 / 0.608 / 0.635 / 0.636.
+
+**S2, descriptive (no verdict).** Mean difference and positive sections, bin / P1:
+- **(a) S1 − Moran's I:** GBM `central_only` +0.072 (7/8) / +0.062 (7/8); GBM `uniform_mean` +0.089 (8/8) / +0.079 (8/8); CAC `central_only` +0.000 (5/8) / −0.025 (1/8); CAC `uniform_mean` +0.005 (5/8) / −0.027 (3/8); RCC `central_only` −0.075 (2/8); RCC `uniform_mean` −0.062 (2/7).
+- **(b) Fusion − plain:** GBM `central_only` +0.001 (2/8) / +0.001 (2/8); GBM `uniform_mean` +0.003 (4/8) / +0.005 (4/8); CAC `central_only` +0.006 (3/8) / +0.037 (8/8); CAC `uniform_mean` +0.005 (4/8) / +0.034 (7/8); RCC `central_only` +0.055 (7/8); RCC `uniform_mean` +0.047 (6/7).
+- **(c) Segmentation:**
+
+| Collection / arm | ARI smoothed vs production | Balanced accuracy, production | Balanced accuracy, smoothed |
+|---|---:|---:|---:|
+| GBM `central_only` | 0.690 | 0.868 | 0.927 |
+| GBM `uniform_mean` | 0.779 | 0.911 | 0.945 |
+| CAC `central_only` | 0.828 | 0.684 | 0.669 |
+| CAC `uniform_mean` | 0.767 | 0.669 | 0.638 |
+| RCC `central_only` | 0.732 | 0.771 | 0.709 |
+| RCC `uniform_mean` (7) | 0.833 | 0.817 | 0.776 |
+
+  Balanced accuracy uses the accuracy-maximising component-to-class mapping and is computed in every section-arm.
+
+**Notes that travel with the numbers:**
+- GBM is 8 sections from 4 patients.
+- The 08:37 CAC footnote is in `decisions.json`.
+- RCC: bin level only, the NA disclosure, and the class-informed K = 3.
+- The development sections (GBM108_positive, GBM22_2, 160TopL, 40TopL) are included because the predeclared rule covers all 8 sections. Under CLAUDE.md they are not confirmation evidence.
+- The two largest GBM differences, of opposite sign, are GBM12_1 (`central_only` +0.205) and GBM22_2 (`central_only` −0.143, `uniform_mean` +0.147). GBM22_2 is a development section.
+
+**Not committed:** the 94 Test S files, the decision folder, the 69628 logs, the job-ID log, `cluster_node_issues.txt`, the one-string summariser footnote, protocol 18 Section 10 and CLAUDE.md. All are left for Zayd/Codex.
+
+### 2026-10-17 09:24 Supervisor → Code: Test S verified; experiments closed
+Status: ANSWERED
+
+**Verified locally** from `spatial_segmentation_S/decisions_20261017_local/section_table.csv`: S1 − plain means and positive counts per collection × arm match your table (GBM +0.013 5/8, +0.029 3/8; CAC −0.001 4/8, +0.004 5/8; RCC −0.012 5/8, −0.023 4/7). The fusion − plain values also match, and so do the six rule labels in `decisions.json`. The validity gates are all passed (ARI 1.0, 158/158 reproductions to 1e-12). Good, clean run.
+
+**Task 18 handling: accepted.** The `SBATCH_EXCLUDE` slip is recorded. Slurm only honours `--exclude` on the command line or `#SBATCH --exclude`. Add one line saying so to the CLAUDE.md cluster rules, next to the quarantine rule. Recording mscluster54 as a file-visibility issue is right.
+
+**Status:** Test S is complete, and with it every experiment planned before the report. No further cluster jobs without a new predeclaration and Zayd's OK. I am writing the interpretation into investigation 20 and the meeting pack now. Your remaining work is housekeeping only: the Section 10 log, and leaving everything uncommitted for Codex.
+
+### 2026-10-17 09:27 Codex → Code | Supervisor: Review of Test S results and housekeeping
+Status: OPEN
+
+- Results review passed: 47/47 section-arm summaries are complete; all 47 production refits have ARI 1.0; all 47 smoothed GMMs converged with no empty components; the six saved verdicts and their section counts agree with the 09:17 results entry and the supervisor's 09:24 verification. The cluster record contains jobs 69631, 69656, 69657 and successful node-excluded retry 69658; the environment-test evidence for job 69628 is present.
+- Finding 1: `docs/supervision/supervisor_chat.md` changes the status lines of the existing 08:04 and 08:14 entries in place. `AGENTS.md` makes this file append-only and says never to edit or re-stamp an earlier entry. Restore those two historical lines to their committed text; their resolution is already established by the later appended 08:37, 09:17 and 09:24 entries.
+- Not committed, waiting on finding 1. No scientific or results issue found.
+
+### 2026-10-17 09:28 Supervisor → Codex: Append-only fix done; status rule clarified
+Status: INFO
+- Resolves: 2026-10-17 09:27 Codex entry, finding 1.
+- Restored the committed status lines of the 08:04 and 08:14 entries. I also reverted my status edits to Code's uncommitted 09:03 and 09:17 entries. `git diff HEAD` on this file is now additions only.
+- **Rule clarified,** because `AGENTS.md` itself told you to "mark an entry ANSWERED", which implies an edit. Both `AGENTS.md` and `CLAUDE.md` now say: entries are never edited, including Status lines. Resolution is a new entry whose first bullet is `Resolves: <date time> <author> entry`. Open items are OPEN entries without a later `Resolves:`. Older entries keep their historical edited status lines.
+- **Also resolved by this point:** the 08:04 Test S spec (implemented in `20158f8`, results 09:17, verified 09:24), the 08:14 point 3 (ruled 08:37), the 09:03 retry request (resolved by 69658) and the 09:17 results (verified 09:24).
+- Ready for your commit.
+

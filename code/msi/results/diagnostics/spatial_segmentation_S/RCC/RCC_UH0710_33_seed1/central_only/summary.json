@@ -1,0 +1,170 @@
+{
+  "status": "complete",
+  "provenance": {
+    "test_s_version": 1,
+    "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md, Section 6.2 (Test S)",
+    "dataset": "RCC_UH0710_33",
+    "parameters": {
+      "gmm_components": 3,
+      "gmm_n_init": 20,
+      "gmm_seed": 1,
+      "radius": 1,
+      "sigma": 0.75,
+      "adaptive": true,
+      "adaptive_weight": "Cardinal 3.12.1 per-pixel scale s_i = max_j ||z_i - z_j|| / 2 + sqrt(eps)",
+      "scales": [
+        "bin"
+      ],
+      "chunk_size": 1024,
+      "score_tolerance": 1e-12
+    },
+    "source_artifacts": {
+      "input": {
+        "path": "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_UH0710_33.h5",
+        "bytes": 1475666,
+        "sha256": "552d16a71001c09f69b5d051722f95192c6f7364681ae21f7b0ab511d6c72ef9"
+      },
+      "fair_scoring_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/fair_scoring_baselines/rcc/bin_level_only/RCC_UH0710_33_seed1/central_only/summary.json",
+        "bytes": 310480,
+        "sha256": "ea8b700bf35c67cb37fcd64617e894f44b33f72d11aa561d6452236d2b383f90"
+      },
+      "latent_mean": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH0710_33_seed1/central_only/attribution/latent_mean.npy",
+        "bytes": 19568,
+        "sha256": "a6a6065b7c5bc4da17d8aec7799a9004b1a5faa80ffcbf9528b8a4b2f01bc8da"
+      },
+      "coordinates_and_gmm": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH0710_33_seed1/central_only/attribution/coordinates_and_gmm.npz",
+        "bytes": 28224,
+        "sha256": "9d63b9e85c600aec23fcda31faeeab8a52616cfe702d8c3e9877fe0f345a25e2"
+      },
+      "gmm_parameters": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH0710_33_seed1/central_only/attribution/gmm_parameters.npz",
+        "bytes": 2330,
+        "sha256": "5f71469a8cb7a681a691ed814a3f891cac016e939e2c5d8c87931ced5551acef"
+      },
+      "attribution_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH0710_33_seed1/central_only/attribution/summary.json",
+        "bytes": 19403,
+        "sha256": "4f19cd01b8b1acf20e5b32292b24d0759bd4287aea2a0de68c2f079eda2212a1"
+      }
+    },
+    "approved_partition_hashes": {},
+    "code": {
+      "evaluate_spatial_segmentation_s.py": "25b0dc0307310565725e5c282ba4e033a143b8c26025221a7a26f86be679c528",
+      "peak_groups.py": "2b76a3b482e534494a3dff6693250a5a3cf4bbeeba60671b0cbbcd198e1b6f6c",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "simple_baselines.py": "1fc8bd4492e96039ec60df8b37801edcc77541525ee068b6a3e7f74a7b7379ee",
+      "spatial_segmentation.py": "a2a691c0e57e3f7a00c16c25614a412c33927a9365b777aef491266f47bf8dbf",
+      "evaluate_fair_scoring_baselines.py": "1be4a74aa19fe3069a0bec571efcdb122057880a9e6d5ea660eb1c6ce6fbaedb",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "bf5e4e118d2fc3092e13a1e14b51604970f62761b64cf343f2d1137de2ef32f4"
+    }
+  },
+  "dataset": "RCC_UH0710_33",
+  "K_bin": 1212,
+  "label": "Test S (protocol 18 Section 6.2); per section-arm scores, no verdict",
+  "checks": {
+    "production_refit_ari_to_saved": 1.0,
+    "production_posterior_max_abs_difference": 9.20443728014142e-07,
+    "neighbourhood_edges_equal_morans_i_edges": true,
+    "moore_edges": 7348,
+    "reproduced_mSCF1": {
+      "bin:posterior_abs_pcc_balanced": 0.4598864606880934,
+      "bin:morans_i": 0.6188203808014618
+    }
+  },
+  "smoothing": {
+    "radius": 1,
+    "sigma": 0.75,
+    "adaptive": true,
+    "neighbourhood": "3x3 Moore over measured pixels, centre included",
+    "measured_neighbours_per_pixel": {
+      "min": 3,
+      "median": 8.0,
+      "max": 8
+    },
+    "self_weight_share_median": 0.4633008473877863,
+    "median_neighbour_distance_lambda_0804": 1.3450684001413533,
+    "adaptive_scale_s_i": {
+      "min": 0.1491649525501093,
+      "median": 1.2537932069857662,
+      "max": 2.4133884572786894
+    }
+  },
+  "smoothed_gmm": {
+    "converged": true,
+    "n_iter": 9,
+    "component_counts": [
+      389,
+      309,
+      274
+    ],
+    "empty_components": 0
+  },
+  "mSCF1": {
+    "bin": {
+      "posterior_abs_pcc_balanced": 0.4598864606880934,
+      "morans_i": 0.6188203808014618,
+      "sa_posterior_abs_pcc_balanced": 0.4660112446597853,
+      "rank_fusion_posterior_morans_i": 0.5763726022807698
+    }
+  },
+  "S1_minus_plain": {
+    "bin": 0.006124783971691861
+  },
+  "S2": {
+    "a_S1_minus_morans_i": {
+      "bin": -0.15280913614167657
+    },
+    "b_fusion_minus_plain": {
+      "bin": 0.1164861415926764
+    },
+    "b_fusion_rule": "mean of the per-bin ranks of posterior-|PCC| (balanced order) and Moran's I; ties broken by the posterior rank",
+    "c_segmentation": {
+      "ari_smoothed_vs_production": 0.8721087090775657,
+      "production_vs_expert": {
+        "balanced_accuracy": 0.4760604139231657,
+        "accuracy": 0.5092592592592593,
+        "mapping": {
+          "0": 0,
+          "1": 1,
+          "2": 2
+        },
+        "mapping_rule": "accuracy-maximising component-to-class permutation (best_component_mapping, as the matched evaluation)"
+      },
+      "smoothed_vs_expert": {
+        "balanced_accuracy": 0.45906832062516595,
+        "accuracy": 0.4835390946502058,
+        "mapping": {
+          "0": 1,
+          "1": 2,
+          "2": 0
+        },
+        "mapping_rule": "accuracy-maximising component-to-class permutation (best_component_mapping, as the matched evaluation)"
+      },
+      "note": "descriptive; expert labels did not fit any GMM or rank any bin"
+    }
+  },
+  "peak_level_P1": null,
+  "zero_tic_pixels": 0,
+  "rankings": {
+    "posterior_abs_pcc_balanced": {
+      "full_ranking_sha256": "3b91c9bb0227e4935d65c51004181670dc27cdc064c528915a865b4045b7d2f5",
+      "saved_prefix_length": 2424
+    },
+    "morans_i": {
+      "full_ranking_sha256": "fc7276ed2f2588c1062dc91277bc211f86fb26487defb64b704fbfd6342ffba0",
+      "saved_prefix_length": 2424
+    },
+    "sa_posterior_abs_pcc_balanced": {
+      "full_ranking_sha256": "5e85062806da38e3cdb5b7b9756e3c987ddec39aeeb7212b244c09ce3caa2b39",
+      "saved_prefix_length": 2424
+    },
+    "rank_fusion_posterior_morans_i": {
+      "full_ranking_sha256": "c0974707ab32d2f2255f1394d3948a7d05fde4e48e1dc6901f77087fc41a2a9f",
+      "saved_prefix_length": 2424
+    }
+  }
+}

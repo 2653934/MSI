@@ -52,3 +52,26 @@ The pipeline has four places where spatial structure could enter: **(i) model in
 4. **Rows 4–5 are future work.** Name them in the Discussion as the natural next step for "spatial input".
 
 The experiment window closes Tuesday 20 October. Anything above row 1 needs Hairong's explicit approval on Monday.
+
+## 5. Result of Test S (17 October; protocol 18 Section 6.2; jobs 69631/69658)
+
+**Predeclared verdicts, spatially regularised segmentation (S1) vs plain posterior correlation:**
+
+| Collection / arm | Rule result | Mean change (bin), positive sections |
+|---|---|---|
+| GBM centre-only | equivalent | +0.013, 5/8 |
+| GBM uniform | mixed (does not meet "helps") | +0.029, 3/8 (median 0.000) |
+| CAC centre-only | equivalent | −0.001, 4/8 |
+| CAC uniform | equivalent | +0.004, 5/8 |
+| RCC centre-only | equivalent | −0.012, 5/8 |
+| RCC uniform | incomplete; no verdict (7/8) | −0.023, 4/7 |
+
+All validity gates passed: the refit gave ARI 1.0, and 158/158 saved scores were reproduced to 1e-12.
+
+**Reading:**
+- **Spatial regularisation of the segmentation does not reliably improve peak ranking on any collection.** It is "helps" nowhere; equivalent in 4 of 5 decided cells; mixed in 1.
+- The averages hide large, opposite-signed changes in single sections: GBM12_1 +0.205, GBM22_2 −0.143 and +0.147 (a development section), RCC UH9912_01 −0.143, UH9812_03 −0.166. Smoothing changes the segmentation a lot (ARI vs production 0.69–0.83), and the peak score follows whether that change happens to suit the annotation.
+- **It moves segmentation accuracy in opposite directions by dataset** (descriptive). On GBM, balanced accuracy against the expert mask rises (0.87 → 0.93; 0.91 → 0.95). On CAC and RCC it falls (0.68 → 0.67, 0.67 → 0.64; 0.77 → 0.71, 0.82 → 0.78). Smoothing helps where the annotated regions are large and contiguous (GBM tumour/non-tumour) and hurts where they are finer or three-class.
+- **Descriptive (post hoc, not a verdict):** fusing correlation and Moran's I rankings is about level with plain correlation on GBM (+0.001 to +0.003). It is higher on RCC (+0.055, 7/8; +0.047, 6/7) and at CAC P1 (+0.037, 8/8; +0.034, 7/8). Moran's I alone is still the best single method on RCC. Treat this as a hypothesis for future work only; it was not predeclared as a test.
+
+**Updated scoped claim:** spatial information gives no reliable peak-picking gain in this pipeline, whether it enters at the encoder input (windows, attention, masking, latent penalty) or at the segmentation (structure-adaptive smoothing). Spatial structure is informative as a ranking statistic (Moran's I) and in convolutional models (S3PL). The project has now tested three of the four entry points; graph and ion-image models remain future work.

@@ -23,7 +23,7 @@ Status: OPEN | INFO | ANSWERED
 
 - Take the time from the local clock (`date`, SAST = UTC+2) immediately before writing. Never edit or re-stamp an earlier entry; append a correction instead.
 - Address **Code** for fixes it should make, and **Supervisor** for scientific or protocol questions (rules, verdict wording, whether something counts as a spec change).
-- Mark an entry ANSWERED only when the finding is resolved. When you commit after a fix, say which entry it resolves.
+- **Entries are never edited after posting, including their Status line.** An entry's status is the one it was posted with. Resolution is recorded only by a later entry whose first bullet reads `Resolves: <date time> <author> entry` (e.g. `Resolves: 2026-10-17 09:27 Codex entry, finding 1`). To find open items, look for OPEN entries with no later `Resolves:` entry. When you commit after a fix, say which entry it resolves.
 
 ## Committing
 

@@ -45,8 +45,10 @@ EQUIVALENT = "equivalent"
 MIXED = "mixed (does not meet the 'helps' rule)"
 NOTES = {
     "GBM": "8 sections from 4 patients; sections are not independent patients",
-    "CAC": ("P1 on CAC is singleton groups (1,481 groups for 1,481 bins), so its matched "
-            "score is the bin-level score at the K_peak budget; reported as predeclared"),
+    # Wording from the supervisor chat, 2026-10-17 08:37.
+    "CAC": ("CAC P1 is singleton groups (1,481 for 1,481 bins), so its peak-level score is "
+            "the bin-level score at the K_peak budget; requiring both is a two-budget check, "
+            "not an independent partition check"),
     "RCC": ("bin level only (protocol 18 Section 6.1 amendment, 17 October); unannotated "
             "class, 45-78% of pixels; the dataset's own Cardinal workflow treats these "
             "pixels as background (rcc_nobg), but this was not independently verified; "

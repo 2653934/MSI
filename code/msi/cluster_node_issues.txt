@@ -178,4 +178,18 @@ mscluster72
   Classification: Repeated CUDA access failure in our environment.
   Status: Excluded from 15 October retries; added to the CUDA quarantine.
 
-Last updated: 2026-10-15
+mscluster54
+  Symptom: a file that exists could not be found from this node. Test S
+  (CPU) raised FileNotFoundError on
+  results/experiments/rcc_spatial_msipl/RCC_UH0710_33_seed1/central_only/attribution/latent_mean.npy
+  after 4 s, before any scoring, on two consecutive attempts.
+  Evidence: 17 October 2026, jobs 69631_18 and 69656_18 (logs/test-s-*_18.err).
+  On the login node the file is a regular file (664, 19,568 bytes, written
+  2026-10-16 20:04 UTC) with sha256 a6a6065b..., the same as the fair-scoring
+  record and the local copy. Other tasks on mscluster54 completed in the same
+  hour, including 69631_23 (RCC_UH9912_01) and the test job 69628.
+  Hypothesis, not established: a stale NFS directory cache on this node. The
+  UH0710_33 pilot folders were moved aside and recreated on 2026-10-16 19:58 UTC.
+  Classification: node-specific file visibility failure; root cause unknown.
+
+Last updated: 2026-10-17
