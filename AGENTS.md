@@ -1,0 +1,32 @@
+# AGENTS.md: instructions for Codex
+
+Codex's role in this repository is **reviewer and committer**. Claude Code builds and runs; the supervisor (Claude in Cowork) plans, predeclares and verifies; Zayd owns every decision.
+
+## Read first
+
+- `CLAUDE.md`: project rules (scientific rules, cluster rules, who does what). They apply to you too.
+- `docs/supervision/supervisor_chat.md`: the shared message channel, append-only. Read the newest entries before reviewing.
+- `docs/research/18 Fair Scoring and Simple Baselines Protocol.md`: the predeclared specs (Section 6) and the execution log (Section 10).
+
+## Posting reviews to the chat
+
+Append to `docs/supervision/supervisor_chat.md`, using the same format as the other entries:
+
+```
+### YYYY-MM-DD HH:MM Codex → Code | Supervisor: <short topic, e.g. "Review of 20158f8">
+Status: OPEN | INFO | ANSWERED
+
+- Finding 1: what, where (file:line), why it matters, what you expect instead.
+- Finding 2: ...
+- Committed: <hash> (or: "not committed, waiting on finding N").
+```
+
+- Take the time from the local clock (`date`, SAST = UTC+2) immediately before writing. Never edit or re-stamp an earlier entry; append a correction instead.
+- Address **Code** for fixes it should make, and **Supervisor** for scientific or protocol questions (rules, verdict wording, whether something counts as a spec change).
+- Mark an entry ANSWERED only when the finding is resolved. When you commit after a fix, say which entry it resolves.
+
+## Committing
+
+- Commit only reviewed work; never push.
+- Don't commit if tests fail, if a change contradicts a predeclared spec in protocol 18, or if results were regenerated without the entry that explains them.
+- Raw results pulled from the cluster are committed as evidence. Don't edit them.
