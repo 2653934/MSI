@@ -1,0 +1,135 @@
+2026-10-16 21:24:24.016725: I tensorflow/core/platform/cpu_feature_guard.cc:140] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 AVX512F FMA
+/home-mscluster/zsuliman/miniconda3/envs/msipl_legacy/lib/python3.6/site-packages/h5py/__init__.py:36: FutureWarning: Conversion of the second argument of issubdtype from `float` to `np.floating` is deprecated. In future, it will be treated as `np.float64 == np.dtype(float).type`.
+  from ._conv import register_converters as _register_converters
+Using TensorFlow backend.
+/home-mscluster/zsuliman/msi/baselines/msipl/Computational_Model_legacy.py:84: UserWarning: Output "decoder" missing from loss dictionary. We assume this was done on purpose, and we will not be expecting any data to be passed to "decoder" during training.
+  VAE_BN_model.compile(optimizer='adam')
+=== LOADING DATA ===
+Input: /datasets/zsuliman/msi_data/rcc_cardinal/RCC_MH0204_33.h5
+HDF5 keys: ['Class_Label', 'Data', 'mzArray', 'xLocation', 'yLocation']
+Raw Data shape: (10200, 1560)
+mzArray shape: (10200,)
+xLocation shape: (1560,)
+yLocation shape: (1560,)
+Transposing Data to (pixels, m/z)...
+Final spectra shape: (1560, 10200)
+m/z range: 150.080000 - 1000.000000
+==== Encoder Architecture...
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+encoder_input (InputLayer)      (None, 10200)        0                                            
+__________________________________________________________________________________________________
+dense_1 (Dense)                 (None, 512)          5222912     encoder_input[0][0]              
+__________________________________________________________________________________________________
+batch_normalization_1 (BatchNor (None, 512)          2048        dense_1[0][0]                    
+__________________________________________________________________________________________________
+activation_1 (Activation)       (None, 512)          0           batch_normalization_1[0][0]      
+__________________________________________________________________________________________________
+z_mean (Dense)                  (None, 5)            2565        activation_1[0][0]               
+__________________________________________________________________________________________________
+z_log_var (Dense)               (None, 5)            2565        activation_1[0][0]               
+__________________________________________________________________________________________________
+batch_normalization_2 (BatchNor (None, 5)            20          z_mean[0][0]                     
+__________________________________________________________________________________________________
+batch_normalization_3 (BatchNor (None, 5)            20          z_log_var[0][0]                  
+__________________________________________________________________________________________________
+z (Lambda)                      (None, 5)            0           batch_normalization_2[0][0]      
+                                                                 batch_normalization_3[0][0]      
+==================================================================================================
+Total params: 5,230,130
+Trainable params: 5,229,086
+Non-trainable params: 1,044
+__________________________________________________________________________________________________
+==== Decoder Architecture...
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+Latent_Space (InputLayer)    (None, 5)                 0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 512)               3072      
+_________________________________________________________________
+batch_normalization_4 (Batch (None, 512)               2048      
+_________________________________________________________________
+activation_2 (Activation)    (None, 512)               0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 10200)             5232600   
+=================================================================
+Total params: 5,237,720
+Trainable params: 5,236,696
+Non-trainable params: 1,024
+_________________________________________________________________
+Beta 2.50: 36 peaks (target 2200, difference -2164)
+Beta 2.45: 39 peaks (target 2200, difference -2161)
+Beta 2.40: 41 peaks (target 2200, difference -2159)
+Beta 2.35: 43 peaks (target 2200, difference -2157)
+Beta 2.30: 43 peaks (target 2200, difference -2157)
+Beta 2.25: 43 peaks (target 2200, difference -2157)
+Beta 2.20: 45 peaks (target 2200, difference -2155)
+Beta 2.15: 45 peaks (target 2200, difference -2155)
+Beta 2.10: 46 peaks (target 2200, difference -2154)
+Beta 2.05: 46 peaks (target 2200, difference -2154)
+Beta 2.00: 48 peaks (target 2200, difference -2152)
+Beta 1.95: 49 peaks (target 2200, difference -2151)
+Beta 1.90: 54 peaks (target 2200, difference -2146)
+Beta 1.85: 56 peaks (target 2200, difference -2144)
+Beta 1.80: 57 peaks (target 2200, difference -2143)
+Beta 1.75: 57 peaks (target 2200, difference -2143)
+Beta 1.70: 63 peaks (target 2200, difference -2137)
+Beta 1.65: 68 peaks (target 2200, difference -2132)
+Beta 1.60: 68 peaks (target 2200, difference -2132)
+Beta 1.55: 71 peaks (target 2200, difference -2129)
+Beta 1.50: 72 peaks (target 2200, difference -2128)
+Beta 1.45: 77 peaks (target 2200, difference -2123)
+Beta 1.40: 87 peaks (target 2200, difference -2113)
+Beta 1.35: 90 peaks (target 2200, difference -2110)
+Beta 1.30: 93 peaks (target 2200, difference -2107)
+Beta 1.25: 97 peaks (target 2200, difference -2103)
+Beta 1.20: 103 peaks (target 2200, difference -2097)
+Beta 1.15: 115 peaks (target 2200, difference -2085)
+Beta 1.10: 122 peaks (target 2200, difference -2078)
+Beta 1.05: 126 peaks (target 2200, difference -2074)
+Beta 1.00: 131 peaks (target 2200, difference -2069)
+Beta 0.95: 136 peaks (target 2200, difference -2064)
+Beta 0.90: 147 peaks (target 2200, difference -2053)
+Beta 0.85: 160 peaks (target 2200, difference -2040)
+Beta 0.80: 172 peaks (target 2200, difference -2028)
+Beta 0.75: 197 peaks (target 2200, difference -2003)
+Beta 0.70: 209 peaks (target 2200, difference -1991)
+Beta 0.65: 233 peaks (target 2200, difference -1967)
+Beta 0.60: 270 peaks (target 2200, difference -1930)
+Beta 0.55: 314 peaks (target 2200, difference -1886)
+Beta 0.50: 377 peaks (target 2200, difference -1823)
+Beta 0.45: 450 peaks (target 2200, difference -1750)
+Beta 0.40: 535 peaks (target 2200, difference -1665)
+Beta 0.35: 649 peaks (target 2200, difference -1551)
+Beta 0.30: 761 peaks (target 2200, difference -1439)
+Beta 0.25: 875 peaks (target 2200, difference -1325)
+Beta 0.20: 1003 peaks (target 2200, difference -1197)
+Beta 0.15: 1084 peaks (target 2200, difference -1116)
+Beta 0.10: 1133 peaks (target 2200, difference -1067)
+Beta 0.05: 1151 peaks (target 2200, difference -1049)
+Beta 0.00: 1154 peaks (target 2200, difference -1046)
+{
+  "dataset": "RCC_MH0204_33",
+  "purpose": "paper-aligned post-training msiPL peak-count tuning",
+  "training_reused": true,
+  "weights": "/datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc/RCC_MH0204_33/msipl_weights.h5",
+  "target_peaks": 2200,
+  "tolerance": 50,
+  "tested_beta": {
+    "minimum": 0.0,
+    "maximum": 2.5,
+    "step": 0.05
+  },
+  "chosen": {
+    "beta": 0.0,
+    "selected_peaks": 1154,
+    "target_peaks": 2200,
+    "difference": -1046,
+    "absolute_difference": 1046,
+    "within_tolerance": false
+  },
+  "status": "closest_outside_tolerance"
+}
+Selected peaks saved to /home-mscluster/zsuliman/msi/results/baselines/msipl/rcc/RCC_MH0204_33/learned_peaks.csv
