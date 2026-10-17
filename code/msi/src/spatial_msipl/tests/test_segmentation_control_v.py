@@ -326,7 +326,10 @@ class SummariserTests(unittest.TestCase):
         from spatial_msipl.tests.test_rcc_pipeline import run
         root = self.build({"GBM": ("bin", "P1"), "CAC": ("bin", "P1"), "RCC": ("bin",)})
         output = root / "out"
-        result = run("summarise_segmentation_control_v.py", "--root", root, "--output", output)
+        empty_test_r = root / "empty_test_r"
+        empty_test_r.mkdir()
+        result = run("summarise_segmentation_control_v.py", "--root", root, "--output", output,
+                     "--test-r-fair", empty_test_r)
         self.assertEqual(result.returncode, 0, result.stderr)
         decisions = json.loads((output / "decisions.json").read_text())
         self.assertEqual(decisions["GBM"]["verdict"], "VAE segmentation helps")
@@ -339,15 +342,19 @@ class SummariserTests(unittest.TestCase):
     def test_wrong_scales_or_mixed_code_are_refused(self):
         from spatial_msipl.tests.test_rcc_pipeline import run
         root = self.build({"GBM": ("bin", "P1"), "CAC": ("bin", "P1"), "RCC": ("bin", "P1")})
+        empty_test_r = root / "empty_test_r"
+        empty_test_r.mkdir()
         result = run("summarise_segmentation_control_v.py", "--root", root, "--output",
-                     root / "o", check=False)
+                     root / "o", "--test-r-fair", empty_test_r, check=False)
         self.assertNotEqual(result.returncode, 0)
         root = self.build({"GBM": ("bin", "P1"), "CAC": ("bin", "P1"), "RCC": ("bin",)})
+        empty_test_r = root / "empty_test_r"
+        empty_test_r.mkdir()
         summary = json.loads((root / "GBM" / "GBM12_1_seed1" / "summary.json").read_text())
         summary["provenance"]["code"] = "other"
         (root / "GBM" / "GBM12_1_seed1" / "summary.json").write_text(json.dumps(summary))
         result = run("summarise_segmentation_control_v.py", "--root", root, "--output",
-                     root / "o", check=False)
+                     root / "o", "--test-r-fair", empty_test_r, check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("different code", result.stderr)
 
