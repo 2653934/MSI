@@ -1,0 +1,86 @@
+{
+  "status": "complete",
+  "provenance": {
+    "version": 1,
+    "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md, Section 6.4 Test V addendum; supervisor chat 2026-10-17 20:17",
+    "dataset": "GBM39_2",
+    "parameters": {
+      "components": [
+        5,
+        20
+      ],
+      "pca_solver": "randomized",
+      "pca_random_state": 1,
+      "preprocessing": {
+        "function": "spatial_msipl.preprocessing.tic_normalize on the raw Data rows read as float32",
+        "matches": "H5SpatialContextDataset.__getitem__ / CachedH5SpatialContextDataset 'target' (the central spectrum CentralOnlyVAE.encode receives)",
+        "pixels": "measured pixels only (every row of Data)"
+      },
+      "explained_variance_tolerance": 1e-06,
+      "metric_chunk_size": 256,
+      "primary": "raw inverse_transform",
+      "secondary": "clip at zero, then decoder-style TIC normalisation"
+    },
+    "source_artifacts": {
+      "input": {
+        "path": "/datasets/zsuliman/msi_data/gbm_massnet/GBM39_2.h5",
+        "bytes": 1637684856,
+        "sha256": "40dfb6fd0998131291e696a66909a0892495b15418056bfb56d0440337cc9d4c"
+      },
+      "test_v_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/segmentation_control_V/GBM/GBM39_2_seed1/summary.json",
+        "bytes": 9656,
+        "sha256": "96ded8bacc187cb749bbc064f6eda036c5cc64e44862ccc1161f46fdcc624b4a"
+      }
+    },
+    "code": {
+      "evaluate_pca_reconstruction_v.py": "116d158ae6c42e08321e055b2aafe0aac88ddf09b9e42938a3f1724e73ab298c",
+      "segmentation_control.py": "88f82f4802b534209e1cf7385508d46936e9630a823843c7c558a2cd7f105160"
+    }
+  },
+  "dataset": "GBM39_2",
+  "pixels": 2406,
+  "spectral_bins": 85062,
+  "explained_variance_gate": {
+    "pca5": {
+      "actual": 0.8175862431526184,
+      "saved_test_v": 0.8175863139331341,
+      "absolute_difference": 7.078051567077637e-08,
+      "tolerance": 1e-06,
+      "passed": true
+    },
+    "pca20": {
+      "actual": 0.9456981420516968,
+      "saved_test_v": 0.9456987062003464,
+      "absolute_difference": 5.641486495733261e-07,
+      "tolerance": 1e-06,
+      "passed": true
+    }
+  },
+  "metrics": {
+    "pca5": {
+      "primary_raw_inverse_transform": {
+        "mean_squared_error": 1.7311653881910098e-09,
+        "mean_absolute_error": 4.515946633317945e-06,
+        "cosine_similarity": 0.9871362224778629
+      },
+      "secondary_clip_zero_then_tic": {
+        "mean_squared_error": 1.7419253559669335e-09,
+        "mean_absolute_error": 4.400877272926971e-06,
+        "cosine_similarity": 0.9872656653349536
+      }
+    },
+    "pca20": {
+      "primary_raw_inverse_transform": {
+        "mean_squared_error": 5.153433006831145e-10,
+        "mean_absolute_error": 3.7716882273745245e-06,
+        "cosine_similarity": 0.9959137838083015
+      },
+      "secondary_clip_zero_then_tic": {
+        "mean_squared_error": 5.327052116130167e-10,
+        "mean_absolute_error": 3.6398207311845962e-06,
+        "cosine_similarity": 0.9959627343333967
+      }
+    }
+  }
+}
