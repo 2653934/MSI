@@ -336,6 +336,57 @@ The rules below are copied from the chat entries, which fixed them before any ou
 - **Decision table:** `scripts/summarise_rcc_fair_scoring.py`. It refuses mixed provenance, reports per-run and per-patient values and the two disclosures, and gives no verdict for the sensitivity analysis.
 - **Order (condition 7):** this specification → code and tests → Zayd sees the diff → cluster test job → preparation (8 CPU tasks), then the partition approval → 2-run pilot (UH9610_15, the largest at 3,564 px, and UH0710_33, the smallest at 972 px; both arms, 4 tasks) → the other 12 tasks → fair scoring → summary. Each `sbatch` needs Zayd's OK.
 
+### 6.2 Test S: spatially regularised segmentation (supervisor chat 17 October 08:04, Zayd-approved; predeclared before any output exists)
+
+The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-17 08:04 Supervisor → Code: New predeclared test S". It was written into this protocol on 17 October before any Test S code was written or run. Later notes (Cardinal source check, implementation) are added below it, never inside it.
+
+**Why.** Investigation 20: spatial information was tested at the encoder input (no benefit) and in the ranking stage (Moran's I strong), but never at the **segmentation** step, which is the component that carries the result. Zayd will show the outcome to Hairong on Monday as an update. This entry is the predeclaration. It is written before any output exists; copy it verbatim into protocol 18 as Section 6.2 "Test S" before running anything.
+
+**S1, primary: structure-adaptive smoothing of the latent means, then the same GMM.**
+- Input per run-arm: the saved production latent means and pixel coordinates (`attribution/latent_mean.npy`, `coordinates_and_gmm.npz`), the production K and the production GMM settings (StandardScaler, full covariance, `reg_covar` 1e-6, `n_init` 20, production seed and max_iter). No retraining, no new IG.
+- Smoothing, following the adaptive spatial weighting of Alexandrov & Kobarg 2011 and Bemis et al. 2016 (Cardinal SSC "adaptive"): radius r = 1 (3×3 Moore neighbourhood over **measured** pixels only; missing neighbours are dropped, not zero-filled).
+  - z̃_i = Σ_j w_ij z_j / Σ_j w_ij, over j ∈ N(i) ∪ {i}.
+  - w_ij = α_ij · β_ij, with spatial weight α_ij = exp(−d_ij² / (2σ²)), where σ = (2r+1)/4.
+  - Adaptive weight β_ij = exp(−‖z_i − z_j‖² / λ²), with λ = the median of ‖z_i − z_j‖ over all neighbour pairs in that run (data-driven, fixed by rule).
+  - Standardise the latents with the production scaler **before** smoothing. Then refit StandardScaler + GMM on z̃ exactly as in production.
+  - **Before implementing, check `σ` and the adaptive form against Cardinal's source in `rcc_env`.** If Cardinal's definitions differ, use Cardinal's and record both. If λ cannot be matched, keep the median rule above. Post what you found before running.
+- Ranking: posterior-|PCC|, balanced (the same definition and round-robin as `posterior_abs_pcc_balanced`), computed from the **smoothed-GMM** posterior. Method name: `sa_posterior_abs_pcc_balanced`.
+- Scoring: the existing fair-scoring evaluator, the same K_bin per run, the same references. GBM and CAC at bin level and P1 (the approved partitions); RCC at bin level only (the 07:16 amendment).
+- Arms: `central_only` and `uniform_mean`, on all 24 sections/runs (GBM 8, CAC 8, RCC 8; RCC `uniform_mean` UH0505_12 stays "not done").
+
+**Decision rule (per collection × arm), S1 vs plain posterior-|PCC|:**
+- "Spatial segmentation helps": mean difference ≥ +0.02 **and** positive in ≥ 6/8 sections. For GBM/CAC this must hold at both bin level and P1; for RCC at bin level.
+- "Equivalent": |mean| < 0.02 at every applicable scale.
+- Otherwise "mixed (does not meet the 'helps' rule)", with the numbers reported. RCC `uniform_mean` (7 runs): "incomplete; no verdict"; numbers reported.
+- No other variant, radius or λ may be substituted after seeing results.
+
+**S2, descriptive only (no verdict):**
+- **(a)** S1 against Moran's I.
+- **(b)** Rank fusion: mean of the two per-bin ranks of posterior-|PCC| (balanced order) and Moran's I, ties broken by posterior. This tests the "complementary" idea in investigation 20.
+- **(c)** Segmentation agreement: ARI between the smoothed and production GMM labels, and balanced accuracy of each against the expert mask (descriptive).
+
+**Validity checks (refuse on failure):**
+- The production GMM refit on the **unsmoothed** latents reproduces the saved labels (ARI 1.000), as in the BIC check.
+- With λ → ∞ and σ → 0 (identity smoothing), S1 reproduces plain posterior-|PCC| scores exactly (unit test).
+- Measured-pixel neighbour construction matches `evaluation.morans_i`'s Moore edges (test).
+
+**Process:**
+- New code: tests first (identity reproduction, neighbour construction, rule logic, refuse paths), then post a diff summary and leave it uncommitted for Codex. After Codex commits: upload, post the pre-submission checklist, run as CPU array jobs on `bigbatch` (one task per section/run, both arms), pull, and post a results entry: the per-collection table plus the verdicts, with S2 descriptive.
+- Outputs go to new roots (`results/diagnostics/spatial_segmentation_S/…`); nothing existing is overwritten.
+- Stop conditions as usual. Deadline: results by Monday 19 October 08:00 SAST for the meeting pack; hard stop Tuesday 20 October.
+
+**Notes added after the predeclaration (17 October, before any Test S output existed):**
+- **Cardinal source check** (supervisor chat 08:14). The `rcc_env` package is Cardinal 3.12.1 (and matter 2.12.0); the matching Bioconductor 3.22 source tarballs, with Packaged stamps identical to `rcc_env`, were read.
+  - The neighbourhood (`findNeighbors`, `metric = "maximum"`, r = 1: 3×3 Moore over measured pixels, centre included) matches.
+  - σ = (2r + 1)/4 = 0.75 matches; the spatial distance is Euclidean (diagonal √2).
+  - **The adaptive weight differs.** Cardinal uses β_ij = exp(−‖z_i − z_j‖² / (2 s_i²)) with the per-pixel scale s_i = max_{j ∈ N(i) ∪ {i}} ‖z_i − z_j‖ / 2 + √eps. By the predeclared rule ("if Cardinal's definitions differ, use Cardinal's and record both"), **Cardinal's per-pixel scale is used**. The 08:04 global-median λ is recorded per run (`median_neighbour_distance_lambda_0804`) but not used.
+  - Recorded, not changed: Cardinal applies these weights in a spatially weighted distance, not by smoothing the features. The predeclared design smooths the features and refits the unchanged GMM.
+- **Implementation:** `src/spatial_msipl/spatial_segmentation.py`, `scripts/evaluate_spatial_segmentation_s.py` (one section-arm), `scripts/summarise_spatial_segmentation_s.py` (the rule), `slurm_jobs/{run,submit}_spatial_segmentation_s.sh` (24 CPU tasks, both arms each). The fair-scoring evaluator is not edited; its functions are imported.
+  - Validity checks (refuse on failure): every input's sha256 equals the fair-scoring summary's record; the production GMM refit on the unsmoothed latents gives ARI exactly 1.0; the smoothing neighbourhoods give exactly the Moran's I Moore edges; plain posterior-|PCC| and Moran's I reproduce the saved mSCF1 to 1e-12 at bin level and (GBM/CAC) P1.
+  - S2c balanced accuracy uses the existing `best_component_mapping` (accuracy-maximising permutation).
+  - Tests: `test_spatial_segmentation.py` (25).
+- **Observation sent to the supervisor (08:14), not a change:** on CAC, P1 is also singleton groups (1,481 groups for 1,481 bins; K_peak 70–239 against K_bin 133–315). So CAC "P1" is the bin-level score at the K_peak budget, as on RCC. The rule is implemented as written (bin level and P1 for CAC) unless the supervisor rules otherwise before results.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
