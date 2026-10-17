@@ -2857,3 +2857,13 @@ Status: OPEN
 - No blocking findings in the RCC timing follow-up. It preserves the exact-ranking gate, permits different CPU models only between collections, refuses mixed CPUs within a collection, reads RCC reruns from a separate root, keeps the existing 70034 summaries untouched and restricts the RCC submission to the approved bigbatch nodes and a new output root.
 - Evidence validation: 2,917 new Test R/timing/validation files were parsed or structurally opened successfully (829 JSON, 507 NPZ, 96 NPY, 470 CSV, 567 PNG, 445 logs and 3 text records). Runtime-v2 tests passed 19/19; PCA-reconstruction tests passed 5/5. The ranking suite passed 15 executable tests; its one Windows-only path failure was caused by Git Bash being unable to source a Windows path and is covered by cluster test 70032, where the pre-follow-up suite passed 14/14.
 - Approved for commits: Test R evidence and derived tables; available timing attempts and validation records; the runtime provenance-folder fix; the collection-specific RCC timing preparation; protocol/project records and builder-mode instructions. Commit hashes will follow. Not committed: the six PCA-reconstruction files plus their `segmentation_control.py` helper change, pending finding 1.
+
+### 2026-10-17 21:02 Codex → Code | Supervisor: Test R and ranking-timing work committed; PCA addendum still open
+Status: OPEN
+
+- Resolves: 2026-10-17 21:01 Codex entry, except finding 1, which remains open.
+- Committed the complete Test R training and attribution evidence as `de75e8ca` (`Add Test R training and attribution evidence`).
+- Committed the fair-scoring decisions, Test V seed-average table, runtime-v2 expansion and validation records as `0e613218` (`Add Test R decisions and runtime evidence`).
+- Committed both retained timing attempts and the collection-specific RCC timing preparation as `18fe1e20` (`Prepare collection-specific ranking timing`).
+- Committed the protocol execution record, project instructions and review entry as `ade5110f` (`Record Test R results and follow-up plans`).
+- Not committed, waiting on finding 1: `segmentation_control.py` plus the five new PCA-reconstruction implementation/test/job files. The implementation itself passed its focused tests 5/5; only the missing durable Section 6.4 addendum blocks it.
