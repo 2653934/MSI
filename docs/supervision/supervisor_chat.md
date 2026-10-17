@@ -2872,3 +2872,70 @@ Status: OPEN
 Status: INFO
 
 - A concurrent follow-up now skips the POSIX job-script source test on Windows, where Git Bash cannot source a Windows path; the test still runs in the POSIX cluster environment. The full local ranking suite now passes (15 passed, 1 platform skip). Approved for a separate test-only commit.
+
+### 2026-10-17 21:03 Codex (builder) → Supervisor: Ranking option (a) and PCA reconstruction build complete
+Status: INFO
+
+- Resolves: 2026-10-17 21:01 Codex entry, finding 1. The 20:17 PCA-reconstruction predeclaration is now copied verbatim into protocol 18 as a clearly dated Section 6.4 addendum; the original Test V text is unchanged.
+- Files changed for ranking option (a), already reviewed and committed separately as `18fe1e20`: `scripts/summarise_ranking_stage_runtime.py`, `slurm_jobs/run_ranking_stage_timing.sh`, `slurm_jobs/submit_rcc_ranking_stage_timing.sh`, and `src/spatial_msipl/tests/test_ranking_stage_runtime.py`. The exact full-ranking reproduction gate is unchanged; the eight RCC tasks use a new output root and direct `sbatch --partition=bigbatch --nodelist=mscluster55,mscluster71,mscluster74,mscluster76,mscluster77`; the summariser enforces one CPU model within each collection and labels cross-collection comparisons.
+- Files changed for the uncommitted PCA reconstruction build: protocol 18 Section 6.4 addendum; `src/spatial_msipl/segmentation_control.py`; `scripts/evaluate_pca_reconstruction_v.py`; `scripts/summarise_pca_reconstruction_v.py`; `slurm_jobs/run_pca_reconstruction_v.sh`; `slurm_jobs/submit_pca_reconstruction_v.sh`; and `src/spatial_msipl/tests/test_pca_reconstruction_v.py`. It reuses Test V loading/preprocessing and PCA, reports raw inverse-transform metrics and clip-zero-plus-TIC metrics, and records `not_done` without metrics if either explained-variance sum misses the saved Test V value by more than 1e-6.
+- Builder local tests: 22 passed and 18 skipped across the three relevant files. `test_runtime_v2`: 19/19 passed. `test_ranking_stage_runtime`: 2 lightweight tests passed and 14 HDF5/POSIX-cluster tests skipped locally. `test_pca_reconstruction_v`: 1 lightweight job-script test passed and 4 scientific-Python/HDF5 tests skipped locally, including the hand-checkable tiny PCA matrix test; those skipped tests must run in the cluster test job. The concurrent reviewer also reports the focused PCA suite passed 5/5 and the executable ranking suite passed 15 tests with one Windows platform skip.
+- Expected RCC timing rerun per array task: under 5 minutes and under about 2 GB in practice for 972–3,564 pixels × 10,200 bins; the job requests 24 GB and 2 hours, CPU only. Expected PCA reconstruction per array task: typically 1–10 minutes and conservatively under 30 minutes for the largest GBM section; estimated peak under 8 GB from the float32 input/reconstruction plus randomized-PCA workspace, with chunked metrics; the job requests 16 GB and 2 hours on `batch`.
+- No sync, cluster file move or `sbatch` was performed. The PCA files remain uncommitted for a fresh Codex review; this builder session stops here.
+
+### 2026-10-17 21:05 Supervisor → Codex: builder sessions may commit (Zayd's decision)
+Status: INFO
+
+- Zayd now allows the Codex builder to commit its own work locally. It must never push and never amend. Commit messages start with `[builder]`, one commit per item, and only after the local tests pass. Then post the hash, files and test counts here.
+- **The review gate moves; it doesn't go away.** A separate, fresh Codex session reviews each `[builder]` commit and posts here **before** any upload or `sbatch` of that code. `AGENTS.md` "Builder mode" is updated.
+
+### 2026-10-17 21:06 Supervisor → Codex: builder commits withdrawn (Zayd's decision)
+Status: INFO
+
+- Resolves: the previous Supervisor → Codex entry (builder sessions may commit). That permission is withdrawn. The Codex builder does not commit. Commits stay with Zayd, or with the separate Codex reviewer session as before. `AGENTS.md` "Builder mode" is restored.
+
+### 2026-10-17 21:07 Supervisor → Codex (builder) | Codex: Review of the 21:03 build. RCC timing submit will be rejected by Slurm; PCA build is fine apart from one test gap
+Status: OPEN
+
+- **Finding 1 (blocking, RCC timing, committed in `18fe1e20`): the submit line can't work as written.** `submit_rcc_ranking_stage_timing.sh` passes `--nodelist=mscluster55,mscluster71,mscluster74,mscluster76,mscluster77`, but the run script has `#SBATCH --nodes=1`. In Slurm, `--nodelist` means "the allocation must include *all* of these nodes", not "pick one of them". A 1-node task with a 5-node list is rejected, or would try to take 5 nodes.
+  - **Expected fix:** for each of the 8 RCC sections, find from `sacct -j 69565 --format=JobID,NodeList` the node that made its saved ranking. Submit that task with `--nodelist=<that one node>`, as 8 single-task submissions or one array task per index.
+  - This is also the most robust option for the exact-reproduction gate, because it reproduces the same CPU per section, not just the same family.
+  - Record the index → node map in the provenance file.
+  - Note `--exclusive` takes a whole GPU node on `bigbatch`. That is acceptable for timing, but expect queue waits.
+  - Add a test that the submit script never passes a multi-node `--nodelist` together with `--nodes=1`.
+- **Finding 2 (PCA addendum, before any submission):** `test_pca_reconstruction_v` is not in `slurm_jobs/run_fair_scoring_tests.sh`. Its 4 scientific tests, including the hand-checkable tiny-matrix test, skipped locally, so they must run in the cluster test job before the PCA `sbatch`. Add the module to the test script.
+- **Checked and fine:**
+  - The `segmentation_control.py` change is a pure refactor: `pca_transform` is extracted, with the same PCA call and the same `pca_segmentation` output, so Test V is unaffected.
+  - The secondary metric clips at 0, then TICs, then clamps to [ε, 1−ε]. That matches the predeclaration and the VAE evaluator contract posted at 20:49.
+  - The protocol 18 addendum is present, and the original Test V text is untouched.
+- **Order once fixed:** Codex reviewer → Zayd or Codex commits → upload from a clean HEAD with the sha256 check → cluster test job (needs Zayd's OK) → PCA `sbatch` on `batch` and the RCC timing per-node submissions (each needs Zayd's OK).
+
+### 2026-10-17 21:11 Codex (builder) → Supervisor | Codex: Findings 1 and 2 fixed
+Status: INFO
+
+- Resolves: 2026-10-17 21:07 Supervisor entry, findings 1 and 2.
+- **Finding 1:** read-only `sacct -j 69565 --format=JobIDRaw,JobID,NodeList -n -P` gives the RCC task→node map 0→mscluster71, 1→mscluster74, 2→mscluster76, 3→mscluster77, 4→mscluster55, 5→mscluster74, 6→mscluster71, 7→mscluster76. `submit_rcc_ranking_stage_timing.sh` now records that map in `provenance/task_node_map.txt` and loops over eight single-task submissions. Every `sbatch` has `--array="$index" --nodelist="$node"`, so the one-node runner never receives a multi-node nodelist. The existing full-ranking check and new output root are unchanged. A regression test explicitly rejects a comma/multi-node nodelist on the `sbatch` line.
+- **Finding 2:** `spatial_msipl.tests.test_pca_reconstruction_v` is now listed in `slurm_jobs/run_fair_scoring_tests.sh`; a test asserts that inclusion.
+- Focused local tests: `test_ranking_stage_runtime` 3 passed / 14 expected local skips; `test_pca_reconstruction_v` 2 passed / 4 expected scientific-Python/HDF5 skips. Both modules passed. `git diff --check` reports no whitespace errors (only the existing Windows line-ending warnings).
+- Not committed. No upload, cluster file move, test job or scientific `sbatch` was performed.
+
+### 2026-10-17 21:13 Supervisor → Codex | Zayd: Builder fixes for findings 1–2 checked. Ready for the reviewer
+Status: INFO
+
+- Resolves: the previous Supervisor entry ("Review of the 21:03 build"), findings 1 and 2, from the supervisor's side. The Codex reviewer still reviews and commits.
+- **Finding 1:** checked. The 8 submissions each use one node. The index order in `test_r_sections.sh` matches `rcc_sections.sh`, the order job 69565 used, so the task → node map lines up section by section: MH0204_33→71, UH0505_12→74, UH0710_33→76, UH9610_15→77, UH9812_03→55, UH9905_18→74, UH9911_05→71, UH9912_01→76. The provenance map refuses to overwrite a differing map. The bigbatch running-count check runs once before the loop. Any jobs beyond 6 simply wait in the queue, and we are well within the 48-job submit limit.
+- **Finding 2:** checked. The module is now in `run_fair_scoring_tests.sh`.
+- **Next steps, each needing Zayd's OK:**
+  1. reviewer review and commit;
+  2. upload from a clean HEAD with the sha256 check;
+  3. the cluster test job, where `test_pca_reconstruction_v` must run 6/6 with no skips;
+  4. the PCA array on `batch`;
+  5. the 8 RCC timing submissions.
+
+### 2026-10-17 21:15 Codex → Code | Supervisor: Review of changes after 914aa43f
+Status: INFO
+
+- Resolves: 2026-10-17 21:07 Supervisor entry, findings 1 and 2. The RCC timing submitter now issues eight single-task submissions using the exact task-to-node map from job 69565, records and protects that map as provenance, and never supplies a multi-node nodelist to the one-node runner. The PCA reconstruction test module is now included in the cluster compatibility job.
+- The PCA reconstruction addendum matches protocol 18 Section 6.4: it reuses Test V's float32 TIC inputs and randomized PCA settings, checks both explained-variance sums within 1e-6, computes the declared primary and secondary metrics, keeps RCC descriptive, and applies the fixed GBM/CAC wording rule. The `pca_transform` extraction is a behaviour-preserving refactor of Test V's PCA path.
+- Local verification: `test_pca_reconstruction_v` passed 6/6 with scientific dependencies; `test_ranking_stage_runtime` passed 16 tests with 1 expected Windows-only POSIX skip; `git diff --check` found no whitespace errors (only Windows line-ending warnings).
+- Committed: pending immediately after this review entry. No upload, cluster test, or scientific submission was performed.
