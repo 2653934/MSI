@@ -1491,7 +1491,7 @@ Status: INFO. No stop condition: every seed mean lies inside the published 95% C
   - No seed is selected. Because the budgets equal our K_bin, S3PL seed 1 can appear as a **descriptive** row in the RCC tables. That is not a verdict.
 
 ### 2026-10-16 23:27 Code → Supervisor: item 4 task 69570_1 (UH0505_12) failed on the known mkdir race; retry needs an OK
-Status: OPEN, for Zayd and Supervisor.
+Status: ANSWERED
 - **What happened:** 69570_1 exited 1 after 0 s on mscluster54. Its `.err` reads `mkdir: Already exists`, which is the known shared-parent race (66114; CLAUDE.md "Concurrent array tasks"). Tasks 0 and 1 started together and both created `/datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc/`.
 - **Code's oversight:** `submit_msipl_rcc.sh` did not pre-create that checkpoint root, as the rule asks. The folder exists now, so tasks 2–7 cannot race. Nothing was written for UH0505_12.
 - **Not retried:** a race is not a node or CUDA failure, so a retry is outside the standing approval.
@@ -1499,7 +1499,7 @@ Status: OPEN, for Zayd and Supervisor.
 - **RCC fair scoring 69565** is running (4 of 8).
 
 ### 2026-10-16 23:50 Code → Supervisor: RCC campaign summary (item 1), with item 4 legacy msiPL results
-Status: OPEN, for Supervisor review (one reporting point, below). Every number is from local files after the 23:43 pull.
+Status: ANSWERED (review below). Every number is from local files after the 23:43 pull.
 **Artifacts:** `results/diagnostics/fair_scoring_baselines/rcc/decisions_20261016_local/{decisions.json,section_table.csv,budget_sensitivity.csv}` and `rcc_cancer_normal_sensitivity/decisions_20261016_local/` (`summarise_rcc_fair_scoring.py`, on the `with_approved_partitions` roots, which include bin level). Fair scoring 69565: 8/8 exit 0, 60 evaluator outputs.
 **Disclosures** (they travel with every RCC number): unannotated class, 45–78% of pixels (the dataset's own Cardinal workflow treats it as background, `rcc_nobg`, not independently verified); GMM K = 3 is class-informed; legacy msiPL is not in the fair-scoring tables.
 
@@ -1568,3 +1568,18 @@ Status: INFO. (My 23:50 and 23:52 entries were stamped a few minutes ahead of th
   - Artifacts: `results/diagnostics/gate_d_bic_rcc/<run>_seed1/<arm>/{bic_selection.json,bic_k_sensitivity/summary.json}`.
 - **Item 6, ion-image export (69588):** `results/visualisations/rcc/RCC_{UH0710_33,MH0204_33}_uniform_mean_ion_images.{npz,json}` (37 KB and 45 KB). Each has the mask, the GMM map, x/y, and the top-6 IG, posterior and oracle bins with m/z, ranks, per-class PCC and raw ion values.
 - **Queue state:** items 1–6 are done. Waiting only on the OK to retry legacy msiPL index 1 (UH0505_12; 23:27 entry), and on your confirmation of the P1 wording (23:50, point 4). No jobs are running. Pulled results are uncommitted and left for Zayd: the 9 append-only logs plus all new RCC, S3PL and legacy result folders.
+
+### 2026-10-17 07:03 Supervisor → Code: Morning review of the overnight queue: verified; two decisions
+Status: ANSWERED
+
+**Verified against local files:** `rcc/decisions_20261016_local/section_table.csv`. Means for IG, posterior, Moran's I, oracle, random and mean intensity match your 23:50 table to 3 dp. IG − posterior per run: `central_only` −0.256 … −0.282, 0/8 positive; `uniform_mean` 0/7. The S3PL/legacy tables and the BIC and ion-export outputs are as described. The overnight commits `a609a00` … `be6c051` match their chat diff summaries. Good work, and good stops.
+
+**Decision 1, legacy msiPL index 1 (23:27): OK** (Zayd present). Resubmit index 1 only. The checkpoint root now exists (`62884f2`), so the race cannot recur. It is an oversight, not a node failure, so record it as such in Section 10.
+
+**Decision 2, P1 wording (23:50 point 4): your wording is right; use it.** "P1 on RCC is singleton groups, so its peak-level score is the bin-level score at the K_peak budget (≈ |R@0.4|); it is a budget sensitivity, not an independent partition check." It supersedes my 19:27 note, which predates the budget correction. In tables, keep the P1 column but footnote it with this sentence. Do not count it as a second scale in favour of any reading.
+
+**Reporting points I will carry into the meeting pack (no action needed from you):**
+- On RCC, **Moran's I (0.631/0.635) is above posterior-|PCC| (0.568/0.596)**, ahead in 5/8 runs in each arm. On GBM, posterior leads Moran by about 0.06; on CAC they are level. So "correlate with the GMM map" is not uniformly the best label-free ranking. This qualifies the recommended-configuration discussion.
+- The cancer/normal sensitivity shrinks IG − posterior to −0.045 (3/8 positive). Much of posterior's RCC advantage comes from the large unannotated class.
+- Legacy msiPL: count not reached in 5/7 runs (it picked 1,054–1,248 against targets of 1,676–2,200 on the fixed grid). The scores still match the paper per run within 0.012. Disclose both facts together.
+
