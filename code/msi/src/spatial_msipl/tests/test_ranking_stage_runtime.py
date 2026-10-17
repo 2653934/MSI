@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import numpy as np
@@ -210,8 +211,12 @@ class MainOutput(unittest.TestCase):
         self.assertTrue(summary["reproduction"]["rankings"].startswith("not available"))
 
     def test_refuses_outside_slurm_without_the_flag(self):
-        with self.assertRaises(SystemExit):
-            timing.main(self.arguments(None))
+        # The cluster test job itself runs inside Slurm, so hide its job ID here.
+        environment = {k: v for k, v in os.environ.items() if k != "SLURM_JOB_ID"}
+        with mock.patch.dict(os.environ, environment, clear=True):
+            with self.assertRaises(SystemExit):
+                timing.main(self.arguments(None, output="outside_slurm"))
+        self.assertFalse((self.folder / "outside_slurm").exists())
 
 
 @unittest.skipIf(h5py is None, "h5py is not installed")

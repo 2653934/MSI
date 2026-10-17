@@ -481,6 +481,59 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
 - Moran's I is also checked to reproduce its saved mSCF1 to 1e-12, as in Test S.
 - **(d)** reads Test R's `central_only` fair-scoring results when both seeds 2 and 3 are complete for a section; otherwise it is left empty.
 
+### 6.5 Test N: S3PL retrained with shuffled nonlocal neighbours, CAC (supervisor chat 17 October 13:04, Zayd-approved; predeclared before any output exists)
+
+The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-17 13:04 Supervisor → Code: New predeclared Test N". It was written into this protocol on 17 October before any Test N code was written or run. Later notes are added below it, never inside it.
+
+**Why.** The S3PL control (retrained centre-tiled: 0.179 / 0.153 vs real 0.591) removes all neighbour information and makes the patch target unattainable. It shows that S3PL fails without neighbour input. It does **not** show that S3PL needs *spatially correct* neighbours. Our VAE claims rest on a shuffled-neighbour control, so S3PL needs the same kind of control before we can contrast the two. This entry is the predeclaration, written before any output. Copy it verbatim into protocol 18 as **Section 6.5 "Test N"** before writing code.
+
+**Design:**
+- **CAC, all 8 sections. Two seeds, using exactly the same seed and RNG conventions as the existing centre-tiled control**: seed 1 on the released code path (global RNG), seed 2 on the controlled sample-order stream.
+- **The only change from the "real" S3PL runs:** at training **and** inference, every non-central position of each p×p input patch is replaced by the spectrum of a nonlocal measured pixel.
+  - Fixed global permutation π of measured pixels, seed 1701, the same construction as the VAE `shuffled_p3` arms.
+  - The neighbour of pixel i at offset o is replaced by π(that neighbour); missing positions are handled as in the real runs.
+  - The centre spectrum stays real.
+  - The reconstruction target is the input patch, as in S3PL. So the target here is the shuffled patch. Record this.
+- **Settings:** released CAC settings (p = 9, z = 256, d1 = 51, d2 = 1, 10 epochs, batch 16, lr 1e-2, `reference_spatial_max`).
+- **Scoring:** the matched peak count, exactly as `s3pl_cac_controls.csv` (`matched_peaks`). Outputs go to new roots.
+
+**Decision rule (per seed, then both), real minus retrained-shuffled:**
+- **"S3PL depends on spatially correct neighbours":** ≥ 0.02 on ≥ 7/8 sections **and** mean ≥ 0.02, in **both** seeds. This is the same thresholds as the existing centre-tiled rule.
+- **"Not spatially specific":** |mean| < 0.02 in both seeds.
+- **Otherwise "mixed"**, with per-section values.
+
+**Descriptive:** retrained-shuffled against retrained centre-tiled (does any neighbour input rescue training?), and against mean intensity at the same count.
+
+**Validity checks:**
+- A test shows the shuffle leaves the centre unchanged and that π is a permutation of measured pixels.
+- The real-arm seed-1/seed-2 scores reproduce the saved `real` column.
+- The default S3PL path stays bit-identical (test).
+
+**Process:** tests first; diff summary; uncommitted for Codex. After commit: upload, cluster test, checklist, submit. 16 short GPU runs.
+
+**Cluster priority** (shared `bigbatch` QOS of 48 submitted / 6 running): (1) the Test R jobs already queued keep running; (2) **Test V next** (CPU, the most important for interpretation); (3) Test N; (4) the remaining Test R seed-3 submissions; (5) ranking-stage timing last.
+**Deadline: the end of Tuesday 20 October.** Anything not finished is reported as not done.
+
+**Notes added after the predeclaration (17 October, before any Test N output existed):**
+- **Shuffle construction:**
+  - The map is the VAE `shuffled` construction (`mapping[order] = roll(order, 1)`, `order = default_rng(1701).permutation(n)`; one n-cycle, so no pixel maps to itself).
+  - The source walk is also the VAE's: start at `mapping[j]` and move on while the candidate lies in the pixel's own window.
+  - For S3PL the window is the 9×9 patch, so every source lies outside the patch. The VAE `shuffled_p3` arms excluded their own 3×3 window. With a 3×3 exclusion, sources could fall inside S3PL's 9×9 patch and would not be nonlocal.
+  - The map uses its own generator and draws nothing from the global NumPy RNG (tested).
+- **CAC runs read imzML through m2aia:**
+  - m2aia fills each unmeasured window position with a random measured pixel of the same window (global RNG), and pads border windows with random repeats.
+  - Test N keeps that construction, so the global RNG stream is identical to the real run (tested). It then maps every non-central slot through the shuffle.
+  - "Centre" is the central slot exactly as the released code fills it. For border pixels m2aia's padding can put another pixel there; that quirk of the released code is unchanged.
+  - On every call, the re-derived real index list is checked to reproduce m2aia's own patch; any mismatch stops the run.
+  - The HDF5 path keeps unmeasured positions empty, as in its real runs.
+- **Target:** the input patch, i.e. the shuffled patch. It is recorded in each run's config (`reconstruction_target`, `neighbour_shuffle_seed` 1701). This differs from the centre-tiled control, which kept the real-patch target.
+- **The "real" values** are recomputed from the saved `metrics.json`: seed 1 from the `_matched_<count>peaks` runs, seed 2 from `s3pl_cac_centre_control/seed2_init2_order1`. They reproduce the saved `real` column exactly in 16/16 (checked before any Test N run).
+- **Mean intensity (descriptive)** is the fair-scoring bin-level value at K_bin. K_bin equals the S3PL matched count in every CAC section. It uses a different scorer and representation (TIC-normalised HDF5 bins), and is labelled so.
+- **Default path:**
+  - `build_patch_dataset` and `H5SpectrumPatchDataset` without the new argument are tested bit-identical to a frozen copy of the pre-change `data_source.py`.
+  - The m2aia default branch is unchanged.
+  - Training and inference call the patch builder exactly as before for `none` and `tile_centre` (tested on the cluster, where torch is installed).
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -910,7 +963,9 @@ A test rebuilds the IG matched groups from these files.
               - Checklist posted (chat 12:16). **69683** `train-first 2` submitted 12:17 SAST / 10:17 UTC (tasks 0–31, at most 3 running). **69689** `train-gbm 2 --after 69683` submitted 12:19 SAST (tasks 32–47, `afterok`).
               - `train-first 3` was refused by Slurm (`QOSMaxSubmitJobPerUserLimit`: the `mss_bigbatch` QOS allows 48 submitted and 6 running jobs per user, counting each array task). Only empty seed-3 parent folders and `manifest_seed3.txt` (correct contents) were left behind; no job was created. Seed 3 is submitted once seed 2's first phase has left the queue (chat 12:20).
               - **69683_2** (RCC_UH0505_12 `central_only`, seed 2): exit 4 after 15:08. Training and the checkpoint check passed; IG `needs_more_ig_steps` at 64 steps. Under Section 6.3 this seed-arm is **"not done"**, with no setting change. As a result, 69689's `afterok` can no longer be met; the plan is in the chat entry headed 12:47, actually posted 12:35 SAST (`scancel 69689`, then `--after-reviewed`, once Zayd has OK'd it).
+              - **69724** `train-first 3` submitted 13:03 SAST (tasks 0–31, at most 3 running) once the QOS had room. 69683's throttle was set back to 3 at the same time.
               - Zayd's OK (session, about 12:40 SAST; supervisor recommendation 12:41): `scontrol update JobId=69683 ArrayTaskThrottle=6` at 12:41 SAST, until seed 3 is queued; `scancel 69689` at 12:42 SAST (CANCELLED, never started). Seed-2 GBM will be resubmitted with `--after-reviewed 69683` once 69683 has finished; seed 3 follows the same path if needed.
+            - **Test V and runtime addendum (Sections 6.4; supervisor chat 09:48, 12:42):** code committed by Codex as `f2e8040` (record `06ab508`). **Upload** 12:58 SAST (local → cluster, documented command, `-n` first, clean HEAD `06ab508`): 13 code files, `sha256sum` 13/13 match HEAD. **Cluster test job 69714** submitted 12:58 SAST (`bigbatch`, CPU), sharing the 6-running QOS limit with Test R. It **FAILED** in 6:54 on mscluster84: 226 tests, 1 failure and 2 expected skips (runtime-artifact tests). `test_segmentation_control_v` ran 18/18 OK. The failure is a test-only bug: `test_refuses_outside_slurm_without_the_flag` assumed `SLURM_JOB_ID` is unset, but it is always set inside the test job. The fix hides the variable in the test; it is uncommitted for Codex (chat 13:13). Test V was held.
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
 

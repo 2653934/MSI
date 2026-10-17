@@ -68,7 +68,7 @@ def test(
     with open(config_path) as f:
         config = json.load(f)
     training_context_mode = config.get("input_context_mode", "none")
-    if training_context_mode not in ("none", "tile_centre"):
+    if training_context_mode not in ("none", "tile_centre", "shuffle_nonlocal"):
         raise ValueError(f"Unsupported training input context: {training_context_mode}")
     if training_context_mode != "none" and input_ablation != "none":
         raise ValueError("Do not combine a trained input control with a frozen input intervention")
@@ -100,11 +100,20 @@ def test(
             normalize_spectra(x, normalization), dtype=torch.float32
         )
     )
-    test_dataset, mz_values = build_patch_dataset(
-        filepath,
-        config["spectral_patch_size"],
-        transform,
-    )
+    if training_context_mode == "shuffle_nonlocal":
+        # Test N: inference sees the same shuffled patches as training.
+        test_dataset, mz_values = build_patch_dataset(
+            filepath,
+            config["spectral_patch_size"],
+            transform,
+            neighbour_shuffle_seed=config["neighbour_shuffle_seed"],
+        )
+    else:
+        test_dataset, mz_values = build_patch_dataset(
+            filepath,
+            config["spectral_patch_size"],
+            transform,
+        )
     mz_list = torch.tensor(mz_values)
     if test_indices is None:
         test_loader = DataLoader(
@@ -148,7 +157,8 @@ def test(
                 X_batch = X_batch.cuda()
                 y_batch = y_batch.cuda()
 
-            X_batch = ablate_patch_context(X_batch, effective_input_mode)
+            if effective_input_mode != "shuffle_nonlocal":  # already in the patch
+                X_batch = ablate_patch_context(X_batch, effective_input_mode)
 
             y_pred, binary_mask, attention_mask = model(X_batch)
 

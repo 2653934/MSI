@@ -138,7 +138,7 @@ def load_spectrum_table(path):
 class H5SpectrumPatchDataset:
     """Create S3PL spatial patches centred only on measured HDF5 pixels."""
 
-    def __init__(self, table, patch_size, transform=None):
+    def __init__(self, table, patch_size, transform=None, neighbour_shuffle_seed=None):
         if patch_size < 1 or patch_size % 2 == 0:
             raise ValueError("spectral patch size must be a positive odd integer")
 
@@ -162,12 +162,24 @@ class H5SpectrumPatchDataset:
         self.patch_indices = windows[self.y - 1, self.x - 1].reshape(
             len(self.x), -1
         )
+        # Test N (protocol 18 Section 6.5), opt-in: shuffled nonlocal neighbours.
+        self.patch_sources = None
+        if neighbour_shuffle_seed is not None:
+            from utils.nonlocal_shuffle import nonlocal_map, shuffle_patch_indices
+
+            mapping = nonlocal_map(len(self.x), neighbour_shuffle_seed)
+            centre = (patch_size * patch_size) // 2
+            self.patch_sources = np.stack([
+                shuffle_patch_indices(row, centre, set(row[row >= 0].tolist()) | {pixel}, mapping)
+                for pixel, row in enumerate(self.patch_indices)
+            ]).astype(self.patch_indices.dtype)
 
     def __len__(self):
         return len(self.x)
 
     def __getitem__(self, index):
-        neighbour_indices = self.patch_indices[index]
+        neighbour_indices = (self.patch_indices if self.patch_sources is None
+                             else self.patch_sources)[index]
         measured = neighbour_indices >= 0
         patch = np.zeros(
             (1, len(self.mz_values), self.patch_size, self.patch_size),
@@ -182,17 +194,28 @@ class H5SpectrumPatchDataset:
         return patch, index
 
 
-def build_patch_dataset(path, patch_size, transform=None):
-    """Build the reference imzML dataset or the compatible HDF5 dataset."""
+def build_patch_dataset(path, patch_size, transform=None, neighbour_shuffle_seed=None):
+    """Build the reference imzML dataset or the compatible HDF5 dataset.
+
+    ``neighbour_shuffle_seed`` (Test N only) replaces every non-central patch
+    position by a nonlocal measured pixel; None keeps the released behaviour.
+    """
     path = Path(path).expanduser().resolve()
     if path.suffix.lower() in HDF5_SUFFIXES:
         table = load_massnet_h5(path)
-        return H5SpectrumPatchDataset(table, patch_size, transform), table.mz_values
+        return (H5SpectrumPatchDataset(table, patch_size, transform, neighbour_shuffle_seed),
+                table.mz_values)
 
     if path.suffix.lower() == ".imzml":
         import m2aia as m2
 
         image = m2.ImzMLReader(str(path))
+        if neighbour_shuffle_seed is not None:
+            from utils.nonlocal_shuffle import nonlocal_spectrum_dataset
+
+            dataset = nonlocal_spectrum_dataset(image, (patch_size, patch_size), transform,
+                                                neighbour_shuffle_seed)
+            return dataset, np.asarray(image.GetXAxis())
         dataset = m2.SpectrumDataset(
             [image],
             shape=(patch_size, patch_size),

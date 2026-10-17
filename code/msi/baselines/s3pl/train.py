@@ -18,12 +18,19 @@ import tqdm
 from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
 from test import ablate_patch_context, test
 from utils.data_source import build_patch_dataset
+from utils.nonlocal_shuffle import NONLOCAL_SHUFFLE_SEED
 from utils.helpers import artifact_directories, normalize_spectra, resolve_data_paths
 
 def train(config):   
     input_context_mode = config.get("input_context_mode", "none")
-    if input_context_mode not in ("none", "tile_centre"):
+    if input_context_mode not in ("none", "tile_centre", "shuffle_nonlocal"):
         raise ValueError(f"Unsupported training input context: {input_context_mode}")
+    # Test N (protocol 18 Section 6.5): the patches themselves carry shuffled
+    # nonlocal neighbours, and the reconstruction target is that input patch.
+    shuffle_seed = NONLOCAL_SHUFFLE_SEED if input_context_mode == "shuffle_nonlocal" else None
+    if shuffle_seed is not None:
+        config["neighbour_shuffle_seed"] = shuffle_seed
+        config["reconstruction_target"] = "input patch (shuffled nonlocal neighbours, real centre)"
     random_seed = config["random_seed"]
     initialization_seed = config.get("initialization_seed")
     sample_order_seed = config.get("sample_order_seed")
@@ -56,11 +63,19 @@ def train(config):
             normalize_spectra(x, normalization), dtype=torch.float32
         )
     )
-    training_dataset, mz_list = build_patch_dataset(
-        filepath,
-        config["spectral_patch_size"],
-        transform,
-    )
+    if shuffle_seed is None:
+        training_dataset, mz_list = build_patch_dataset(
+            filepath,
+            config["spectral_patch_size"],
+            transform,
+        )
+    else:
+        training_dataset, mz_list = build_patch_dataset(
+            filepath,
+            config["spectral_patch_size"],
+            transform,
+            neighbour_shuffle_seed=shuffle_seed,
+        )
     num_input_channels = len(mz_list)
     
     dataset_size = len(training_dataset)
@@ -139,7 +154,8 @@ def train(config):
 
                 X_batch, _ = batch
                 y_batch = X_batch  # Keep the original real-patch reconstruction target.
-                X_batch = ablate_patch_context(X_batch, input_context_mode)
+                if input_context_mode != "shuffle_nonlocal":  # already in the patch
+                    X_batch = ablate_patch_context(X_batch, input_context_mode)
 
                 if use_cuda:
                     X_batch = X_batch.cuda()

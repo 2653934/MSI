@@ -52,5 +52,11 @@ PY
     spatial_msipl.tests.test_ranking_stage_runtime \
     spatial_msipl.tests.test_runtime_v2 \
     spatial_msipl.tests.test_segmentation_control_v \
+    spatial_msipl.tests.test_s3pl_shuffle_control \
     2>&1 | tee "$RECORD_DIR/${SLURM_JOB_ID}_unittest.log"
+# Test N (protocol 18 Section 6.5): the S3PL patch tests run from the S3PL folder,
+# where m2aia, pyimzml and torch let the real-m2aia and training-call tests run.
+(cd baselines/s3pl && "$PYTHON" -m unittest -v tests.test_nonlocal_shuffle \
+    tests.test_frozen_patch_context tests.test_h5_data_source) \
+    2>&1 | tee "$RECORD_DIR/${SLURM_JOB_ID}_s3pl_unittest.log"
 echo "All fair-scoring tests passed under s3pl_env."

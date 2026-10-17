@@ -56,9 +56,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--input-context-mode",
-        choices=("none", "tile_centre"),
+        choices=("none", "tile_centre", "shuffle_nonlocal"),
         default=None,
-        help="training control: replace neighbour spectra with the normalised centre while keeping the real reconstruction target",
+        help="training control: tile_centre replaces neighbour spectra with the normalised centre while keeping the real reconstruction target; shuffle_nonlocal (Test N) replaces them with nonlocal measured pixels at training and inference, and the target is that input patch",
     )
 
     parser.add_argument(

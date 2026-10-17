@@ -2347,3 +2347,164 @@ Status: INFO
 - Resolves: 2026-10-17 12:56 Codex entry.
 - Committed the reviewed Test V PCA segmentation control, ranking-stage timing, runtime table v2 and legacy RCC wall-time evidence, tests, protocol and project records as `f2e8040` (`Add PCA segmentation control and runtime v2`).
 - The commit authorises no cluster action by itself; the predeclared upload, cluster-test and submission checklist still apply, with Test R retaining priority.
+
+### 2026-10-17 13:04 Code → Supervisor: Test R seed 3 first phase submitted (69724); 69683 throttle back to 3; Test V/runtime uploaded, test job 69714 running
+Status: INFO
+- **Upload** 12:58 SAST from the clean HEAD `06ab508` (Codex `f2e8040`; documented command, `-n` first): 13 code files, `sha256sum` 13/13 match HEAD. None of them is used by the running Test R jobs.
+- **Cluster test job 69714** (`bigbatch`, CPU): submitted 12:58 SAST, running since about 13:02 on mscluster84 (it waited for a free slot under the 6-running QOS limit).
+- **69724** `train-first 3` (RCC + CAC, tasks 0–31, at most 3 running): submitted 13:03 SAST, once 69683 had 15 tasks left (15 + 32 = 47 of 48). At the same time, `scontrol update JobId=69683 ArrayTaskThrottle=3`, per the 12:41 note and Zayd's OK.
+- **69683** (seed-2 phase 1): 22/32 finished, 21 COMPLETED, plus 69683_2 "not done". The others are running or pending. Seed-2 GBM is resubmitted with `--after-reviewed 69683` once 69683 has fully finished.
+- **Timing so far matches seed 1.** RCC tasks take 4–28 min (UH9610_15 is the longest, with 22 min of IG) and CAC tasks 2–3 min. Two tasks on mscluster81 spent about 5 extra minutes outside the training timer (training script time 424 s vs 125 s of training; 588 s vs 256 s), probably slow file reads. This is descriptive only; the node is not quarantined. Expected end of all training: about 19:00–21:00 SAST.
+
+### 2026-10-17 13:04 Supervisor → Code: New predeclared Test N (S3PL retrained with shuffled nonlocal neighbours, CAC); Test V gets slot priority
+Status: OPEN, for Code (Zayd-approved; independent review F5)
+
+**Why.** The S3PL control (retrained centre-tiled: 0.179 / 0.153 vs real 0.591) removes all neighbour information and makes the patch target unattainable. It shows that S3PL fails without neighbour input. It does **not** show that S3PL needs *spatially correct* neighbours. Our VAE claims rest on a shuffled-neighbour control, so S3PL needs the same kind of control before we can contrast the two. This entry is the predeclaration, written before any output. Copy it verbatim into protocol 18 as **Section 6.5 "Test N"** before writing code.
+
+**Design:**
+- **CAC, all 8 sections. Two seeds, using exactly the same seed and RNG conventions as the existing centre-tiled control**: seed 1 on the released code path (global RNG), seed 2 on the controlled sample-order stream.
+- **The only change from the "real" S3PL runs:** at training **and** inference, every non-central position of each p×p input patch is replaced by the spectrum of a nonlocal measured pixel.
+  - Fixed global permutation π of measured pixels, seed 1701, the same construction as the VAE `shuffled_p3` arms.
+  - The neighbour of pixel i at offset o is replaced by π(that neighbour); missing positions are handled as in the real runs.
+  - The centre spectrum stays real.
+  - The reconstruction target is the input patch, as in S3PL. So the target here is the shuffled patch. Record this.
+- **Settings:** released CAC settings (p = 9, z = 256, d1 = 51, d2 = 1, 10 epochs, batch 16, lr 1e-2, `reference_spatial_max`).
+- **Scoring:** the matched peak count, exactly as `s3pl_cac_controls.csv` (`matched_peaks`). Outputs go to new roots.
+
+**Decision rule (per seed, then both), real minus retrained-shuffled:**
+- **"S3PL depends on spatially correct neighbours":** ≥ 0.02 on ≥ 7/8 sections **and** mean ≥ 0.02, in **both** seeds. This is the same thresholds as the existing centre-tiled rule.
+- **"Not spatially specific":** |mean| < 0.02 in both seeds.
+- **Otherwise "mixed"**, with per-section values.
+
+**Descriptive:** retrained-shuffled against retrained centre-tiled (does any neighbour input rescue training?), and against mean intensity at the same count.
+
+**Validity checks:**
+- A test shows the shuffle leaves the centre unchanged and that π is a permutation of measured pixels.
+- The real-arm seed-1/seed-2 scores reproduce the saved `real` column.
+- The default S3PL path stays bit-identical (test).
+
+**Process:** tests first; diff summary; uncommitted for Codex. After commit: upload, cluster test, checklist, submit. 16 short GPU runs.
+
+**Cluster priority** (shared `bigbatch` QOS of 48 submitted / 6 running): (1) the Test R jobs already queued keep running; (2) **Test V next** (CPU, the most important for interpretation); (3) Test N; (4) the remaining Test R seed-3 submissions; (5) ranking-stage timing last.
+**Deadline: the end of Tuesday 20 October.** Anything not finished is reported as not done.
+
+### 2026-10-17 13:07 Supervisor → Codex | Code: Independent review applied to the update pack
+Status: INFO
+- **Source:** `docs/meetings/2026-10-19_update/independent_review_2026-10-17.md` (an independent Claude review, read-only). I checked its key claims against the saved tables:
+  - CAC posterior-max equals the oracle on 160TopL/200TopL;
+  - CAC mean intensity 0.612 is the best label-free ranking;
+  - RCC cancer/normal: correlation 0.380, below mean intensity, Moran's I and variance, beating IG in 5/8;
+  - 2 of the 14 extra arms have only 1 section.
+  - CAC is one biopsy: confirmed from Weigand et al. ("selected from each region of the biopsy", 8 of 52).
+- **Applied (gitignored update pack only; `report/draft/` untouched):**
+  - status lines (Tests R, V, N);
+  - mean intensity;
+  - metric alignment, with Q3 now "ablation, not recommendation";
+  - the RCC cancer/normal caveat beside every 47/47 and RCC claim;
+  - GBM → PDX lines, CAC → one biopsy, CAC p-value removed;
+  - S3PL wording, now pending Test N;
+  - the error fixes (heading, line 63, Q7, 98 comparisons, the legacy RCC row);
+  - §5.3 status;
+  - IG-configuration scope;
+  - the S3PL GBM check list, including imzML limits and 280TopL;
+  - Moran's I vs published S3PL, carefully worded;
+  - extended limitations.
+- **New:**
+  - `proposal_to_outcome_2026-10-19.md`;
+  - `descriptive_analyses/` (segmentation accuracy vs score, paired differences with ranges, budget sensitivity), plus figure 22 and chapter §4.6.
+- **Where I differ from the review (F8):** no bootstrap intervals at the PDX-line or specimen level (4 lines, 1 CAC specimen; decided 9 Oct). Instead, per-section values, sign counts and min/max are given. Any section-level interval must be labelled as such.
+
+
+### 2026-10-17 13:13 Code → Supervisor | Codex | Zayd: Cluster test job 69714 FAILED on one test-only bug; Test V not submitted; fix uncommitted for Codex
+Status: OPEN, for Codex (a one-test fix) and Zayd (a choice on Test V)
+- **69714:** FAILED after 6:54 on mscluster84. 226 tests ran: 1 failure and 2 skips.
+  - The 2 skips are the expected runtime-artifact tests in `test_runtime_v2` (the synced artifacts are not on the cluster).
+  - **`test_segmentation_control_v` ran 18/18 OK.** `test_test_r` 19/19, `test_runtime_v2` 13 run.
+- **The failure:** `test_ranking_stage_runtime.MainOutput.test_refuses_outside_slurm_without_the_flag`, "SystemExit not raised".
+  - Cause: the test expects the Slurm guard to refuse because `SLURM_JOB_ID` is unset. Inside the cluster test job that variable is always set, so the guard correctly let the script run.
+  - It passed locally only because there is no Slurm there. **The bug is in the test; the guard and the timing code are right.**
+- **Fix (test file only, uncommitted):** the test now hides `SLURM_JOB_ID` with `mock.patch.dict(os.environ, …)` and checks that no output folder is created. `test_ranking_stage_runtime` passes 13/13 locally both without and with `SLURM_JOB_ID=12345` set; the old version would fail in the second case.
+- **Test V not submitted:** the instruction was to submit once the test job passes, and the job as a whole failed.
+- **Zayd's choice:**
+  - (a) wait for Codex's commit, then upload and rerun the test job (about 7 min of runtime, plus waiting for a free slot), then submit Test V; or
+  - (b) submit Test V now, since its own 18 tests ran and passed on the cluster and the failure is in an unrelated module (the ranking timing, which runs last anyway).
+  - I recommend (a) only if Codex is available soon; otherwise (b).
+- Meanwhile I am building Test N (Section 6.5 first).
+
+### 2026-10-17 13:22 Code → Supervisor | Codex | Zayd: Test N — Section 6.5 written; code and tests done; diff summary; uncommitted for Codex. Queue question on seed-2 GBM
+Status: OPEN, for Codex (review) and Zayd (one queue decision)
+- **Clock correction:** my entry headed 13:13 was written at 13:11 SAST. The header stays as posted (append-only).
+
+**0. Protocol.** 13:04 is in protocol 18 as **Section 6.5 "Test N"**, verbatim (checked with `diff`). It was written before any code. The implementation notes sit below it.
+
+**1. Two implementation choices to confirm:**
+- **(a) "Nonlocal" window = the 9×9 patch.** The VAE `shuffled` construction is used as is: the seed-1701 map (one n-cycle), plus the walk that skips the pixel's own window. The VAE `shuffled_p3` arms excluded a 3×3 window. For S3PL I exclude the whole 9×9 patch; otherwise a "nonlocal" source could sit inside the patch.
+- **(b) The m2aia path (CAC is imzML).**
+  - m2aia fills unmeasured window slots with random in-window pixels and pads border windows with random repeats, using the global RNG.
+  - Test N keeps that real construction, with the RNG stream identical to the real run (tested), then maps every non-central slot through the shuffle.
+  - "Centre" = the central slot as the released code fills it. At borders m2aia's padding can put another pixel there; that is a released-code quirk, unchanged.
+  - Each call re-derives the real index list and checks that it reproduces m2aia's own patch; a mismatch stops the run.
+- **Target:** the shuffled input patch, as 13:04 specifies. It is recorded in each run config. This differs from the centre-tiled control (real-patch target).
+
+**2. Changed S3PL files** (opt-in; the default path is unchanged):
+- `utils/data_source.py` (+28/−5): `neighbour_shuffle_seed=None` on `build_patch_dataset` and `H5SpectrumPatchDataset`; the m2aia default branch is untouched.
+- `train.py` (+24/−6), `test.py` (+18/−6), `main.py`:
+  - a new `--input-context-mode shuffle_nonlocal`, applied at training and at inference;
+  - `none` and `tile_centre` call the patch builder exactly as before;
+  - the training name gets `_train_shuffle_nonlocal`, and the existing overwrite refusal for non-`none` modes applies.
+
+**3. New files:**
+- `baselines/s3pl/utils/nonlocal_shuffle.py` (149): the map, the walk, the patch-index shuffle, and the m2aia mixin.
+- `baselines/s3pl/tests/test_nonlocal_shuffle.py` (360) and `tests/fixtures/pre_test_n/data_source.py`, a frozen copy of the pre-change file used for the bit-identity tests.
+- `scripts/summarise_s3pl_cac_shuffle_control.py` (210):
+  - The 13:04 rule per seed, then both: `S3PL depends on spatially correct neighbours` / `not spatially specific` / `mixed`; "incomplete" below 8/8.
+  - Validity: each real value is recomputed from its saved `metrics.json` and must reproduce the saved `real` column. **It already does, 16/16, from the local files; no Test N run has happened yet.** Each shuffled run's configuration is checked (mode, map seed 1701, seeds, count, epochs, patch size, normalisation).
+  - Descriptive: shuffled minus the retrained centre-tiled control, and shuffled minus mean intensity (fair-scoring bin level at K_bin = the S3PL count; a different scorer, so labelled).
+- `slurm_jobs/run_s3pl_cac_shuffle_control.sh` (106):
+  - tasks 0–7 seed 1 (released path) → `reproducibility/s3pl_cac_shuffle_control/seed1_released`;
+  - tasks 8–15 seed 2 (`--initialization_seed 2 --sample_order_seed 1`) → `.../seed2_init2_order1`.
+  - Before training it checks the source config against the seed-1 real config, compiles the files, runs the Test N tests, and does the CUDA warm-up. It refuses to overwrite.
+- `slurm_jobs/submit_s3pl_cac_shuffle_control.sh` (46): `sbatch --exclude` from the quarantine list; at most 2 running.
+- `src/spatial_msipl/tests/test_s3pl_shuffle_control.py` (104).
+- `run_fair_scoring_tests.sh`: +1 module, plus a second unittest step that runs the S3PL tests from `baselines/s3pl` (logged to `<job>_s3pl_unittest.log`).
+
+**4. Tests** (local Python 3.11 venv, no torch or m2aia):
+- `test_nonlocal_shuffle` 11 run + 2 skipped. The skipped classes need m2aia/pyimzml and torch and run on the cluster: real m2aia on a synthetic imzML, and the training-call checks.
+- `test_s3pl_shuffle_control` 6/6.
+- What they cover:
+  - the map equals the VAE construction, is a derangement and a single cycle, and leaves the global RNG untouched;
+  - sources are outside the window; unmeasured slots stay empty;
+  - the H5 default patches equal the frozen pre-change copy;
+  - the centre is unchanged and every non-central source is nonlocal;
+  - m2aia stand-in: the RNG stream equals the real run, the transform is applied once, and a drifted index rule is detected;
+  - decision boundaries; configuration refusals; job-script contents.
+- Re-run alongside: `test_ranking_stage_runtime`, `test_segmentation_control_v`, `test_runtime_v2`, `test_job_scripts`, all OK.
+
+**5. Queue question for Zayd.** 69683 finished at about 13:10 (31 COMPLETED, plus the predeclared "not done" 69683_2). Per the plan, seed-2 GBM goes next with `--after-reviewed 69683`. But 13:04 ranks Test V above anything not yet queued, and Test V is waiting on the 13:13 test-job decision. 69724 holds 26 of the 48 submit slots and 3 of the 6 running slots.
+- (i) Submit seed-2 GBM now (16 tasks; 42/48). The 3 idle GPU slots get used. Test V then waits for queue room, and later behind GBM tasks pending in the queue.
+- (ii) Hold seed-2 GBM until Test V is queued. 3 GPU slots stay idle meanwhile, so the end of training moves about 1 h later.
+- I am holding (ii) until Zayd answers, per the 13:04 order.
+
+### 2026-10-17 13:25 Supervisor → Code | Codex | Zayd: Rulings on 13:13 (Test V) and 13:22 (Test N, queue)
+Status: INFO
+- Resolves: 2026-10-17 13:13 Code entry and 2026-10-17 13:22 Code entry, on the supervisor side. The cluster actions below need Zayd's OK.
+- **Test V (13:13): option (b) is fine scientifically.** `test_segmentation_control_v` ran 18/18 on the cluster under `s3pl_env`. The single failure is a test-environment bug in an unrelated module (ranking timing, which runs last), and the guard itself behaved correctly. Record in Section 10: "submitted after test job 69714, whose only failure was the unrelated test-only bug in `test_ranking_stage_runtime`, fixed in <commit>". The fix goes through Codex. The ranking-timing job must wait for a test job that passes after that fix.
+- **Queue (13:22): neither (i) nor (ii) as posted.** Test V's 24 tasks do not fit beside 69724 (26 queued) either way, and leaving GPUs idle costs more than it saves. Proposed (Zayd's OK needed):
+  1. Submit seed-2 GBM now (`--after-reviewed 69683`), throttled to **2** running.
+  2. Submit Test V **in chunks** that fit the 48-submit limit (now indices 0–5), throttled to **1** running. Add the next chunks as the queue frees. Running total: 69724 (3) + GBM (2) + Test V (1) = 6.
+  3. Once 69724 finishes, raise GBM's throttle back up and submit the rest of Test V at 2 running.
+  4. Test N follows after Codex commits it, when GPU slots free up.
+- **Test N implementation (13:22): both choices accepted.**
+  - (a) Excluding the whole 9×9 patch is the correct reading of "nonlocal" for S3PL. The predeclaration's "same construction" refers to the map. Record the patch exclusion as an implementation note, not an amendment.
+  - (b) Keeping m2aia's real patch construction and RNG stream, then remapping the non-central slots, is right. The border-padding quirk is unchanged released behaviour; note it.
+  - Over to Codex for review. The cluster-only skipped tests (m2aia, torch) must run, not skip, in the cluster test job before submission.
+
+### 2026-10-17 13:26 Codex → Code | Supervisor: Review of Test N and cluster-test fix
+Status: INFO
+
+- Resolves: 2026-10-17 13:04 Supervisor entry and 2026-10-17 13:22 Code entry, for the independent code review; the 13:25 Supervisor entry separately resolves the scientific choices.
+- No blocking findings. Test N is opt-in, preserves the existing default data path, applies the fixed seed-1701 permutation at training and inference, retains the shuffled input as the reconstruction target, validates saved real-arm values and configuration provenance, refuses overwrite, and implements the predeclared two-seed decision rule without inspecting Test N outcomes.
+- The whole-9×9 exclusion and released m2aia central-slot/border behaviour match the Supervisor's 13:25 ruling and the implementation notes now recorded in protocol 18 Section 6.5.
+- The ranking-runtime test fix correctly removes inherited `SLURM_JOB_ID` only inside the outside-Slurm test and also checks that no output directory was created. The failed cluster run remains recorded; a passing cluster test is still required before ranking timing, and Test N's m2aia/torch tests must run without skips before Test N submission.
+- Verification: `git diff --check` passed; Test N decision/configuration tests 6/6 passed; eight dependency-light nonlocal-shuffle tests passed locally, with dependency-gated HDF5, real-m2aia and torch tests unavailable in this local environment. The submitted diff reports those dependency-gated tests passing in its fuller local environment, but the required cluster test remains the authoritative gate.
+- Approved for commit. The commit hash will be recorded in a follow-up entry; this review authorises no cluster action by itself.
