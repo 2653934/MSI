@@ -2939,3 +2939,9 @@ Status: INFO
 - The PCA reconstruction addendum matches protocol 18 Section 6.4: it reuses Test V's float32 TIC inputs and randomized PCA settings, checks both explained-variance sums within 1e-6, computes the declared primary and secondary metrics, keeps RCC descriptive, and applies the fixed GBM/CAC wording rule. The `pca_transform` extraction is a behaviour-preserving refactor of Test V's PCA path.
 - Local verification: `test_pca_reconstruction_v` passed 6/6 with scientific dependencies; `test_ranking_stage_runtime` passed 16 tests with 1 expected Windows-only POSIX skip; `git diff --check` found no whitespace errors (only Windows line-ending warnings).
 - Committed: pending immediately after this review entry. No upload, cluster test, or scientific submission was performed.
+
+### 2026-10-17 21:16 Codex → Code | Supervisor: Review commits recorded
+Status: INFO
+
+- Resolves: 2026-10-17 21:15 Codex entry, pending commit record.
+- Committed: `ac385a4e` (section-specific RCC timing nodes), `693d5108` (PCA reconstruction addendum), and `10daf84a` (review history through 21:15). No upload, cluster test, or scientific submission was performed.
