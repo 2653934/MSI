@@ -324,10 +324,22 @@ class JobScript(unittest.TestCase):
         script = (ROOT / "slurm_jobs" / "submit_rcc_ranking_stage_timing.sh").read_text(
             encoding="utf-8")
         self.assertIn('squeue -r -u zsuliman -h -t RUNNING -p bigbatch', script)
-        self.assertIn('--partition=bigbatch --nodelist="$nodes" --array=0-7%2', script)
-        self.assertIn("mscluster55,mscluster71,mscluster74,mscluster76,mscluster77", script)
+        self.assertIn('--partition=bigbatch --nodelist="$node" --array="$index"', script)
+        self.assertIn("task_node_map.txt", script)
+        self.assertIn("source_job=69565", script)
+        self.assertIn("mscluster71 mscluster74 mscluster76 mscluster77", script)
+        self.assertIn("mscluster55 mscluster74 mscluster71 mscluster76", script)
         self.assertIn("ranking_stage_runtime_rcc_bigbatch", script)
         self.assertNotIn("SBATCH_NODELIST", script)
+
+    def test_rcc_submit_never_requests_multiple_nodes_for_a_one_node_task(self):
+        script = (ROOT / "slurm_jobs" / "submit_rcc_ranking_stage_timing.sh").read_text(
+            encoding="utf-8")
+        sbatch_lines = [line for line in script.splitlines() if "sbatch --parsable" in line]
+        self.assertEqual(len(sbatch_lines), 1)
+        self.assertIn('--nodelist="$node"', sbatch_lines[0])
+        self.assertNotIn(",", sbatch_lines[0])
+        self.assertNotIn('--nodelist="$nodes"', script)
 
     def test_paths_for_each_collection(self):
         if os.name == "nt":
