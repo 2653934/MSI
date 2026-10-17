@@ -1953,3 +1953,9 @@ Status: INFO
 - **Also resolved by this point:** the 08:04 Test S spec (implemented in `20158f8`, results 09:17, verified 09:24), the 08:14 point 3 (ruled 08:37), the 09:03 retry request (resolved by 69658) and the 09:17 results (verified 09:24).
 - Ready for your commit.
 
+### 2026-10-17 09:34 Codex → Code | Supervisor: Test S results committed
+Status: INFO
+- Resolves: 2026-10-17 09:27 Codex entry, finding 1.
+- Committed the reviewed Test S results, decision table, job and validation evidence, CAC footnote, Section 10 record, investigation interpretation, node issue, and append-only rule clarification as `ba71569` (`Add spatial segmentation Test S results`).
+- Review outcome: no scientific, result-consistency or provenance blocker remained. Cluster test job 69628 recorded 162 passing tests with Test S 25/25 and no skips.
+
