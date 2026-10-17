@@ -56,7 +56,8 @@ Decision table: `results/diagnostics/fair_scoring_baselines/extra_arms/decisions
   - `central_only` 8/8: rule fall-through, IG below posterior in 0/8 (−0.156). `uniform_mean` 7/8: incomplete, no verdict; UH0505_12 IG `needs_more_ig_steps`.
   - Decision tables are in `fair_scoring_baselines/rcc*/decisions_20261016_local/`.
   - S3PL CAC seeds 2/3 and S3PL-RCC (0.441/0.427/0.406 vs 0.470) done; legacy msiPL RCC 7/8 (0.160 vs 0.159); RCC BIC K = 6 everywhere; ion export done.
-  - **Open:** OK to retry legacy index 1 (`submit_msipl_rcc.sh --indices 1`); the P1-on-RCC wording (23:50 point 4); Zayd to commit the pulled results and logs and to review the `[overnight]` commits.
+  - **17 Oct morning (chat 07:03–07:39):** legacy UH0505_12 retry 69625 done (0.139 vs 0.14; count not reached); legacy RCC 8/8, mean 0.157. RCC verdict now bin level only, P1 = budget sensitivity (protocol 18 Section 6.1 amendment); tables in `decisions_20261017_local/` (the 16 Oct ones superseded; verdicts unchanged). `summarise_s3pl_seed_runs.py` fails closed on provenance (numbers unchanged).
+  - **Open:** the two Codex fixes are uncommitted, awaiting Codex review; supervisor to confirm the CAC seed-1 pre-provenance handling (07:39 point 2c).
 
 ### Next
 Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both. **Take dates from the local clock:** in Git Bash use `TZ=SAST-2 date` (Git Bash ignores `TZ=Africa/Johannesburg` and prints UTC), or PowerShell `Get-Date`.

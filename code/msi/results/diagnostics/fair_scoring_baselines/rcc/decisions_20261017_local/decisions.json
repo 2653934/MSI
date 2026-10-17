@@ -1,0 +1,212 @@
+{
+  "RCC/central_only": {
+    "sections": [
+      "RCC_MH0204_33",
+      "RCC_UH0505_12",
+      "RCC_UH0710_33",
+      "RCC_UH9610_15",
+      "RCC_UH9812_03",
+      "RCC_UH9905_18",
+      "RCC_UH9911_05",
+      "RCC_UH9912_01"
+    ],
+    "ig_minus_posterior_bin": {
+      "sections": 8,
+      "mean_difference": -0.15555870329491217,
+      "median_difference": -0.14965721536653687,
+      "positive_sections": 0,
+      "per_section": [
+        -0.25582500694079663,
+        -0.05943196775911619,
+        -0.06899636642384027,
+        -0.18407150608162237,
+        -0.0662411434122166,
+        -0.11524292465145136,
+        -0.21241425676114345,
+        -0.28224645432911044
+      ]
+    },
+    "mean_mSCF1_bin": {
+      "integrated_gradients": 0.41225437445881075,
+      "posterior_abs_pcc_balanced": 0.5678130777537229,
+      "first_layer_l2": 0.11462159903374673,
+      "mean_intensity": 0.4975588585324186,
+      "variance": 0.5079554523345202,
+      "morans_i": 0.6308843577579683,
+      "oracle": 0.7560012923685567,
+      "random_mean": 0.1708339123909784
+    },
+    "patient_ig_minus_posterior_bin": {
+      "MH0204_33": -0.25582500694079663,
+      "UH0505_12": -0.05943196775911619,
+      "UH0710_33": -0.06899636642384027,
+      "UH9610_15": -0.18407150608162237,
+      "UH9812_03": -0.0662411434122166,
+      "UH9905_18": -0.11524292465145136,
+      "UH9911_05": -0.21241425676114345,
+      "UH9912_01": -0.28224645432911044
+    },
+    "ig_minus_posterior_P1_budget_sensitivity": {
+      "sections": 8,
+      "mean_difference": -0.17884824820921583,
+      "median_difference": -0.17942286954909786,
+      "positive_sections": 0,
+      "per_section": [
+        -0.22162441058180582,
+        -0.10784052600663513,
+        -0.10511139743539893,
+        -0.2469288880550839,
+        -0.09955374027103808,
+        -0.14229401173663525,
+        -0.21655172736156048,
+        -0.290881284225569
+      ]
+    },
+    "ig_vs_posterior_verdict": "mixed / not resolved by the predeclared rule",
+    "verdict_scale": "bin level only",
+    "peak_level_partitions_used": [
+      "P1"
+    ],
+    "disclosures": [
+      "unannotated class, 45-78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (rcc_nobg), but this was not independently verified",
+      "GMM K = 3 equals the number of label classes: label-free in training and ranking, class-informed in its component count",
+      "legacy msiPL not run on RCC (requires count tuning)"
+    ],
+    "limitations": [
+      "per the dataset documentation, UH0505_12 and UH9905_18 contain heterogeneous tumour with large normal-looking areas (descriptive; no exclusion, no separate analysis)"
+    ],
+    "budget_note": "K_bin = released S3PL target num_GT_peaks (~|R@0.5|, the paper's RCC threshold), the GBM/CAC convention: 466-2,200 bins per run; GBM K_bin 584-1,028 and CAC K_bin 133-315 bins",
+    "p1_note": "P1 on RCC is singleton groups, so its peak-level score is the bin-level score at the K_peak budget (~|R@0.4|); it is a budget sensitivity, not an independent partition check; it does not enter the verdict"
+  },
+  "RCC/uniform_mean": {
+    "sections": [
+      "RCC_MH0204_33",
+      "RCC_UH0710_33",
+      "RCC_UH9610_15",
+      "RCC_UH9812_03",
+      "RCC_UH9905_18",
+      "RCC_UH9911_05",
+      "RCC_UH9912_01"
+    ],
+    "ig_minus_posterior_bin": {
+      "sections": 7,
+      "mean_difference": -0.18532056489548393,
+      "median_difference": -0.20310438046620133,
+      "positive_sections": 0,
+      "per_section": [
+        -0.17735948737190166,
+        -0.06542079222167019,
+        -0.23630131632813453,
+        -0.20797480811656371,
+        -0.11158456184564008,
+        -0.20310438046620133,
+        -0.29549860791827604
+      ]
+    },
+    "mean_mSCF1_bin": {
+      "integrated_gradients": 0.4104655126429403,
+      "posterior_abs_pcc_balanced": 0.5957860775384242,
+      "first_layer_l2": 0.08368807723547275,
+      "mean_intensity": 0.4988250072677865,
+      "variance": 0.5039643261241674,
+      "morans_i": 0.6352065610179845,
+      "oracle": 0.7552044851600144,
+      "random_mean": 0.1733776849439448
+    },
+    "patient_ig_minus_posterior_bin": {
+      "MH0204_33": -0.17735948737190166,
+      "UH0710_33": -0.06542079222167019,
+      "UH9610_15": -0.23630131632813453,
+      "UH9812_03": -0.20797480811656371,
+      "UH9905_18": -0.11158456184564008,
+      "UH9911_05": -0.20310438046620133,
+      "UH9912_01": -0.29549860791827604
+    },
+    "ig_minus_posterior_P1_budget_sensitivity": {
+      "sections": 7,
+      "mean_difference": -0.21145168864210614,
+      "median_difference": -0.219885553858847,
+      "positive_sections": 0,
+      "per_section": [
+        -0.18309603915855455,
+        -0.09638445536474533,
+        -0.2931681901863236,
+        -0.219885553858847,
+        -0.1539188743196802,
+        -0.22324450440054167,
+        -0.31046420320605084
+      ]
+    },
+    "ig_vs_posterior_verdict": "incomplete; no verdict (7/8 runs)",
+    "verdict_scale": "bin level only",
+    "peak_level_partitions_used": [
+      "P1"
+    ],
+    "disclosures": [
+      "unannotated class, 45-78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (rcc_nobg), but this was not independently verified",
+      "GMM K = 3 equals the number of label classes: label-free in training and ranking, class-informed in its component count",
+      "legacy msiPL not run on RCC (requires count tuning)"
+    ],
+    "limitations": [
+      "per the dataset documentation, UH0505_12 and UH9905_18 contain heterogeneous tumour with large normal-looking areas (descriptive; no exclusion, no separate analysis)"
+    ],
+    "budget_note": "K_bin = released S3PL target num_GT_peaks (~|R@0.5|, the paper's RCC threshold), the GBM/CAC convention: 466-2,200 bins per run; GBM K_bin 584-1,028 and CAC K_bin 133-315 bins",
+    "p1_note": "P1 on RCC is singleton groups, so its peak-level score is the bin-level score at the K_peak budget (~|R@0.4|); it is a budget sensitivity, not an independent partition check; it does not enter the verdict"
+  },
+  "_patients": {
+    "mapping": {
+      "RCC_MH0204_33": "MH0204_33",
+      "RCC_UH0505_12": "UH0505_12",
+      "RCC_UH0710_33": "UH0710_33",
+      "RCC_UH9610_15": "UH9610_15",
+      "RCC_UH9812_03": "UH9812_03",
+      "RCC_UH9905_18": "UH9905_18",
+      "RCC_UH9911_05": "UH9911_05",
+      "RCC_UH9912_01": "UH9912_01"
+    },
+    "source": "CardinalWorkflows 1.44.0 MSI-classification vignette: each matched pair from one subject is on its own slide (run); 8 runs, 8 subjects"
+  },
+  "_campaign_provenance": {
+    "approval": "689822537e26f38b76a55487d48bbd19edaac920be2c9bea2102ca34321a4877",
+    "code": {
+      "evaluate_fair_scoring_baselines.py": "1be4a74aa19fe3069a0bec571efcdb122057880a9e6d5ea660eb1c6ce6fbaedb",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "bf5e4e118d2fc3092e13a1e14b51604970f62761b64cf343f2d1137de2ef32f4",
+      "peak_groups.py": "2b76a3b482e534494a3dff6693250a5a3cf4bbeeba60671b0cbbcd198e1b6f6c",
+      "peak_selection.py": "6a9a0182d6aa275310c6a6a4e91f2ebeaff3d6e76ec5b6d7f3595f814a66d852",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "simple_baselines.py": "1fc8bd4492e96039ec60df8b37801edcc77541525ee068b6a3e7f74a7b7379ee"
+    },
+    "evaluation_version": 4,
+    "parameters": {
+      "budget_multipliers": [
+        0.5,
+        0.75,
+        1.0,
+        1.5,
+        2.0
+      ],
+      "legacy": "legacy msiPL not run on RCC (requires count tuning)",
+      "random_draws": 100,
+      "random_seed": 20261009,
+      "score_tolerance": 1e-12,
+      "thresholds": [
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ]
+    },
+    "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.2)",
+    "approved_partition_parameters_by_collection": {
+      "RCC": {
+        "P1": {
+          "gap_break_ppm": 50.0,
+          "max_merge_width_ppm": 100.0,
+          "min_relative_depth": 0.05,
+          "smoothing_bins": 3
+        }
+      }
+    }
+  }
+}

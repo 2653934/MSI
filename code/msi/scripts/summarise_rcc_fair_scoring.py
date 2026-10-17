@@ -2,7 +2,9 @@
 """RCC decision table (protocol 18 Section 6.1, item D step 2).
 
 Applies the Section 7 IG-versus-posterior rule per arm over the 8 RCC runs, at
-bin level and under P1 when the RCC partition approval exists. With
+bin level only. P1, when the RCC partition approval exists, is tabulated as a
+budget sensitivity and never enters the verdict (protocol 18 Section 6.1
+amendment of 17 October; supervisor chat 2026-10-17 07:16). With
 --sensitivity it tabulates the cancer/normal-only analysis, which never gets a
 verdict. Refuses mixed provenance, rows from other collections, and a primary
 root that contains class-subset results (or the reverse). No legacy rule: legacy
@@ -41,9 +43,10 @@ K_DISCLOSURE = ("GMM K = 3 equals the number of label classes: label-free in tra
 SENSITIVITY_LABEL = "sensitivity, cancer/normal classes only"
 SENSITIVITY_CLASSES = [0, 1]
 LEGACY_NOTE = "legacy msiPL not run on RCC (requires count tuning)"
-# Supervisor chat 2026-10-16 19:27 (P1) and 19:47 (budget).
-P1_NOTE = ("P1 = bin level on RCC (bin spacing ~0.083 Da > merge threshold); "
-           "no separate P1 verdict; not independent confirmation")
+# Supervisor chat 2026-10-17 07:03/07:16 (P1; supersedes 19:27) and 2026-10-16 19:47 (budget).
+P1_NOTE = ("P1 on RCC is singleton groups, so its peak-level score is the bin-level score "
+           "at the K_peak budget (~|R@0.4|); it is a budget sensitivity, not an independent "
+           "partition check; it does not enter the verdict")
 BUDGET_RULE = ("K_bin = released S3PL target num_GT_peaks (~|R@0.5|, the paper's RCC "
                "threshold), the GBM/CAC convention")
 OTHER_BUDGETS = "GBM K_bin 584-1,028 and CAC K_bin 133-315 bins"
@@ -61,12 +64,13 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def verdict(scales, sections):
-    if sections != len(RCC_SECTIONS):
-        return f"incomplete; no verdict ({sections}/{len(RCC_SECTIONS)} runs)"
-    if all(s["mean_difference"] >= PRACTICAL and s["positive_sections"] >= 6 for s in scales):
+def verdict(bin_level):
+    """The Section 7 rule on the bin-level paired record only (P1 never enters)."""
+    if bin_level["sections"] != len(RCC_SECTIONS):
+        return f"incomplete; no verdict ({bin_level['sections']}/{len(RCC_SECTIONS)} runs)"
+    if bin_level["mean_difference"] >= PRACTICAL and bin_level["positive_sections"] >= 6:
         return "IG adds value beyond its segmentation target"
-    if all(abs(s["mean_difference"]) < PRACTICAL for s in scales):
+    if abs(bin_level["mean_difference"]) < PRACTICAL:
         return "IG equivalent to segment-then-correlate"
     return "mixed / not resolved by the predeclared rule"
 
@@ -149,17 +153,16 @@ def main():
                              if k.startswith("P") and ":" in k})
         for partition in partitions:
             if all(f"{partition}:integrated_gradients" in r for r in subset):
-                record[f"ig_minus_posterior_{partition}"] = paired(
+                record[f"ig_minus_posterior_{partition}_budget_sensitivity"] = paired(
                     [r[f"{partition}:integrated_gradients"] for r in subset],
                     [r[f"{partition}:posterior_abs_pcc_balanced"] for r in subset])
-        scales = [record["ig_minus_posterior_bin"]] + [
-            record[k] for k in record if k.startswith("ig_minus_posterior_P")]
         if args.sensitivity:
             record["label"] = SENSITIVITY_LABEL
             record["caption"] = SENSITIVITY_CAPTION
             record["ig_vs_posterior_verdict"] = None
         else:
-            record["ig_vs_posterior_verdict"] = verdict(scales, len(subset))
+            record["ig_vs_posterior_verdict"] = verdict(record["ig_minus_posterior_bin"])
+            record["verdict_scale"] = "bin level only"
         record["peak_level_partitions_used"] = partitions
         record["disclosures"] = [NA_CAVEAT, K_DISCLOSURE, LEGACY_NOTE]
         record["limitations"] = [HETEROGENEITY_LIMITATION]

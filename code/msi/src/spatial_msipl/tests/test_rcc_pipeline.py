@@ -462,5 +462,74 @@ class RccPipelineTests(unittest.TestCase):
         self.assertIn("is not an RCC run", refused.stderr)
 
 
+def synthetic_summary(ig_bin, posterior_bin, ig_p1, posterior_p1):
+    """A minimal complete RCC fair-scoring summary.json (bin level and P1)."""
+    methods = {"integrated_gradients": ig_bin, "posterior_abs_pcc_balanced": posterior_bin,
+               "first_layer_l2": 0.1, "mean_intensity": 0.3, "variance": 0.3,
+               "morans_i": 0.4, "oracle": 0.8}
+    bin_level = {name: {"1.0": {"mSCF1": value}} for name, value in methods.items()}
+    bin_level["random"] = {"1.0": {"mSCF1_mean": 0.15}}
+    return {
+        "status": "complete", "K_bin": 500, "budgets": {"1.0": 500},
+        "legacy_msipl": "legacy msiPL not run on RCC (requires count tuning)",
+        "provenance": {"evaluation_version": 1, "protocol": "18", "code": {"x": "h"},
+                       "partition_approval": {"sha256": "a"},
+                       "parameters": {"class_subset": None}},
+        "bin_level": bin_level,
+        "peak_level": {"P1": {"methods": {
+            "integrated_gradients": {"matched_K_peak": {"mSCF1": ig_p1}},
+            "posterior_abs_pcc_balanced": {"matched_K_peak": {"mSCF1": posterior_p1}}}}},
+    }
+
+
+class RccVerdictScaleTests(unittest.TestCase):
+    """Amendment of 17 October (supervisor chat 07:16): the RCC verdict uses bin
+    level only; P1 is a budget sensitivity and never enters the rule."""
+
+    def summarise(self, bin_difference, p1_difference):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name) / "tree"
+        for section in RCC_SECTIONS:
+            target = root / f"{section}_seed1" / "central_only"
+            target.mkdir(parents=True)
+            (target / "summary.json").write_text(json.dumps(
+                synthetic_summary(0.5 + bin_difference, 0.5, 0.5 + p1_difference, 0.5)))
+        output = Path(tmp.name) / "decisions"
+        result = run("summarise_rcc_fair_scoring.py", "--root", root, "--output", output)
+        self.assertIn("RCC/central_only", result.stdout)
+        return json.loads((output / "decisions.json").read_text())["RCC/central_only"]
+
+    def test_bin_level_alone_decides_when_p1_disagrees(self):
+        # Bin level meets the "helps" rule (+0.05, 8/8); P1 is -0.05, 0/8.
+        # With P1 as a second scale this was "mixed"; now bin level decides.
+        record = self.summarise(0.05, -0.05)
+        self.assertEqual(record["ig_vs_posterior_verdict"],
+                         "IG adds value beyond its segmentation target")
+        self.assertEqual(record["verdict_scale"], "bin level only")
+        p1 = record["ig_minus_posterior_P1_budget_sensitivity"]
+        self.assertAlmostEqual(p1["mean_difference"], -0.05)
+        self.assertEqual(p1["positive_sections"], 0)
+        self.assertNotIn("ig_minus_posterior_P1", record)
+        self.assertIn("budget sensitivity", record["p1_note"])
+        self.assertIn("does not enter the verdict", record["p1_note"])
+
+    def test_p1_cannot_rescue_a_bin_level_fall_through(self):
+        # Bin level -0.05 (mixed); P1 equivalent (+0.001) would not change it.
+        record = self.summarise(-0.05, 0.001)
+        self.assertEqual(record["ig_vs_posterior_verdict"],
+                         "mixed / not resolved by the predeclared rule")
+        record = self.summarise(0.001, 0.05)
+        self.assertEqual(record["ig_vs_posterior_verdict"],
+                         "IG equivalent to segment-then-correlate")
+
+    def test_verdict_takes_the_bin_level_record_only(self):
+        sys.path[:0] = [str(SCRIPTS)]
+        from summarise_rcc_fair_scoring import verdict
+        helps = {"sections": 8, "mean_difference": 0.05, "positive_sections": 7}
+        self.assertEqual(verdict(helps), "IG adds value beyond its segmentation target")
+        self.assertTrue(verdict(dict(helps, sections=7)).startswith("incomplete; no verdict"))
+
+
 if __name__ == "__main__":
     unittest.main()

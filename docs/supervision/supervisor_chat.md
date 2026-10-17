@@ -1583,3 +1583,86 @@ Status: ANSWERED
 - The cancer/normal sensitivity shrinks IG − posterior to −0.045 (3/8 positive). Much of posterior's RCC advantage comes from the large unannotated class.
 - Legacy msiPL: count not reached in 5/7 runs (it picked 1,054–1,248 against targets of 1,676–2,200 on the fixed grid). The scores still match the paper per run within 0.012. Disclose both facts together.
 
+### 2026-10-17 07:16 Supervisor → Code: Two Codex review findings: fix, test, leave uncommitted
+Status: ANSWERED (Code, 07:39 entry; fixes left uncommitted for Codex)
+
+Codex committed the overnight evidence; the tree is clean. Both findings are valid. I checked the code.
+
+**1. `summarise_rcc_fair_scoring.py`: P1 is still a second decision scale, and its note is outdated.**
+- Confirmed: `verdict()` receives `scales = [bin] + [P*]`, so P1 enters the rule. `P1_NOTE` still says "P1 = bin level".
+- **Change:** the verdict uses the **bin level only** for RCC. Keep the P1 numbers in `decisions.json` and the tables, under a key that makes their status clear (e.g. `ig_minus_posterior_P1_budget_sensitivity`), and never pass them to `verdict()`. Replace `P1_NOTE` with the approved 07:03 wording: "P1 on RCC is singleton groups, so its peak-level score is the bin-level score at the K_peak budget (≈ |R@0.4|); it is a budget sensitivity, not an independent partition check; it does not enter the verdict."
+- **Record it as an amendment**, made after results, in protocol 18 (RCC spec + Section 10). Reason: after the 19:47 budget correction, P1 on RCC no longer tests partitioning. State explicitly that the verdict labels are **unchanged** by it: `central_only` stays "mixed / not resolved" (bin −0.156, 0/8); `uniform_mean` stays "incomplete; no verdict (7/8)". Verify this from the regenerated output rather than asserting it.
+- Test: a case where bin level and P1 would give different verdicts, showing that only bin level decides.
+- Regenerate **both** `decisions_*` folders (primary and cancer/normal sensitivity) into **new** dated folders. Don't overwrite the committed `decisions_20261016_local`; mark it superseded in the protocol. Raw evaluator outputs stay untouched.
+
+**2. `summarise_s3pl_seed_runs.py`: trusts `metrics.json` by path only.**
+Fail closed: refuse, exit non-zero, write no table, if any check fails. Per run, verify:
+- `metrics.json`: `dataset` == section; `normalization` == `reference_spatial_max`; `number_picked_peaks` == `num_GT_peaks[section]` (from `data_configs.py`, parsed with `ast`); `frozen_input_ablation`/`*_context_mode` == `none`; `source_training_name` encodes the expected epochs, z and p (CAC: 10, 256, 9; RCC: 10, 1024, 5).
+- The seed: from the run's own training log (`logs/s3pl/<training_name>.json`, or wherever the config/seed is recorded). It must equal the seed the table assigns. For seeds 2/3 also check `provenance/manifest.txt` (`random_seed=`, settings line). Seed 1 CAC (`results/baselines/s3pl/`) has no manifest. Verify it from its training log and record "no manifest (pre-manifest run)" rather than skipping the check.
+- Record, per run: the sha256 of `metrics.json`, the picked-peaks CSV and the training log; the manifest hash where there is one; and the verified fields. Also write a top-level `provenance_checks: passed` with counts.
+- Tests: pass, wrong seed, wrong peak count, wrong normalisation, missing log → each refused.
+- Regenerate `s3pl_seed_stability/{cac,rcc}`. If the numbers change at all, stop and post. They should not.
+
+Run `test_rcc_pipeline`, the new tests and `test_job_scripts`. Post a diff summary, then **leave everything uncommitted** for Codex. Also, if not done yet: resubmit legacy msiPL index 1 (07:03). It is independent of these fixes.
+
+
+### 2026-10-17 07:19 Code → Supervisor: Pre-submission checklist, legacy msiPL RCC index 1 (UH0505_12) retry
+Status: INFO
+- **What:** `bash slurm_jobs/submit_msipl_rcc.sh --indices 1` (07:03 decision 1). Cause of the first failure recorded as an oversight (missing pre-created checkpoint root), not a node failure.
+- **Code on the cluster:** `run_msipl_rcc.sh` and `submit_msipl_rcc.sh` sha256 match HEAD `12d7cdf` (d8742368…, 98e2f724…). Checkpoint root `/datasets/.../baselines/msipl/rcc/` exists; no UH0505_12 checkpoint in it.
+1. **Loader:** legacy loader reads the HDF5 in full (TensorFlow `msipl_legacy` env); the VAE cache rule doesn't apply.
+2. **Time:** the 7 completed tasks of 69570 took 2:46–7:18 min (UH0505_12 has 3,140 px, mid-range), against `--time=04:00:00`.
+3. **Partition:** `bigbatch` (in the script), `--exclusive`, CPU only, so no GPU quarantine applies. `batch` still down (100 nodes down/drain).
+4. **Outputs:** `results/baselines/msipl/{rcc,rcc_fixed_beta}/RCC_UH0505_12/` (both exist and are empty, created 16 Oct 21:20 UTC by the failed task) and the new checkpoint folder `.../msipl/rcc/RCC_UH0505_12/`. The script refuses to overwrite existing metrics or weights. Job ID appended to `rcc_provenance/slurm_job_ids.txt`.
+
+### 2026-10-17 07:39 Code → Supervisor: Legacy UH0505_12 done (8/8); both Codex fixes done, tested, uncommitted
+Status: ANSWERED (2c confirmed below)
+
+**1. Legacy msiPL UH0505_12 retry (07:03 decision 1): done.**
+- **69625** submitted 07:20 SAST / 05:20 UTC after the 07:19 checklist; COMPLETED in 3:55 on mscluster74 (CPU, `bigbatch`), exit 0. Pulled at 07:37 SAST: 21 new files + 1 line in `rcc_provenance/slurm_job_ids.txt`. Logged in Section 10 as Code's oversight, not a node failure.
+- **UH0505_12:** mSCF1 **0.139** (published **0.14**). **Count not reached:** Beta 0.0 (grid edge) picked 1,288 bins against the target 1,448 (−160), `closest_outside_tolerance`; grid not widened.
+- **RCC legacy now 8/8:** mean **0.157** (published 0.159, CI 0.141–0.176; inside, so no stop condition). Every run within 0.012 of the published value. Count reached 2/8, not reached 6/8.
+
+**2. Codex fixes (07:16). Both done, left uncommitted.**
+- **(a) `summarise_rcc_fair_scoring.py`:** `verdict()` now takes only the bin-level paired record. The P1 numbers are kept as `ig_minus_posterior_P1_budget_sensitivity`, never passed to the rule. `P1_NOTE` is the approved 07:03 wording plus "it does not enter the verdict". A new field `verdict_scale: "bin level only"` is added.
+  - **Regenerated** into `rcc/decisions_20261017_local/` and `rcc_cancer_normal_sensitivity/decisions_20261017_local/`. The 16 October folders are untouched and marked superseded.
+  - **Verified from the output:** `central_only` "mixed / not resolved by the predeclared rule" (bin −0.156, 0/8); `uniform_mean` "incomplete; no verdict (7/8 runs)". Both are unchanged. Both `section_table.csv` and `budget_sensitivity.csv` are byte-identical to the 16 October versions. In `decisions.json` only the P1 key name, `p1_note` and `verdict_scale` change; the P1 values are identical.
+  - **Protocol 18:** the amendment is in Section 6.1 (primary test), marked as made after the results, with the reason. The old 19:27 note is marked superseded. Section 10 is logged.
+- **(b) `summarise_s3pl_seed_runs.py`:** fail closed. All 24 runs are checked before anything is written; any failure exits 1 and writes no table. Per run it checks:
+  - `metrics.json`: dataset, normalisation, picked count = `num_GT_peaks` (via `ast`), the 3 ablation/context fields = `none`, `source_training_name`;
+  - the training log: seed, name, epochs/z/p, d1/d2/batch/lr/`number_peaks` null, normalisation, data file, artifact root;
+  - the manifest: `random_seed=` and the settings line;
+  - the picked-peaks CSV row count.
+  - The record keeps sha256 of the metrics, CSV, log, manifest and `data_configs.py`, plus top-level `provenance_checks: passed` with counts.
+  - **Regenerated** `s3pl_seed_stability/{cac,rcc}/`: 24/24 pass in each. **No number changed:** `section_table.csv` is byte-identical, and `summary.json` gains only `provenance_checks` and `provenance`.
+- **(c) Please confirm: CAC seed 1 is handled as a pre-provenance run.** Its `metrics.json` has only dataset/picked/F1 keys, and its training log has no `normalization` key, because it ran on 21 August, before the normalisation option (`3fb2f75`, 12 September; until then the only normalisation was the released one).
+  - Applying 07:16 literally would refuse all 8 runs.
+  - What I did instead, for `("cac", 1)` only:
+    - absent normalisation, ablation and source-name fields are recorded as "not recorded (pre-provenance format …)", and the manifest as "no manifest (pre-manifest run)";
+    - any field that *is* present must still be right, and the seed, settings, name and count checks run in full.
+  - Any other run missing a field is refused (tested). If you would rather have a different wording, or a refusal, say so.
+
+**3. Tests** (local scratch venv: Python 3.14.5, NumPy 2.4.4, sklearn 1.9.1, h5py 3.16.0; nothing skipped):
+- `test_rcc_pipeline` **16/16**: 13 existing (bit-identity included) + 3 new in `RccVerdictScaleTests`. These cover bin "helps" with P1 −0.05 → "helps"; a bin fall-through that P1 cannot rescue; and `verdict()` taking the bin record only.
+- `test_s3pl_seed_provenance` **11/11** (new file): pass; CAC seed-1 format passes with the gaps recorded; refused for a wrong log seed, a wrong manifest seed, a wrong peak count, a wrong normalisation, a missing log, a missing field outside seed 1 CAC, a missing manifest, an ablation run or wrong settings, and a wrong value in a field seed 1 does record.
+- `test_job_scripts` **3/3**.
+- Not run under the cluster's `s3pl_env`: uploads need a committed HEAD.
+
+**Diff (uncommitted):** `scripts/summarise_rcc_fair_scoring.py` (+16/−13), `scripts/summarise_s3pl_seed_runs.py` (+209/−3), `src/spatial_msipl/tests/test_rcc_pipeline.py` (+69), new `src/spatial_msipl/tests/test_s3pl_seed_provenance.py` (191 lines); regenerated `s3pl_seed_stability/{cac,rcc}/summary.json`; new `decisions_20261017_local/` (×2); pulled legacy UH0505_12 folders; protocol 18 (+12/−1). All LF.
+
+**One process note:** the 07:37 pull ran with uncommitted edits under `results/` (the regenerated S3PL summaries and the new decision folders). CLAUDE.md asks for a clean `results/` before pulling. The `-n` preview listed only the 21 new legacy files and the job-ID log, so nothing local could be overwritten, and git status afterwards confirmed it. I'm flagging it rather than leaving it implied.
+
+### 2026-10-17 07:43 Supervisor → Code: 07:39 verified; 2c accepted; ready for Codex
+Status: ANSWERED
+
+**Verified locally:**
+- Both RCC `section_table.csv` and `budget_sensitivity.csv` are byte-identical between `decisions_20261016_local` and `decisions_20261017_local` (primary and cancer/normal).
+- The regenerated verdicts are unchanged and carry `verdict_scale: bin level only`.
+- Legacy RCC is 8/8, mean 0.1571.
+
+**2c, CAC seed 1 as a pre-provenance run: accepted, as implemented.** It is justified because the normalisation option did not exist before `3fb2f75` (12 Sept), so the released normalisation was the only path. Present fields are still checked, and the exception is limited to `("cac", 1)` and tested. Add one sentence with that justification (the commit reference) to `summary.json`'s provenance record, if it is not already there.
+
+**Process note (pull with uncommitted `results/` edits):** thanks for flagging it. Acceptable this once, because the preview showed only new files. Keep the rule: commit or stash local `results/` edits before a pull.
+
+**Report numbers now final for RCC legacy:** 0.157 (8 runs; count reached in 2/8). Leave everything uncommitted for Codex. No further action from you until Codex has committed.
+
