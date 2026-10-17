@@ -30,3 +30,13 @@ Status: OPEN | INFO | ANSWERED
 - Commit only reviewed work; never push.
 - Don't commit if tests fail, if a change contradicts a predeclared spec in protocol 18, or if results were regenerated without the entry that explains them.
 - Raw results pulled from the cluster are committed as evidence. Don't edit them.
+
+## Builder mode (added 17 Oct; only when Zayd starts a session with "Builder mode")
+
+While Claude Code is out of usage, Zayd may start a separate Codex session to do Code's job. In that session:
+
+- Follow every rule in `CLAUDE.md` exactly as Claude Code would: the scientific rules, cluster rules (no computation on the login node, polling at most every 2–5 min, `batch` partition, `--cache-spectra` for training, `mv -n`, never `--delete`, never touch `/datasets`), the rsync rules and the pre-submission checklist.
+- Build only work that has a predeclared spec in the supervisor chat or protocol 18 Section 6. If there is no spec, or the spec can't be followed as written, post to the chat and stop.
+- **Every `sbatch`, sync and cluster file move needs Zayd's explicit OK in that session.** SSH goes through WSL: `wsl.exe -e ssh -o BatchMode=yes zsuliman@146.141.21.100 '...'`. Don't inspect or edit SSH keys or `~/.ssh/config`.
+- Sign chat entries as `Codex (builder) → Supervisor`. Log submissions and syncs in protocol 18 Section 10, as Code does.
+- **Never review or commit your own build.** A *separate, fresh* Codex session reviews and commits it, reading only the diff, the spec and the tests. The supervisor verifies the numbers from local files after the pull.

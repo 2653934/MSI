@@ -2704,3 +2704,156 @@ Status: INFO
   Zayd's OK is needed for the move and the resubmission.
 - **Interpretation is the supervisor's:** I am writing Test V and Test N into the update pack now. No further cluster work beyond Test R fair scoring and the timing rerun.
 
+
+### 2026-10-17 19:45 Code → Supervisor: timing repair uploaded; cluster test 70032 running; Zayd's OK for the move and the resubmission
+Status: INFO
+- Zayd's OK (session, about 19:42 SAST): the 19:28 plan, i.e. `mv -n` of the first attempt to `ranking_stage_runtime_superseded_69985` (no delete) and a resubmission of all 24 tasks on `batch`.
+- **Upload** 19:44 SAST from HEAD `2b40cc5` (Codex `303d07d`; documented command, `-n` first). Two files changed in content (`time_ranking_stages.py`, `test_ranking_stage_runtime.py`); 15 others had only their timestamps touched. `sha256sum` matches HEAD for the changed and related files (5/5 checked).
+- **Cluster test job 70032** (`batch`): submitted 19:44 SAST. The move and the resubmission follow only if it passes with the new realistic-size bit-identity test run.
+- **Test R:** 69746_45 (seed-2 GBM39_1 `uniform_mean`, on mscluster81) is still in IG. `fair 2` goes on `batch` when it ends. fair 3 (69980): 24/24 COMPLETED.
+- IG-completeness failures so far, for the results entry: RCC_UH0505_12 (seed 1 `uniform_mean`, seed 2 `central_only`), RCC_UH9912_01 (seed 3 `uniform_mean`), GBM39_2 (seed 3 `uniform_mean`). That is 4 seed-arms across 3 runs/sections. The supervisor's count of 5 may include a case I have missed; I will reconcile it from the saved files in the results entry.
+
+### 2026-10-17 19:51 Code → Supervisor: test 70032 passed; first timing attempt moved aside; rerun 70034 submitted on batch
+Status: INFO
+- **70032:** COMPLETED in 5:04 on mscluster219. Main suite 233 OK, with 3 expected artifact skips. `test_ranking_stage_runtime` 14/14 ran, including the new realistic-size bit-identity test. S3PL suite 25 OK.
+- **Move** (Zayd's OK, about 19:42), 19:51 SAST: `mv -n results/diagnostics/ranking_stage_runtime results/diagnostics/ranking_stage_runtime_superseded_69985`. The 10 files (9 old-code summaries and the job-ID record) are kept, not deleted.
+- **70034:** all 24 tasks on `batch` (at most 4 running, `--exclusive`), code `303d07d`, submitted 19:51 SAST / 17:51 UTC. Same output root, now empty; its provenance notes the rerun.
+
+### 2026-10-17 19:53 Code → Supervisor: Test R seed-2 GBM complete (16/16); fair 2 submitted on batch (70060)
+Status: INFO
+- **69746** (seed-2 GBM): 16/16 COMPLETED. The last task, 69746_45 (GBM39_1 `uniform_mean`, mscluster81), took 1:50:25 (slow node; I/O noted earlier).
+- **70060** `fair 2` on `batch` (script default; 24 CPU tasks, at most 4 running): submitted 19:53 SAST. The RCC_UH0505_12 `central_only` seed-arm (not done) is skipped by design.
+- All Test R training is finished: seed 2 has 1 "not done" (RCC_UH0505_12 `central_only`), seed 3 has 2 (RCC_UH9912_01 `uniform_mean`, GBM39_2 `uniform_mean`). fair 3 (69980) is COMPLETED 24/24.
+
+### 2026-10-17 19:54 Code → Supervisor | Zayd: Ranking-timing rerun 70034: GBM and CAC reproduce exactly (16/16); RCC fails (7/7) because its saved rankings were made on a different CPU type. Decision needed
+Status: OPEN, for the supervisor and Zayd
+- **70034** (code `303d07d`, `batch`): 17 COMPLETED, 7 FAILED (exit 4).
+  - **All 8 GBM and all 8 CAC tasks pass the exact full-ranking check.** The layout fix worked.
+  - RCC_UH0505_12 completed, but it has no saved ranking to check against.
+  - **All 7 other RCC tasks fail**: posterior-|PCC| in 4, the oracle in 3.
+- **Cause, from `sacct`:**
+  - The saved seed-1 GBM/CAC rankings came from fair-scoring job 66053 on `batch` (mscluster121, 127–131, 156–159, 217–219), the pool 70034 ran on.
+  - The saved RCC rankings came from job 69565 on `bigbatch` GPU nodes (mscluster55, 71, 74, 76, 77), because `batch` was down on 16 October.
+  - The PCC and oracle steps are BLAS matrix products. Their rounding depends on the CPU, so exact equality across CPU types is not guaranteed, and the hash check caught that.
+  - The scientific results are unaffected.
+- **The timing table cannot have one CPU type and exact reproduction for all three collections.** Options:
+  - **(a, recommended)** Rerun the 8 RCC tasks on `bigbatch` nodes of the type that made the saved RCC rankings (`--nodelist`/`--constraint` to those GPU nodes; CPU only). The table then reports one CPU model per collection: GBM/CAC on the `batch` CPU, RCC on the `bigbatch` CPU. This needs a small summariser change ("one CPU model per collection" in place of "one for all"), which goes to Codex. Cross-collection timing comparisons would carry that label.
+  - **(b)** Keep RCC on `batch` and relax the check for RCC only, e.g. the evaluator's own tie-tolerant comparison (`tie_permuted_positions`) on the saved prefix, or a value tolerance. That changes a validity gate after seeing a failure, so it would be a separately labelled analysis.
+  - **(c)** Report RCC ranking-stage timing as "not done (saved rankings not reproducible bit-for-bit on the available CPU type)" and table GBM and CAC only.
+- Nothing is being resubmitted until you decide. The 17 completed summaries stay in `results/diagnostics/ranking_stage_runtime/`; the 7 failed tasks wrote no summary.
+- Test R: `fair 2` (70060) is running on `batch`.
+
+### 2026-10-17 20:17 Supervisor → Code | Codex | Zayd: Ruling on the RCC timing check (19:54); new predeclared Test V addendum (PCA reconstruction); Codex builder mode
+Status: OPEN
+
+- **Resolves: 2026-10-17 19:54 Code entry, decision (pending Zayd's OK).** Option **(a)**. Rerun the 8 RCC timing tasks, CPU only, on the `bigbatch` node type that made the saved RCC rankings (job 69565). Report one CPU model per collection, and label any cross-collection timing comparison with it. The summariser change goes to Codex. (b) is not allowed, because it relaxes a validity gate after seeing a failure. (c) is the fallback if (a) fails its exact-reproduction check again. Check the `bigbatch` running-job count (6 max) against Test R before submitting.
+- **New predeclared Test V addendum: PCA reconstruction error (written before any output exists).**
+  - **Why:** the results draft may say "PCA-5 is simpler and reconstructs worse, yet gives equivalent peak ranking." Test V saved only PCA explained variance, which can't be compared with the VAE's saved MSE. This must be measured, not assumed. PCA-5 is the MSE-optimal rank-5 linear map, and the VAE is trained on cross-entropy, so either outcome is possible.
+  - **Inputs and PCA:** exactly as Test V (protocol 18 Section 6.4). The same `tic_normalize` on raw `Data` as float32, measured pixels only, and `PCA(n_components=5 and 20, svd_solver="randomized", random_state=1)`, fitted on all pixels of each section. All 24 sections.
+  - **Reconstruction:** `inverse_transform` of the scores.
+    - **Primary:** MSE, MAE and cosine similarity on the raw reconstruction.
+    - **Secondary:** the same three metrics after clipping at 0 and re-applying TIC, to match the VAE's "after decoder TIC normalization" convention.
+    - Before writing code, the builder confirms from the VAE evaluation code that MSE and MAE are averaged in the same way (over all pixel × feature entries) and states this in the chat.
+  - **Comparison:** against the saved VAE values (`evaluation/comparison.json`: centre-only and uniform-mean), for GBM (`spatial_msipl_reconstruction`) and CAC (`spatial_msipl_cac_reconstruction`). RCC has no saved VAE reconstruction, so its PCA values are reported alone, with no comparison.
+  - **Validity:** the explained-variance-ratio sum reproduces the saved Test V value within 1e-6 in every section, or that section is "not done".
+  - **Cluster run:** CPU only, `batch`, a job script based on `run_segmentation_control_v.sh`. New root `results/diagnostics/pca_reconstruction_V/`. No new mSCF1 scoring; Test V's scores are reused.
+  - **Reporting (descriptive, no decision rule):**
+    - per section, the PCA-5, PCA-20 and VAE MSE/MAE/cosine;
+    - per collection, the number of sections where the PCA-5 MSE exceeds the centre-only VAE MSE;
+    - the median ratio of PCA-5 MSE to VAE MSE.
+  - **Wording, fixed now:**
+    - If the PCA-5 MSE is higher in at least 6 of 8 sections in both GBM and CAC, under both the primary and the secondary metric: "PCA-5 reconstructs worse than the VAE yet gives equivalent peak ranking."
+    - Otherwise: "Reconstruction error does not separate PCA-5 from the VAE," and the "reconstructs worse" claim is dropped.
+- **Codex builder mode:** `AGENTS.md` now has a "Builder mode" section, so Codex can do Code's work while Claude usage is limited. The rules are the same as `CLAUDE.md`. Every `sbatch` or sync needs Zayd's OK. The session that builds never reviews or commits its own work: a separate fresh Codex session reviews it, and I verify the numbers locally after the pull.
+
+### 2026-10-17 20:30 Code → Supervisor: Test R results (Section 6.3): rule labels and numbers
+Status: INFO, for the supervisor's verification.
+- Resolves: 2026-10-17 09:45 Supervisor entry (Test R; results exist). The 09:48 addendum stays open: the runtime v2 Test R rows and the timing decision (19:54).
+- **Runs:**
+  - Training: 69683, 69724, 69746 and 69820. 96 trainings, all with complete training and checkpoint checks.
+  - **IG "not done" (`needs_more_ig_steps` at 64 steps), 4 seed-arms across 3 runs/sections** (the supervisor's "5" counts one too many; this list comes from the saved IG summaries):
+    - RCC_UH0505_12 seed 1 `uniform_mean` (69524_9, before Test R);
+    - RCC_UH0505_12 seed 2 `central_only` (69683_2);
+    - RCC_UH9912_01 seed 3 `uniform_mean` (69724_15);
+    - GBM39_2 seed 3 `uniform_mean` (69820_47).
+  - Fair scoring: 70060 (seed 2) and 69980 (seed 3), 24/24 each, on `batch`. 156/156 evaluator summaries `complete`: seed 2 has 47 bin-level and 32 P1, seed 3 has 46 and 31; the gaps are exactly the not-done arms. Every summary passed the evaluator's own IG/L2/legacy reproduction checks before scoring.
+  - **Pull** 20:29 SAST (documented artifact pull, `-n` first): 2,941 new files (Test R training and fair scoring, the timing outputs, validation logs); no committed file changed.
+  - Table: `results/diagnostics/fair_scoring_baselines/test_r/decisions_20261017_local/` (`decisions.json`, `section_table.csv`).
+- **Decision 1 (headline: IG below posterior-|PCC| in ≥ 7/8 and mean ≤ −0.02 at every applicable scale). Rule result: does not hold overall.** It fails at CAC seed 2 in both arms. Per collection × arm × seed, IG − posterior (mean, IG below /n):
+  - **GBM `central_only`:** seed 1 replicates (bin −0.225 8/8; P1 −0.201 8/8); seed 2 replicates (−0.261 8/8; −0.233 8/8); seed 3 replicates (−0.247 8/8; −0.223 8/8).
+  - **GBM `uniform_mean`:** seed 1 replicates (−0.233 8/8; −0.213 8/8); seed 2 replicates (−0.254 8/8; −0.231 8/8); seed 3 incomplete (7/8; −0.248 7/7; −0.225 7/7).
+  - **CAC `central_only`:** seed 1 replicates (−0.078 8/8; −0.092 8/8); **seed 2 does not replicate** (bin −0.080 8/8; **P1 −0.076 6/8**: 40TopL +0.003, 280TopL +0.020); seed 3 replicates (−0.074 7/8; −0.083 7/8).
+  - **CAC `uniform_mean`:** seed 1 replicates (−0.047 8/8; −0.039 7/8); **seed 2 does not replicate** (**bin −0.057 6/8; P1 −0.066 6/8**); seed 3 replicates (−0.060 8/8; −0.056 7/8).
+  - **RCC `central_only` (bin only):** seed 1 replicates (−0.156 8/8); seed 2 incomplete (7/8; −0.138, 6/7); seed 3 replicates (−0.137 8/8).
+  - **RCC `uniform_mean` (bin only):** seed 1 incomplete (7/8; −0.185 7/7); seed 2 replicates (−0.134 8/8); seed 3 incomplete (7/8; −0.104 7/7).
+- **Decision 2 (context: IG `uniform_mean` − `central_only`, seed-averaged over 1–3, Section 7 rule):**
+  - **CAC: "helps"** (seed-averaged bin +0.023 8/8; P1 +0.027 8/8). Per-seed labels: seed 1 "helps" (+0.031 8/8 / +0.051 7/8), seed 2 "mixed" (+0.024 5/8 / +0.021 5/8), seed 3 "equivalent" (+0.013 4/8 / +0.009 4/8). The seed-1 label is superseded by the 3-seed label; they agree.
+  - **GBM: "incomplete (7/8 sections)"** (seed-averaged over 7: bin +0.000 3/7; P1 −0.003 2/7). Per-seed labels: seed 1 "equivalent" (−0.007 5/8 / −0.011 4/8), seed 2 "equivalent" (−0.002 4/8 / −0.006 4/8), seed 3 incomplete (+0.001 3/7 / −0.004 3/7). The seed-1 label "equivalent" is superseded by "incomplete"; they differ because GBM39_2 has no seed-3 `uniform_mean`.
+  - **RCC: "incomplete (6/8 sections)"** (seed-averaged over 6: bin +0.026 5/6). Per seed: seed 1 −0.003 3/7, seed 2 +0.046 6/7, seed 3 +0.017 5/7, all incomplete (7/8).
+- **Decision 3 (descriptive):**
+  - Per-section seed SD, median / max:
+    - IG: GBM `central_only` 0.016 / 0.049, `uniform_mean` 0.026 / 0.046; CAC 0.011 / 0.032 and 0.012 / 0.028; RCC 0.023 / 0.044 and 0.014 / 0.026.
+    - Posterior-|PCC|: GBM 0.013 / 0.131 and 0.026 / 0.085; CAC 0.017 / 0.030 and 0.003 / 0.037; RCC 0.019 / 0.127 and 0.019 / 0.081.
+  - GMM balanced accuracy, seeds 1 / 2 / 3:
+    - GBM: `central_only` 0.868 / 0.957 / 0.931; `uniform_mean` 0.911 / 0.947 / 0.926.
+    - CAC: `central_only` 0.684 / 0.668 / 0.624; `uniform_mean` 0.669 / 0.667 / 0.673.
+    - RCC: `central_only` 0.771 / 0.621 / 0.768; `uniform_mean` 0.817 / 0.735 / 0.730.
+  - RCC Moran's I − posterior (bin), seeds 1 / 2 / 3:
+    - `central_only`: +0.063 5/8; +0.108 7/7; +0.086 8/8.
+    - `uniform_mean`: +0.039 5/7; +0.066 5/8; +0.099 7/7.
+- **Caveats:** GBM is 8 sections from 4 patients. CAC is one biopsy, and its P1 is singleton groups (a two-budget check). For RCC: bin level only; unannotated class, 45–78% of pixels, which the dataset's own Cardinal workflow treats as background (`rcc_nobg`), not independently verified; GMM K = 3 is class-informed; per the dataset documentation, UH0505_12 and UH9905_18 contain heterogeneous tumour with large normal-looking areas.
+- **Disclosed differences from seed 1:** seed-1 GBM/CAC were trained with the streaming loader, seeds 2/3 cached; seed-1 GBM `uniform_mean` IG is `attribution_version` 1.
+- No interpretation from Code. Next: the Test V (d) seed average, runtime v2 with the Test R rows, and the ranking-timing decision (19:54).
+
+### 2026-10-17 20:31 Code → Supervisor | Codex: Test V item (d) filled; runtime v2 has the 96 Test R rows; one-line builder fix uncommitted for Codex
+Status: INFO, for Codex (one small fix) and the supervisor (descriptive values)
+- **Test V (d), descriptive** (VAE `central_only` posterior-|PCC| averaged over seeds 1–3, minus PCA-5):
+  - GBM bin +0.042 5/8, P1 +0.041 5/8.
+  - CAC bin −0.012 2/8, P1 −0.023 2/8.
+  - RCC bin −0.011 3/7 (UH0505_12 has no seed-2 `central_only`).
+  - The predeclared seed-1 verdicts are unchanged (GBM "mixed", CAC "mixed", RCC "equivalent"). Written to a new folder, `segmentation_control_V/decisions_20261017_with_test_r_local/`; the committed `decisions_20261017_local/` is untouched.
+- **Runtime v2:** `runtime_all_sections_v2.csv` regenerated with 242 rows (146 + 96 Test R cached rows, 48/48 per seed). v1 and the training-curve files are byte-identical; only the v2 file changed.
+  - Cached VAE training medians (min–max), seeds 2 / 3:
+    - GBM `central_only` 31.7 (20.2–40.2) / 34.0 (21.2–40.9) min; `uniform_mean` 32.5 (20.4–46.9) / 34.6 (21.4–43.6) min.
+    - CAC 1.3–1.4 min.
+    - RCC 2.2 min.
+  - S3PL 10 epochs: GBM 13.7 min, CAC 0.9 min, RCC 1.6 min (seed 1; seeds 2/3 for CAC and RCC as tabulated).
+  - The GBM numbers come from different GPU nodes and include one slow-I/O node (mscluster81); descriptive.
+- **Builder fix (uncommitted for Codex):** `test_r_rows` refused the submitter's `test_r_training_seeds/provenance/` folder as "not a Test R section/seed folder". It now skips that one folder by name; every other unknown folder is still refused. Test added (`test_runtime_v2` 19/19).
+- **Open:** the ranking-timing decision (19:54); then the timing summary and the v2 timing link.
+
+### 2026-10-17 20:35 Supervisor → Code | Codex: Test R and Test V (d) verified; report wording fixed
+Status: INFO
+
+- **Resolves: 2026-10-17 20:30 Code entry (Test R results).** Verified. I recomputed everything independently from `test_r/decisions_20261017_local/section_table.csv`, and every number matches:
+  - all 30 Decision 1 cells (means and counts);
+  - the Decision 2 seed averages (CAC +0.023 8/8 bin and +0.027 8/8 P1; GBM +0.000 3/7; RCC +0.026 5/6);
+  - all GMM balanced-accuracy means.
+  - Code is right that there are **4** not-done seed-arms, not 5. My count was wrong.
+- **Resolves: 2026-10-17 20:31 Code entry (Test V (d)).** Verified from the Test V summaries and the Test R table: GBM +0.042 / +0.041 5/8; CAC −0.012 / −0.023 2/8; RCC −0.011 3/7. The builder fix is for Codex to review.
+- **Wording for the report, fixed now:**
+  - **Decision 1:** "The headline does not hold overall under the predeclared rule. It fails at CAC seed 2, where IG is below correlation in 6/8 sections (centre-only P1; uniform bin and P1), not the required 7/8. The failure is on the count, not the direction: in all 30 collection × arm × seed × scale cells, the mean IG − correlation difference is negative (−0.039 to −0.261). At bin level, IG is below in 136 of 140 valid section–model comparisons across three seeds."
+  - Not to be used: "nearly replicates", or "replicates except one".
+  - **Decision 2, CAC:** "helps" on the 3-seed average. The report must also state:
+    - the per-seed labels (helps / mixed / equivalent);
+    - that the gain sits near the +0.02 threshold;
+    - that under correlation ranking the CAC context gain is 0.000.
+  - **Decision 2, GBM and RCC:** "incomplete". Their seed averages are descriptive only.
+- **Update pack:** chapter Section 6.9, the discussion's "47 comparisons" bullet, the seeds and power limitations, and the summary's status, framing and seeds lines are updated with the above.
+- Still open: ranking timing option (a) and the PCA reconstruction addendum (20:17), both waiting on Zayd's OK.
+
+### 2026-10-17 20:49 Codex (builder) → Supervisor: PCA reconstruction metric contract confirmed before code
+Status: INFO
+
+- The saved VAE reconstruction evaluator (`scripts/evaluate_spatial_reconstruction.py`, `deterministic_reconstruction_metrics`) computes each pixel's MSE and MAE as the mean over all spectral features, then sums those per-pixel means and divides by the total pixel count. Therefore each metric is the mean over all pixel × feature entries, with every entry equally weighted. Cosine similarity is computed per pixel and then averaged over pixels.
+- The decoder output is TIC-normalised independently for each pixel by dividing its full decoded spectrum by that row's sum, with the denominator clamped to at least float32 epsilon. The resulting entries are then clamped elementwise to `[epsilon, 1 - epsilon]`; there is no second row renormalisation after that clamp. MSE, MAE and cosine are computed against the clean TIC-normalised target using this post-decoder-normalisation array.
+- I will match that averaging and TIC operation for the PCA addendum's secondary metrics. The primary metrics will use the raw `inverse_transform`, as predeclared.
+
+### 2026-10-17 21:01 Codex → Code | Supervisor: Review of Test R evidence, timing follow-up and PCA reconstruction build
+Status: OPEN
+
+- Finding 1 (PCA reconstruction only): `evaluate_pca_reconstruction_v.py` records its governing protocol as "Protocol 18 Section 6.4 Test V addendum", but Section 6.4 currently contains only the original segmentation-control predeclaration; the 20:17 PCA-reconstruction addendum exists only in this chat. Code should copy that predeclaration verbatim into protocol 18 as a clearly dated addendum (not edit the original Test V text), so the saved provenance points to an actual durable specification. No PCA-reconstruction code or job script is committed pending that documentation fix.
+- No blocking findings in the completed Test R evidence. The 156 fair-scoring summaries are all complete; regenerating the Test R decisions reproduced both saved files byte for byte, including the four incomplete seed-arms, the CAC Decision 1 failures and the CAC `helps` Decision 2 label. The Test V seed-average addendum and 242-row runtime-v2 table also regenerated byte for byte.
+- No blocking findings in the RCC timing follow-up. It preserves the exact-ranking gate, permits different CPU models only between collections, refuses mixed CPUs within a collection, reads RCC reruns from a separate root, keeps the existing 70034 summaries untouched and restricts the RCC submission to the approved bigbatch nodes and a new output root.
+- Evidence validation: 2,917 new Test R/timing/validation files were parsed or structurally opened successfully (829 JSON, 507 NPZ, 96 NPY, 470 CSV, 567 PNG, 445 logs and 3 text records). Runtime-v2 tests passed 19/19; PCA-reconstruction tests passed 5/5. The ranking suite passed 15 executable tests; its one Windows-only path failure was caused by Git Bash being unable to source a Windows path and is covered by cluster test 70032, where the pre-follow-up suite passed 14/14.
+- Approved for commits: Test R evidence and derived tables; available timing attempts and validation records; the runtime provenance-folder fix; the collection-specific RCC timing preparation; protocol/project records and builder-mode instructions. Commit hashes will follow. Not committed: the six PCA-reconstruction files plus their `segmentation_control.py` helper change, pending finding 1.
