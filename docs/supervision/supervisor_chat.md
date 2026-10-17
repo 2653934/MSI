@@ -2945,3 +2945,43 @@ Status: INFO
 
 - Resolves: 2026-10-17 21:15 Codex entry, pending commit record.
 - Committed: `ac385a4e` (section-specific RCC timing nodes), `693d5108` (PCA reconstruction addendum), and `10daf84a` (review history through 21:15). No upload, cluster test, or scientific submission was performed.
+
+### 2026-10-17 21:18 Codex (builder) → Supervisor | Zayd: Step 1 upload complete
+Status: INFO
+
+- Uploaded the reviewed code from clean committed HEAD `acd9e905` with the documented rsync source command, dry-run (`-n --itemize-changes`) first, never `--delete`.
+- Fourteen source/test files were transferred or timestamp-refreshed. The first real invocation misspelled the `*.imzML` exclusion as `*.imZML`; its transfer list contained no MSI data. I immediately reran the exact documented command with lowercase `*.imzML`, which transferred nothing further.
+- SHA-256 check: cluster and local clean-HEAD content match for all 14 uploaded files. Logged in protocol 18 Section 10.
+
+### 2026-10-17 21:25 Codex (builder) → Supervisor | Zayd: Step 2 cluster test failed; stopped
+Status: INFO
+
+- Cluster test job **70119** (`batch`, mscluster146) finished **FAILED** in 5:17, exit 1. The main suite ran 243 tests: 1 failure, 3 expected artifact skips.
+- The required `test_pca_reconstruction_v` ran **6/6 with no skips and all six passed**.
+- The failure is the existing artifact-sensitive `test_segmentation_control_v.SummariserTests.test_verdicts_per_collection`: it expected `d_vae_seed_mean_minus_pca5` to be `None`, but the Test R artifacts present on the cluster populated that descriptive field. The S3PL sub-suite did not run because the main unittest pipeline exited nonzero.
+- Per Zayd's instruction to stop on any failure, **no PCA reconstruction or RCC timing job was submitted**. Logged in protocol 18 Section 10.
+
+### 2026-10-17 21:31 Supervisor → Codex (builder) | Codex | Zayd: Test 70119 failure is a test-isolation bug; fix the test, then rerun the test job
+Status: OPEN
+
+- **Diagnosis, checked locally:** `SummariserTests.test_verdicts_per_collection` builds a temporary fixture root, but it doesn't pass `--test-r-fair`. The summariser then falls back to the real `results/diagnostics/fair_scoring_baselines/test_r`, which exists on the cluster since Test R. So the fixture run picks up real seed values, and the `d_vae_seed_mean_minus_pca5 is None` assertion fails. The summariser and the saved results are fine; the test isn't hermetic.
+- **Fix (test only):** pass `--test-r-fair <an empty temporary directory>` in that test, and in any other summariser test that relies on the default. Optionally, add one test with a tiny fixture Test R root that checks the seed-mean field is filled. Don't change the summariser or its default. Check that the committed `decisions_20261017_local` and `decisions_20261017_with_test_r_local` regenerate byte for byte.
+- **Upload deviation at 21:18:** the first real rsync used a mistyped exclude (`*.imZML`). The builder reports that the transfer list contained no MSI data, and that the corrected rerun transferred nothing more. Accepted on that report. From now on, copy the documented commands from `docs/operations/cluster_sync.md` exactly; don't retype them.
+- **Then:** reviewer review and commit → upload from a clean HEAD (sha256) → rerun the cluster test job, which must pass fully, including the S3PL sub-suite → PCA array → the 8 RCC timing submissions. These steps are already approved by Zayd; stop on any failure.
+- The builder was right to stop at 21:25.
+
+### 2026-10-17 21:35 Codex (builder) → Supervisor | Codex: Test 70119 isolation fix ready for review
+Status: INFO
+
+- Resolves: 2026-10-17 21:31 Supervisor entry, test-only fix. `test_segmentation_control_v.SummariserTests` now passes an explicit empty temporary `--test-r-fair` root in every subprocess test that previously relied on the default. The summariser and its production default are unchanged.
+- Focused lightweight local run: `test_segmentation_control_v` 1 passed / 17 expected scientific-stack skips; module status OK.
+- Regression check with the real local artifacts: regenerated `decisions_20261017_local/{decisions.json,section_table.csv}` using an empty Test R root and `decisions_20261017_with_test_r_local/{decisions.json,section_table.csv}` using the saved Test R root. All four regenerated files are byte-identical to the committed copies.
+- Not committed. No upload or cluster action performed; stopped for fresh Codex review.
+
+### 2026-10-17 21:43 Codex → Code | Supervisor: Review of Test V test-isolation fix
+Status: INFO
+
+- Resolves: 2026-10-17 21:31 Supervisor entry. The change is test-only: every fixture-based summariser subprocess now passes its own explicit empty `--test-r-fair` directory. The production summariser and its default are unchanged.
+- Independently regenerated both committed Test V decision sets. `decisions_20261017_local/{decisions.json,section_table.csv}` and `decisions_20261017_with_test_r_local/{decisions.json,section_table.csv}` each matched the regenerated file byte for byte by SHA-256.
+- Focused local verification: `test_segmentation_control_v` passed its runnable test with 17 expected scientific-stack skips; `git diff --check` found no whitespace errors (only Windows line-ending warnings).
+- Committed: `55d20f0e` (`Make Test V summariser tests hermetic`). No upload or cluster action was performed.
