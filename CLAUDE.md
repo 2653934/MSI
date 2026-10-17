@@ -156,5 +156,19 @@ A separate Claude session (Cowork) acts as Zayd's **research supervisor**. It re
 - Zayd makes git commits himself. Do not commit or push unless asked.
 - Line endings: `.gitattributes` forces LF for `*.py` and `*.sh`. Check with `git ls-files --eol`; `grep -c $'\r'` is unreliable in Git Bash.
 - Leave the unrelated modified files alone (line-ending changes in older scripts and runtime CSVs).
-- Run the relevant unittest modules before proposing a cluster run. Locally, h5py may be missing, so the pipeline tests may need the cluster test job (`slurm_jobs/run_fair_scoring_tests.sh`).
+- Run the relevant unittest modules before proposing a cluster run. **How to run local tests** (added 17 Oct; new sessions kept rediscovering this):
+  - **Two tiers.** Run the lightweight tests locally. The full suite (torch, real HDF5 data, POSIX job-script sourcing) runs only in the cluster test job `slurm_jobs/run_fair_scoring_tests.sh`, which needs Zayd's OK like any `sbatch`. Tests that skip locally for those reasons are expected, not failures.
+  - **Python.** Use a persistent scratch venv at `tmp/test-venv` in the repo root. `tmp/` is gitignored. If it doesn't exist yet, create it once from Git Bash:
+    `python -m venv tmp/test-venv && tmp/test-venv/Scripts/python -m pip install numpy scikit-learn scipy h5py`
+    Earlier sessions used Python 3.14.5, NumPy 2.4.4, sklearn 1.9.1 and h5py 3.16.0. Never install torch locally, and never pip-install into the system Python.
+  - **Command** (Git Bash). Windows Python needs a `;`-separated, Windows-style `PYTHONPATH`:
+    `cd code/msi && PYTHONPATH="$(cygpath -w "$PWD/src");$(cygpath -w "$PWD/scripts")" ../../tmp/test-venv/Scripts/python -m unittest -v spatial_msipl.tests.<module>`
+    Run S3PL tests from `code/msi/baselines/s3pl` with `-m unittest tests.<module>`.
+  - **Alternative that worked on 17 Oct (no venv needed; `tmp/test-venv` did not exist then).** `uv` (0.10.8, `~/.local/bin/uv`) builds a cached throwaway environment and leaves the system Python untouched:
+    `cd code/msi && PYTHONPATH="src;scripts" uv run -q --no-project --python 3.14 --with numpy --with h5py --with scikit-learn --with matplotlib --with scipy python -m unittest -v spatial_msipl.tests.<module>`
+    The first run downloads the packages (about 1 min); later runs use the cache. The plain `py`/`python` on this machine has no h5py, so `spatial_msipl` fails to import without one of these environments.
+  - **Known local-only skips:** torch, real HDF5 inputs, and tests that `source` a bash job script (Git Bash cannot source a Windows path).
+  - **Test isolation:** tests must not read real `results/` folders through script defaults. Pass temp roots explicitly (cluster test 70119 failed this way).
+  - **Reporting:** in the chat, give passed/skipped counts per module and the reason for each skip, e.g. "X/Y passed locally; 4 HDF5 tests skipped, covered by the cluster test job".
+  - If these commands need adjusting, fix this section so the next session doesn't rediscover it.
 - Explain plainly; Zayd is an Honours student. When a result changes the thesis, say so directly and propose the honest framing.

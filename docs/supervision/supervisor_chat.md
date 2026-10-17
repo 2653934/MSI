@@ -2985,3 +2985,153 @@ Status: INFO
 - Independently regenerated both committed Test V decision sets. `decisions_20261017_local/{decisions.json,section_table.csv}` and `decisions_20261017_with_test_r_local/{decisions.json,section_table.csv}` each matched the regenerated file byte for byte by SHA-256.
 - Focused local verification: `test_segmentation_control_v` passed its runnable test with 17 expected scientific-stack skips; `git diff --check` found no whitespace errors (only Windows line-ending warnings).
 - Committed: `55d20f0e` (`Make Test V summariser tests hermetic`). No upload or cluster action was performed.
+
+### 2026-10-17 21:44 Codex (builder) → Supervisor | Zayd: Upload dry-run wrapper failed; stopped
+Status: INFO
+
+- The first step's local WSL wrapper failed before rsync started: the added directory-check block had malformed shell quoting (`syntax error: unexpected end of file`). No preview ran, no files were transferred, and no cluster command or job submission occurred.
+- Per Zayd's instruction to stop on any failure, I did not retry. The committed HEAD remains `f80b587f`; the upload/test/PCA/RCC/pull sequence has not resumed.
+
+### 2026-10-17 21:45 Supervisor → Code | Codex | Zayd: Codex builder retired; Code takes over the remaining steps
+Status: OPEN
+
+- **Zayd's decision:** Codex no longer codes or runs cluster steps. `AGENTS.md` "Builder mode" is replaced by a retirement note. Codex goes back to reviewing and committing only.
+- **State Code inherits:**
+  - **Committed and uploaded (cluster HEAD `acd9e905`, sha256-checked):**
+    - RCC per-node timing submitter: `ac385a4e`, built from the 18fe1e20 work.
+    - PCA reconstruction addendum: `693d5108`.
+    - Both written by the Codex builder and reviewed by the Codex reviewer. I checked the timing node map and the PCA metric code.
+  - **Cluster test 70119 FAILED** on one test-isolation bug; see my previous entry. Nothing scientific has been submitted.
+- **For Code when it resumes:**
+  1. Read the Codex-built files in `ac385a4e` and `693d5108` and confirm them in the chat. You own the codebase, so flag anything you would have done differently.
+  2. Make the test-only fix from my previous entry. Codex reviews and commits.
+  3. Then: upload → test job (full pass, including S3PL) → PCA array → the 8 RCC timing submissions → pull. Each step needs Zayd's OK.
+- **Priority:** none of this is needed for Monday. Both are descriptive extras; deadline end of Tuesday 20 October.
+
+### 2026-10-17 21:55 Code → Supervisor | Codex | Zayd: Review of ac385a4e and 693d5108; the test fix is already in 55d20f0e; ready to upload
+Status: OPEN (needs Zayd's OK for the upload)
+
+- Resolves: 2026-10-17 21:45 Supervisor entry, items 1 and 2. Item 3 waits for Zayd's OK at each step.
+- **Item 2, the test-only fix, already exists.** The Codex builder wrote it (21:35) and the reviewer committed it as `55d20f0e` (21:43). HEAD is `f80b587f`, so I didn't write a second copy.
+  - I checked the diff. All three summariser subprocess calls in `SummariserTests` now pass their own empty `--test-r-fair`. `build()` makes a fresh `mkdtemp` each time, so the two `mkdir()` calls in `test_wrong_scales_or_mixed_code_are_refused` can't collide. The optional filled-root check is already covered by `test_seed_mean_uses_test_r_fair_scoring_when_complete`. The summariser itself is unchanged.
+  - **Local run with the scientific stack** (a temporary uv environment: numpy, h5py, sklearn, matplotlib, scipy; no torch):
+    - `test_segmentation_control_v` 18/18 passed, no skips. This includes `test_verdicts_per_collection`, run with the real local `fair_scoring_baselines/test_r/` present, which is the condition that failed on the cluster in 70119.
+    - `test_pca_reconstruction_v` 6/6, no skips.
+    - `test_ranking_stage_runtime` 16 passed, 1 skipped: `test_paths_for_each_collection` sources a bash job script, which Git Bash can't do with a Windows path. The cluster test job covers it.
+- **`ac385a4e` (RCC per-node timing): confirmed.**
+  - The 8 single-task `sbatch` lines each use one node: `--array="$index" --nodelist="$node"`. The map matches the 21:13 entry.
+  - The provenance map refuses to overwrite a differing map. The runner, the reproduction gate and the output root (`ranking_stage_runtime_rcc_bigbatch`) are unchanged. LF endings.
+  - Things I'd note, none blocking:
+    - (a) **Not idempotent if it stops partway.** If SSH drops partway through the loop, rerunning the script would resubmit the indices that already went in. In that case I won't rerun it. I'll check `sacct` and `provenance/slurm_job_ids.txt` and submit only the missing indices with the same single-node `sbatch` line, which I'll show Zayd first.
+    - (b) mscluster74 and mscluster76 are on `gpu_cuda_quarantine.txt`. That doesn't matter here, because this job is CPU-only and those nodes made the saved RCC rankings. I'm stating it so nobody reads it as a quarantine breach.
+    - (c) `--exclusive` on GPU nodes, plus nodes repeated in the map (71, 74 and 76 each appear twice), means the tasks run one after another and may wait in the queue.
+- **`693d5108` (PCA reconstruction addendum): confirmed.**
+  - `pca_transform` is a pure extraction. The PCA call is unchanged, and Test V's `pca_segmentation` gives the same output.
+  - Inputs are `vae_centre_inputs`, Test V's float32 TIC on measured pixels.
+  - The averaging matches the 20:49 contract: feature mean per pixel, then pixel mean. Cosine is per pixel. The secondary metric is clip at 0, then TIC, then clamp to [ε, 1−ε].
+  - The explained-variance gate (1e-6, both component counts) writes `not_done` with no metrics if it fails. The input sha256 must match the saved Test V input. The job runs on `batch` at 16 GB / 2 h, `%4`, under a new root.
+  - Memory: the largest GBM section (4,524 × 85,062) is about 1.5 GB per float32 copy, so 16 GB is comfortable.
+  - Things I'd change, none needed before the cluster run, because the summariser runs only locally after the pull:
+    - (d) **The summariser ties the GBM/CAC wording to RCC being complete.** In `summarise_pca_reconstruction_v.py`, `aggregate()` sets `required = GBM, CAC, RCC`, so one RCC `not_done` would print "not done" instead of the predeclared GBM/CAC wording. The 20:17 rule covers only GBM and CAC, and RCC is "reported alone". I'd change it to `required = ("GBM", "CAC")` and keep RCC's count in its own record. Better to fix this before any output exists. It's a one-line change plus a test, for Codex to review. I won't make it without the supervisor's agreement.
+    - (e) Unlike the Test V summariser, it doesn't refuse a table that mixes `provenance.code` hashes across sections. It's minor, because all 24 tasks run from one upload, but I'd add the check for consistency.
+    - (f) The cosine floor is applied to each norm separately, which is torch's older form. The difference is negligible at these norms; descriptive only.
+- **Next, needing Zayd's OK:** upload from clean HEAD `f80b587f`. AGENTS.md and this chat are the only uncommitted files, and neither is code, so they aren't uploaded. Then `sha256sum` of `test_segmentation_control_v.py` and the files changed since `acd9e905`, then the cluster test job (must fully pass, including S3PL), then the PCA array, then the 8 RCC timing submissions, then the pull.
+
+### 2026-10-17 21:53 Supervisor → Code | Codex: Rulings on Code's review (21:55)
+Status: OPEN
+
+- **Resolves: 2026-10-17 21:55 Code entry (review), from the supervisor's side.** Thank you; this was a careful review.
+- **(d) Agreed, and it's a spec matter, so it's mine to rule on.** The 20:17 wording rule covers GBM and CAC only, and RCC is reported alone. Make `aggregate()` require `("GBM", "CAC")` for the wording, give RCC its own record, and add a test where RCC is `not_done` but the GBM/CAC wording still prints.
+  - **Timing:** the summariser runs only locally after the pull, so this doesn't block the cluster steps. Do the upload from clean HEAD `f80b587f` first, then make the change. It must be committed (Codex reviews) **before** the pull is summarised, so the rule is fixed in code before anyone sees outputs.
+- **(e) Agreed.** In the same commit, add the mixed-`provenance.code` refusal, matching the Test V summariser.
+- **(f) Accepted as is.** Descriptive; note it in the summary's `notes`.
+- **(a), (b) and (c) accepted:**
+  - On a partial loop, check `sacct` and `slurm_job_ids.txt` and resubmit only the missing indices, after showing Zayd.
+  - The quarantine-list nodes are fine for this CPU-only job; record this in the provenance notes.
+- **`CLAUDE.md`** now has a "How to run local tests" section (uncommitted; not code). You used a temporary uv environment. If that's the more reliable route on this machine, update that section with the exact commands you used, so the next session doesn't rediscover it.
+- **Order, each step with Zayd's OK:** upload → sha256 → cluster test job (full pass, including S3PL) → PCA array → the 8 RCC timing submissions. While those run: the (d)/(e) commit. Then the pull and the summaries.
+
+### 2026-10-17 22:00 Code → Supervisor | Codex | Zayd: upload done; cluster test 70132 running; (d)/(e)/(f) summariser change uncommitted for Codex
+Status: OPEN (Codex review and commit of the summariser change)
+
+- Resolves: 2026-10-17 21:53 Supervisor entry, items (d), (e) and (f) as code; the commit stays with Codex. Order steps continue below.
+- **Upload** 21:54 SAST (19:54 UTC). I copied the documented command from `cluster_sync.md` exactly and ran it with `-n` first. The preview listed one file, `src/spatial_msipl/tests/test_segmentation_control_v.py` (`55d20f0e`), and the real run transferred the same one file. The source was clean HEAD `f80b587f`; AGENTS.md, CLAUDE.md and this chat were uncommitted, none of them code. **sha256:** 12/12 files match HEAD: the test fix, the 7 code files from `693d5108`, the 2 from `ac385a4e`, and `run_ranking_stage_timing.sh` and `summarise_ranking_stage_runtime.py`.
+- **Cluster test 70132** was submitted 21:55 SAST on `batch` (script default) and is running on mscluster146. The PCA array and the RCC timing submissions wait until it passes in full, including S3PL.
+- **Summariser change (uncommitted, for Codex review)** to `scripts/summarise_pca_reconstruction_v.py` and `src/spatial_msipl/tests/test_pca_reconstruction_v.py`:
+  - **(d)** The wording now needs only `WORDING_COLLECTIONS = ("GBM", "CAC")` to be complete. RCC keeps its own record (`sections_complete`/`sections_expected`, `comparison: "none; no saved VAE reconstruction, reported alone"`), with no MSE comparison. The not-done wording is now "not done; one or more GBM or CAC sections are missing or invalid".
+  - **(e)** `collect()` refuses a table whose PCA summaries differ in `provenance.{version, protocol, parameters, code}`, with "different code or settings; refusing to mix them in one table". `not_done` sections are included in the check. Per-section `source_artifacts` are excluded, as they are in the Test V summariser.
+  - **(f)** `summary["notes"]` records the cosine-floor form as descriptive.
+  - **New tests:**
+    - RCC `not_done` with GBM/CAC complete still gives the GBM/CAC wording, and RCC has no comparison;
+    - an incomplete GBM gives "not done";
+    - mixed `code` is refused, and matching `code` is accepted.
+  - **Local:** `test_pca_reconstruction_v` 9/9 passed, no skips, in a temporary uv environment with h5py, sklearn and scipy. `git diff --check` is clean, with LF endings.
+  - The evaluator and job scripts are unchanged, so the uploaded cluster code doesn't need to be re-uploaded. This must be committed before the pulled PCA results are summarised.
+- **(a) and (b) provenance note:** for the RCC timing tasks, mscluster74 and mscluster76 are on `gpu_cuda_quarantine.txt`. They're used because the job is CPU-only and those nodes made the saved RCC rankings in 69565. I'll record this in protocol 18 Section 10 alongside the submission, not in the uploaded script.
+- **CLAUDE.md:** "How to run local tests" now also has the uv command that worked tonight. Not code.
+
+### 2026-10-17 22:03 Code → Supervisor | Zayd: cluster test 70132 passed in full; PCA array 70137 and RCC timing 70142–70149 submitted
+Status: INFO
+
+- **Cluster test 70132** (`batch`, mscluster146) COMPLETED in 4:21, exit 0.
+  - Main suite: 243 tests, all OK. The 3 skips are the expected artifact skips, as in 70032 (2 × `test_runtime_v2` local artifacts, 1 × `test_s3pl_shuffle_control` local artifacts).
+  - `test_pca_reconstruction_v` passed 6/6, and `test_segmentation_control_v` passed with no failures.
+  - S3PL sub-suite 25/25 OK.
+- **PCA reconstruction array 70137** was submitted 22:00 SAST (20:00 UTC): indices 0–23, `%4`, `batch`, new root `pca_reconstruction_V/`, which did not exist before. All 24 Test V summaries it reads are present.
+- **RCC timing:** 8 single-node `bigbatch` submissions at 22:00 SAST, 0 `bigbatch` jobs running beforehand:
+  - 70142 (0, mscluster71), 70143 (1, 74), 70144 (2, 76), 70145 (3, 77), 70146 (4, 55), 70147 (5, 74), 70148 (6, 71), 70149 (7, 76).
+  - New root `ranking_stage_runtime_rcc_bigbatch/`. `task_node_map.txt` was written.
+  - The note about the quarantined nodes is in protocol 18 Section 10.
+- Logged in protocol 18 Section 10. Next: check after the expected durations (PCA a few minutes per task; timing under 5 min per task plus queue waits for `--exclusive` nodes). Then the pull with `-n` first, after Codex commits the (d)/(e)/(f) summariser change (22:00 entry).
+
+### 2026-10-17 22:20 Code → Supervisor | Zayd: PCA 70137 done, CAC 360TopL "not done" on its explained-variance gate (2.8e-6 > 1e-6); RCC timing stuck in the bigbatch queue (mscluster76 down). Decisions needed
+Status: OPEN, for the supervisor and Zayd
+
+- **PCA reconstruction 70137:** 24/24 COMPLETED on `batch`. Pulled 22:13 SAST (32 new files, no committed file changed).
+  - **23 sections `complete`. CAC 360TopL is `not_done`:** the PCA-5 explained-variance sum is 0.9502566, against the saved Test V value 0.9502594, a difference of 2.82e-6 against the 1e-6 tolerance. PCA-20 passed (2.9e-7).
+  - In the other 23 sections, the differences are 1.5e-9 to 5.6e-7. None is exactly 0.
+  - **Likely cause, not verified:** Test V ran on `bigbatch` (mscluster73/79/86; 360TopL was 69768_13 on mscluster73). The addendum ran on `batch`, as predeclared. Randomized float32 PCA rounds differently on another CPU type, the same mechanism as the RCC timing gate (19:54).
+  - **Consequence under the predeclared rule:** CAC has 7/8 sections, so the fixed wording is not reached. The (d) summariser would print "not done; one or more GBM or CAC sections are missing or invalid". I haven't run the summariser or looked at any reconstruction metric. It waits for Codex's commit of the (d)/(e)/(f) change.
+  - **Options, for the supervisor:**
+    - (i) Accept "not done" for 360TopL, and with it no fixed wording.
+    - (ii) A separately labelled rerun of 360TopL only, with the gate unchanged, on the CPU type that made the saved Test V value (mscluster73, `bigbatch`). This mirrors RCC timing option (a). It faces the same full `bigbatch` queue (below).
+    - I won't relax the tolerance.
+- **RCC timing 70142–70149: all PENDING** at 22:08 SAST.
+  - mscluster55, 71, 74 and 77 are each fully allocated (14/14 CPUs) to other users' jobs with 3-day limits, which have been running 2.5–9 h. Our tasks need `--exclusive`, so they wait on `Priority`, possibly for days.
+  - **mscluster76 is `down*` (Not responding).** Indices 2 (UH0710_33) and 7 (UH9912_01) can't start while it's down.
+  - No `bigbatch` node is idle. Of 48 nodes, 25 are allocated, 22 down and 1 drained.
+  - **Moving to `batch` doesn't help:** 70034 ran exactly that and failed the exact-reproduction gate on 7/7 RCC tasks. Relaxing the gate is option (b), already ruled out.
+  - **Options:**
+    - leave them queued until a decision point, e.g. Monday 19 Oct 20:00 SAST, and take fallback (c) for whatever hasn't run;
+    - or take (c) now.
+  - Indices 2 and 7 could alternatively be repinned to another node of the same CPU model, if that is acceptable as "the node type" (the 20:17 ruling). The 21:07 per-node pinning was a robustness choice. Every `bigbatch` node is busy anyway.
+- Nothing cancelled or resubmitted. Logged in protocol 18 Section 10.
+
+### 2026-10-17 22:24 Code → Supervisor | Zayd: RCC timing resubmitted as "shared node, not exclusive" (70179), Zayd's decision; CPU-model check posted
+Status: INFO (the 22:20 RCC timing question is answered by Zayd; the CAC 360TopL question stays open)
+
+- **Zayd's decision (about 22:19 SAST):**
+  - Cancel the pending exclusive tasks.
+  - If mscluster55/71/74/76/77 share one CPU model, resubmit without `--exclusive` on any of those five nodes, excluding every other `bigbatch` node, with the exact-reproduction check unchanged and the label "shared node, not exclusive".
+  - Use option (c) if the models differ or nothing has finished by Monday 19 Oct 18:00 SAST.
+- **CPU-model check:**
+  - `scontrol` (one call) shows identical hardware on all five nodes: 1 socket × 14 cores × 2 threads, 124,000 MB, x86_64, no Features. It doesn't report the CPU model on this cluster.
+  - From saved artifacts: the Test R `runtime_metrics` record **`Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz` for mscluster55 (4 records), 71 (10) and 77 (8)**. Every one of the 96 `bigbatch` CPU records in `results/` is that model.
+  - mscluster74 and 76 have no record, because they are GPU-quarantined. Their model is inferred from the matching topology, not confirmed.
+  - **Fail-closed guard:** each timing task records `cpu_model`, and the summariser refuses mixed models within a collection. I judged this sufficient to proceed.
+- **Done:**
+  - Cancelled 70142–70149 (8/8 `CANCELLED` while pending; none started).
+  - The first resubmission with `--oversubscribe` was refused by sbatch, because it conflicts with the runner's `#SBATCH --exclusive`. Nothing was submitted.
+  - **Array 70179** was submitted 22:21 SAST via `sbatch --wrap`, with the runner's resources repeated except `--exclusive`; the committed runner is unchanged. Indices 0–7 run `%1`, so our own tasks never share a node with each other. Every `bigbatch` node except 55/71/74/76/77 is excluded.
+  - `scontrol`: `OverSubscribe=OK` (not exclusive); the partition has `OverSubscribe=NO`, so CPUs aren't shared, only the node.
+  - New root `ranking_stage_runtime_rcc_bigbatch_shared/`, with `provenance/notes.txt` recording the label, the model evidence and the stop rule.
+- **Caveat:** all four live nodes are still fully allocated (14/14 CPUs), so 70179 is pending on `Priority` until another user's job frees cores. Dropping `--exclusive` widens the options but doesn't free a slot by itself.
+- For the summariser later: the RCC rows must carry "shared node, not exclusive" next to the per-collection CPU label. That will be a Codex-reviewed change, or the report caption, at the supervisor's choice.
+- Logged in protocol 18 Section 10.
+
+### 2026-10-17 22:27 Codex → Code | Supervisor: Review of PCA summary rules and pulled evidence
+Status: INFO
+
+- Resolves: 2026-10-17 22:00 Code entry, requested review of items (d), (e) and (f). The fixed wording now depends only on complete GBM and CAC results; RCC is retained as a separate descriptive record. Mixed `provenance.{version, protocol, parameters, code}` is refused, including for `not_done` sections, and the accepted cosine-floor convention is disclosed in the summary notes.
+- Local verification: `test_pca_reconstruction_v` passed 9/9. All 24 pulled PCA summaries parsed, shared one provenance signature, and agreed internally with their explained-variance gates: 23 `complete`, with only CAC 360TopL `not_done`. The saved cluster records show test job 70132 passed 243 tests with 3 expected artifact skips and the S3PL sub-suite passed 25/25.
+- Committed: `a21ff6b1` (`Fix PCA reconstruction summary rules`) and `7666293d` (`Add PCA reconstruction and validation evidence`). The open decision about CAC 360TopL is not pre-empted; no derived PCA summary was generated or committed.

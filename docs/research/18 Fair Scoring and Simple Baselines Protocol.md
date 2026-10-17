@@ -1015,6 +1015,40 @@ A test rebuilds the IG matched groups from these files.
               - **PCA reconstruction addendum and RCC timing option (a) upload:** 21:18 SAST, from clean committed HEAD `acd9e905`, using the documented source upload with `-n` first and no `--delete`. Fourteen source/test files were transferred or timestamp-refreshed; the command was rerun with the exact documented lowercase `*.imzML` exclusion after a capitalization typo in the first real invocation (no data file was listed or transferred). Cluster and local SHA-256 values match for all 14 uploaded files; `git diff --exit-code HEAD -- code/msi` passed before the check.
               - **Cluster compatibility test 70119 submitted:** 21:19 SAST on the script-default `batch` partition: `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh`. It must pass, with `test_pca_reconstruction_v` 6/6 and no skips, before either scientific submission.
               - **Cluster compatibility test 70119 FAILED:** finished in 5:17 on mscluster146, exit 1. The required `test_pca_reconstruction_v` module ran 6/6 with no skips and all six passed. The full Python suite ran 243 tests with 1 failure and 3 expected artifact skips: existing `test_segmentation_control_v.SummariserTests.test_verdicts_per_collection` expected `d_vae_seed_mean_minus_pca5` to be `None`, but the cluster's now-present Test R artifacts populated it. The S3PL sub-suite did not run because the main unittest pipeline failed. Per the stop rule, neither the PCA reconstruction array nor the RCC timing jobs were submitted.
+              - **Test-isolation fix and resubmission (Code; Codex builder retired, chat 21:45):**
+                - The fix is `55d20f0e`: `SummariserTests` passes an empty `--test-r-fair`.
+                - **Upload** 21:54 SAST, from clean HEAD `f80b587f`, using the documented command with `-n` first. One file transferred (`test_segmentation_control_v.py`). `sha256sum` matches HEAD in 12/12 changed files.
+                - **Cluster test 70132** (`batch`, mscluster146), submitted 21:55 SAST, COMPLETED in 4:21. The main suite ran 243 tests, all OK, with 3 expected artifact skips: `test_pca_reconstruction_v` 6/6, `test_segmentation_control_v` all OK. S3PL 25/25 OK.
+              - **PCA reconstruction array 70137** was submitted 22:00 SAST (20:00 UTC) with `bash slurm_jobs/submit_pca_reconstruction_v.sh`: indices 0–23, `%4`, `batch`, new root `results/diagnostics/pca_reconstruction_V/`.
+              - **RCC ranking timing (option (a)):** `bash slurm_jobs/submit_rcc_ranking_stage_timing.sh` was run 22:00 SAST. It made 8 single-task submissions on `bigbatch`, each `--nodelist` set to the node of the matching 69565 task:
+                - 70142 (index 0, mscluster71), 70143 (1, mscluster74), 70144 (2, mscluster76), 70145 (3, mscluster77), 70146 (4, mscluster55), 70147 (5, mscluster74), 70148 (6, mscluster71), 70149 (7, mscluster76).
+                - Output root `results/diagnostics/ranking_stage_runtime_rcc_bigbatch/`. The map is recorded in `provenance/task_node_map.txt`.
+                - **Note:** mscluster74 and mscluster76 are on `gpu_cuda_quarantine.txt`. The job is CPU-only and uses those nodes because they made the saved RCC rankings, so the CUDA quarantine does not apply (supervisor chat 21:53).
+              - **70137 finished** by 22:08 SAST: 24/24 COMPLETED, exit 0, on `batch` (mscluster129–132, 146).
+                - Logs: 23 sections `complete`. CAC 360TopL is `not_done`: the PCA-5 explained-variance sum differs from the saved Test V value by 2.82e-6, against the 1e-6 tolerance. PCA-20 passed at 2.85e-7.
+                - In the other 23 sections the differences are 1.5e-9 to 5.6e-7, never exactly 0.
+                - Likely cause, not verified: Test V ran on `bigbatch` (mscluster73/79/86; 360TopL was task 69768_13 on mscluster73), while this addendum ran on `batch` as predeclared. Randomized float32 PCA rounds differently on another CPU type.
+                - The tolerance is unchanged. Under the addendum the section is "not done".
+              - **Pull** 22:13 SAST (documented quiet artifact pull, `-n` first): 32 new files (25 `pca_reconstruction_V`, 2 `ranking_stage_runtime_rcc_bigbatch/provenance`, 5 test-job validation records). No committed file changed.
+              - **RCC timing status at 22:08 SAST:** all 8 tasks PENDING.
+                - The 6 tasks pinned to mscluster55/71/74/77 wait on `Priority`. Each node is fully allocated (14/14 CPUs) to another user's job with a 3-day limit, and `--exclusive` needs the node empty.
+                - The 2 tasks pinned to mscluster76 (indices 2 and 7) show `ReqNodeNotAvail`, because mscluster76 is `down*` (Not responding).
+                - No `bigbatch` node is idle.
+              - **RCC timing moved to "shared node, not exclusive"** (Zayd's OK, about 22:19 SAST):
+                - **CPU-model check:**
+                  - `scontrol` (once) shows identical hardware on mscluster55/71/74/76/77: 1 socket × 14 cores × 2 threads, 124,000 MB. It does not report the CPU model.
+                  - The Test R `runtime_metrics` record `Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz` for mscluster55, 71 and 77. All 96 `bigbatch` records in `results/` show that model.
+                  - mscluster74 and 76 have no record, because they are GPU-quarantined.
+                  - The summariser refuses mixed CPU models within a collection, so an unexpected model fails closed.
+                - **Cancelled** 70142–70149 while pending (8/8 `CANCELLED`, none started).
+                - **First resubmission attempt refused by sbatch:** `--oversubscribe` on the command line is "mutually exclusive" with the runner's `#SBATCH --exclusive`. Nothing was submitted.
+                - **Resubmitted as array 70179** at 22:21 SAST: `bigbatch`, indices 0–7, `%1`, `--exclude=mscluster[42-54,56-70,72-73,75,78-89]`, so only nodes 55/71/74/76/77 are allowed.
+                  - It was submitted through `sbatch --wrap="bash slurm_jobs/run_ranking_stage_timing.sh <root>"`, with the runner's `#SBATCH` resources repeated on the command line apart from `--exclusive` (`--nodes=1 --ntasks=1 --cpus-per-task=2 --mem=24G --time=02:00:00`, same log names). The committed runner is unchanged.
+                  - `scontrol` shows `OverSubscribe=OK`. The partition has `OverSubscribe=NO`, so the node is shared but not the CPUs.
+                  - New root: `results/diagnostics/ranking_stage_runtime_rcc_bigbatch_shared/` (provenance `slurm_job_ids.txt` and `notes.txt`). The exact full-ranking reproduction check is unchanged.
+                - **Label:** "shared node, not exclusive".
+                - **Stop rule:** if nothing has finished by Monday 19 October 18:00 SAST, use option (c).
+                - At submission it was pending on `Priority`, because all four live nodes are fully allocated.
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.
