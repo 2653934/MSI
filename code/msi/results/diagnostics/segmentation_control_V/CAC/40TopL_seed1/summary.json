@@ -1,0 +1,271 @@
+{
+  "status": "complete",
+  "provenance": {
+    "test_v_version": 1,
+    "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md, Section 6.4 (Test V)",
+    "dataset": "40TopL",
+    "parameters": {
+      "gmm_components": 3,
+      "pca_components": [
+        5,
+        20
+      ],
+      "pca_solver": "randomized",
+      "pca_random_state": 1,
+      "gmm_n_init": 20,
+      "gmm_seed": 1,
+      "reg_covar": 1e-06,
+      "preprocessing": {
+        "function": "spatial_msipl.preprocessing.tic_normalize on the raw Data rows read as float32",
+        "matches": "H5SpatialContextDataset.__getitem__ / CachedH5SpatialContextDataset 'target' (the central spectrum CentralOnlyVAE.encode receives)",
+        "pixels": "measured pixels only (every row of Data)"
+      },
+      "scales": [
+        "bin",
+        "P1"
+      ],
+      "chunk_size": 1024,
+      "score_tolerance": 1e-12
+    },
+    "source_artifacts": {
+      "input": {
+        "path": "/datasets/zsuliman/msi_data/cac_msipl/40TopL.h5",
+        "bytes": 27854880,
+        "sha256": "d4c8249370885836cd0211b47c67c5214ac7d983e6e5f8934668d96f126a7b8b"
+      },
+      "fair_scoring_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/fair_scoring_baselines/with_approved_partitions/40TopL_seed1/central_only/summary.json",
+        "bytes": 384141,
+        "sha256": "c8b342e8e2d782aa54a7968b3eeac3a9f6153b99d0ad48b3513711e0250624d8"
+      },
+      "uniform_fair_scoring_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/fair_scoring_baselines/with_approved_partitions/40TopL_seed1/uniform_mean/summary.json",
+        "bytes": 382236,
+        "sha256": "9615619e869e79a9eb4d313ced2dd1599bc752c5aad21f3aa8e558de8895f260"
+      },
+      "latent_mean": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/latent_mean.npy",
+        "bytes": 93848,
+        "sha256": "a0a84f5d7c511ff30b827de911943e6c8896d8bd88dc63cc7f3b43be068e1890"
+      },
+      "coordinates_and_gmm": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/coordinates_and_gmm.npz",
+        "bytes": 132216,
+        "sha256": "505f36100f065e48aca3dde6fcf3c40df032f1aeea2e2cf23340e5e7c2e53b72"
+      },
+      "gmm_parameters": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/gmm_parameters.npz",
+        "bytes": 2330,
+        "sha256": "5f6ae4d7c0d4b710a8dddc81844415b12eb259c4eb2db0392a203c7dcebbed0f"
+      },
+      "attribution_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_cac_gmm_integrated_gradients/40TopL_seed1/central_only/summary.json",
+        "bytes": 18468,
+        "sha256": "6b15f5483be3b98fa6eaa7aebf9ff68c7ca11995dc7b57950858e91cbd6efcdd"
+      },
+      "partitions": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/peak_partition_audit/40TopL/partitions.npz",
+        "bytes": 26804,
+        "sha256": "9de925d62e258c6e571d50a396f7af989a469d48b7084634152fa92dd8be4952"
+      }
+    },
+    "approved_partition_hashes": {
+      "P1": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1"
+    },
+    "code": {
+      "evaluate_segmentation_control_v.py": "445d0af68a8962065c0d38fc3178b4ca5f45b78df334b27bfff8937df89d76fc",
+      "peak_groups.py": "2b76a3b482e534494a3dff6693250a5a3cf4bbeeba60671b0cbbcd198e1b6f6c",
+      "preprocessing.py": "157a301e5179060e0dabf93e9fdfdb0c4130f3d7a9a732aab7e7cec2d439e903",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "segmentation_control.py": "c79c322e45a7b65bb819c709c4840aaa0f10d67272872cc42305c7640b6a244a",
+      "simple_baselines.py": "1fc8bd4492e96039ec60df8b37801edcc77541525ee068b6a3e7f74a7b7379ee",
+      "evaluate_fair_scoring_baselines.py": "1be4a74aa19fe3069a0bec571efcdb122057880a9e6d5ea660eb1c6ce6fbaedb",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "bf5e4e118d2fc3092e13a1e14b51604970f62761b64cf343f2d1137de2ef32f4"
+    }
+  },
+  "dataset": "40TopL",
+  "K_bin": 315,
+  "label": "Test V (protocol 18 Section 6.4); per section scores, no verdict",
+  "checks": {
+    "production_refit_ari_to_saved": 1.0,
+    "production_posterior_max_abs_difference": 1.3471762850825186e-06,
+    "reproduced_mSCF1": {
+      "bin:posterior_abs_pcc_balanced": 0.7272305097268011,
+      "bin:morans_i": 0.7311313760137667,
+      "P1:posterior_abs_pcc_balanced": 0.7270854409906257,
+      "P1:morans_i": 0.7789854407338472
+    }
+  },
+  "pca": {
+    "pca5": {
+      "n_components": 5,
+      "pca": {
+        "svd_solver": "randomized",
+        "random_state": 1
+      },
+      "explained_variance_ratio": [
+        0.861146867275238,
+        0.0923159196972847,
+        0.013474931009113789,
+        0.008031042292714119,
+        0.0059889559634029865
+      ],
+      "explained_variance_ratio_sum": 0.9809577162377536,
+      "gmm": {
+        "components": 3,
+        "covariance_type": "full",
+        "reg_covar": 1e-06,
+        "n_init": 20,
+        "seed": 1,
+        "scaler": "StandardScaler"
+      },
+      "converged": true,
+      "n_iter": 21,
+      "component_counts": [
+        1242,
+        1743,
+        1701
+      ],
+      "empty_components": 0
+    },
+    "pca20": {
+      "n_components": 20,
+      "pca": {
+        "svd_solver": "randomized",
+        "random_state": 1
+      },
+      "explained_variance_ratio": [
+        0.8611463904380798,
+        0.09231597185134888,
+        0.013474948704242706,
+        0.008031060919165611,
+        0.005988948978483677,
+        0.0028730446938425303,
+        0.0021232296712696552,
+        0.0014439744409173727,
+        0.0013243196299299598,
+        0.001258846721611917,
+        0.0007043536170385778,
+        0.0005503447027876973,
+        0.0005071141058579087,
+        0.0004846799129154533,
+        0.00042226037476211786,
+        0.0003896881244145334,
+        0.00033274482120759785,
+        0.00030116105335764587,
+        0.0002582174201961607,
+        0.00023931689793244004
+      ],
+      "explained_variance_ratio_sum": 0.9941706170793623,
+      "gmm": {
+        "components": 3,
+        "covariance_type": "full",
+        "reg_covar": 1e-06,
+        "n_init": 20,
+        "seed": 1,
+        "scaler": "StandardScaler"
+      },
+      "converged": true,
+      "n_iter": 16,
+      "component_counts": [
+        1389,
+        1961,
+        1336
+      ],
+      "empty_components": 0
+    }
+  },
+  "mSCF1": {
+    "bin": {
+      "posterior_abs_pcc_balanced": 0.7272305097268011,
+      "morans_i": 0.7311313760137667,
+      "pca5_posterior_abs_pcc_balanced": 0.6900208841078554,
+      "pca20_posterior_abs_pcc_balanced": 0.7374620993542286
+    },
+    "P1": {
+      "posterior_abs_pcc_balanced": 0.7270854409906257,
+      "morans_i": 0.7789854407338472,
+      "pca5_posterior_abs_pcc_balanced": 0.6330276104237993,
+      "pca20_posterior_abs_pcc_balanced": 0.7688647575389431
+    }
+  },
+  "vae_minus_pca5": {
+    "bin": 0.037209625618945696,
+    "P1": 0.09405783056682637
+  },
+  "saved_descriptive": {
+    "bin": {
+      "integrated_gradients": 0.6804372163847988,
+      "vae_uniform_mean_posterior_abs_pcc_balanced": 0.7449861077542191
+    },
+    "P1": {
+      "integrated_gradients": 0.6807753053024532,
+      "vae_uniform_mean_posterior_abs_pcc_balanced": 0.7572152469915319
+    }
+  },
+  "segmentation_vs_expert": {
+    "vae_central_only": {
+      "balanced_accuracy": 0.5730763238490543,
+      "accuracy": 0.6303883909517712,
+      "mapping": {
+        "0": 1,
+        "1": 0,
+        "2": 2
+      },
+      "mapping_rule": "accuracy-maximising component-to-class permutation (best_component_mapping, as the matched evaluation)"
+    },
+    "pca5": {
+      "balanced_accuracy": 0.5722832718180333,
+      "accuracy": 0.6299615877080665,
+      "mapping": {
+        "0": 2,
+        "1": 0,
+        "2": 1
+      },
+      "mapping_rule": "accuracy-maximising component-to-class permutation (best_component_mapping, as the matched evaluation)"
+    },
+    "pca20": {
+      "balanced_accuracy": 0.5572224522519059,
+      "accuracy": 0.5938967136150235,
+      "mapping": {
+        "0": 0,
+        "1": 1,
+        "2": 2
+      },
+      "mapping_rule": "accuracy-maximising component-to-class permutation (best_component_mapping, as the matched evaluation)"
+    },
+    "ari_pca5_vs_vae": 0.696257092070015,
+    "note": "descriptive; expert labels did not fit any GMM or rank any bin"
+  },
+  "peak_level_P1": {
+    "partition_sha256": "c67a8b52382369f1ed511aeef49e34f4edc93b0e99e2f5c1cd4842ea5ec558f1",
+    "groups": 1481,
+    "K_peak": 239,
+    "bins_consumed": {
+      "posterior_abs_pcc_balanced": 239,
+      "morans_i": 239,
+      "pca5_posterior_abs_pcc_balanced": 239,
+      "pca20_posterior_abs_pcc_balanced": 239
+    }
+  },
+  "zero_tic_pixels": 0,
+  "rankings": {
+    "posterior_abs_pcc_balanced": {
+      "full_ranking_sha256": "b81ecb7bfde0ff360238501e8632e388a2e5bc4baa8546f03c50a043bb1cde63",
+      "saved_prefix_length": 630
+    },
+    "morans_i": {
+      "full_ranking_sha256": "9eb55aa737e66e55e0ab26c994ba46ad7e547d05ca6025f4f4cec98cc0f525d7",
+      "saved_prefix_length": 630
+    },
+    "pca5_posterior_abs_pcc_balanced": {
+      "full_ranking_sha256": "08bd7981188c801ff11db296bc705e83191a1381fef5b134b7ceba07e66e005e",
+      "saved_prefix_length": 630
+    },
+    "pca20_posterior_abs_pcc_balanced": {
+      "full_ranking_sha256": "9ac5d43689deb74824a57ac3f98f62ab1aac7bf42c1c47d77c191c2b0cece5cf",
+      "saved_prefix_length": 630
+    }
+  }
+}
