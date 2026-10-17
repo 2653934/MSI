@@ -1,0 +1,51 @@
+{
+  "rule": "real minus retrained shuffled-nonlocal, per seed then both: >= 0.02 on >= 7/8 and mean >= 0.02 in both seeds; |mean| < 0.02 in both; otherwise mixed",
+  "per_seed": {
+    "1": {
+      "sections": 8,
+      "sections_at_least_0.02": 4,
+      "mean_difference": 0.03924837340898693,
+      "per_section": [
+        -0.020953164834198623,
+        0.06528285557187191,
+        0.06915030932253463,
+        0.013279812207553476,
+        0.0534747812331961,
+        0.01143854780575082,
+        0.20510988226626403,
+        -0.0827960363010769
+      ]
+    },
+    "2": {
+      "sections": 8,
+      "sections_at_least_0.02": 3,
+      "mean_difference": 0.039962328341367405,
+      "per_section": [
+        -0.04064869906158053,
+        0.01351030500429945,
+        0.05671348729030523,
+        0.011816609697010039,
+        0.06595796659773745,
+        -0.013667370167278148,
+        0.3052755817477323,
+        -0.07925925437728654
+      ]
+    }
+  },
+  "verdict": "mixed",
+  "reconstruction_target": "the input patch (shuffled neighbours, real centre)",
+  "real_reproduced_from_saved_metrics": true,
+  "descriptive": {
+    "status": "descriptive only; no verdict",
+    "shuffled_minus_tile_centre_mean": {
+      "1": 0.37342084195053143,
+      "2": 0.3976203729652903
+    },
+    "shuffled_minus_mean_intensity_mean": {
+      "1": -0.06015078648103175,
+      "2": -0.061612634383883806
+    },
+    "mean_intensity_note": "fair-scoring bin-level mean intensity at K_bin = the matched count, on TIC-normalised HDF5 bins with the fair-scoring scorer; not the S3PL evaluator on imzML m/z values"
+  },
+  "note": "CAC is one biopsy (8 regions); sections are not independent patients"
+}
