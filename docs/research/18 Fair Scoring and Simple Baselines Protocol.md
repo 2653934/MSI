@@ -481,6 +481,26 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
 - Moran's I is also checked to reproduce its saved mSCF1 to 1e-12, as in Test S.
 - **(d)** reads Test R's `central_only` fair-scoring results when both seeds 2 and 3 are complete for a section; otherwise it is left empty.
 
+#### Addendum: PCA reconstruction error (supervisor chat 17 October 20:17, Zayd-approved; predeclared before any output exists)
+
+- **New predeclared Test V addendum: PCA reconstruction error (written before any output exists).**
+  - **Why:** the results draft may say "PCA-5 is simpler and reconstructs worse, yet gives equivalent peak ranking." Test V saved only PCA explained variance, which can't be compared with the VAE's saved MSE. This must be measured, not assumed. PCA-5 is the MSE-optimal rank-5 linear map, and the VAE is trained on cross-entropy, so either outcome is possible.
+  - **Inputs and PCA:** exactly as Test V (protocol 18 Section 6.4). The same `tic_normalize` on raw `Data` as float32, measured pixels only, and `PCA(n_components=5 and 20, svd_solver="randomized", random_state=1)`, fitted on all pixels of each section. All 24 sections.
+  - **Reconstruction:** `inverse_transform` of the scores.
+    - **Primary:** MSE, MAE and cosine similarity on the raw reconstruction.
+    - **Secondary:** the same three metrics after clipping at 0 and re-applying TIC, to match the VAE's "after decoder TIC normalization" convention.
+    - Before writing code, the builder confirms from the VAE evaluation code that MSE and MAE are averaged in the same way (over all pixel × feature entries) and states this in the chat.
+  - **Comparison:** against the saved VAE values (`evaluation/comparison.json`: centre-only and uniform-mean), for GBM (`spatial_msipl_reconstruction`) and CAC (`spatial_msipl_cac_reconstruction`). RCC has no saved VAE reconstruction, so its PCA values are reported alone, with no comparison.
+  - **Validity:** the explained-variance-ratio sum reproduces the saved Test V value within 1e-6 in every section, or that section is "not done".
+  - **Cluster run:** CPU only, `batch`, a job script based on `run_segmentation_control_v.sh`. New root `results/diagnostics/pca_reconstruction_V/`. No new mSCF1 scoring; Test V's scores are reused.
+  - **Reporting (descriptive, no decision rule):**
+    - per section, the PCA-5, PCA-20 and VAE MSE/MAE/cosine;
+    - per collection, the number of sections where the PCA-5 MSE exceeds the centre-only VAE MSE;
+    - the median ratio of PCA-5 MSE to VAE MSE.
+  - **Wording, fixed now:**
+    - If the PCA-5 MSE is higher in at least 6 of 8 sections in both GBM and CAC, under both the primary and the secondary metric: "PCA-5 reconstructs worse than the VAE yet gives equivalent peak ranking."
+    - Otherwise: "Reconstruction error does not separate PCA-5 from the VAE," and the "reconstructs worse" claim is dropped.
+
 ### 6.5 Test N: S3PL retrained with shuffled nonlocal neighbours, CAC (supervisor chat 17 October 13:04, Zayd-approved; predeclared before any output exists)
 
 The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-17 13:04 Supervisor → Code: New predeclared Test N". It was written into this protocol on 17 October before any Test N code was written or run. Later notes are added below it, never inside it.

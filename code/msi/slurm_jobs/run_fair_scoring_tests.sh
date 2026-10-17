@@ -52,6 +52,7 @@ PY
     spatial_msipl.tests.test_ranking_stage_runtime \
     spatial_msipl.tests.test_runtime_v2 \
     spatial_msipl.tests.test_segmentation_control_v \
+    spatial_msipl.tests.test_pca_reconstruction_v \
     spatial_msipl.tests.test_s3pl_shuffle_control \
     2>&1 | tee "$RECORD_DIR/${SLURM_JOB_ID}_unittest.log"
 # Test N (protocol 18 Section 6.5): the S3PL patch tests run from the S3PL folder,

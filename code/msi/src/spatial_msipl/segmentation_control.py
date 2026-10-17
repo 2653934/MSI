@@ -58,12 +58,17 @@ def fit_gmm(features, k, n_init=GMM_N_INIT, seed=GMM_SEED):
     return model, standardized
 
 
-def pca_segmentation(features, n_components, k):
-    """PCA scores clustered by the production GMM; returns (posterior, component, record)."""
+def pca_transform(features, n_components):
+    """Fit Test V's declared PCA and return the model and pixel scores."""
     from sklearn.decomposition import PCA
 
     pca = PCA(n_components=n_components, svd_solver="randomized", random_state=PCA_SEED)
-    scores = pca.fit_transform(features)
+    return pca, pca.fit_transform(features)
+
+
+def pca_segmentation(features, n_components, k):
+    """PCA scores clustered by the production GMM; returns (posterior, component, record)."""
+    pca, scores = pca_transform(features, n_components)
     model, standardized = fit_gmm(scores, k)
     posterior = model.predict_proba(standardized)
     component = np.argmax(posterior, axis=1)
