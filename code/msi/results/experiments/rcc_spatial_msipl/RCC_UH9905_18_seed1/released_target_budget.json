@@ -1,0 +1,100 @@
+{
+  "status": "complete",
+  "provenance": {
+    "budget_version": 1,
+    "protocol": "docs/research/18 Fair Scoring and Simple Baselines Protocol.md (v3.2), Section 6.1 item D step 2",
+    "dataset": "RCC_UH9905_18",
+    "parameters": {
+      "thresholds": [
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ],
+      "budget": "released S3PL target num_GT_peaks",
+      "released_target_key": "UH9905_18",
+      "reference_threshold": 0.5,
+      "descriptive_class_subset": [
+        0,
+        1
+      ]
+    },
+    "input": {
+      "path": "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_UH9905_18.h5",
+      "bytes": 2309469,
+      "sha256": "d4a3d43048aeb0c66830965a0368e3b7aa069eab50abb8c854bc2c9c9844f8e3"
+    },
+    "code": {
+      "compute_reference_budget.py": "3b197a1e99cc900edc88b73b6a207dc9c76abe342ba2806d3df440cd3741d721",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "bf5e4e118d2fc3092e13a1e14b51604970f62761b64cf343f2d1137de2ef32f4"
+    },
+    "released_target_config": {
+      "path": "baselines/s3pl/data_configs.py",
+      "bytes": 1284,
+      "sha256": "fd4c9c6a516f8c6eedd8a27971697e824d019d164ca48b7b5b438ef874556635"
+    }
+  },
+  "dataset": "RCC_UH9905_18",
+  "K_bin": 1699,
+  "rule": "K_bin = released S3PL target num_GT_peaks (baselines/s3pl/data_configs.py), the GBM/CAC convention; the paper sets the RCC budget at PCC 0.5 (spec correction, supervisor chat 2026-10-16 19:47); |R@0.4| is descriptive only",
+  "classes": [
+    0,
+    1,
+    2
+  ],
+  "pixels_per_class": {
+    "0": 81,
+    "1": 533,
+    "2": 1366
+  },
+  "spectral_bins": 10200,
+  "reference_set_sizes_all_classes": {
+    "0.3": 3363,
+    "0.4": 2501,
+    "0.5": 1691,
+    "0.6": 923
+  },
+  "reference_set_sizes_per_class": {
+    "0": {
+      "0.3": 899,
+      "0.4": 469,
+      "0.5": 207,
+      "0.6": 67
+    },
+    "1": {
+      "0.3": 1796,
+      "0.4": 1389,
+      "0.5": 979,
+      "0.6": 595
+    },
+    "2": {
+      "0.3": 1051,
+      "0.4": 765,
+      "0.5": 513,
+      "0.6": 261
+    }
+  },
+  "released_target": {
+    "key": "UH9905_18",
+    "num_GT_peaks": 1699,
+    "our_R_at_0.5": 1691,
+    "target_minus_our_R_at_0.5": 8,
+    "our_R_at_0.4_descriptive": 2501
+  },
+  "reference_set_sizes_descriptive_subset": {
+    "classes": [
+      0,
+      1
+    ],
+    "sizes": {
+      "0.3": 2314,
+      "0.4": 1736,
+      "0.5": 1178,
+      "0.6": 662
+    },
+    "use": "descriptive only; never a budget (the sensitivity analysis keeps K_bin)"
+  },
+  "runtime_seconds": 6.172456515021622
+}
