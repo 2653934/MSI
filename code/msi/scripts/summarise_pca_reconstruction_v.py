@@ -25,6 +25,14 @@ SECTIONS = {
 CONVENTIONS = ("primary_raw_inverse_transform", "secondary_clip_zero_then_tic")
 VAE_MODELS = ("central_only", "uniform_mean")
 METRICS = ("mean_squared_error", "mean_absolute_error", "cosine_similarity")
+# The predeclared wording rule (protocol 18 Section 6.4 addendum) covers GBM and CAC
+# only; RCC has no saved VAE reconstruction and is reported alone.
+WORDING_COLLECTIONS = ("GBM", "CAC")
+NOTES = (
+    "Cosine similarity floors each row norm at 1e-8 separately (the older torch "
+    "form); the difference from the product-floor form is negligible at these norms. "
+    "Descriptive only (supervisor chat 2026-10-17 21:53, item f).",
+)
 
 
 def load_json(path):
@@ -32,7 +40,7 @@ def load_json(path):
 
 
 def collect(pca_root=PCA_ROOT, vae_roots=VAE_ROOTS, sections=SECTIONS):
-    rows = []
+    rows, keys = [], set()
     for collection, names in sections.items():
         for section in names:
             pca_path = Path(pca_root) / collection / f"{section}_seed1" / "summary.json"
@@ -42,6 +50,10 @@ def collect(pca_root=PCA_ROOT, vae_roots=VAE_ROOTS, sections=SECTIONS):
                 rows.append(row)
                 continue
             pca = load_json(pca_path)
+            provenance = pca.get("provenance", {})
+            keys.add(json.dumps({key: provenance.get(key) for key in
+                                 ("version", "protocol", "parameters", "code")},
+                                sort_keys=True))
             row["status"] = pca.get("status")
             if row["status"] != "complete":
                 row["not_done_reason"] = pca.get("not_done_reason")
@@ -66,6 +78,9 @@ def collect(pca_root=PCA_ROOT, vae_roots=VAE_ROOTS, sections=SECTIONS):
                         row[f"vae_{model}_{metric}"] = vae["models"][model][metric]
                 row["vae_source"] = vae_path.as_posix()
             rows.append(row)
+    if len(keys) > 1:
+        raise ValueError("PCA reconstruction results come from different code or settings; "
+                         "refusing to mix them in one table")
     return rows
 
 
@@ -75,6 +90,8 @@ def aggregate(rows, sections=SECTIONS, vae_collections=("GBM", "CAC")):
         selected = [row for row in rows if row["collection"] == collection]
         complete = [row for row in selected if row["status"] == "complete"]
         record = {"sections_complete": len(complete), "sections_expected": len(selected)}
+        if collection not in vae_collections:
+            record["comparison"] = "none; no saved VAE reconstruction, reported alone"
         if collection in vae_collections and len(complete) == len(selected):
             comparisons = {}
             for convention in CONVENTIONS:
@@ -89,19 +106,21 @@ def aggregate(rows, sections=SECTIONS, vae_collections=("GBM", "CAC")):
                     }
             record["mse_comparisons"] = comparisons
         summary[collection] = record
-    required = [c for c in ("GBM", "CAC", "RCC") if c in sections]
+    required = [c for c in WORDING_COLLECTIONS if c in sections]
     ready = all(summary[c]["sections_complete"] == summary[c]["sections_expected"]
                 for c in required)
     if ready:
         worse = all(summary[c]["mse_comparisons"][convention]["central_only"]
                     ["pca5_mse_exceeds_vae_count"] >= 6
-                    for c in ("GBM", "CAC") if c in summary for convention in CONVENTIONS)
+                    for c in required for convention in CONVENTIONS)
         summary["fixed_wording"] = (
             "PCA-5 reconstructs worse than the VAE yet gives equivalent peak ranking."
             if worse else
             "Reconstruction error does not separate PCA-5 from the VAE.")
     else:
-        summary["fixed_wording"] = "not done; one or more sections are missing or invalid"
+        summary["fixed_wording"] = ("not done; one or more GBM or CAC sections are missing "
+                                    "or invalid")
+    summary["notes"] = list(NOTES)
     return summary
 
 

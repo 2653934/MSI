@@ -100,6 +100,54 @@ class Summary(unittest.TestCase):
                 self.assertEqual(central["median_pca5_to_vae_mse_ratio"], 2.0)
         self.assertTrue(summary["fixed_wording"].startswith("PCA-5 reconstructs worse"))
 
+    def test_rcc_not_done_does_not_block_gbm_cac_wording(self):
+        rows = []
+        for collection in ("GBM", "CAC"):
+            for index in range(8):
+                row = {"collection": collection, "section": f"{collection}{index}",
+                       "status": "complete"}
+                for convention in summariser.CONVENTIONS:
+                    row[f"pca5_{convention}_mean_squared_error"] = 0.5
+                row["vae_central_only_mean_squared_error"] = 1.0
+                row["vae_uniform_mean_mean_squared_error"] = 1.0
+                rows.append(row)
+        rows.append({"collection": "RCC", "section": "RCC0", "status": "not_done"})
+        rows.append({"collection": "RCC", "section": "RCC1", "status": "complete"})
+        summary = summariser.aggregate(rows, sections={"GBM": (), "CAC": (), "RCC": ()})
+        self.assertEqual(summary["fixed_wording"],
+                         "Reconstruction error does not separate PCA-5 from the VAE.")
+        self.assertEqual(summary["RCC"]["sections_complete"], 1)
+        self.assertEqual(summary["RCC"]["sections_expected"], 2)
+        self.assertNotIn("mse_comparisons", summary["RCC"])
+        self.assertIn("reported alone", summary["RCC"]["comparison"])
+        self.assertTrue(any("Cosine" in note for note in summary["notes"]))
+
+    def test_incomplete_gbm_gives_not_done_wording(self):
+        rows = [{"collection": "GBM", "section": "GBM0", "status": "not_done"},
+                {"collection": "CAC", "section": "CAC0", "status": "complete",
+                 **{f"pca5_{c}_mean_squared_error": 2.0 for c in summariser.CONVENTIONS},
+                 "vae_central_only_mean_squared_error": 1.0,
+                 "vae_uniform_mean_mean_squared_error": 1.0}]
+        summary = summariser.aggregate(rows, sections={"GBM": (), "CAC": ()})
+        self.assertTrue(summary["fixed_wording"].startswith("not done"))
+
+    def test_mixed_code_is_refused(self):
+        root = Path(tempfile.mkdtemp())
+        for section, code in (("RCC0", "a"), ("RCC1", "b")):
+            folder = root / "RCC" / f"{section}_seed1"
+            folder.mkdir(parents=True)
+            (folder / "summary.json").write_text(json.dumps({
+                "status": "not_done", "not_done_reason": "test",
+                "provenance": {"version": 1, "protocol": "p", "parameters": {},
+                               "code": code}}))
+        sections = {"RCC": ("RCC0", "RCC1")}
+        with self.assertRaisesRegex(ValueError, "different code"):
+            summariser.collect(root, vae_roots={}, sections=sections)
+        (root / "RCC" / "RCC1_seed1" / "summary.json").write_text(json.dumps({
+            "status": "not_done", "not_done_reason": "test",
+            "provenance": {"version": 1, "protocol": "p", "parameters": {}, "code": "a"}}))
+        self.assertEqual(len(summariser.collect(root, vae_roots={}, sections=sections)), 2)
+
 
 class JobScripts(unittest.TestCase):
     def test_batch_job_uses_test_v_inputs_and_new_root(self):
