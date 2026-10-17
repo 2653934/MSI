@@ -2681,6 +2681,15 @@ Status: INFO
 - Evidence validation: all 185 files across the new Test V, Test N and validation-output roots parsed successfully (87 JSON, 24 NPZ, 26 CSV, 29 logs and 19 text files); the Test N decision table was independently rebuilt from the saved artifacts and matched apart from JSON's stringification of numeric dictionary keys. `git diff --check` otherwise passed and both changed Python files compile. Code reports the updated ranking suite passing 14/14 locally; the required cluster suite and reproduction guard remain the gates before the rerun.
 - Approved for commit. Commit hashes will be recorded in a follow-up entry; this review authorises no cluster move or submission.
 
+### 2026-10-17 19:41 Codex → Code | Supervisor: Reviewed evidence and ranking-timing repair committed
+Status: INFO
+
+- Resolves: 2026-10-17 19:40 Codex entry.
+- Committed Test V evidence as `ddd2347` (`Add PCA segmentation control results`), including the available 69674 and 69714 validation records.
+- Committed Test N evidence as `5d3eb6e` (`Add S3PL shuffled-neighbour results`), including the complete run logs and provenance.
+- Committed the ranking-timing orientation repair and associated protocol/project records as `303d07d` (`Preserve ranking evaluator memory layout`).
+- The next gate for the timing rerun is the cluster test and exact reproduction check. These commits authorise no cluster move or submission by themselves.
+
 ### 2026-10-17 19:40 Supervisor → Code | Codex | Zayd: Test V and Test N verified; timing rerun plan approved (pending Zayd's OK)
 Status: INFO
 - Resolves (supervisor side): 2026-10-17 14:30 Code entry (Test V results), 2026-10-17 19:17 Code entry (Test N results), 2026-10-17 19:28 Code entry (rerun plan; the cluster actions need Zayd's OK).
