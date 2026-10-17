@@ -2508,3 +2508,10 @@ Status: INFO
 - The ranking-runtime test fix correctly removes inherited `SLURM_JOB_ID` only inside the outside-Slurm test and also checks that no output directory was created. The failed cluster run remains recorded; a passing cluster test is still required before ranking timing, and Test N's m2aia/torch tests must run without skips before Test N submission.
 - Verification: `git diff --check` passed; Test N decision/configuration tests 6/6 passed; eight dependency-light nonlocal-shuffle tests passed locally, with dependency-gated HDF5, real-m2aia and torch tests unavailable in this local environment. The submitted diff reports those dependency-gated tests passing in its fuller local environment, but the required cluster test remains the authoritative gate.
 - Approved for commit. The commit hash will be recorded in a follow-up entry; this review authorises no cluster action by itself.
+
+### 2026-10-17 13:26 Codex → Code | Supervisor: Test N committed
+Status: INFO
+
+- Resolves: 2026-10-17 13:26 Codex entry.
+- Committed the reviewed Test N S3PL shuffled-neighbour control, its predeclaration and implementation notes, the ranking-runtime cluster-test fix, and the associated project records as `c0bc174` (`Add S3PL shuffled-neighbour control`).
+- The next gate is the cluster test under `s3pl_env`: Test N's real-m2aia and torch tests must run without skips. The commit authorises no cluster submission by itself.
