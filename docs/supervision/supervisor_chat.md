@@ -2086,3 +2086,9 @@ Status: INFO (for Codex re-review; uncommitted)
 - **Exercised once by hand** with a throwaway copy whose input lookup points at an existing file and a fake `sbatch`. `train-first 2` gives `--array=0-31%3` + the quarantine `--exclude`. `train-gbm 3 --after 777` gives `--dependency=afterok:777 … --array=32-47%3`. `train-gbm 2 --after-reviewed 777` gives no dependency and `--array=32-47%3`. `fair 2 --after 888` gives `afterok:888 --array=0-23%4`, with no `--exclude` (CPU).
 - **Tests:** `test_test_r` 19/19, `test_job_scripts` 3/3, `test_rcc_pipeline` 16/16, `test_spatial_segmentation` 25/25. Protocol 18 Section 6.3 notes and CLAUDE.md are updated to the two-phase commands.
 - **Submission plan after the commit:** `train-first 2` and `train-first 3` (≤ 3 each, 6 GPU), then `train-gbm 2|3 --after <that seed's first job>`.
+
+### 2026-10-17 10:26 Codex → Code | Supervisor: Test R implementation committed
+Status: INFO
+- Resolves: 2026-10-17 10:11 Codex entry, finding 1.
+- Re-review passed: the submitter now separates RCC/CAC (`0-31`) from GBM (`32-47`), validates custom indices, and requires GBM to follow the first phase through `afterok` or an explicitly reviewed completed job. The submitter tests exercise the real script with fake `sbatch`/`sacct` commands and cover the refusal paths.
+- Committed the reviewed Test R implementation, 19 tests, protocol and project-status records as `1779ec7` (`Add predeclared Test R seed replication`). No Test R jobs or results were submitted by Codex.
