@@ -120,11 +120,11 @@ class StagesMatchTheEvaluator(unittest.TestCase):
             folder = Path(tempfile.mkdtemp())
             path, attribution = write_section(folder, pixels_first)
             expected = evaluator_rankings(path, attribution)
-            mz, labels, x, y, raw = timing.load_section(path)
-            self.assertEqual(raw.shape, (WIDTH * HEIGHT, BINS))
-            tic = timing.tic_normalise(raw, CHUNK)
+            mz, labels, x, y, raw, stored_pixels_first = timing.load_section(path)
+            self.assertEqual(stored_pixels_first, pixels_first)
+            tic_chunks = timing.tic_normalise(raw, pixels_first, CHUNK)
             gmm = dict(np.load(attribution / "gmm_parameters.npz"))
-            outputs, seconds = timing.run_stages(raw, tic, labels, x, y,
+            outputs, seconds = timing.run_stages(raw, pixels_first, tic_chunks, labels, x, y,
                                                  np.load(attribution / "latent_mean.npy"),
                                                  gmm, CHUNK)
             self.assertEqual(set(seconds), set(timing.STAGES))
@@ -132,22 +132,61 @@ class StagesMatchTheEvaluator(unittest.TestCase):
             for stage, name in timing.SAVED_NAME.items():
                 np.testing.assert_array_equal(outputs[stage], expected[name], err_msg=stage)
 
+    def test_values_are_bit_identical_to_the_evaluator_at_a_realistic_size(self):
+        """Run 69985 failed on m/z-first files: a contiguous copy changed NumPy's
+        summation order. Compare the values themselves, not just the rankings."""
+        rng = np.random.default_rng(0)
+        width, height, bins, chunk = 30, 20, 3000, 1024
+        x, y = [a.ravel() for a in np.meshgrid(np.arange(1, width + 1), np.arange(1, height + 1))]
+        data = rng.gamma(0.5, 1.0, (len(x), bins)).astype(np.float32)
+        posterior = rng.dirichlet([1, 1], len(x))
+        for pixels_first in (True, False):
+            path = Path(tempfile.mkdtemp()) / "s.h5"
+            with h5py.File(path, "w") as handle:
+                handle["Data"] = data if pixels_first else np.ascontiguousarray(data.T)
+                handle["mzArray"] = np.arange(bins, dtype=float)
+                handle["Class_Label"] = (x > width // 2).astype(int)
+                handle["xLocation"], handle["yLocation"] = x, y
+            _, labels, xx, yy, raw, stored = timing.load_section(path)
+            tic_chunks = timing.tic_normalise(raw, stored, chunk)
+            sources, targets = moore_edges(xx, yy)
+            stats, pcc, _ = evaluator.tic_statistics(path, stored, bins, chunk,
+                                                     {"soft": posterior}, sources, targets)
+            mine_pcc = np.zeros((bins, 2))
+            mine_mean, mine_moran = np.zeros(bins), np.zeros(bins)
+            for start, stop, values in tic_chunks:
+                mine_pcc[start:stop] = timing.pearson_features_vs_maps(values, posterior)
+                mine_mean[start:stop] = values.mean(axis=0)
+                mine_moran[start:stop] = timing.morans_i_per_feature(values, sources, targets)
+            np.testing.assert_array_equal(mine_pcc, pcc["soft"], err_msg=f"pcc {pixels_first}")
+            np.testing.assert_array_equal(mine_mean, stats["mean_intensity"],
+                                          err_msg=f"mean {pixels_first}")
+            np.testing.assert_array_equal(mine_moran, stats["morans_i"],
+                                          err_msg=f"moran {pixels_first}")
+            correlations = attributed.load_correlations(path, labels, bins, stored, chunk)
+            np.testing.assert_array_equal(timing.stage_oracle(raw, stored, labels, chunk),
+                                          supervised_oracle_ranking(correlations))
+
     def test_the_oracle_stage_leaves_the_in_memory_spectra_unchanged(self):
-        folder = Path(tempfile.mkdtemp())
-        path, _ = write_section(folder)
-        _, labels, _, _, raw = timing.load_section(path)
-        before = raw.copy()
-        timing.stage_oracle(raw, labels, CHUNK)
-        np.testing.assert_array_equal(raw, before)
+        for pixels_first in (True, False):
+            folder = Path(tempfile.mkdtemp())
+            path, _ = write_section(folder, pixels_first)
+            _, labels, _, _, raw, stored = timing.load_section(path)
+            before = raw.copy()
+            timing.stage_oracle(raw, stored, labels, CHUNK)
+            np.testing.assert_array_equal(raw, before)
 
     def test_tic_normalisation_matches_the_evaluator_values(self):
-        folder = Path(tempfile.mkdtemp())
-        path, _ = write_section(folder)
-        _, _, _, _, raw = timing.load_section(path)
-        tic = timing.tic_normalise(raw, CHUNK)
-        self.assertTrue(np.all(tic[3] == 0.0))
-        sums = tic.sum(axis=1)
-        np.testing.assert_allclose(np.delete(sums, 3), 1.0, rtol=1e-12)
+        for pixels_first in (True, False):
+            folder = Path(tempfile.mkdtemp())
+            path, _ = write_section(folder, pixels_first)
+            _, _, _, _, raw, stored = timing.load_section(path)
+            tic_chunks = timing.tic_normalise(raw, stored, CHUNK)
+            self.assertEqual(timing.n_bins_of(tic_chunks), BINS)
+            matrix = np.concatenate([values for _, _, values in tic_chunks], axis=1)
+            self.assertEqual(matrix.shape, (WIDTH * HEIGHT, BINS))
+            self.assertTrue(np.all(matrix[3] == 0.0))
+            np.testing.assert_allclose(np.delete(matrix.sum(axis=1), 3), 1.0, rtol=1e-12)
 
 
 @unittest.skipIf(h5py is None, "h5py is not installed")

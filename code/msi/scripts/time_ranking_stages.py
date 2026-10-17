@@ -14,9 +14,13 @@ functions, each ranking stage after the GMM:
                        then the supervised oracle ranking
 
 The evaluator computes the label-free statistics in one chunked HDF5 pass; here the
-section is read into memory once (data_load, timed once) and TIC-normalised once
-(tic_normalisation, timed once), and each stage then runs the same per-chunk calls
-(chunk 1024 bins) on the in-memory arrays. Each stage is repeated (default 3) and
+section is read into memory once in its stored orientation (data_load, timed once)
+and TIC-normalised once into the evaluator's own 1024-bin chunks (tic_normalisation,
+timed once), and each stage then runs the same per-chunk calls on those chunks. Each
+chunk has the evaluator's memory layout (a transposed view for m/z-first files), so
+every value is bit-identical to the evaluator's: NumPy's summation order depends on
+the layout (first run 69985 failed its reproduction check on the m/z-first GBM and
+RCC files for that reason). Each stage is repeated (default 3) and
 the median is reported. Every ranking must reproduce the saved seed-1 fair-scoring
 ranking exactly (full-ranking SHA-256), and the posterior must reproduce the saved
 GMM assignments; otherwise nothing is reported as timed (exit 4).
@@ -98,26 +102,13 @@ def cpu_model():
 
 
 def load_section(path):
-    """Raw spectra in memory as float64, pixels x bins (the evaluator's orientation)."""
+    """Raw spectra in memory as float64, in the file's stored orientation."""
     import h5py
 
     mz, labels, x, y, pixels_first = read_h5_metadata(path)
     with h5py.File(path, "r") as handle:
         raw = np.asarray(handle["Data"], dtype=np.float64)
-    if not pixels_first:
-        raw = np.ascontiguousarray(raw.T)
-    return mz, labels, x, y, raw
-
-
-def tic_normalise(raw, chunk_size):
-    """TIC normalisation exactly as tic_statistics: chunked TIC sum, then scale."""
-    n_bins = raw.shape[1]
-    tic = np.zeros(raw.shape[0])
-    for start in range(0, n_bins, chunk_size):
-        tic += raw[:, start:min(start + chunk_size, n_bins)].sum(axis=1)
-    scale = np.zeros_like(tic)
-    np.divide(1.0, tic, out=scale, where=tic > 0)
-    return raw * scale[:, None]
+    return mz, labels, x, y, raw, pixels_first
 
 
 def chunks(n_bins, chunk_size):
@@ -125,31 +116,55 @@ def chunks(n_bins, chunk_size):
         yield start, min(start + chunk_size, n_bins)
 
 
+def evaluator_block(raw, pixels_first, start, stop):
+    """Pixels x chunk float64, with the layout tic_statistics' block() produces."""
+    if pixels_first:
+        return np.ascontiguousarray(raw[:, start:stop])     # an HDF5 read is contiguous
+    return raw[start:stop, :].T                              # read rows, then transpose
+
+
+def tic_normalise(raw, pixels_first, chunk_size):
+    """TIC-normalised chunks exactly as tic_statistics: [(start, stop, values)]."""
+    n_bins = raw.shape[1] if pixels_first else raw.shape[0]
+    n_pixels = raw.shape[0] if pixels_first else raw.shape[1]
+    tic = np.zeros(n_pixels)
+    for start, stop in chunks(n_bins, chunk_size):
+        tic += evaluator_block(raw, pixels_first, start, stop).sum(axis=1)
+    scale = np.zeros_like(tic)
+    np.divide(1.0, tic, out=scale, where=tic > 0)
+    return [(start, stop, evaluator_block(raw, pixels_first, start, stop) * scale[:, None])
+            for start, stop in chunks(n_bins, chunk_size)]
+
+
+def n_bins_of(tic_chunks):
+    return tic_chunks[-1][1]
+
+
 def stage_gmm_posterior(latent, gmm_parameters):
     return gmm_posterior_numpy(latent, **gmm_parameters)
 
 
-def stage_posterior_abs_pcc(tic, posterior, chunk_size):
-    pcc = np.zeros((tic.shape[1], posterior.shape[1]))
-    for start, stop in chunks(tic.shape[1], chunk_size):
-        pcc[start:stop] = pearson_features_vs_maps(tic[:, start:stop], posterior)
+def stage_posterior_abs_pcc(tic_chunks, posterior):
+    pcc = np.zeros((n_bins_of(tic_chunks), posterior.shape[1]))
+    for start, stop, values in tic_chunks:
+        pcc[start:stop] = pearson_features_vs_maps(values, posterior)
     # The primary ranking of posterior_pcc_rankings, without the secondary ones.
     return balanced_ranking_from_component_scores(
         {c: np.abs(pcc[:, c]) for c in range(pcc.shape[1])})
 
 
-def stage_morans_i(tic, x, y, chunk_size):
+def stage_morans_i(tic_chunks, x, y):
     sources, targets = moore_edges(x, y)
-    values = np.zeros(tic.shape[1])
-    for start, stop in chunks(tic.shape[1], chunk_size):
-        values[start:stop] = morans_i_per_feature(tic[:, start:stop], sources, targets)
+    values = np.zeros(n_bins_of(tic_chunks))
+    for start, stop, chunk in tic_chunks:
+        values[start:stop] = morans_i_per_feature(chunk, sources, targets)
     return rank_descending(nan_to_lowest(values))
 
 
-def stage_mean_intensity(tic, chunk_size):
-    values = np.zeros(tic.shape[1])
-    for start, stop in chunks(tic.shape[1], chunk_size):
-        values[start:stop] = tic[:, start:stop].mean(axis=0)
+def stage_mean_intensity(tic_chunks):
+    values = np.zeros(n_bins_of(tic_chunks))
+    for start, stop, chunk in tic_chunks:
+        values[start:stop] = chunk.mean(axis=0)
     return rank_descending(values)
 
 
@@ -168,10 +183,10 @@ class CopyingReader:
         return np.array(self.array[key], dtype=np.float64, copy=True)
 
 
-def stage_oracle(raw, labels, chunk_size):
+def stage_oracle(raw, pixels_first, labels, chunk_size):
     reader = CopyingReader(raw)
-    correlations = {int(v): pearson_by_feature(reader, (labels == v).astype(np.uint8), True,
-                                               chunk_size)
+    correlations = {int(v): pearson_by_feature(reader, (labels == v).astype(np.uint8),
+                                               pixels_first, chunk_size)
                     for v in sorted(np.unique(labels).tolist())}
     return supervised_oracle_ranking(correlations)
 
@@ -182,17 +197,19 @@ def timed(function, *arguments):
     return value, time.perf_counter() - started
 
 
-def run_stages(raw, tic, labels, x, y, latent, gmm_parameters, chunk_size):
+def run_stages(raw, pixels_first, tic_chunks, labels, x, y, latent, gmm_parameters,
+               chunk_size):
     """One repeat: every stage once, in order. Returns (outputs, seconds)."""
     outputs, seconds = {}, {}
     outputs["gmm_posterior"], seconds["gmm_posterior"] = timed(
         stage_gmm_posterior, latent, gmm_parameters)
     outputs["posterior_abs_pcc"], seconds["posterior_abs_pcc"] = timed(
-        stage_posterior_abs_pcc, tic, outputs["gmm_posterior"], chunk_size)
-    outputs["morans_i"], seconds["morans_i"] = timed(stage_morans_i, tic, x, y, chunk_size)
+        stage_posterior_abs_pcc, tic_chunks, outputs["gmm_posterior"])
+    outputs["morans_i"], seconds["morans_i"] = timed(stage_morans_i, tic_chunks, x, y)
     outputs["mean_intensity"], seconds["mean_intensity"] = timed(
-        stage_mean_intensity, tic, chunk_size)
-    outputs["oracle"], seconds["oracle"] = timed(stage_oracle, raw, labels, chunk_size)
+        stage_mean_intensity, tic_chunks)
+    outputs["oracle"], seconds["oracle"] = timed(stage_oracle, raw, pixels_first, labels,
+                                                 chunk_size)
     return outputs, seconds
 
 
@@ -239,8 +256,8 @@ def main(argv=None):
         if Path(fair_summary["provenance"]["input"]["path"]).name != args.input.name:
             raise SystemExit("fair-scoring summary belongs to a different input")
 
-    (mz, labels, x, y, raw), load_seconds = timed(load_section, args.input)
-    tic, tic_seconds = timed(tic_normalise, raw, args.chunk_size)
+    (mz, labels, x, y, raw, pixels_first), load_seconds = timed(load_section, args.input)
+    tic_chunks, tic_seconds = timed(tic_normalise, raw, pixels_first, args.chunk_size)
     latent = np.load(args.attribution_dir / "latent_mean.npy")
     gmm_parameters = dict(np.load(args.attribution_dir / "gmm_parameters.npz"))
     saved_gmm = np.load(args.attribution_dir / "coordinates_and_gmm.npz")
@@ -249,8 +266,8 @@ def main(argv=None):
 
     repeats = []
     for _ in range(args.repeats):
-        outputs, seconds = run_stages(raw, tic, labels, x, y, latent, gmm_parameters,
-                                      args.chunk_size)
+        outputs, seconds = run_stages(raw, pixels_first, tic_chunks, labels, x, y, latent,
+                                      gmm_parameters, args.chunk_size)
         repeats.append(seconds)
     try:
         checks = reproduction(outputs, saved_gmm, fair_summary)
@@ -266,7 +283,8 @@ def main(argv=None):
         "input": str(args.input),
         "attribution_dir": str(args.attribution_dir),
         "fair_summary": None if args.fair_summary is None else str(args.fair_summary),
-        "pixels": int(raw.shape[0]), "spectral_bins": int(raw.shape[1]),
+        "pixels": int(len(x)), "spectral_bins": int(len(mz)),
+        "stored_orientation": "pixels x bins" if pixels_first else "bins x pixels",
         "gmm_components": int(len(gmm_parameters["mixture_weights"])),
         "chunk_size": args.chunk_size, "repeats": args.repeats,
         "timer": "time.perf_counter around each stage function",

@@ -2515,3 +2515,183 @@ Status: INFO
 - Resolves: 2026-10-17 13:26 Codex entry.
 - Committed the reviewed Test N S3PL shuffled-neighbour control, its predeclaration and implementation notes, the ranking-runtime cluster-test fix, and the associated project records as `c0bc174` (`Add S3PL shuffled-neighbour control`).
 - The next gate is the cluster test under `s3pl_env`: Test N's real-m2aia and torch tests must run without skips. The commit authorises no cluster submission by itself.
+
+### 2026-10-17 13:29 Code → Supervisor: Test V pre-submission checklist; submitting with seed-2 GBM under the 13:25 plan (Zayd's OK)
+Status: INFO
+- Zayd's OK (session, about 13:28): option (b) for Test V; the 13:25 queue plan.
+- **Test V checklist:**
+  1. **Loader:** none. CPU only, on saved artifacts plus a float32 read of each section's HDF5; no training.
+  2. **Time:** expected a few minutes per task (PCA-5 and PCA-20 on up to 4,524 × 85,062 float32, a GMM with n_init 20 on 5/20 dimensions, and one chunked scoring pass; the seed-1 fair scoring took about 1 min per GBM section-arm). `--time 02:00:00` and 16 GB.
+  3. **Partition:** `bigbatch` at submit time (`batch` is down; 98 nodes down). No GPU, so no quarantine. At most 1 running for now.
+  4. **Outputs:** the new root `results/diagnostics/segmentation_control_V/` (checked absent at 13:29). Nothing else is written.
+- The Test V code files on the cluster match HEAD (`sha256sum` 4/4; unchanged since the `f2e8040` upload).
+- **Submitting now:**
+  - seed-2 GBM: `train-gbm 2 --after-reviewed 69683 --concurrency 2`. 69683 has no pending or running tasks: 31 COMPLETED, plus 69683_2 "not done".
+  - Test V: indices 0–5 (the GBM sections), at most 1 running.
+  - Total: 26 + 16 + 6 = 48 submitted.
+- The ranking timing waits for a passing test job after the `c0bc174` fix. Test N waits for upload and a cluster test in which the m2aia and torch tests run.
+
+### 2026-10-17 13:31 Code → Supervisor: 13:25 plan applied — 69746 (seed-2 GBM, 2 running), 69749 (Test V 0–5, 1 running); c0bc174 uploaded
+Status: INFO
+- Resolves: 2026-10-17 13:25 Supervisor entry, items 1–2 (Zayd's OK about 13:28). Item 3 follows when 69724 finishes; item 4 follows the Test N cluster test.
+- **69746** `train-gbm 2 --after-reviewed 69683 --concurrency 2`: submitted 13:29 SAST; tasks 32 and 33 running (mscluster81, mscluster84).
+- **69749** Test V, indices 0–5 (GBM), at most 1 running: submitted 13:29 SAST; pending for a free slot.
+- 48/48 submitted. Section 10 records Test V as submitted after test job 69714, whose only failure was the unrelated test-only bug in `test_ranking_stage_runtime`, fixed in `c0bc174`.
+- **Upload** 13:29 SAST from HEAD `84504d7` (Codex `c0bc174`; documented command, `-n` first): 15 files, `sha256sum` 15/15 match HEAD. Nothing running uses them. `segmentation_control.py` had only a timestamp change; its content was unchanged.
+- **Next, as queue room frees** (checked every 4 min):
+  - further Test V chunks;
+  - the cluster test job for `c0bc174`. Test N goes only if its m2aia and torch tests run, not skip. The ranking timing needs this job to pass.
+  - When 69724 finishes: raise 69746's throttle, submit the rest of Test V at 2 running, and submit seed-3 GBM.
+
+### 2026-10-17 14:13 Code → Supervisor: Test R seed 3, RCC_UH9912_01 uniform_mean "not done" (IG needs_more_ig_steps); Test V fully queued; cluster test 69798 queued
+Status: INFO
+- **Clock correction:** my entry headed 13:31 was written at 13:30 SAST. The header stays as posted.
+- **69724_15** (RCC_UH9912_01 `uniform_mean`, seed 3): exit 4 after 16:07 on mscluster79. The CUDA warm-up passed, the training finished, and the checkpoint was verified. IG then wrote `status: needs_more_ig_steps` at 64 steps (runtime 720 s).
+  - Per Section 6.3 this seed-arm is **"not done"**: no retry and no setting change.
+  - RCC `uniform_mean` is therefore incomplete at seed 3 (at most 7/8).
+  - It is the fourth RCC seed-arm with this failure. UH0505_12 failed at seed 1 `uniform_mean` and seed 2 `central_only`; this is UH9912_01 at seed 3 `uniform_mean`. (Listed for the results entry; descriptive only.)
+- **Consequence:** seed-3 GBM uses `--after-reviewed 69724` once 69724 has fully finished (Zayd's OK of about 12:40 covers seed 3).
+- **Test V:** all 24 tasks are now submitted in 7 chunks. The chunks are 69749 (0–5), 69760 (6–8), 69764 (9–11), 69768 (12–14), 69771 (15), 69777 (16–18), 69785 (19), 69790 (20–22) and 69797 (23), each at most 1 running. 6/24 are COMPLETED (about 1–1.5 min each), and none has failed. The rest are pending (Priority) behind Test R, because `bigbatch` has no idle node (25 allocated, 22 down).
+- **Cluster test job 69798** (for `c0bc174`): submitted 14:12 SAST, pending.
+
+### 2026-10-17 14:22 Code → Supervisor: 69724 finished (31 COMPLETED + 1 "not done"); seed-3 GBM 69820 submitted; 69746 throttle back to 3
+Status: INFO
+- Resolves: 2026-10-17 13:25 Supervisor entry, item 3.
+- **69724** (seed-3 RCC/CAC): 31 COMPLETED, plus 69724_15 "not done" (posted 14:13). No task is pending or running.
+- **69820** `train-gbm 3 --after-reviewed 69724` (GBM tasks 32–47, at most 3 running): submitted 14:21 SAST. The review behind `--after-reviewed` is the 14:13 entry, under Zayd's 12:40 OK for seed 3.
+- `scontrol update JobId=69746 ArrayTaskThrottle=3` (seed-2 GBM): at 14:21.
+- **Test V:** 14/24 COMPLETED, none failed. The remaining tasks are in the queue and run as slots free; every chunk was submitted at most 1 running, and a few chunks can now run side by side.
+- **Cluster test job 69798** (`c0bc174`): pending. When it passes with Test N's m2aia and torch tests run, Test N goes in (at most 2 running), then the ranking timing.
+- **All Test R training is now queued.** Seed 2 GBM 69746 and seed 3 GBM 69820; RCC/CAC for both seeds is done (each seed with one predeclared RCC "not done").
+
+### 2026-10-17 14:30 Code → Supervisor: Test V results (Section 6.4): rule labels and numbers
+Status: INFO, for the supervisor's verification.
+- Resolves: 2026-10-17 12:42 Supervisor entry (Test V; results exist).
+- **Clock correction:** my entry headed 14:22 was written at 14:21 SAST. From this entry on, the header time is filled in from the clock when the entry is written.
+- **Runs:**
+  - 69749, 69760, 69764, 69768, 69771, 69777, 69785, 69790 and 69797: 24/24 COMPLETED, about 1–1.5 min per task, no retries.
+  - **Pull** 14:29 SAST (`-n` first): 53 new files (Test V and the 69674/69714 test logs); no local file changed. Unfinished Test R outputs and the then-running 69798 logs were excluded from that pull.
+  - Table: `results/diagnostics/segmentation_control_V/decisions_20261017_local/` (`decisions.json`, `section_table.csv`).
+- **Validity (24/24 sections):** refit ARI 1.0 in all; 80/80 saved mSCF1 reproductions within 1e-12 (VAE posterior-|PCC| and Moran's I, bin and P1); all PCA-5 and PCA-20 GMMs converged with no empty component. PCA explained variance: PCA-5 0.702–0.981, PCA-20 0.791–0.994.
+- **Decision (VAE `central_only` posterior-|PCC| minus PCA-5 posterior-|PCC|; mean, VAE positive /8, range):**
+  - **GBM: "mixed".** Bin +0.023, 5/8 (−0.274 to +0.397); P1 +0.023, 5/8 (−0.253 to +0.383).
+  - **CAC: "mixed".** Bin −0.013, 4/8 (−0.062 to +0.037); P1 −0.028, 2/8 (−0.084 to +0.094).
+  - **RCC: "equivalent".** Bin +0.015, 3/8 (−0.046 to +0.166). The RCC NA caveat applies (unannotated class, 45–78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (`rcc_nobg`), but this was not independently verified).
+- **Mean mSCF1 (bin / P1):**
+  - GBM: VAE 0.743 / 0.749; PCA-5 0.720 / 0.725; PCA-20 0.672 / 0.690; Moran's I 0.684 / 0.697; IG 0.518 / 0.547; VAE `uniform_mean` 0.744 / 0.750.
+  - CAC: VAE 0.606 / 0.603; PCA-5 0.620 / 0.631; PCA-20 0.625 / 0.645; Moran's I 0.605 / 0.635; IG 0.528 / 0.511; VAE `uniform_mean` 0.607 / 0.601.
+  - RCC (bin): VAE 0.568; PCA-5 0.553; PCA-20 0.532; Moran's I 0.631; IG 0.412; VAE `uniform_mean` 0.596 (7 runs).
+- **Descriptive (no verdict):**
+  - (a) VAE − PCA-20: GBM +0.071 6/8 / +0.059 6/8; CAC −0.019 3/8 / −0.042 1/8; RCC +0.036 3/8.
+  - (b) Mean balanced accuracy against the expert mask, VAE / PCA-5 / PCA-20: GBM 0.868 / 0.839 / 0.837; CAC 0.684 / 0.616 / 0.610; RCC 0.771 / 0.745 / 0.706.
+  - (c) PCA-5 − Moran's I: GBM +0.036 7/8 / +0.029 7/8; CAC +0.014 7/8 / −0.003 5/8; RCC −0.078 2/8.
+  - (c) PCA-5 − IG: GBM +0.202 7/8 / +0.178 7/8; CAC +0.091 8/8 / +0.121 7/8; RCC +0.141 8/8.
+  - VAE `uniform_mean` − PCA-5: GBM +0.024 4/8 / +0.024 4/8; CAC −0.013 2/8 / −0.030 2/8; RCC +0.028 5/7.
+  - (d) Seed mean 1–3: not yet; Test R is still training.
+- No interpretation from Code.
+
+### 2026-10-17 14:31 Code → Supervisor: Test N — cluster test passed (m2aia and torch tests ran); pre-submission checklist; submitting
+Status: INFO. Submitting under Zayd's instruction ("After Codex commits: upload, cluster test, checklist, submit").
+- **Upload** 13:29 SAST from HEAD `84504d7` (Codex `c0bc174`): 15 files, `sha256sum` 15/15 match HEAD.
+- **Cluster test 69798:** COMPLETED in 4:22 on mscluster58.
+  - Main suite: 232 tests OK, with 3 expected skips (local-artifact tests).
+  - S3PL suite: **25 tests OK, none skipped**, including `M2aiaRealTests.test_real_m2aia_reproduces_and_shuffles` (real m2aia on a synthetic imzML) and `TrainingAndInferenceCallTests` (torch).
+  - This also clears the ranking-timing gate (the `c0bc174` fix passed).
+- **Checklist:**
+  1. **Loader:** S3PL's own in-memory patch data (m2aia memory buffer), as in the real runs; the VAE `--cache-spectra` rule does not apply.
+  2. **Time:** the comparable centre-tiled CAC control took 85 s per run (seed 2: 62 s training). The shuffle adds one extra index derivation and buffered read per patch, so I expect about 2–5 min per task against `--time 02:00:00`.
+  3. **Partition:** `bigbatch` (script default), GPU, 32 GB. The 16-node CUDA quarantine is passed with `sbatch --exclude`. At most 2 running; the 6-running QOS is shared with Test R GBM.
+  4. **Outputs:** new roots under `reproducibility/s3pl_cac_shuffle_control/` (`seed1_released`, `seed2_init2_order1`), checked absent at 14:31. The job refuses to overwrite, and seed-1 and real artifacts are untouched.
+- **Submitting:** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running); 31 + 16 = 47 of 48 submitted.
+- **Next:** the ranking timing goes last, when there is room (24 tasks, `--exclusive`).
+
+### 2026-10-17 15:07 Code → Supervisor | Zayd: Test N is starved by the 6-running QOS; proposal to lower seed-3 GBM to 1 running while Test N runs
+Status: OPEN, for Zayd (one throttle change)
+- **69830** (Test N, 16 tasks, at most 2 running): still PENDING (`QOSMaxJobsPerUserLimit`). 69746 and 69820 (seed-2 and seed-3 GBM, 3 running each) hold all 6 running slots.
+- GBM tasks take about 34 min or more each (69746_34/35: 33:49–33:51). At this rate Test N would start only after the GBM phase, in about 4–5 h.
+- **13:04 ranks Test N above the remaining Test R seed-3 work.** Test N is short: the centre-tiled control took 85 s per run, so I expect about 2–5 min per task, or about 30–40 min for all 16 at 2 running.
+- **Proposal:**
+  - `scontrol update JobId=69820 ArrayTaskThrottle=1` now. As 69820's running tasks finish, it drops to 1, which frees 2 slots for Test N.
+  - Back to 3 once 69830 has finished.
+  - Running tasks are not touched.
+  - This delays the seed-3 GBM end by about 40 min; it stays well within Tuesday.
+- **Status:** seed-2 GBM 4/16 COMPLETED, seed-3 GBM 0/16 COMPLETED (3 running), no failures.
+
+### 2026-10-17 19:17 Code → Supervisor: Test N results (Section 6.5): rule label and numbers; Test R seed-3 GBM done (one "not done"); fair 3 submitted
+Status: INFO, for the supervisor's verification.
+- Resolves: 2026-10-17 13:04 Supervisor entry (Test N; results exist). Also resolves 2026-10-17 15:07 Code entry: Test N started on its own once seed-2 GBM dropped below 3 running, so no throttle change was made.
+- **Test N runs:** 69830, 16/16 COMPLETED, 1:54–3:04 per task, no retries.
+  - **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded (still running).
+  - Table: `results/diagnostics/s3pl_cac_shuffle_control/decisions_20261017_local/`.
+- **Validity:** the real mSCF1 recomputed from the saved `metrics.json` reproduces the saved `real` column in 16/16. Every shuffled run has the predeclared configuration (mode `shuffle_nonlocal`, map seed 1701, seeds, count, 10 epochs, p 9, `reference_spatial_max`). Each run also checked on every patch that the re-derived real index list reproduces m2aia's own patch; none stopped.
+- **Decision (real − retrained shuffled-nonlocal; at least 0.02 in /8, mean, positive /8, range):**
+  - Seed 1: 4/8, **+0.039**, 6/8 positive (−0.083 to +0.205).
+  - Seed 2: 3/8, **+0.040**, 5/8 positive (−0.079 to +0.305).
+  - **Rule result: "mixed".** "Depends" needs at least 7/8 sections at 0.02 or more in both seeds (here 4/8 and 3/8). "Not spatially specific" needs |mean| < 0.02 (here about +0.04).
+  - Per section, seed 1 / seed 2:
+    - 40TopL −0.021 / −0.041; 160TopL +0.065 / +0.014; 200TopL +0.069 / +0.057; 240TopL +0.013 / +0.012;
+    - 280TopL +0.053 / +0.066; 360TopL +0.011 / −0.014; 400TopL +0.205 / +0.305; 520TopL −0.083 / −0.079.
+- **Mean mSCF1, seed 1 / seed 2:** real 0.591 / 0.591; retrained shuffled 0.552 / 0.551; retrained centre-tiled 0.179 / 0.153; mean intensity (fair-scoring bin level at K_bin, a different scorer and representation) 0.612 for both.
+- **Descriptive:** shuffled − centre-tiled +0.373 (8/8) / +0.398 (8/8); shuffled − mean intensity −0.060 (2/8 positive) / −0.062 (3/8 positive).
+- The reconstruction target is the shuffled input patch (as predeclared), unlike the centre-tiled control's real-patch target. CAC is one biopsy.
+- **Test R seed-3 GBM 69820:** 15 COMPLETED. **69820_47 (GBM39_2 `uniform_mean`, seed 3): exit 4 after 35:42.** Training and the checkpoint check passed; IG `needs_more_ig_steps` at 64 steps (511 s). **"Not done"** under Section 6.3, so GBM `uniform_mean` is incomplete at seed 3 (7/8). This is the first GBM seed-arm with this failure; the earlier three were RCC.
+- **69979** `fair 3` (`SBATCH_PARTITION=bigbatch`, 24 CPU tasks, at most 4 running): submitted 19:17 SAST. Not-done seed-arms are skipped by design.
+- Seed-2 GBM 69746: 15/16 COMPLETED, 69746_45 still running (1:14 so far). `fair 2` follows when it finishes.
+- No interpretation from Code.
+
+### 2026-10-17 19:20 Code → Supervisor: batch is back; fair 3 moved from bigbatch (69979, cancelled while pending) to batch (69980)
+Status: INFO
+- Zayd (session, about 19:19): batch may be back. sinfo at 19:19 SAST: `batch` up with 73 idle nodes (QOS `mss_batch`: 100 submitted / 13 running per user); `bigbatch` full (25 allocated, 22 down).
+- **69979** (`fair 3` on `bigbatch`) was still PENDING (Priority) and never started; `scancel` at 19:20 SAST. **69980** `fair 3` resubmitted with the script default partition (`batch`), 24 CPU tasks, at most 4 running.
+- CPU work from here on (`fair 2`, ranking timing) uses `batch`, the scripts' default.
+
+### 2026-10-17 19:20 Code → Supervisor: ranking-stage timing (09:48 item 2) pre-submission checklist; submitting on batch
+Status: INFO
+- **Gate:** test job 69798 passed after the `c0bc174` fix (`test_ranking_stage_runtime` 13/13 under Slurm). The cluster copies of `time_ranking_stages.py` and `run_ranking_stage_timing.sh` match HEAD.
+- **Checklist:**
+  1. **Loader:** none. CPU only, on saved artifacts; each task reads one section into memory once.
+  2. **Time:** the seed-1 fair-scoring evaluator took about 67 s per GBM section-arm, and each task here runs five stages × 3 repeats plus one in-memory read. I expect a few minutes per task against `--time 02:00:00`. Memory 24 GB (GBM22_2 is held as two float64 copies of about 3.1 GB each).
+  3. **Partition:** `batch`, the script default; it is back up with 73 idle nodes, all 6 CPUs / 30 GB. `--exclusive` with 2 threads, as the evaluator ran. No GPU. At most 4 running.
+  4. **Outputs:** the new root `results/diagnostics/ranking_stage_runtime/` (checked absent at 19:2x); it is created before submission. Each task refuses to overwrite.
+- It runs while `fair 2` waits for the last seed-2 GBM task (69746_45). Both are on separate partitions, so neither delays the other.
+
+### 2026-10-17 19:28 Code → Supervisor | Codex | Zayd: Ranking-stage timing 69985 stopped on its reproduction check (layout bug in my script); fix uncommitted for Codex; rerun needs Zayd's OK
+Status: OPEN, for Codex (review) and Zayd (one cluster move and a resubmission)
+- **69985:** 9 COMPLETED, 15 FAILED (exit 4, "Reproduction failed; timings not reported"). No timings were written for the failed tasks.
+  - The failures follow the collection, not the node. All 8 CAC tasks passed. Every RCC and GBM task with a saved ranking failed (posterior-|PCC| first; Moran's I in one). RCC_UH0505_12 "passed" only because it has no saved ranking to check against. The same nodes (mscluster132/134) ran both passing and failing tasks.
+- **Cause (my bug, now reproduced):**
+  - GBM and RCC store `Data` as bins × pixels. The evaluator reads each 1024-bin chunk as a transposed view. My script first made one contiguous pixels × bins copy, and NumPy's summation order depends on memory layout.
+  - On a synthetic bins × pixels section (600 px × 3,000 bins) the old code's PCC differs from the evaluator's by up to 1.2e-16, and mean intensity is not bit-identical. For pixels × bins files (CAC) both match exactly.
+  - Near-tied bins then swap somewhere in the full 85k-bin ranking. The check compares the full-ranking SHA-256, so it caught this; that is what the check is for.
+  - The scientific results are unaffected; only this timing script's re-computation differed.
+- **Fix (uncommitted for Codex):** `time_ranking_stages.py` keeps the section in its stored orientation. It builds the TIC-normalised chunks with the evaluator's own layout (`evaluator_block`: a contiguous copy for pixels-first, the transposed row view for bins-first). The stages run on those chunks, and the oracle reads through the copying reader with the real `pixels_first` flag. The data load and TIC normalisation are still timed once each, outside the stages. The summary records `stored_orientation`.
+- **Tests:** `test_ranking_stage_runtime` is now 14/14 locally. A new test checks PCC, mean intensity, Moran's I and the oracle ranking **bit for bit** against `tic_statistics` and `load_correlations` on the 600 × 3,000 section in both orientations; the old code fails that case. The existing tests are updated to the new signatures.
+- **Rerun plan (needs Zayd's OK), so the table comes from one code version:**
+  1. Codex commits; I upload and run the cluster test job.
+  2. Move the first attempt aside on the cluster: `mv -n results/diagnostics/ranking_stage_runtime results/diagnostics/ranking_stage_runtime_superseded_69985`. It holds 9 summaries from the old code, plus empty folders from the failed tasks.
+  3. Resubmit all 24 tasks on `batch`.
+- **Test R is unaffected:** fair 3 (69980) is running on `batch`, and the last seed-2 GBM task is still training.
+
+### 2026-10-17 19:40 Codex → Code | Supervisor: Review of Test V and Test N evidence and ranking-timing repair
+Status: INFO
+
+- Resolves: 2026-10-17 19:28 Code entry, for the code-review portion only; moving the superseded cluster output and resubmitting still require Zayd's separate approval.
+- No blocking findings. Test V contains 24/24 section outputs, its decision table uses the predeclared collection-level rules, and the saved verdicts and effect sizes reproduce the 14:30 chat entry. Test N contains 16/16 completed runs, both seed conventions and all configurations match Section 6.5, the real-arm values reproduce 16/16, and the saved verdict is correctly `mixed` (+0.039 with 4/8 at threshold; +0.040 with 3/8).
+- The ranking-timing repair addresses the observed cause rather than weakening the guard: it retains each HDF5 file's stored orientation, constructs the same chunk layout as the evaluator, carries the true orientation into the oracle reader, and continues to require exact full-ranking reproduction before reporting timings. The new realistic-size regression checks PCC, mean intensity and Moran's I values bit for bit in both orientations, plus the oracle ranking.
+- Evidence validation: all 185 files across the new Test V, Test N and validation-output roots parsed successfully (87 JSON, 24 NPZ, 26 CSV, 29 logs and 19 text files); the Test N decision table was independently rebuilt from the saved artifacts and matched apart from JSON's stringification of numeric dictionary keys. `git diff --check` otherwise passed and both changed Python files compile. Code reports the updated ranking suite passing 14/14 locally; the required cluster suite and reproduction guard remain the gates before the rerun.
+- Approved for commit. Commit hashes will be recorded in a follow-up entry; this review authorises no cluster move or submission.
+
+### 2026-10-17 19:40 Supervisor → Code | Codex | Zayd: Test V and Test N verified; timing rerun plan approved (pending Zayd's OK)
+Status: INFO
+- Resolves (supervisor side): 2026-10-17 14:30 Code entry (Test V results), 2026-10-17 19:17 Code entry (Test N results), 2026-10-17 19:28 Code entry (rerun plan; the cluster actions need Zayd's OK).
+- **Test V verified** from `segmentation_control_V/decisions_20261017_local/decisions.json`: GBM "mixed", CAC "mixed", RCC "equivalent". The validity gates were all passed. Good run.
+- **Test N verified** from `s3pl_cac_shuffle_control/decisions_20261017_local/decisions.json`: "mixed". Seed 1: 4/8 sections ≥ 0.02, mean +0.039. Seed 2: 3/8, +0.040. Real reproduced from saved metrics 16/16.
+- **New "not done" seed-arms** (Test R seed 3: RCC_UH9912_01 `uniform_mean`, GBM39_2 `uniform_mean`): correct per Section 6.3. Keep the full list of IG-completeness failures for the results entry: 5 seed-arms across 3 runs/sections.
+- **Ranking-timing rerun plan (19:28): approved from the supervisor side.** A good catch by the full-ranking hash check. The plan:
+  1. Codex commits.
+  2. Upload and run the cluster test.
+  3. `mv -n` the first attempt aside to `_superseded_69985`; do not delete it.
+  4. Resubmit all 24 tasks on `batch`.
+  Zayd's OK is needed for the move and the resubmission.
+- **Interpretation is the supervisor's:** I am writing Test V and Test N into the update pack now. No further cluster work beyond Test R fair scoring and the timing rerun.
+
