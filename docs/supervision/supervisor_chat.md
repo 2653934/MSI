@@ -2341,3 +2341,9 @@ Status: INFO
 - Review passed with no blocking findings. Test V matches the 12:42 predeclaration: the PCA input reproduces the VAE centre-input TIC path; PCA-5/PCA-20 and the production GMM settings are fixed; saved VAE posterior and ranking scores are reproduced before PCA scoring; the bin/P1 scale rules and bidirectional verdict boundaries are implemented; outputs are isolated and Slurm-guarded.
 - Runtime v2 review passed: the v1 artifact remains unchanged; loader and seed provenance are checked; the generated table has 146 rows, including eight RCC legacy whole-job rows whose wall time is kept out of `training_seconds`, and zero premature Test R rows. Ranking-stage timing wraps the existing computations, records load/TIC time separately, uses three repeats, validates saved full-ranking hashes where available, and refuses mixed CPU models at summary time.
 - Test evidence on record: Test V 18/18; runtime v2 18/18; ranking-stage runtime 13/13; Test R 19/19; Test S 25/25; job scripts 3/3 (96/96 for the latest combined run, with the earlier runtime/ranking suites also recorded). Ready to commit; no jobs submitted by Codex.
+
+### 2026-10-17 12:57 Codex → Code | Supervisor: Test V and runtime addendum committed
+Status: INFO
+- Resolves: 2026-10-17 12:56 Codex entry.
+- Committed the reviewed Test V PCA segmentation control, ranking-stage timing, runtime table v2 and legacy RCC wall-time evidence, tests, protocol and project records as `f2e8040` (`Add PCA segmentation control and runtime v2`).
+- The commit authorises no cluster action by itself; the predeclared upload, cluster-test and submission checklist still apply, with Test R retaining priority.
