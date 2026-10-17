@@ -1,0 +1,83 @@
+{
+  "records": [
+    {
+      "k": 1,
+      "status": "converged",
+      "bic": 27878.97894164026,
+      "n_iter": 2
+    },
+    {
+      "k": 2,
+      "status": "converged",
+      "bic": 19991.34944849888,
+      "n_iter": 26
+    },
+    {
+      "k": 3,
+      "status": "converged",
+      "bic": 17387.278293618612,
+      "n_iter": 19
+    },
+    {
+      "k": 4,
+      "status": "converged",
+      "bic": 16621.10549886138,
+      "n_iter": 12
+    },
+    {
+      "k": 5,
+      "status": "converged",
+      "bic": 13705.611935510557,
+      "n_iter": 30
+    },
+    {
+      "k": 6,
+      "status": "converged",
+      "bic": 11893.779232468542,
+      "n_iter": 43
+    }
+  ],
+  "selected_k": 6,
+  "tie_rule": "smallest K within dBIC < 10.0",
+  "primary_result": "BIC selects K=6",
+  "status": "complete",
+  "provenance": {
+    "selection_version": 2,
+    "parameters": {
+      "production_k": 3,
+      "seed": 1,
+      "n_init": 20,
+      "candidates": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "tie_delta": 10.0
+    },
+    "source_artifacts": {
+      "latent_mean.npy": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH9812_03_seed1/central_only/attribution/latent_mean.npy",
+        "bytes": 42688,
+        "sha256": "3bab9b7f73f3669ed428567d77e8158a31b44211cb8536cfeb1399ac5957d07f"
+      },
+      "coordinates_and_gmm.npz": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH9812_03_seed1/central_only/attribution/coordinates_and_gmm.npz",
+        "bytes": 60592,
+        "sha256": "e4ca971c97498e0d5c66ad568d6169ff5fb88d774992ef63b799d3def98f6303"
+      }
+    },
+    "code": {
+      "select_gmm_k_bic.py": "9ec978894b84d276f27f48fd4bce03c866d1df74ba7bf6f6dd979ef2be12f089",
+      "gate_d_helpers.py": "bbb282b1370d70d729f257821a1f27c4681ec4f6f0ade440bf30a1e7800cd2fc",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0"
+    }
+  },
+  "attribution_dir": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH9812_03_seed1/central_only/attribution",
+  "production_k": 3,
+  "production_refit_ari_to_saved": 1.0,
+  "labels_read": false,
+  "convergence_note": "sklearn reports convergence of the best of n_init initialisations; a K whose best fit did not converge is excluded"
+}

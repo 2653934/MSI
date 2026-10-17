@@ -1,0 +1,110 @@
+{
+  "status": "complete",
+  "provenance": {
+    "sensitivity_version": 1,
+    "label": "BIC-K segmentation sensitivity, descriptive",
+    "dataset": "RCC_UH9812_03",
+    "parameters": {
+      "production_k": 3,
+      "target_k": 6,
+      "seed": 1,
+      "n_init": 20,
+      "chunk_size": 1024,
+      "score_tolerance": 1e-12
+    },
+    "input": {
+      "path": "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_UH9812_03.h5",
+      "bytes": 3437529,
+      "sha256": "be5a480e29d535ce9d899dd3710b26e869f5a6fac3d847f79c259b7c69a7d8b6"
+    },
+    "source_artifacts": {
+      "latent_mean.npy": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH9812_03_seed1/central_only/attribution/latent_mean.npy",
+        "bytes": 42688,
+        "sha256": "3bab9b7f73f3669ed428567d77e8158a31b44211cb8536cfeb1399ac5957d07f"
+      },
+      "coordinates_and_gmm.npz": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH9812_03_seed1/central_only/attribution/coordinates_and_gmm.npz",
+        "bytes": 60592,
+        "sha256": "e4ca971c97498e0d5c66ad568d6169ff5fb88d774992ef63b799d3def98f6303"
+      },
+      "gmm_parameters.npz": {
+        "path": "/home-mscluster/zsuliman/msi/results/experiments/rcc_spatial_msipl/RCC_UH9812_03_seed1/central_only/attribution/gmm_parameters.npz",
+        "bytes": 2330,
+        "sha256": "f1aec2243681972de004b97a8929fb96c6634e619ecaf3f244e2e97a46ce762c"
+      },
+      "bic_selection": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/gate_d_bic_rcc/RCC_UH9812_03_seed1/central_only/bic_selection.json",
+        "bytes": 2350,
+        "sha256": "ccc6dec44ea470f11160f54fecfbf4c4ed1c0d8d9d495a63c5648be434ee0d26"
+      },
+      "fair_scoring_summary": {
+        "path": "/home-mscluster/zsuliman/msi/results/diagnostics/fair_scoring_baselines/rcc/bin_level_only/RCC_UH9812_03_seed1/central_only/summary.json",
+        "bytes": 311041,
+        "sha256": "62751ecc37bd76769d86f47d1cd6aebcc04abb304d0b1d1c7f0b1a6b4659d1c1"
+      }
+    },
+    "code": {
+      "bic_segmentation_sensitivity.py": "eff5e45110909d16c4df760ca8bad6deafabcbf52e38f5a218503113530253e1",
+      "provenance.py": "ab9f8fc1e764c2d9eabaeabd75e2b6b0d9eae9910464deaabd3ff6e278ed0ff0",
+      "simple_baselines.py": "1fc8bd4492e96039ec60df8b37801edcc77541525ee068b6a3e7f74a7b7379ee",
+      "evaluate_fair_scoring_baselines.py": "1be4a74aa19fe3069a0bec571efcdb122057880a9e6d5ea660eb1c6ce6fbaedb",
+      "evaluate_msipl_massnet_peaks.py": "8d21ca2abb2e1022ecb3a38a0b2503f0efbf586c784b63af631685404c435928",
+      "evaluate_spatial_msipl_attributed_peaks.py": "bf5e4e118d2fc3092e13a1e14b51604970f62761b64cf343f2d1137de2ef32f4"
+    }
+  },
+  "label": "BIC-K segmentation sensitivity, descriptive",
+  "dataset": "RCC_UH9812_03",
+  "production_k": 3,
+  "bic_selected_k": 6,
+  "tested_k": 6,
+  "verdict": null,
+  "trigger": null,
+  "applicable": true,
+  "K_bin": 1676,
+  "budget_multiplier": "1.0",
+  "checks": {
+    "production_posterior_max_abs_difference": 1.232834912157088e-06,
+    "production_k_mSCF1_reproduced": {
+      "posterior_abs_pcc_balanced": 0.49131538462507324,
+      "hard_assignment_abs_pcc_balanced": 0.4915931824975584
+    }
+  },
+  "refit": {
+    "converged": true,
+    "n_iter": 43,
+    "bic": 11893.779232468542,
+    "component_counts": [
+      439,
+      343,
+      305,
+      398,
+      302,
+      341
+    ],
+    "empty_components": 0
+  },
+  "label_agreement": {
+    "tested_k_hard_assignment": {
+      "ari": 0.26570540340132753,
+      "nmi": 0.4959504203217999
+    },
+    "production_k_saved_assignment": {
+      "ari": 0.34912648987897055,
+      "nmi": 0.42774654201212836
+    },
+    "note": "ARI and NMI only; no balanced accuracy when K differs from the class count"
+  },
+  "mSCF1_at_K_bin": {
+    "posterior_abs_pcc_balanced": {
+      "production_k_mSCF1": 0.49131538462507324,
+      "tested_k_mSCF1": 0.5338078250298606,
+      "tested_minus_production": 0.042492440404787335
+    },
+    "hard_assignment_abs_pcc_balanced": {
+      "production_k_mSCF1": 0.4915931824975584,
+      "tested_k_mSCF1": 0.5303859309383929,
+      "tested_minus_production": 0.038792748440834524
+    }
+  }
+}
