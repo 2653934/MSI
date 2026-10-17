@@ -54,7 +54,12 @@ fi
 DATASET="${TEST_R_SECTIONS[TASK_ID]}"
 mapfile -t PATHS < <(ranking_timing_paths "$DATASET")
 INPUT="${PATHS[0]}"; ATTRIBUTION="${PATHS[1]}"; FAIR_SUMMARY="${PATHS[2]}"
-OUTPUT="$PROJECT_ROOT/results/diagnostics/ranking_stage_runtime/${DATASET}_seed1/uniform_mean"
+OUTPUT_ROOT="${1:-results/diagnostics/ranking_stage_runtime}"
+case "$OUTPUT_ROOT" in
+    /*) OUTPUT_BASE="$OUTPUT_ROOT" ;;
+    *) OUTPUT_BASE="$PROJECT_ROOT/$OUTPUT_ROOT" ;;
+esac
+OUTPUT="$OUTPUT_BASE/${DATASET}_seed1/uniform_mean"
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT/src:$PROJECT_ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
 export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 MPLBACKEND=Agg

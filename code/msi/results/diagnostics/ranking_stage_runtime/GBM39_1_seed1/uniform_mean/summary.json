@@ -1,0 +1,74 @@
+{
+  "status": "complete",
+  "purpose": "ranking-stage timing, descriptive only (supervisor chat 2026-10-17 09:48)",
+  "dataset": "GBM39_1",
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM39_1.h5",
+  "attribution_dir": "/home-mscluster/zsuliman/msi/results/experiments/spatial_msipl_gmm_integrated_gradients/GBM39_1_seed1/uniform_mean",
+  "fair_summary": "/home-mscluster/zsuliman/msi/results/diagnostics/fair_scoring_baselines/bin_level_only/GBM39_1_seed1/uniform_mean/summary.json",
+  "pixels": 4015,
+  "spectral_bins": 85062,
+  "stored_orientation": "bins x pixels",
+  "gmm_components": 2,
+  "chunk_size": 1024,
+  "repeats": 3,
+  "timer": "time.perf_counter around each stage function",
+  "data_load_seconds": 24.84463543899983,
+  "data_load_scope": "HDF5 metadata and the full Data matrix read into memory as float64, once",
+  "tic_normalisation_seconds": 0.5941840060004324,
+  "tic_normalisation_scope": "shared by posterior_abs_pcc, morans_i and mean_intensity; once, not in their stage times",
+  "stage_seconds_median": {
+    "gmm_posterior": 0.0008536210007150657,
+    "posterior_abs_pcc": 1.2347894539998379,
+    "morans_i": 9.508377004000067,
+    "mean_intensity": 0.11818994699933683,
+    "oracle": 1.758403272000578
+  },
+  "stage_seconds_repeats": [
+    {
+      "gmm_posterior": 0.006026207000104478,
+      "posterior_abs_pcc": 1.2347894539998379,
+      "morans_i": 9.555341074999887,
+      "mean_intensity": 0.11826151399873197,
+      "oracle": 1.734599524999794
+    },
+    {
+      "gmm_posterior": 0.0008506140002282336,
+      "posterior_abs_pcc": 1.221304170001531,
+      "morans_i": 9.508377004000067,
+      "mean_intensity": 0.11818994699933683,
+      "oracle": 1.758403272000578
+    },
+    {
+      "gmm_posterior": 0.0008536210007150657,
+      "posterior_abs_pcc": 1.300123839002481,
+      "morans_i": 9.501898585000163,
+      "mean_intensity": 0.11814746500022011,
+      "oracle": 1.8528340330012725
+    }
+  ],
+  "posterior_abs_pcc_including_gmm_posterior_median": 1.235643075000553,
+  "integrated_gradients": {
+    "seconds": 971.4247048590332,
+    "label": "IG incl. GMM + faithfulness: the attribution script's runtime_seconds (GMM fit, integrated gradients, first-layer comparator and deletion faithfulness); the attribution step is not recorded separately",
+    "attribution_status": "valid_pilot",
+    "attribution_version": 1
+  },
+  "reproduction": {
+    "posterior_max_abs_difference": 8.655675162172471e-07,
+    "rankings": {
+      "posterior_abs_pcc_balanced": "identical (full-ranking SHA-256)",
+      "morans_i": "identical (full-ranking SHA-256)",
+      "mean_intensity": "identical (full-ranking SHA-256)",
+      "oracle": "identical (full-ranking SHA-256)"
+    }
+  },
+  "environment": {
+    "node": "mscluster130.ms.wits.ac.za",
+    "cpu_model": "Intel(R) Core(TM) i5-14400",
+    "slurm_job_id": "70058",
+    "slurm_array_task_id": "22",
+    "omp_num_threads": "2",
+    "python": "3.11.5",
+    "numpy": "2.4.6"
+  }
+}

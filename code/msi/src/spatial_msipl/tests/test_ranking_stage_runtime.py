@@ -275,20 +275,32 @@ class Summariser(unittest.TestCase):
                    "environment": {"cpu_model": cpu, "node": "n1"}}
         (folder / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
 
-    def test_table_has_one_row_per_section_and_refuses_mixed_cpus(self):
+    def test_table_allows_one_cpu_per_collection_and_refuses_mixed_within_one(self):
         root = Path(tempfile.mkdtemp())
         self.write(root, "40TopL", "Xeon A")
-        self.write(root, "RCC_UH0505_12", "Xeon A", check="not available (no seed-1 ...)")
-        rows, cpu = summariser.collect(root, expected=("40TopL", "RCC_UH0505_12"))
-        self.assertEqual(cpu, "Xeon A")
+        self.write(root, "RCC_UH0505_12", "Xeon B", check="not available (no seed-1 ...)")
+        rows, cpus = summariser.collect(root, expected=("40TopL", "RCC_UH0505_12"))
+        self.assertEqual(cpus, {"CAC": "Xeon A", "RCC": "Xeon B"})
         self.assertEqual([r["section"] for r in rows], ["40TopL", "RCC_UH0505_12"])
         self.assertEqual(rows[0]["collection"], "CAC")
         self.assertEqual(rows[1]["ranking_reproduction"], "not available (no seed-1 ...)")
         self.assertEqual(rows[0]["posterior_abs_pcc_seconds"], 0.1)
         self.assertEqual(rows[0]["ig_label"], timing.IG_LABEL)
-        self.write(root, "GBM12_1", "Xeon B")
+        self.write(root, "160TopL", "Xeon C")
         with self.assertRaises(SystemExit):
-            summariser.collect(root, expected=("40TopL", "RCC_UH0505_12", "GBM12_1"))
+            summariser.collect(root, expected=("40TopL", "160TopL"))
+
+    def test_collection_specific_root_keeps_existing_summaries_untouched(self):
+        root = Path(tempfile.mkdtemp())
+        rcc_root = Path(tempfile.mkdtemp())
+        self.write(root, "40TopL", "Xeon A")
+        self.write(rcc_root, "RCC_MH0204_33", "Xeon B")
+        rows, cpus = summariser.collect(
+            root, expected=("RCC_MH0204_33", "40TopL"),
+            collection_roots={"RCC": rcc_root})
+        self.assertEqual([r["status"] for r in rows], ["complete", "complete"])
+        self.assertEqual(cpus, {"CAC": "Xeon A", "RCC": "Xeon B"})
+        self.assertIn(rcc_root.as_posix(), rows[0]["source"])
 
     def test_missing_section_is_listed_not_invented(self):
         root = Path(tempfile.mkdtemp())
@@ -308,16 +320,25 @@ class JobScript(unittest.TestCase):
         self.assertNotIn("--allow-outside-slurm", script)
         self.assertIn("#SBATCH --exclusive", script)
 
+    def test_rcc_submit_option_uses_sbatch_nodelist_and_a_new_root(self):
+        script = (ROOT / "slurm_jobs" / "submit_rcc_ranking_stage_timing.sh").read_text(
+            encoding="utf-8")
+        self.assertIn('squeue -r -u zsuliman -h -t RUNNING -p bigbatch', script)
+        self.assertIn('--partition=bigbatch --nodelist="$nodes" --array=0-7%2', script)
+        self.assertIn("mscluster55,mscluster71,mscluster74,mscluster76,mscluster77", script)
+        self.assertIn("ranking_stage_runtime_rcc_bigbatch", script)
+        self.assertNotIn("SBATCH_NODELIST", script)
+
     def test_paths_for_each_collection(self):
         bash = shutil.which("bash")
         if bash is None:
             self.skipTest("bash not available")
-        script = (f'source "{(ROOT / "slurm_jobs" / "run_ranking_stage_timing.sh").as_posix()}" '
+        script = ('source "slurm_jobs/run_ranking_stage_timing.sh" '
                   '--paths-only; '
                   'for s in RCC_UH0505_12 40TopL GBM22_2; do ranking_timing_paths "$s"; done')
         result = subprocess.run([bash, "-c", script], capture_output=True, text=True,
-                                env=dict(os.environ, HOME="/h"))
-        self.assertEqual(result.returncode, 0, result.stderr)
+                                env=dict(os.environ, HOME="/h"), cwd=ROOT)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
         lines = result.stdout.split()
         self.assertEqual(lines, [
             "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_UH0505_12.h5",

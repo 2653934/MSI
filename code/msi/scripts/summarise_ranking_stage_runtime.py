@@ -5,7 +5,9 @@ Reads only the per-section summary.json files written by time_ranking_stages.py
 (locally, after the download sync) and writes one row per section/run:
 uniform_mean, seed 1, median of the repeats, seconds. Descriptive only.
 
-Refuses a table that mixes CPU models (the request is one node type for all).
+Refuses a table that mixes CPU models within a collection. CPU models are
+reported per collection, and cross-collection timing comparisons must carry
+that label.
 A section without a complete summary is listed as missing, never filled in.
 """
 
@@ -41,11 +43,14 @@ def reproduction_label(rankings):
     return f"identical (full-ranking SHA-256), {len(rankings)} rankings"
 
 
-def collect(root, expected=SECTIONS):
-    rows, cpus = [], set()
+def collect(root, expected=SECTIONS, collection_roots=None):
+    collection_roots = {k: Path(v) for k, v in (collection_roots or {}).items()}
+    rows, cpus = [], {}
     for section in expected:
-        path = Path(root) / f"{section}_seed1" / "uniform_mean" / "summary.json"
-        row = {"section": section, "collection": collection(section), "arm": "uniform_mean",
+        group = collection(section)
+        source_root = collection_roots.get(group, Path(root))
+        path = source_root / f"{section}_seed1" / "uniform_mean" / "summary.json"
+        row = {"section": section, "collection": group, "arm": "uniform_mean",
                "seed": 1}
         summary = (json.loads(path.read_text(encoding="utf-8")) if path.exists() else None)
         if summary is None or summary.get("status") != "complete":
@@ -55,7 +60,7 @@ def collect(root, expected=SECTIONS):
         median = summary["stage_seconds_median"]
         ig = summary["integrated_gradients"]
         environment = summary["environment"]
-        cpus.add(environment["cpu_model"])
+        cpus.setdefault(group, set()).add(environment["cpu_model"])
         row.update({
             "status": "complete",
             "pixels": summary["pixels"], "spectral_bins": summary["spectral_bins"],
@@ -71,9 +76,10 @@ def collect(root, expected=SECTIONS):
             "source": path.as_posix(),
         })
         rows.append(row)
-    if len(cpus) > 1:
-        raise SystemExit(f"Mixed CPU models {sorted(cpus)}: not one node type; no table written")
-    return rows, (next(iter(cpus)) if cpus else None)
+    mixed = {group: sorted(models) for group, models in cpus.items() if len(models) > 1}
+    if mixed:
+        raise SystemExit(f"Mixed CPU models within collections {mixed}; no table written")
+    return rows, {group: next(iter(models)) for group, models in sorted(cpus.items())}
 
 
 def main():
@@ -81,9 +87,12 @@ def main():
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     parser.add_argument("--output", type=Path, default=None,
                         help="Default: <root>/table_local/")
+    parser.add_argument("--rcc-root", type=Path,
+                        help="Read RCC rerun summaries from this separate root")
     args = parser.parse_args()
     output = args.output or args.root / "table_local"
-    rows, cpu = collect(args.root)
+    roots = {"RCC": args.rcc_root} if args.rcc_root is not None else None
+    rows, cpus = collect(args.root, collection_roots=roots)
     output.mkdir(parents=True, exist_ok=True)
     fields = list(next(r for r in rows if r["status"] == "complete")) if any(
         r["status"] == "complete" for r in rows) else list(rows[0])
@@ -94,10 +103,12 @@ def main():
         writer.writeheader()
         writer.writerows(rows)
     complete = sum(r["status"] == "complete" for r in rows)
-    record = {"sections_complete": complete, "sections_expected": len(rows), "cpu_model": cpu,
+    record = {"sections_complete": complete, "sections_expected": len(rows),
+              "cpu_model_by_collection": cpus,
               "missing": [r["section"] for r in rows if r["status"] != "complete"],
               "note": "uniform_mean, seed 1; median of repeats; descriptive only "
-                      "(supervisor chat 2026-10-17 09:48)"}
+                      "(supervisor chat 2026-10-17 09:48). CPU model is specific to each "
+                      "collection; label every cross-collection timing comparison with it."}
     (output / "summary.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(record, indent=2))
 
