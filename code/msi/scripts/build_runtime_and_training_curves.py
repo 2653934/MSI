@@ -349,7 +349,8 @@ def test_r_rows(root=TEST_R):
     if not root.exists():
         return rows, counts
     found = []
-    for folder in sorted(p for p in root.iterdir() if p.is_dir()):
+    # provenance/ holds the submitter's manifests and job IDs, not a run.
+    for folder in sorted(p for p in root.iterdir() if p.is_dir() and p.name != "provenance"):
         section, _, seed = folder.name.rpartition("_seed")
         if section not in TEST_R_SECTIONS or seed not in ("2", "3"):
             raise SystemExit(f"{folder}: not a Test R section/seed folder")

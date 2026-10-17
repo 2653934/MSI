@@ -218,6 +218,13 @@ class TestRRows(unittest.TestCase):
         rows, counts = builder.test_r_rows(self.root / "missing")
         self.assertEqual((rows, counts), ([], {2: 0, 3: 0}))
 
+    def test_the_submitter_provenance_folder_is_not_a_run(self):
+        (self.root / "provenance").mkdir()
+        (self.root / "provenance" / "manifest_seed2.txt").write_text("x")
+        write_vae_run(self.root / "40TopL_seed2" / "central_only", seed=2)
+        rows, counts = builder.test_r_rows(self.root)
+        self.assertEqual((len(rows), counts), (1, {2: 1, 3: 0}))
+
     def test_present_runs_are_tabulated_with_seed_and_cached_loader(self):
         write_vae_run(self.root / "RCC_MH0204_33_seed2" / "central_only", seed=2)
         write_vae_run(self.root / "GBM12_1_seed3" / "uniform_mean", seed=3)
