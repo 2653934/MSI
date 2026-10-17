@@ -330,6 +330,8 @@ class JobScript(unittest.TestCase):
         self.assertNotIn("SBATCH_NODELIST", script)
 
     def test_paths_for_each_collection(self):
+        if os.name == "nt":
+            self.skipTest("job-script source test runs in the POSIX cluster environment")
         bash = shutil.which("bash")
         if bash is None:
             self.skipTest("bash not available")

@@ -2867,3 +2867,8 @@ Status: OPEN
 - Committed both retained timing attempts and the collection-specific RCC timing preparation as `18fe1e20` (`Prepare collection-specific ranking timing`).
 - Committed the protocol execution record, project instructions and review entry as `ade5110f` (`Record Test R results and follow-up plans`).
 - Not committed, waiting on finding 1: `segmentation_control.py` plus the five new PCA-reconstruction implementation/test/job files. The implementation itself passed its focused tests 5/5; only the missing durable Section 6.4 addendum blocks it.
+
+### 2026-10-17 21:02 Codex → Code | Supervisor: Ranking test portability follow-up
+Status: INFO
+
+- A concurrent follow-up now skips the POSIX job-script source test on Windows, where Git Bash cannot source a Windows path; the test still runs in the POSIX cluster environment. The full local ranking suite now passes (15 passed, 1 platform skip). Approved for a separate test-only commit.
