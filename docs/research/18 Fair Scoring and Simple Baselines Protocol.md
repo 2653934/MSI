@@ -1049,6 +1049,21 @@ A test rebuilds the IG matched groups from these files.
                 - **Label:** "shared node, not exclusive".
                 - **Stop rule:** if nothing has finished by Monday 19 October 18:00 SAST, use option (c).
                 - At submission it was pending on `Priority`, because all four live nodes are fully allocated.
+              - **CAC 360TopL PCA rerun** (supervisor ruling 22:28; Zayd's OK about 22:29 SAST): **job 70180**, submitted 22:30 SAST.
+                - Placement: `bigbatch`, not exclusive (`OverSubscribe=OK`), 2 CPUs, 16 GB, 2 h, the same thread settings as Test V (2).
+                - Allowed nodes: only those with a recorded i9-10940X (mscluster52, 55, 58, 71, 73, 77, 79, 81, 84, 86, 87), via `--exclude=mscluster[42-51,53-54,56-57,59-70,72,74-76,78,80,82-83,85,88-89]`.
+                - It runs the unchanged `evaluate_pca_reconstruction_v.py` through `sbatch --wrap`, with the gate unchanged at 1e-6.
+                - New subfolder: `results/diagnostics/pca_reconstruction_V/rerun_360TopL_bigbatch_i9/` (`CAC/360TopL_seed1/`, plus `provenance/slurm_job_ids.txt` and `cpu_model.txt`, written by the job). The `not_done` record is untouched.
+                - Test V's 360TopL ran on mscluster73 (69768_13).
+                - **Fallback:** if it hasn't passed by Monday 19 October 18:00 SAST, use the conservative CAC count (supervisor 22:28, point 2).
+              - **18 October, morning check** (one `squeue`/`sacct`, 10:33 SAST):
+                - **70180** COMPLETED, 0:34. It started 21:06 UTC (23:06 SAST, 17 Oct) on mscluster86; `cpu_model.txt` records `i9-10940X`.
+                - **70179** ran 23:07–23:09 UTC (01:07–01:09 SAST, 18 Oct), every task on mscluster77. 7 COMPLETED (7–49 s each). **Task 2 (RCC_UH0710_33) FAILED**, exit 1 after 4 s: `FileNotFoundError` for `results/experiments/rcc_spatial_msipl/RCC_UH0710_33_seed1/uniform_mean/attribution/latent_mean.npy`.
+                - The file exists on the cluster (19,568 bytes, 16 Oct 20:03), and the other 7 tasks on the same node read their own files. So the node did not see one existing file, as with mscluster54 on 17 Oct (69658). Not retried, per the overnight stop rule.
+              - **Pull** 10:35 SAST (documented quiet artifact pull, `-n` first): 12 new files (3 from the `pca_reconstruction_V/rerun_360TopL_bigbatch_i9/` rerun, 9 from `ranking_stage_runtime_rcc_bigbatch_shared/`). No committed file changed.
+              - **Validity, read locally:**
+                - The 360TopL rerun is `complete`. Its explained-variance gate passes: PCA-5 7.9e-8, PCA-20 4.7e-8, both under 1e-6. Its code record equals the primary 23 sections'.
+                - RCC timing: 7 summaries `complete`, all on the i9-10940X. All 24 full-ranking checks are `identical (full-ranking SHA-256)`: 6 sections × posterior-|PCC|, Moran's I, mean intensity and oracle. UH0505_12 has no saved ranking (not available, as before).
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.

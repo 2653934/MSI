@@ -3135,3 +3135,94 @@ Status: INFO
 - Resolves: 2026-10-17 22:00 Code entry, requested review of items (d), (e) and (f). The fixed wording now depends only on complete GBM and CAC results; RCC is retained as a separate descriptive record. Mixed `provenance.{version, protocol, parameters, code}` is refused, including for `not_done` sections, and the accepted cosine-floor convention is disclosed in the summary notes.
 - Local verification: `test_pca_reconstruction_v` passed 9/9. All 24 pulled PCA summaries parsed, shared one provenance signature, and agreed internally with their explained-variance gates: 23 `complete`, with only CAC 360TopL `not_done`. The saved cluster records show test job 70132 passed 243 tests with 3 expected artifact skips and the S3PL sub-suite passed 25/25.
 - Committed: `a21ff6b1` (`Fix PCA reconstruction summary rules`) and `7666293d` (`Add PCA reconstruction and validation evidence`). The open decision about CAC 360TopL is not pre-empted; no derived PCA summary was generated or committed.
+
+### 2026-10-17 22:28 Supervisor → Code | Codex | Zayd: Ruling on CAC 360TopL (PCA addendum), made without seeing any reconstruction metric; RCC timing noted
+Status: OPEN
+
+- **Resolves: 2026-10-17 22:20 Code entry, the CAC 360TopL question.** This ruling is made before anyone has seen a reconstruction metric. Code has not run the summariser, and I have not looked.
+- **My error first:** the 20:17 spec put the addendum on `batch`, but Test V ran on `bigbatch` (i9-10940X). I didn't check that. The gate worked as designed: it caught the CPU difference. The 23 passing sections differ from Test V by at most 5.6e-7.
+- **Ruling:**
+  1. **Rerun CAC 360TopL only, as a separately labelled rerun.** Gate unchanged at 1e-6. CPU only, on `bigbatch` nodes of the Test V CPU model, i9-10940X. Use the 70179 pattern: not exclusive, every node of unknown or different model excluded, `cpu_model` recorded. Write to a new subfolder; don't overwrite the `not_done` record. If it passes, it replaces the `not_done` for the wording rule, and the report says so.
+  2. **Fallback, fixed now:** if the rerun hasn't passed by **Monday 19 Oct 18:00 SAST**, evaluate the CAC wording conservatively. 360TopL counts as **not** supporting "PCA-5 reconstructs worse", so the claim needs PCA-5 MSE higher in at least 6 of the 7 valid CAC sections under both metrics, i.e. still at least 6 of 8 overall. The report states "CAC 7/8 valid; 360TopL not done (cross-CPU explained-variance gate)". This can only make the claim harder to reach.
+  3. **No tolerance change. No summary is generated** until the rerun outcome or the fallback applies. That needs a one-line summariser option or a documented manual count; Code proposes which, and Codex reviews.
+- **RCC timing:** Zayd's 22:19 decision is noted. 70179 is pending, shared and not exclusive, with the Monday 18:00 fallback to (c). The CPU-model evidence (i9-10940X on 55/71/77, topology match on 74/76, plus the `cpu_model` fail-closed guard) is accepted. Add the "shared node, not exclusive" label as a report caption; no summariser change is needed.
+- **Overnight:** Zayd is going to sleep. Code may submit the 360TopL rerun under this ruling, poll at most every 2–5 min (or less often), and pull finished outputs with `-n` first. Stop on any failure. No other new work.
+
+### 2026-10-17 22:32 Code → Supervisor | Codex | Zayd: CAC 360TopL rerun 70180 submitted (bigbatch i9, not exclusive); proposal for the summary step
+Status: OPEN (Codex: the summary-step proposal, reviewed before it is built; nothing built tonight)
+
+- Resolves: 2026-10-17 22:28 Supervisor entry, point 1 (submitted). Points 2 and 3 remain.
+- **70180** submitted 22:30 SAST (Zayd's OK):
+  - `bigbatch`, not exclusive (`OverSubscribe=OK`), 2 CPUs and thread variables 2, as in Test V; 16 GB, 2 h.
+  - **Allowed nodes:** only those with a recorded `i9-10940X` in `results/` (mscluster52, 55, 58, 71, 73, 77, 79, 81, 84, 86, 87). Every other `bigbatch` node is excluded, including 74 and 76, whose model is unrecorded.
+  - It runs the unchanged `evaluate_pca_reconstruction_v.py` via `sbatch --wrap`. The gate is unchanged at 1e-6.
+  - **Output:** `pca_reconstruction_V/rerun_360TopL_bigbatch_i9/CAC/360TopL_seed1/`. The job writes `provenance/cpu_model.txt` (hostname, `/proc/cpuinfo` model name, job id). The original `not_done` record is untouched.
+  - Pending on `Priority` at submission.
+- **Point 3, proposal (not built):** a summariser option rather than a manual count, so the outcome is reproducible from code.
+  - `--rerun <collection>/<section>=<summary.json>`: accepted only if the primary record is `not_done`, the rerun is `complete`, its provenance signature matches the other sections, and a sibling `provenance/cpu_model.txt` exists. The row is labelled `rerun_cross_cpu_gate`, and the summary lists every substitution.
+  - `--conservative-not-done`: implements the fallback in point 2. A `not_done` GBM/CAC section counts as "not supporting", the wording needs ≥ 6 per collection over all 8 sections, and the summary states "CAC 7/8 valid; 360TopL not done (cross-CPU explained-variance gate)".
+  - Default behaviour is unchanged. Tests:
+    - substitution accepted and refused (mismatched signature, rerun not complete, primary already complete);
+    - the conservative count with one `not_done`.
+  - Build and Codex review after Zayd is up. Per "no other new work", I won't write it overnight.
+- Overnight I'll poll 70179 and 70180 at most every 2–5 min (in practice less often), pull finished outputs with `-n` first, and stop on any failure.
+
+### 2026-10-17 22:33 Supervisor → Code: 70180 submission and summariser proposal approved
+Status: INFO
+
+- **70180** is as ruled. Restricting it to the nodes with a recorded i9-10940X is better than my wording, because it excludes 74 and 76.
+- **The summariser proposal is approved as specified:** `--rerun` with its acceptance checks, `--conservative-not-done`, default behaviour unchanged, and the listed tests. Build it after Zayd is up, then Codex reviews. No summary is generated before that commit.
+- Overnight plan confirmed. Good night.
+
+### 2026-10-18 10:38 Code → Supervisor | Zayd: overnight status. 360TopL rerun passed its gate; RCC timing 7/8 with exact reproduction; UH0710_33 failed on an unseen input file (not retried)
+Status: OPEN (Zayd: retry of 70179 index 2?)
+
+- One `squeue`/`sacct` check at 10:33 SAST. The overnight watcher stopped when the session ended, so no other polls ran after 22:32.
+- **70180 (CAC 360TopL PCA rerun):** COMPLETED in 0:34. It started 21:06 UTC (23:06 SAST) on mscluster86; `cpu_model.txt` records `Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz`.
+  - **Explained-variance gate passes:** PCA-5 difference 7.9e-8, PCA-20 4.7e-8 (tolerance 1e-6). Its `provenance.code` equals that of the 23 primary sections.
+  - The cross-CPU explanation from 22:20 now has direct support. I haven't looked at any reconstruction metric.
+- **70179 (RCC timing, "shared node, not exclusive"):** every task ran on mscluster77 (i9-10940X), 23:07–23:09 UTC (01:07–01:09 SAST).
+  - **7/8 COMPLETED. Every full-ranking check is identical** (24/24: 6 sections × posterior-|PCC|, Moran's I, mean intensity, oracle). UH0505_12 again has no saved ranking to check against.
+  - **Index 2, RCC_UH0710_33: FAILED**, exit 1 after 4 s: `FileNotFoundError` for `.../RCC_UH0710_33_seed1/uniform_mean/attribution/latent_mean.npy`. The file exists on the cluster (19,568 bytes, 16 Oct 20:03), and the same node read the other sections' files. This matches the 17 Oct mscluster54 incident (69658): the node failed to see one existing file. Not retried, per the overnight stop rule.
+  - **Proposed retry (needs Zayd's OK):** index 2 only, same `--wrap` command and root. Exclude mscluster77 on top of the existing exclude list, leaving mscluster55, 71, 74 and 76. Any of those that records a non-i9 model would be refused by the summariser.
+- **Pull** 10:35 SAST, `-n` first: 12 new files, no committed file changed. Logged in protocol 18 Section 10.
+- **Next:** building `--rerun` / `--conservative-not-done` (22:32 proposal, approved 22:33) for Codex. No PCA summary until that commit exists.
+
+### 2026-10-18 10:55 Code → Codex | Supervisor: `--rerun` and `--conservative-not-done` built (uncommitted, for review); no PCA summary generated
+Status: OPEN (Codex: review and commit)
+
+- Implements the 22:32 proposal, approved at 22:33. Files: `code/msi/scripts/summarise_pca_reconstruction_v.py` and `code/msi/src/spatial_msipl/tests/test_pca_reconstruction_v.py`. No other file changed. LF endings, `git diff --check` clean.
+- **`--rerun COLLECTION/SECTION=SUMMARY_JSON`** (repeatable; giving one section twice is refused). Acceptance checks in `load_rerun()`, each refused with `ValueError`:
+  - the section is in `SECTIONS`;
+  - the primary record exists and is `not_done`;
+  - the rerun is `complete` with `dataset == section`;
+  - `<rerun root>/provenance/cpu_model.txt` exists and contains `model name`;
+  - its signature (`provenance.{version, protocol, parameters, code}`) joins the existing mixed-signature refusal, so it must equal the other sections' signature.
+  - The row gets `rerun_cross_cpu_gate: true`, `source` (the rerun), `primary_source`, `primary_status: not_done` and `rerun_cpu_record`. `summary.json` gets a `reruns` list naming every substitution.
+- **`--conservative-not-done`:** applies only to a GBM/CAC collection whose non-complete sections are all `not_done`; a `missing` section is never counted. Those sections count as not supporting the claim.
+  - The comparison runs over the valid sections, and the threshold stays ≥ `WORSE_THRESHOLD = 6`, with the 8 sections as the denominator, so the claim can only get harder to reach.
+  - Records `conservative_not_done: [...]` and `validity_statement`, e.g. "CAC 7/8 valid; 360TopL not done (cross-CPU explained-variance gate)", plus top-level `conservative_not_done_applied`.
+- **Default behaviour unchanged:** the wording still needs every GBM/CAC section complete. `ready` now tests for the presence of `mse_comparisons`, which without the option exists exactly when complete == expected.
+- **Tests:** `test_pca_reconstruction_v` 22/22 passed locally, no skips (uv environment with h5py, sklearn, scipy). The 13 new tests:
+  - **Rerun:**
+    - default keeps the `not_done`;
+    - an accepted rerun is substituted and labelled;
+    - refused for a different signature, a rerun that is not complete, a primary that is already complete, a missing CPU record, or an unknown section;
+    - CLI parsing, plus refusal of a malformed or duplicate `--rerun` before any output is written.
+  - **Conservative:**
+    - default gives "not done";
+    - 6 of 7 valid meets the threshold;
+    - 5 of 7 valid gives "does not separate";
+    - a missing section is never counted;
+    - a fully complete collection is identical with and without the option.
+- **The intended command after the commit** (the 22:28 ruling, point 1: the rerun passed its gate):
+  `python scripts/summarise_pca_reconstruction_v.py --rerun CAC/360TopL=results/diagnostics/pca_reconstruction_V/rerun_360TopL_bigbatch_i9/CAC/360TopL_seed1/summary.json --output results/diagnostics/pca_reconstruction_V/summary_local`
+  `--conservative-not-done` isn't needed, because the rerun passed. It stays available for Monday's fallback, should anything change.
+- Not generated: no PCA summary or decision table exists yet.
+
+### 2026-10-18 10:44 Codex → Code | Supervisor: Review of PCA rerun paths and overnight evidence
+Status: INFO
+
+- Resolves: 2026-10-18 10:55 Code entry. The repeatable `--rerun` path implements every approved acceptance check and labels each substitution; `--conservative-not-done` retains the six-of-eight threshold, never counts a missing section, and leaves the default complete-data behaviour unchanged.
+- Local verification: `test_pca_reconstruction_v` passed 22/22. The CAC 360TopL rerun is `complete`, passes both unchanged 1e-6 explained-variance gates, matches the primary provenance signature, and records an i9-10940X CPU. Seven RCC timing summaries are complete on i9-10940X; their six comparable sections contain all 24 expected `identical (full-ranking SHA-256)` checks, while UH0505_12 has the expected unavailable comparison.
+- Committed: `7eef7b8d` (`Add PCA rerun and conservative summary paths`) and `054e6aef` (`Add PCA rerun and RCC timing evidence`). No PCA summary was generated, and the failed RCC section was not retried.
