@@ -1,0 +1,11 @@
+RCC ranking-stage timing, label: "shared node, not exclusive" (Zayd, 17 Oct 2026).
+Supersedes 70142-70149 (exclusive, one pinned node each), cancelled while pending:
+mscluster55/71/74/77 were fully allocated to other users' 3-day jobs, and mscluster76 was down.
+Allowed nodes: mscluster55, 71, 74, 76, 77 (the nodes that made the saved RCC rankings in 69565);
+every other bigbatch node excluded. Same CPU model: i9-10940X recorded on 55/71/77 in Test R;
+74/76 have the same scontrol topology, model not recorded. time_ranking_stages.py records each
+task's cpu_model and the summariser refuses mixed models within a collection.
+Submitted with sbatch --wrap: the runner's #SBATCH resources repeated on the command line except
+--exclusive; the committed runner is unchanged. Exact full-ranking reproduction check unchanged.
+CPU only. mscluster74/76 are on the GPU CUDA quarantine list, which does not apply to CPU-only jobs.
+Stop rule: if nothing has finished by Monday 19 Oct 18:00 SAST, use option (c).
