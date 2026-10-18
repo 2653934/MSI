@@ -149,6 +149,163 @@ class Summary(unittest.TestCase):
         self.assertEqual(len(summariser.collect(root, vae_roots={}, sections=sections)), 2)
 
 
+def pca_record(section, status="complete", code="c1", mse=2.0):
+    record = {"status": status, "dataset": section, "pixels": 4,
+              "provenance": {"version": 1, "protocol": "p", "parameters": {"k": 1},
+                             "code": code}}
+    if status == "complete":
+        values = {"mean_squared_error": mse, "mean_absolute_error": 0.1,
+                  "cosine_similarity": 0.9}
+        record["metrics"] = {f"pca{n}": {c: dict(values) for c in summariser.CONVENTIONS}
+                             for n in (5, 20)}
+    else:
+        record["not_done_reason"] = "explained-variance-ratio sum did not reproduce"
+    return record
+
+
+def conservative_rows(exceeding, extra_status="not_done"):
+    """CAC: 7 complete sections, `exceeding` of them above the VAE, plus one other."""
+    rows = []
+    for index in range(7):
+        row = {"collection": "CAC", "section": f"CAC{index}", "status": "complete",
+               "vae_central_only_mean_squared_error": 1.0,
+               "vae_uniform_mean_mean_squared_error": 1.0}
+        for convention in summariser.CONVENTIONS:
+            row[f"pca5_{convention}_mean_squared_error"] = 2.0 if index < exceeding else 0.5
+        rows.append(row)
+    rows.append({"collection": "CAC", "section": "CAC7", "status": extra_status})
+    return rows
+
+
+@unittest.skipIf(h5py is None, "scientific Python dependencies are not installed locally")
+class RerunAndConservative(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.pca_root = self.root / "pca"
+        self.vae_root = self.root / "vae"
+        self.sections = {"CAC": ("A", "B")}
+        for section in ("A", "B"):
+            folder = self.vae_root / f"{section}_seed1" / "evaluation"
+            folder.mkdir(parents=True)
+            models = {m: {"pixels": 4, "mean_squared_error": 1.0, "mean_absolute_error": 0.1,
+                          "cosine_similarity": 0.95} for m in summariser.VAE_MODELS}
+            (folder / "comparison.json").write_text(json.dumps(
+                {"status": "complete", "dataset": section, "models": models}))
+        self.write(self.pca_root / "CAC" / "A_seed1", pca_record("A"))
+        self.write(self.pca_root / "CAC" / "B_seed1", pca_record("B", status="not_done"))
+        self.rerun_base = self.pca_root / "rerun_B"
+        self.rerun = self.write(self.rerun_base / "CAC" / "B_seed1", pca_record("B", mse=3.0))
+        (self.rerun_base / "provenance").mkdir(parents=True)
+        (self.rerun_base / "provenance" / "cpu_model.txt").write_text(
+            "node=n\nmodel name\t: Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz\n")
+
+    def write(self, folder, record):
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "summary.json").write_text(json.dumps(record))
+        return folder / "summary.json"
+
+    def collect(self, reruns):
+        return summariser.collect(self.pca_root, vae_roots={"CAC": self.vae_root},
+                                  sections=self.sections, reruns=reruns)
+
+    def test_default_keeps_the_primary_not_done(self):
+        rows = self.collect(None)
+        self.assertEqual([row["status"] for row in rows], ["complete", "not_done"])
+        self.assertNotIn("rerun_cross_cpu_gate", rows[1])
+
+    def test_accepted_rerun_is_substituted_and_labelled(self):
+        rows = self.collect({("CAC", "B"): self.rerun})
+        self.assertEqual([row["status"] for row in rows], ["complete", "complete"])
+        self.assertTrue(rows[1]["rerun_cross_cpu_gate"])
+        self.assertEqual(rows[1]["source"], self.rerun.as_posix())
+        self.assertEqual(rows[1]["primary_status"], "not_done")
+        self.assertEqual(rows[1]["pca5_primary_raw_inverse_transform_mean_squared_error"], 3.0)
+        summary = summariser.aggregate(rows, sections=self.sections)
+        self.assertEqual(summary["reruns"][0]["label"], "rerun_cross_cpu_gate")
+        self.assertEqual(summary["reruns"][0]["section"], "B")
+        self.assertIn("mse_comparisons", summary["CAC"])
+
+    def test_rerun_with_a_different_signature_is_refused(self):
+        self.write(self.rerun.parent, pca_record("B", code="other"))
+        with self.assertRaisesRegex(ValueError, "different code"):
+            self.collect({("CAC", "B"): self.rerun})
+
+    def test_rerun_that_is_not_complete_is_refused(self):
+        self.write(self.rerun.parent, pca_record("B", status="not_done"))
+        with self.assertRaisesRegex(ValueError, "not a complete result"):
+            self.collect({("CAC", "B"): self.rerun})
+
+    def test_rerun_for_a_complete_primary_is_refused(self):
+        rerun_a = self.write(self.rerun_base / "CAC" / "A_seed1", pca_record("A"))
+        with self.assertRaisesRegex(ValueError, "primary record is not `not_done`"):
+            self.collect({("CAC", "A"): rerun_a})
+
+    def test_rerun_without_cpu_record_is_refused(self):
+        (self.rerun_base / "provenance" / "cpu_model.txt").unlink()
+        with self.assertRaisesRegex(ValueError, "no CPU-model record"):
+            self.collect({("CAC", "B"): self.rerun})
+
+    def test_rerun_for_an_unknown_section_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "unknown section"):
+            self.collect({("CAC", "Z"): self.rerun})
+
+    def test_cli_rerun_argument(self):
+        self.assertEqual(summariser.parse_rerun("CAC/360TopL=a/b/summary.json"),
+                         (("CAC", "360TopL"), Path("a/b/summary.json")))
+        for bad in (["--rerun", "CAC-B"],
+                    ["--rerun", f"CAC/B={self.rerun}", "--rerun", f"CAC/B={self.rerun}"]):
+            with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+                summariser.main(["--root", str(self.pca_root), "--output",
+                                 str(self.root / "out")] + bad)
+        self.assertFalse((self.root / "out").exists())
+
+
+@unittest.skipIf(h5py is None, "scientific Python dependencies are not installed locally")
+class ConservativeNotDone(unittest.TestCase):
+    sections = {"CAC": ()}
+
+    def test_default_one_not_done_gives_not_done_wording(self):
+        summary = summariser.aggregate(conservative_rows(7), sections=self.sections)
+        self.assertTrue(summary["fixed_wording"].startswith("not done"))
+        self.assertNotIn("conservative_not_done", summary["CAC"])
+
+    def test_six_of_seven_valid_meets_the_threshold_over_eight(self):
+        summary = summariser.aggregate(conservative_rows(6), sections=self.sections,
+                                       conservative_not_done=True)
+        self.assertEqual(summary["fixed_wording"],
+                         "PCA-5 reconstructs worse than the VAE yet gives equivalent peak "
+                         "ranking.")
+        self.assertEqual(summary["CAC"]["conservative_not_done"], ["CAC7"])
+        self.assertEqual(summary["CAC"]["validity_statement"],
+                         "CAC 7/8 valid; CAC7 not done (cross-CPU explained-variance gate)")
+        central = summary["CAC"]["mse_comparisons"][summariser.CONVENTIONS[0]]["central_only"]
+        self.assertEqual(central["pca5_mse_exceeds_vae_count"], 6)
+        self.assertEqual(central["sections"], 7)
+        self.assertEqual(summary["conservative_not_done_applied"], ["CAC"])
+
+    def test_five_of_seven_valid_does_not_meet_the_threshold(self):
+        summary = summariser.aggregate(conservative_rows(5), sections=self.sections,
+                                       conservative_not_done=True)
+        self.assertEqual(summary["fixed_wording"],
+                         "Reconstruction error does not separate PCA-5 from the VAE.")
+
+    def test_missing_section_is_never_counted_conservatively(self):
+        summary = summariser.aggregate(conservative_rows(7, extra_status="missing"),
+                                       sections=self.sections, conservative_not_done=True)
+        self.assertTrue(summary["fixed_wording"].startswith("not done"))
+        self.assertNotIn("conservative_not_done", summary["CAC"])
+
+    def test_complete_collection_is_unchanged_by_the_option(self):
+        rows = conservative_rows(6, extra_status="complete")
+        rows[-1].update({f"pca5_{c}_mean_squared_error": 0.5 for c in summariser.CONVENTIONS})
+        rows[-1].update({"vae_central_only_mean_squared_error": 1.0,
+                         "vae_uniform_mean_mean_squared_error": 1.0})
+        default = summariser.aggregate(rows, sections=self.sections)
+        option = summariser.aggregate(rows, sections=self.sections, conservative_not_done=True)
+        option.pop("conservative_not_done_applied")
+        self.assertEqual(default, option)
+
+
 class JobScripts(unittest.TestCase):
     def test_batch_job_uses_test_v_inputs_and_new_root(self):
         runner = (ROOT / "slurm_jobs" / "run_pca_reconstruction_v.sh").read_text(

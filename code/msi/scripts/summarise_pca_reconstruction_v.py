@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Local descriptive table for the Test V PCA reconstruction addendum."""
+"""Local descriptive table for the Test V PCA reconstruction addendum.
+
+Options approved in supervisor chat 2026-10-17 (22:32 proposal, 22:33 approval):
+--rerun substitutes a separately labelled rerun for a primary `not_done` section;
+--conservative-not-done applies the 22:28 fallback, in which a `not_done` GBM/CAC
+section counts as not supporting "PCA-5 reconstructs worse". Without either option
+the table is unchanged.
+"""
 
 import argparse
 import csv
@@ -33,27 +40,59 @@ NOTES = (
     "form); the difference from the product-floor form is negligible at these norms. "
     "Descriptive only (supervisor chat 2026-10-17 21:53, item f).",
 )
+WORSE_THRESHOLD = 6  # of 8 sections per collection, fixed at 20:17
+
+
+def signature(pca):
+    provenance = pca.get("provenance", {})
+    return json.dumps({key: provenance.get(key) for key in
+                       ("version", "protocol", "parameters", "code")}, sort_keys=True)
+
+
+def load_rerun(path, collection, section, primary):
+    """A rerun replaces a primary record only when every acceptance check passes."""
+    path = Path(path)
+    if primary is None or primary.get("status") != "not_done":
+        raise ValueError(f"rerun refused for {collection}/{section}: the primary record "
+                         "is not `not_done`")
+    rerun = load_json(path)
+    if rerun.get("status") != "complete" or rerun.get("dataset") != section:
+        raise ValueError(f"rerun refused for {collection}/{section}: {path} is not a "
+                         "complete result for this section")
+    cpu_record = path.parents[2] / "provenance" / "cpu_model.txt"
+    if not cpu_record.is_file() or "model name" not in cpu_record.read_text(encoding="utf-8"):
+        raise ValueError(f"rerun refused for {collection}/{section}: no CPU-model record "
+                         f"at {cpu_record}")
+    return rerun, cpu_record
 
 
 def load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def collect(pca_root=PCA_ROOT, vae_roots=VAE_ROOTS, sections=SECTIONS):
+def collect(pca_root=PCA_ROOT, vae_roots=VAE_ROOTS, sections=SECTIONS, reruns=None):
+    reruns = dict(reruns or {})
+    unknown = set(reruns) - {(c, s) for c, names in sections.items() for s in names}
+    if unknown:
+        raise ValueError(f"rerun given for an unknown section: {sorted(unknown)}")
     rows, keys = [], set()
     for collection, names in sections.items():
         for section in names:
             pca_path = Path(pca_root) / collection / f"{section}_seed1" / "summary.json"
             row = {"collection": collection, "section": section, "status": "missing",
                    "source": pca_path.as_posix()}
-            if not pca_path.exists():
+            pca = load_json(pca_path) if pca_path.exists() else None
+            if (collection, section) in reruns:
+                rerun_path = Path(reruns[(collection, section)])
+                pca, cpu_record = load_rerun(rerun_path, collection, section, pca)
+                row.update({"source": rerun_path.as_posix(), "rerun_cross_cpu_gate": True,
+                            "primary_source": pca_path.as_posix(),
+                            "primary_status": "not_done",
+                            "rerun_cpu_record": cpu_record.as_posix()})
+            if pca is None:
                 rows.append(row)
                 continue
-            pca = load_json(pca_path)
-            provenance = pca.get("provenance", {})
-            keys.add(json.dumps({key: provenance.get(key) for key in
-                                 ("version", "protocol", "parameters", "code")},
-                                sort_keys=True))
+            keys.add(signature(pca))
             row["status"] = pca.get("status")
             if row["status"] != "complete":
                 row["not_done_reason"] = pca.get("not_done_reason")
@@ -84,15 +123,27 @@ def collect(pca_root=PCA_ROOT, vae_roots=VAE_ROOTS, sections=SECTIONS):
     return rows
 
 
-def aggregate(rows, sections=SECTIONS, vae_collections=("GBM", "CAC")):
+def aggregate(rows, sections=SECTIONS, vae_collections=("GBM", "CAC"),
+              conservative_not_done=False):
     summary = {}
     for collection in sections:
         selected = [row for row in rows if row["collection"] == collection]
         complete = [row for row in selected if row["status"] == "complete"]
+        not_done = [row["section"] for row in selected if row["status"] == "not_done"]
         record = {"sections_complete": len(complete), "sections_expected": len(selected)}
         if collection not in vae_collections:
             record["comparison"] = "none; no saved VAE reconstruction, reported alone"
-        if collection in vae_collections and len(complete) == len(selected):
+        # The 22:28 fallback: `not_done` sections count as not supporting the claim, so
+        # the threshold still applies to all 8. A missing section is never allowed.
+        conservative = bool(conservative_not_done and collection in vae_collections
+                            and complete and not_done
+                            and len(complete) + len(not_done) == len(selected))
+        if conservative:
+            record["conservative_not_done"] = not_done
+            record["validity_statement"] = (
+                f"{collection} {len(complete)}/{len(selected)} valid; {', '.join(not_done)} "
+                "not done (cross-CPU explained-variance gate)")
+        if collection in vae_collections and (len(complete) == len(selected) or conservative):
             comparisons = {}
             for convention in CONVENTIONS:
                 comparisons[convention] = {}
@@ -107,11 +158,10 @@ def aggregate(rows, sections=SECTIONS, vae_collections=("GBM", "CAC")):
             record["mse_comparisons"] = comparisons
         summary[collection] = record
     required = [c for c in WORDING_COLLECTIONS if c in sections]
-    ready = all(summary[c]["sections_complete"] == summary[c]["sections_expected"]
-                for c in required)
+    ready = all("mse_comparisons" in summary[c] for c in required)
     if ready:
         worse = all(summary[c]["mse_comparisons"][convention]["central_only"]
-                    ["pca5_mse_exceeds_vae_count"] >= 6
+                    ["pca5_mse_exceeds_vae_count"] >= WORSE_THRESHOLD
                     for c in required for convention in CONVENTIONS)
         summary["fixed_wording"] = (
             "PCA-5 reconstructs worse than the VAE yet gives equivalent peak ranking."
@@ -121,6 +171,16 @@ def aggregate(rows, sections=SECTIONS, vae_collections=("GBM", "CAC")):
         summary["fixed_wording"] = ("not done; one or more GBM or CAC sections are missing "
                                     "or invalid")
     summary["notes"] = list(NOTES)
+    substituted = [row for row in rows if row.get("rerun_cross_cpu_gate")]
+    if substituted:
+        summary["reruns"] = [
+            {"collection": row["collection"], "section": row["section"],
+             "label": "rerun_cross_cpu_gate", "source": row["source"],
+             "replaces": row["primary_source"], "cpu_record": row["rerun_cpu_record"]}
+            for row in substituted]
+    if conservative_not_done:
+        summary["conservative_not_done_applied"] = sorted(
+            c for c in sections if "conservative_not_done" in summary[c])
     return summary
 
 
@@ -147,13 +207,32 @@ def write_outputs(rows, summary, output):
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+def parse_rerun(text):
+    try:
+        key, path = text.split("=", 1)
+        collection, section = key.split("/", 1)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            "expected <collection>/<section>=<summary.json>") from None
+    return (collection, section), Path(path)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=PCA_ROOT)
     parser.add_argument("--output", type=Path)
-    args = parser.parse_args()
-    rows = collect(args.root)
-    summary = aggregate(rows)
+    parser.add_argument("--rerun", type=parse_rerun, action="append", default=[],
+                        metavar="COLLECTION/SECTION=SUMMARY_JSON",
+                        help="substitute a complete rerun for a primary `not_done` section")
+    parser.add_argument("--conservative-not-done", action="store_true",
+                        help="count `not_done` GBM/CAC sections as not supporting the claim")
+    args = parser.parse_args(argv)
+    reruns = dict(args.rerun)
+    if len(reruns) != len(args.rerun):
+        parser.error("a section was given more than one --rerun")
+    rows = collect(args.root, reruns=reruns)
+    summary = aggregate(rows, conservative_not_done=args.conservative_not_done)
     write_outputs(rows, summary, args.output or args.root / "summary_local")
     print(json.dumps(summary, indent=2))
 
