@@ -554,6 +554,61 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
   - The m2aia default branch is unchanged.
   - Training and inference call the patch builder exactly as before for `none` and `tile_centre` (tested on the cluster, where torch is installed).
 
+### 6.6 Stats: predeclared statistical-analysis plan, saved results only (supervisor chat 20 October 10:28, Zayd-approved; predeclared before any test output exists)
+
+The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-20 10:28 Supervisor → Code | Codex | Zayd: Title correction; predeclared statistical-analysis plan (Section 6.6 "Stats"), saved results only" (the title correction in that entry is not part of the plan). It was written into this protocol on 20 October at 10:39 SAST, before any statistics code was written or run. The comparison family is listed in the chat and confirmed by the supervisor before anything is computed. Later notes are added below it, never inside it.
+
+- **Statistical-analysis plan, predeclared before any test output exists.** Copy it verbatim into protocol 18 as Section 6.6 before writing code. It is analysis of saved per-section results, run locally. The existing practical labels ("helps", "equivalent", …) stay unchanged; the tests are reported **beside** them, never replacing them.
+  1. **Paired comparisons:** every rule-labelled comparison in the family (protocol 18 Sections 6–7 and Tests S, V, N, R; Code lists the family, about 20, in the chat before computing anything). For each:
+     - n;
+     - the exact two-sided Wilcoxon signed-rank p (`scipy.stats.wilcoxon`, exact method; zero differences reported, `zero_method="wilcox"`);
+     - the Hodges–Lehmann median paired difference with an exact distribution-free 95% CI (Walsh averages);
+     - matched-pairs rank-biserial r;
+     - the sign count;
+     - a Holm-adjusted p across the whole family.
+  2. **Units:**
+     - Average the training seeds per section before testing when 3 seeds exist (Test R arms); otherwise use seed 1.
+     - GBM is also reported at PDX-line level: average the 2 sections per line, n = 4, so the minimum attainable two-sided p is 0.125. This must be stated.
+     - CAC is one biopsy: its tests are within-specimen. RCC is 8 subjects.
+     - Development sections are excluded wherever the original comparison excluded them.
+  3. **Mann–Whitney U, only for independent groups.** Per-peak quality of the *selected* bins of two rankings, e.g. each selected bin's maximum |PCC| with any class mask, for IG vs posterior correlation within each section. The selected sets aren't paired. Report U, p, and the common-language effect size per section, plus a per-collection summary with no pooled p.
+     - Code first checks whether per-bin mask correlations are saved locally. If they aren't, this item is "not done" and must not trigger new cluster work without a separate OK.
+  4. **Mixed model (descriptive):** score ~ method + (1 | section) [+ (1 | seed) where seeds exist], per collection, for IG vs correlation and VAE vs PCA-5. Report the fixed-effect estimate and its 95% CI. No model selection; if it fails to converge, report "not converged".
+  5. **Output:** `results/diagnostics/statistics_6_6/` (`tests.csv`, `mann_whitney.csv`, `mixed_models.csv`, `summary.json` with provenance and input hashes). Tests use known toy data (e.g. a hand-checked Wilcoxon/HL case).
+- **Wording rule, fixed now:**
+  - p-values describe these sections, not a population.
+  - With n = 8 the smallest possible p is 0.0078, and with n = 4 it is 0.125.
+  - A comparison is called "statistically supported" only if the Holm-adjusted p < 0.05 **and** the practical label is "helps" (or its opposite). Otherwise the practical label stands alone.
+- **Scope:** no retraining and no new scoring. The optional random-list chance baseline is *not* part of this plan.
+
+#### Addendum: comparison family and Holm families by question (supervisor chat 20 October 10:46; predeclared before any statistic was computed)
+
+Written into this protocol on 20 October at 10:47 SAST, before any statistics code existed. It records the family Code proposed (chat 10:39) and the supervisor's confirmation with one amendment (chat 10:46). The original plan above is unchanged.
+
+- **Family (bin level; each difference signed as in its rule, first − second; n = sections the rule used):**
+  - Rows 1–6: IG − posterior-|PCC| (Section 7; Test R Decision 1; RCC primary). GBM, CAC, RCC × `central_only`, `uniform_mean`. Seed mean 1–3.
+  - Rows 7–10: IG − legacy msiPL (Section 7). GBM, CAC × both arms. Seed 1.
+  - Rows 11–13: IG `uniform_mean` − `central_only` (Test R Decision 2). GBM, CAC, RCC. Seed mean 1–3.
+  - Rows 14–15: attention − uniform IG (item A). GBM, CAC. Seed 1.
+  - Rows 16–19: G1 − attention, G1 − G2 (item G rule 2). GBM, CAC. Seed 1.
+  - Rows 20–23: G1 IG − posterior, G2 IG − posterior (item G rule 3). GBM, CAC. Seed 1.
+  - Rows 24–27: p7 − 3×3, p9 − 3×3 IG (item E). GBM, CAC. Seed 1.
+  - Rows 28–33: S1 − plain posterior-|PCC| (Test S). GBM, CAC, RCC × both arms. Seed 1.
+  - Rows 34–36: VAE `central_only` posterior − PCA-5 posterior (Test V). GBM, CAC, RCC. Seed 1, with the seed mean reported beside.
+  - Rows 37–38: S3PL real − retrained shuffled-nonlocal (Test N). CAC, seed 1 and seed 2 separately.
+  - **Excluded:** gate (d) pixel count (n = 2), G3 (2 sections), the G mechanism (not a paired score), BIC, C2 and p5 (no rule), the RCC cancer/normal sensitivity (no verdict), Test V (a)–(d) and the PCA reconstruction addendum (descriptive), and the Test N descriptive contrasts. No development section is excluded, because every listed rule used all 8 sections.
+- **Amendment (Q1): Holm families by research question, not one family of 38.** With exact Wilcoxon at n = 8 the smallest attainable p is 0.0078, so Holm's first step can be cleared only when k ≤ 6. One family of 38 could never give "statistically supported", whatever the data.
+  - **F1, primary ranking:** rows 1–6. **F2, vs legacy:** rows 7–10. **F3, encoder context and variants:** rows 11–27. **F4, segmentation:** rows 28–36. **F5, S3PL:** rows 37–38.
+  - Holm is applied within each family, and unadjusted p is also reported. `summary.json` records per family k, the Holm first-step threshold, and whether that threshold is attainable at the family's n.
+  - Report wording: with 8 sections, only a family of ≤ 6 tests can reach Holm significance, so effect sizes and CIs carry the weight, and p-values are supporting evidence.
+- **Q2:** bin level is primary. P1 (GBM/CAC) is secondary, with its own Holm within the same family structure.
+- **Q3:** seed means use only sections with all 3 seeds (as Test R Decision 2); the reduced n is shown.
+- **Q4:** each test uses the unit of the predeclared label it accompanies: rows 1–6 and 11–13 the seed mean (3-seed Test R labels); rows 34–36 seed 1, with the seed mean beside.
+- **Q5:** GBM PDX-line tests (n = 4) are reported beside each GBM row, outside the Holm families.
+- **Q6:** item 3 (Mann–Whitney) is "not done" as specified. Per-bin mask PCCs are saved locally only for the IG- and L2-selected bins, not for the posterior-selected bins. IG vs L2 is not substituted. A CPU job for the posterior-selected bins would need its own specification.
+- **Q7:** mixed models use statsmodels `MixedLM` (local uv environment only). Every model is labelled descriptive, and singular or boundary fits are flagged.
+- **Zero differences:** counted and reported, together with what the installed scipy does with them under `method="exact"`.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -1083,6 +1138,8 @@ A test rebuilds the IG matched groups from these files.
                 - **Pull** 09:55 SAST (documented quiet artifact pull, `-n` first). It brought 2 files: the new `ranking_stage_runtime_rcc_bigbatch_shared/RCC_UH0710_33_seed1/uniform_mean/summary.json`, and `provenance/slurm_job_ids.txt`, which gains the 70528/70530 lines with its earlier content unchanged. Zayd OK'd the change to that committed file before the pull.
                 - **Read locally:** `complete`. All 4 full-ranking checks (posterior-|PCC|, Moran's I, mean intensity, oracle) are `identical (full-ranking SHA-256)`; the posterior's maximum difference is 8.2e-7. `cpu_model` is `Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz`.
                 - **RCC timing:** 8/8 `complete` on i9-10940X ("shared node, not exclusive"). Exact reproduction holds in 7 sections (28/28 checks); UH0505_12 has no saved ranking to compare against.
+              - **20 October 10:39 SAST, Section 6.6 (statistics plan):** the supervisor's 10:28 plan was copied verbatim into Section 6.6 before any statistics code existed. The proposed comparison family was posted to the chat for confirmation; nothing is computed until the supervisor confirms it. Local only; no cluster work.
+              - **20 October 10:47–11:00 SAST, Section 6.6 run (local only; chat 10:46 and 11:00):** the family amendment was written as the dated Section 6.6 addendum before any code. Built `paired_statistics.py`, `compute_statistics_6_6.py` and `test_statistics_6_6.py` (14/14 local). All 38 rows reproduce their saved decisions' per-section values to 1e-12. Output `results/diagnostics/statistics_6_6/`, byte-identical on a second run. A first development run showed estimates beside 3 non-converged mixed models; the code was fixed to report "not converged" only, and that run was copied to the session scratchpad (its `tests.csv` is identical to the final run). Item 3 (Mann–Whitney) is "not done". Uncommitted, for Codex.
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.
