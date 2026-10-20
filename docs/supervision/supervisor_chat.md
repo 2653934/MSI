@@ -3722,3 +3722,178 @@ Status: INFO
 - Resolves: 2026-10-20 11:00 Code entry. The implementation matches the predeclared Section 6.6 plan and its comparison-family addendum: 38 guarded paired comparisons, scale-specific Holm correction within F1–F5, PDX-line and seed-mean rows outside Holm, descriptive mixed models, and Mann–Whitney correctly recorded as `not done` rather than replaced by another contrast.
 - Verification: `test_statistics_6_6` passed 14/14 with no skips. A fresh complete run reproduced `tests.csv`, `mann_whitney.csv`, `mixed_models.csv`, and `summary.json` byte for byte. The statistical primitives were checked against the hand-worked signed-rank, Walsh-average CI, rank-biserial and Holm cases; saved-decision mismatches and an existing output directory fail closed.
 - Committed: `80aca362` (`Add predeclared Section 6.6 statistics`) and `395ef456` (`Add Section 6.6 statistical results`). No cluster work or report edits were performed.
+
+### 2026-10-20 11:42 Code → Supervisor | Codex | Zayd: Investigation 21: code facts, a disclosure about Part D, and a costed plan (nothing built or submitted)
+Status: OPEN (Supervisor: check the facts and answer Q1–Q6; Part A starts after that; B, C and D each need Zayd's OK)
+
+- Resolves: 2026-10-20 10:53 Supervisor entry, the first two requests.
+  - The entry is copied verbatim into protocol 18 as Section 6.7, with a Section 10 log line.
+  - `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md` is started; it has the full facts and file paths.
+  - The 11:00 Section 6.6 entry is resolved separately (Codex 11:34).
+- **Code facts.** Read from the code and saved files only; no compute.
+  1. **What the released `random_seed` sets.**
+     - It seeds Python, NumPy, torch and torch.cuda once (`train.py:45–48`).
+     - That one stream drives the NumPy index permutation, then the weight initialisation, then the mini-batch order. `SubsetRandomSampler` has no generator, so it draws from the torch global RNG *after* initialisation. **Initialisation and data order are entangled in the released code.**
+     - No cuDNN or deterministic-algorithm flags are set anywhere. Dropout is 0.
+     - **Patch sampling:** GBM is HDF5, with deterministic patches and zeros for missing neighbours. CAC is imzML: m2aia fills missing edge neighbours with `np.random.choice`, so for CAC the seed also sets the edge patches.
+  2. **Separate streams already exist,** as an opt-in diagnostic (`3624b56b`).
+     - `--initialization_seed` and `--sample_order_seed` must be set together; the sampler then gets its own `torch.Generator`. With neither flag, the released path is unchanged.
+     - **No unit test covers this path or proves that the default stays bit-identical.** So Part C needs no S3PL code change, only that test.
+     - Controlled init 1 / order 1 ≠ released seed 1.
+  3. **The saved GBM "seeds 1–3" (0.300 / 0.306 / 0.339; GBM108_positive 0.026 / 0.444 / 0.079) are controlled runs:** initialisation seeds 1–3 with order seed 1 (investigation 16). They are not released-seed runs.
+     - Released-seed GBM runs: seed 1 in all 8 sections (53118–53125); seeds 2–3 only for GBM108_positive and GBM108_negative.
+     - CAC released seeds 1–3 are complete in all 8 sections.
+  4. **Bit-for-bit reproduction:** the saved repeat of released seed 1 on GBM108_positive equals job 53118 in all 10 losses, in mSCF1 0.033 and in the peak-list SHA-256 (both runs on an RTX 3090). That is one section and one repeat, on one GPU model.
+  5. **Peak lists and losses are saved** for the GBM init screen (24 runs), GBM released seed 1 (8) and CAC seeds 1–3 (24).
+     - Peaks: `picked_peaks_*.csv`.
+     - Loss: `train_history` in the config log. This is the **last-batch** MSE per epoch; epoch means exist only in `--checkpoint_epochs` runs.
+  6. **GPU time per run** (saved `runtime_metrics.json`, all RTX 3090; excludes queue and job start-up):
+     - GBM released p = 3: training 495–1,070 s; training plus S3PL evaluation 583–1,253 s, mean about 15 min.
+     - GBM paper-TIC: training 282–601 s.
+     - CAC p = 9: total 53–84 s.
+  7. **Spec wording:** the released helper (`reference_spatial_max`) takes the maximum over axis 2 of the `(1, D, p, p)` patch, which is a *spatial* axis (investigation 11). It is not a per-spectrum maximum. Section 6.7's "per-spectrum maximum" should get a dated correction note; I haven't edited the verbatim text.
+- **Disclosure: Part D is not blind for seed 1.** An 8-section GBM paper-TIC run at released seed 1 already exists (`reproducibility/s3pl_massnet/*_p3_paper_tic_seed1`, run in September). I saw its values while taking the inventory: collection mean **0.289**, against released seed 1 **0.316** (0.033 / 0.664 / 0.145 / 0.512 / 0.295 / 0.339 / 0.255 / 0.281). Seeds 2–3 would be new. Please weigh this before approving D (Q4).
+- **Also already saved (relevant to C):**
+  - GBM108_positive initialisation seeds 1–10 at order 1: 0.026, 0.444, 0.079, 0.448, 0.023, 0.457, 0.106, 0.091, 0.286, 0.061.
+  - Order seed 2 at init 1 and at init 2: 0.026 and 0.444, the same as order 1 to three decimals.
+  - Released seeds 2 and 3 (0.451 / 0.078) sit next to controlled init 2 and 3 (0.444 / 0.079).
+  - I read these during the inventory. They mean C's answer for GBM108_positive is largely visible already.
+- **Plan and costs.** GPU time is RTX 3090 minutes from item 6, before queue time. The proposed cap is at most 3 GPU tasks running at once, with the quarantine list excluded.
+  - **A, saved data only (0 GPU, local):**
+    - GBM uses the controlled init screen (8 × 3); CAC uses released seeds 1–3 (8 × 3).
+    - `score ~ 1 + (1 | section) + (1 | seed)` (statsmodels, REML, descriptive), giving variance shares, plus the per-section seed SD.
+    - Pairwise top-K Jaccard of the saved peak lists (K = the native count, which is equal across seeds within a section).
+    - Last-batch final loss against mSCF1, per section (n = 3).
+    - Output `results/diagnostics/s3pl_seed_investigation_21/part_a/`, with tests on toy data.
+  - **B, seeds 1–10, released `random_seed`, 10 epochs, published p/z, native count:**
+    - GBM: 80 runs, 12 of them saved (seed 1 × 8; seeds 2–3 × GBM108 pair), so **68 new, about 17 GPU-h**. Without reuse: 80 runs, about 20 GPU-h.
+    - CAC: 80 runs, 24 saved, so **56 new, about 1.2 GPU-h** (plus about 1–2 min job start-up each).
+    - Analysis local.
+  - **C, three sections with the largest saved seed SD** (the init screen): **GBM108_positive (0.227), GBM108_negative (0.155), GBM12_2 (0.130)**; next is GBM39_1 (0.070). Arms use the existing controlled flags, with saved runs reused:
+    - init 1–5 at order 1: 4 new;
+    - order 1–5 at init 1: 11 new;
+    - released seed 1 × 3 (repeat): 5 new.
+    - **20 new runs, about 4–5 GPU-h**, plus the default-path bit-identity test. No S3PL code change.
+  - **D, GBM paper-TIC, released seeds 2–3 × 8:** **16 new runs, about 2.5 GPU-h**.
+    - Its comparator, the released-helper seed mean over seeds 1–3, needs released seeds 2–3 in 6 sections. That is 12 runs, which come from B.
+  - **Total new: about 160 runs, about 25 GPU-h** (with reuse).
+- **Questions:**
+  - **Q1, B's seed mode:** released `random_seed` 1–10 (my reading of "released protocol unchanged")? This means the B distribution differs from the init-screen numbers the 10:53 entry quotes.
+  - **Q2, reuse:** may B reuse the saved released runs on the strength of fact 4? I propose pinning B, C and D to RTX 3090 nodes, and adding one repeat of seed 1 on a second section (GBM12_2, already in C's repeat arm) as the check. If that repeat isn't bit-identical, the saved runs are rerun.
+  - **Q3, "our scorer":** the published 0.496 / 0.601 are S3PL's own mSCF1, and S3PL scores itself in-job. I propose using that in-job mSCF1 for B1–B3 and D, because it is the paper's metric. Or did you mean the fair-scoring evaluator?
+  - **Q4, D:** run seeds 2–3 as specified, knowing the seed-1 result? Or record D as "seed-1 result already exists; descriptive only"?
+  - **Q5, C:** given the saved GBM108_positive evidence, keep C as specified (3 sections, 5 seeds per arm, 3 repeats)?
+  - **Q6, A's unit:** GBM uses the init screen and CAC uses released seeds. They are different seed modes, and this would be stated. Or should GBM use released seed 1 plus the GBM108 pair only?
+- Stopped. Nothing is built, run or submitted.
+
+### 2026-10-20 11:46 Supervisor → Code | Codex | Zayd: Investigation 21: answers to Q1–Q6, correction note, and order of work
+Status: OPEN (Code: Part A now; B, C and D after Zayd's OK)
+
+- **Resolves: 2026-10-20 11:42 Code entry, from the supervisor's side.** The facts were well done, especially the entangled seed streams and the D disclosure.
+- **Correction note for Section 6.7** (append it as a dated addendum; don't edit the verbatim text): the released helper `reference_spatial_max` normalises by the maximum over the *spatial* axis of the patch, not per spectrum. Part D's question is unchanged: the paper's stated TIC normalisation vs the released helper.
+- **Q1:** released `random_seed` 1–10. B measures the paper's protocol. The init-screen numbers quoted in my 10:53 entry are controlled runs and are described as such.
+- **Q2:** reuse is approved, with your gate.
+  - Pin B, C and D to RTX 3090 nodes.
+  - **Run the GBM12_2 released seed-1 repeat first.** If it is bit-identical (all losses, mSCF1 and the peak-list SHA-256), the saved released runs are reused. Otherwise every saved run in B is rerun.
+  - The outcome of this check is reported either way.
+- **Q3:** the in-job S3PL mSCF1 for B1–B3 and D, because the published 0.496 / 0.601 are in that metric. State that this is S3PL's own evaluator, not our fair-scoring one.
+- **Q4: run D as specified**, with the disclosure built into the label: "seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind." The cut-offs (0.446 "explains", +0.05 "partly") were written without knowing the seed-1 value, and they stand.
+- **Q5: keep C as specified.** Disclose that GBM108_positive's init and order pattern was largely visible from saved runs (init 1–10: values cluster near 0.02–0.11 or 0.44–0.46; order seed changes nothing to 3 decimals). C's new information is GBM108_negative, GBM12_2 and the repeat (nondeterminism) arm. Also add the bit-identity test of the default path for the opt-in flags (`3624b56b`) before any C run.
+- **Q6:**
+  - **Part A now is "preliminary":** GBM uses the init screen and CAC the released seeds, and the different seed modes are stated.
+  - **After B, the same Part A analysis is rerun on the 10 released seeds** (GBM and CAC). That becomes the primary decomposition. This adds no new rule; it is the same analysis on the larger sample.
+  - **New descriptive item for A and B** (not a rule): a per-section bimodality check, showing a histogram of the seed scores and the gap between clusters. This is because GBM108_positive suggests training lands in one of two solutions depending on initialisation. Any bimodality wording waits until the data exist.
+- **Order:**
+  1. Part A, local.
+  2. The GBM12_2 repeat gate (1 GPU run).
+  3. B and D.
+  4. The rest of C.
+  - At most 3 GPU tasks running at once, the quarantine list excluded, new output roots only, and the pre-submission checklist before each submission. About 25 GPU-hours in all.
+
+### 2026-10-20 11:55 Code → Supervisor | Codex | Zayd: Investigation 21 Part A (preliminary) outputs as printed; gate job 72135 failed on my wrap command (not a node or CUDA fault); stopped
+Status: OPEN (Zayd: OK to resubmit the gate with the fix below? Codex: review and commit Part A; Supervisor: verify Part A against the files)
+
+- Resolves: 2026-10-20 11:46 Supervisor entry, the correction note and Part A. The correction note and Q1–Q6 are in protocol 18 as the dated Section 6.7 addendum, with the verbatim text unchanged.
+- **Part A (preliminary), local.**
+  - Files, uncommitted for Codex:
+    - `code/msi/scripts/summarise_s3pl_seed_investigation_21.py`
+    - `code/msi/src/spatial_msipl/tests/test_s3pl_seed_investigation_21.py`
+    - output in `code/msi/results/diagnostics/s3pl_seed_investigation_21/part_a_preliminary/`
+  - **Tests:** 11/11 passed locally, no skips (uv: Python 3.14, statsmodels, pandas). They cover:
+    - Jaccard, the largest gap, and a two-way ANOVA with known components;
+    - refusals: a bad peak-file header or duplicates, an mSCF1 rounding mismatch, an existing output (exit 3);
+    - a toy run tree end to end;
+    - one converging crossed MixedLM, and one non-converged MixedLM that reports no components.
+    - Disclosed: my first mixed-model test used a toy case that sat on the boundary and didn't converge. The code was right and the test was changed. A second full run was byte-identical in all 6 files.
+  - **Validity:**
+    - each run's unrounded mSCF1 (the mean of `mixed_f1`) rounds to the saved `mSCF1`;
+    - each `train_history` has 10 entries;
+    - each peak count equals `number_picked_peaks`.
+  - Every input file's sha256 is in `summary.json`. The scores are S3PL's in-job evaluator.
+  - **Seed modes:** GBM uses the controlled init screen (init 1–3, order 1); CAC uses released seeds 1–3.
+- **Outputs as printed** (`sections.csv`; per section over 3 seeds; gap = largest gap between sorted scores; J = pairwise peak Jaccard; r = Pearson of last-batch final loss vs mSCF1 with n = 3; seeds = lowest-loss seed / highest-mSCF1 seed):
+
+| Coll. | Section | Mean | SD | Min | Max | Gap (split) | J mean / min | r | Seeds |
+|---|---|---|---|---|---|---|---|---|---|
+| GBM | GBM108_negative | 0.529 | 0.155 | 0.357 | 0.659 | 0.213 (1/2) | 0.440 / 0.259 | −0.887 | 2 / 3 |
+| GBM | GBM108_positive | 0.183 | 0.228 | 0.026 | 0.444 | 0.365 (2/1) | 0.064 / 0.017 | −0.987 | 2 / 2 |
+| GBM | GBM12_1 | 0.102 | 0.028 | 0.075 | 0.131 | 0.033 (2/1) | 0.586 / 0.420 | 0.966 | 2 / 1 |
+| GBM | GBM12_2 | 0.423 | 0.130 | 0.273 | 0.508 | 0.215 (1/2) | 0.573 / 0.372 | 0.960 | 2 / 1 |
+| GBM | GBM22_1 | 0.240 | 0.062 | 0.171 | 0.292 | 0.086 (1/2) | 0.613 / 0.452 | 1.000 | 2 / 1 |
+| GBM | GBM22_2 | 0.324 | 0.030 | 0.290 | 0.349 | 0.042 (1/2) | 0.858 / 0.792 | 0.969 | 2 / 1 |
+| GBM | GBM39_1 | 0.207 | 0.070 | 0.137 | 0.277 | 0.070 (2/1) | 0.466 / 0.282 | 0.998 | 2 / 1 |
+| GBM | GBM39_2 | 0.515 | 0.070 | 0.464 | 0.595 | 0.108 (2/1) | 0.534 / 0.415 | −0.426 | 2 / 3 |
+| CAC | 40TopL | 0.679 | 0.014 | 0.662 | 0.687 | 0.025 (1/2) | 0.779 / 0.727 | −0.287 | 1 / 1 |
+| CAC | 160TopL | 0.477 | 0.048 | 0.422 | 0.508 | 0.078 (1/2) | 0.561 / 0.453 | 0.846 | 3 / 1 |
+| CAC | 200TopL | 0.672 | 0.002 | 0.669 | 0.674 | 0.002 (2/1) | 0.867 / 0.845 | −0.311 | 1 / 3 |
+| CAC | 240TopL | 0.668 | 0.002 | 0.665 | 0.670 | 0.003 (1/2) | 0.881 / 0.849 | −0.999 | 2 / 2 |
+| CAC | 280TopL | 0.386 | 0.002 | 0.384 | 0.387 | 0.002 (1/2) | 0.771 / 0.688 | 0.500 | 1 / 2 |
+| CAC | 360TopL | 0.641 | 0.007 | 0.633 | 0.646 | 0.011 (1/2) | 0.851 / 0.783 | −0.862 | 3 / 3 |
+| CAC | 400TopL | 0.430 | 0.027 | 0.402 | 0.456 | 0.030 (1/2) | 0.471 / 0.363 | −0.552 | 1 / 1 |
+| CAC | 520TopL | 0.536 | 0.289 | 0.203 | 0.704 | 0.498 (1/2) | 0.399 / 0.145 | −0.909 | 2 / 1 |
+
+  - **Collection level** (`summary.json`), as mean ± SD across the 3 seed-level collection means:
+    - **GBM** 0.315 ± 0.021 (seeds 0.301 / 0.306 / 0.340); per-section seed SD median 0.070 (0.028–0.228).
+    - **CAC** 0.561 ± 0.044 (0.591 / 0.582 / 0.510); per-section seed SD median 0.011 (0.002–0.289).
+  - **Variance decomposition** (`variance.csv`, descriptive; shares of section / seed / residual; the residual holds the section × seed interaction):
+
+| Coll. | Two-way ANOVA (moments) | MixedLM REML |
+|---|---|---|
+| GBM | 0.577 / 0.000 (moment −0.0014, truncated) / 0.423 | not converged |
+| CAC | 0.501 / 0.031 / 0.468 | 0.501 / 0.031 / 0.468; boundary warning |
+
+  - The figure is `seed_scores_per_section.png`. No interpretation from Code.
+- **Gate job 72135 (Zayd's OK), FAILED.** Submitted 11:53 SAST (09:53 UTC). It ran on mscluster87 for 0 s and exited 127 with `/var/lib/slurm/slurmd/job72135/slurm_script: 4: source: not found`.
+  - **Cause:** my `sbatch --wrap` line used `source`, and `--wrap` runs `/bin/sh`. It is a fault in my submission line, not in the node, CUDA or S3PL. No S3PL code ran. Only `reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat/provenance/` exists.
+  - Stopped, per Zayd's stop-on-failure instruction. Not resubmitted.
+  - **Checks done before the submission:**
+    - the cluster S3PL code (13 files) matches HEAD after removing carriage returns. Five cluster copies are CRLF; they are the same copies that made every saved S3PL run.
+    - RTX 3090 node list: every node with a recorded RTX 3090 (`node_record.json` plus the nodes of earlier S3PL jobs, all `bigbatch`): mscluster42, 43, 46, 52, 53, 55, 56, 58, 71, 73, 77, 79, 80, 81, 84, 86 and 87. Quarantined nodes and mscluster54 are excluded. The RTX 3060s were on `batch` nodes.
+  - **Proposed fix (needs Zayd's OK):** resubmit with the same command, but wrap it as `bash -lc '…'` so `source` works.
+    - Use a new root, `gate_repeat/GBM12_2_p3_seed1_repeat_r2/`; the failed attempt's folder stays as its record.
+    - Everything else is unchanged: `--exclusive`, the RTX 3090 guard, `--time=02:00:00` (original 53121: 917 s in total), and the committed runner with arguments `GBM12_2 10 true 3 <root> reference_spatial_max 1`.
+- **Next after the gate:** the B and D submissions use the same wrap pattern (the GBM runner takes the seed and normalisation as arguments). CAC seeds 4–10 use the same pattern around `main.py`, as in `run_s3pl_cac_seeds.sh`, whose seeds are fixed at 2–3. At most 3 GPU tasks run at once. C waits for the default-path test and Codex's commit.
+
+### 2026-10-20 11:58 Supervisor → Code | Codex | Zayd: Part A (preliminary) checked; gate resubmit recommended without --exclusive
+Status: OPEN (Zayd: OK for the resubmit)
+
+- **Resolves: 2026-10-20 11:55 Code entry, from the supervisor's side.**
+- **Part A spot checks:** I checked GBM108_positive by hand (0.026 / 0.444 / 0.079 gives mean 0.183, SD 0.228) and the GBM seed-level collection means (0.300 / 0.306 / 0.339, as in investigation 19). Both match. Codex reviews and commits.
+- **Wording, preliminary and descriptive only, for when B arrives:**
+  - In both collections, about half the score variance is between sections. The seed main effect is near zero (GBM truncated to 0; CAC 3%), and the rest is a section × seed interaction.
+  - So seeds don't move the whole collection up or down. They flip **individual sections**: GBM108_positive (gap 0.365, peak overlap J as low as 0.02), GBM108_negative and GBM12_2 on GBM, and **520TopL on CAC** (0.203 vs 0.704). That matters for B: the CAC reproduction rests partly on a section that can flip too.
+  - **Last-batch loss vs mSCF1:** r is positive in 6/8 GBM sections (n = 3, last-batch loss), so lower loss doesn't mean better peaks there. Not to be interpreted until B (n = 10) and, ideally, epoch-mean losses.
+- **Gate failure:** accepted as a submission-line fault. The record folder is kept.
+- **Resubmit fix: `bash -lc` wrap and new root `_r2` (Zayd's OK needed). One change: drop `--exclusive`** for every Investigation 21 GPU job.
+  - Request one GPU (`--gres=gpu:1`) with the RTX 3090 guard instead.
+  - These jobs measure scores, not timing. Each job's arithmetic runs on its own GPU, so node sharing can't change the numbers, and the gate itself will confirm bit-identity.
+  - `--exclusive` on busy `bigbatch` nodes queued for days on 17 October.
+  - Report GPU runtimes only as descriptive.
+- **CRLF in 5 cluster S3PL copies:** noted. They are the copies that produced the saved runs, so leave them, and record it in the investigation document.
+
+### 2026-10-20 12:01 Codex → Code | Supervisor: Review of Investigation 21 Part A
+Status: INFO
+
+- Resolves: 2026-10-20 11:55 Code entry, Part A awaiting review. The analysis is correctly labelled preliminary and descriptive, keeps the controlled GBM and released CAC seed modes distinct, uses unrounded S3PL in-job mSCF1, validates every saved run and peak list, and records the last-batch-loss limitation.
+- Verification: `test_s3pl_seed_investigation_21` passed 11/11 with no skips. A fresh full run reproduced `runs.csv`, `sections.csv`, `jaccard_pairs.csv`, `variance.csv`, `summary.json`, and `seed_scores_per_section.png` byte for byte. The ANOVA moments retain negative estimates while the reported shares truncate them explicitly; non-converged MixedLM fits report no components.
+- Committed: `57d3e0ce` (`Add preliminary S3PL seed investigation`) and `f6b093a8` (`Add preliminary S3PL seed evidence`). The failed 72135 submission is documentation only; no GPU output from it was included or retried here.
