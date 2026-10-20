@@ -3226,3 +3226,145 @@ Status: INFO
 - Resolves: 2026-10-18 10:55 Code entry. The repeatable `--rerun` path implements every approved acceptance check and labels each substitution; `--conservative-not-done` retains the six-of-eight threshold, never counts a missing section, and leaves the default complete-data behaviour unchanged.
 - Local verification: `test_pca_reconstruction_v` passed 22/22. The CAC 360TopL rerun is `complete`, passes both unchanged 1e-6 explained-variance gates, matches the primary provenance signature, and records an i9-10940X CPU. Seven RCC timing summaries are complete on i9-10940X; their six comparable sections contain all 24 expected `identical (full-ranking SHA-256)` checks, while UH0505_12 has the expected unavailable comparison.
 - Committed: `7eef7b8d` (`Add PCA rerun and conservative summary paths`) and `054e6aef` (`Add PCA rerun and RCC timing evidence`). No PCA summary was generated, and the failed RCC section was not retried.
+
+### 2026-10-18 10:45 Supervisor → Code | Codex | Zayd: Overnight results checked; generate the PCA summary; RCC index 2 retry approved pending Zayd
+Status: OPEN
+
+- **Resolves: 2026-10-18 10:38 Code entry, from the supervisor's side.**
+- **CAC 360TopL rerun (70180): checked from the local file.** It is `complete`. PCA-5 differs from Test V by 7.9e-8 and PCA-20 by 4.7e-8, both within 1e-6. The CPU is recorded as i9-10940X on mscluster86. Under the 22:28 ruling, point 1, it replaces the `not_done` record. The fallback is not needed.
+- **Generate the PCA summary now** with the command in Code's entry (`--rerun CAC/360TopL=…`, without `--conservative-not-done`). Post the wording label, the per-collection counts and the median ratios exactly as the summariser prints them, with no interpretation. I'll verify against the files, then the result goes into pack chapter 6.8.
+- **RCC timing:** 7/8 complete, all on one i9 node, with every full-ranking check identical. That's a good result.
+  - **Retry of index 2 (UH0710_33): I recommend it.** The cause is a node failing to see an existing file, the same as the 69658 incident, not a code problem.
+  - Use the same command and root, excluding mscluster77. It needs Zayd's OK.
+  - The Monday 18:00 fallback (c) still applies to that one section if the retry hasn't passed by then. The table would then show RCC 6/8 with exact reproduction (UH0505_12 has no saved ranking).
+- **Timestamps:** the 10:55 Code entry was stamped about 10 minutes ahead of the local clock, and Codex's 10:44 entry resolves it. Please take the time from `date` immediately before writing. No need to fix past entries.
+
+### 2026-10-18 10:48 Code → Supervisor | Codex | Zayd: PCA reconstruction summary generated (output as printed); RCC timing index 2 retry 70528 submitted
+Status: INFO, for the supervisor's verification
+
+- Resolves: 2026-10-18 10:45 Supervisor entry: the summary, and the retry with Zayd's OK.
+- **Command** (summariser `7eef7b8d`, equal to HEAD; no `summary_local/` existed beforehand):
+  `python scripts/summarise_pca_reconstruction_v.py --rerun CAC/360TopL=results/diagnostics/pca_reconstruction_V/rerun_360TopL_bigbatch_i9/CAC/360TopL_seed1/summary.json --output results/diagnostics/pca_reconstruction_V/summary_local`
+  Run without `--conservative-not-done`. Output: `summary_local/{summary.json, section_table.csv, collection_summary.csv}`.
+- **As printed:**
+  - `fixed_wording`: **"Reconstruction error does not separate PCA-5 from the VAE."**
+  - Sections complete / expected: GBM 8/8, CAC 8/8, RCC 8/8 (RCC: "none; no saved VAE reconstruction, reported alone").
+  - `pca5_mse_exceeds_vae_count` / `sections` / `median_pca5_to_vae_mse_ratio`:
+
+    | Collection | Metric | vs `central_only` | vs `uniform_mean` |
+    |---|---|---|---|
+    | GBM | primary_raw_inverse_transform | 0 / 8 / 0.6312267027718396 | 2 / 8 / 0.6100820549434588 |
+    | GBM | secondary_clip_zero_then_tic | 0 / 8 / 0.6363470103252308 | 2 / 8 / 0.6152022742039542 |
+    | CAC | primary_raw_inverse_transform | 7 / 8 / 1.056858632935469 | 6 / 8 / 1.0629702708648812 |
+    | CAC | secondary_clip_zero_then_tic | 7 / 8 / 1.0878220195666408 | 7 / 8 / 1.0937006378335157 |
+
+  - `reruns`: CAC 360TopL, label `rerun_cross_cpu_gate`, source `rerun_360TopL_bigbatch_i9/CAC/360TopL_seed1/summary.json`, cpu_record `rerun_360TopL_bigbatch_i9/provenance/cpu_model.txt`.
+  - `notes`: the cosine-floor note (f).
+- **Cosmetic, for Codex (no number affected):** `reruns[0].replaces` is printed as an absolute local path (`C:/Users/.../pca_reconstruction_V/CAC/360TopL_seed1/summary.json`), because the default `--root` is absolute. `source` is relative. A later fix could print it relative to `ROOT`. Not changed now.
+- **RCC timing retry 70528**, submitted 10:46 SAST (08:46 UTC) with Zayd's OK:
+  - Index 2 (RCC_UH0710_33) only, with the same `--wrap` command and root as 70179.
+  - `--exclude=mscluster[42-54,56-70,72-73,75,77-89]` adds mscluster77, so mscluster55, 71, 74 and 76 are allowed.
+  - `OverSubscribe=OK`; pending on `Priority`. The input file is visible from the login node.
+  - The Monday 18:00 fallback (c) applies to this section if it hasn't passed by then.
+- No interpretation from Code. Logged in protocol 18 Section 10.
+
+### 2026-10-18 10:54 Supervisor → Code | Codex: PCA reconstruction summary verified; wording for the report
+Status: INFO
+
+- **Verified:** I recomputed every count and median ratio from `summary_local/section_table.csv`, and spot-checked GBM108_negative against its source `comparison.json` and PCA `summary.json`. All match what was printed.
+- **The predeclared label is "Reconstruction error does not separate PCA-5 from the VAE."** The planned note "PCA reconstructs worse yet ranks equally" is **dropped**.
+- **Descriptive, for chapter 6.8** (fixed now; no stronger wording):
+  - **GBM:** PCA-5 has *lower* reconstruction MSE than the centre-only VAE in all 8 sections (median ratio 0.63, both metrics). Against uniform it is lower in 6/8.
+  - **CAC:** PCA-5 MSE is higher in 7/8 sections against centre-only (median ratio 1.06–1.09), and 6–7/8 against uniform.
+  - Read with Test V: on GBM, the VAE segments slightly better (balanced accuracy 0.868 vs 0.839) while reconstructing worse than PCA-5. On CAC, PCA-5 reconstructs slightly worse while its peak scores are level or slightly higher. Reconstruction quality and peak-ranking quality don't move together, in either direction. Consistent with Mazarura, Jarvis & Bau (2025).
+  - **Caveats:** the VAE is trained on a cross-entropy loss, not MSE; PCA-5 is the MSE-optimal rank-5 linear map; in-sample reconstruction on one seed; RCC has no VAE comparison.
+- **Cosmetic absolute-path issue in `reruns[0].replaces`:** fine to fix later; no number is affected.
+
+### 2026-10-18 10:58 Code → Supervisor | Zayd: RCC timing retry widened to every up i9-10940X node (70530 replaces 70528)
+Status: INFO
+
+- Zayd's instruction: the requirement is the CPU model, not the original five nodes.
+- **One `sinfo -p bigbatch -N -h -o "%N %T %C %m"` at 10:56 SAST.** Nodes with a recorded i9-10940X in `results/`:
+
+  | Node | State | Idle CPUs | i9-10940X recorded | Used for 70530 |
+  |---|---|---|---|---|
+  | mscluster52 | allocated | 0 | yes | allowed |
+  | mscluster55 | allocated | 0 | yes | allowed |
+  | mscluster58 | allocated | 0 | yes | allowed |
+  | mscluster71 | allocated | 0 | yes | allowed |
+  | mscluster73 | allocated | 0 | yes | allowed |
+  | mscluster77 | allocated | 0 | yes | excluded (70179_2 failure) |
+  | mscluster79 | allocated | 0 | yes | allowed |
+  | mscluster81 | allocated | 0 | yes | allowed |
+  | mscluster84 | allocated | 0 | yes | allowed |
+  | mscluster86 | allocated | 0 | yes | allowed |
+  | mscluster87 | allocated | 0 | yes | allowed |
+
+  - Every other `bigbatch` node has no i9 record and is excluded. These include mscluster54 (allocated; the 17 Oct file-visibility incident), mscluster74 (allocated, unrecorded) and mscluster76 (down*).
+  - Overall: 25 allocated, 22 down*, 1 drained (mscluster85), 0 idle.
+- **70528** was still PENDING and was cancelled (`CANCELLED`, never started).
+- **70530** was submitted 10:56 SAST (08:56 UTC): index 2 (RCC_UH0710_33) only, with the same `--wrap` command and root, not exclusive (`OverSubscribe=OK`).
+  - `--exclude=mscluster[42-51,53-54,56-57,59-70,72,74-78,80,82-83,85,88-89]`, so 10 allowed nodes.
+  - Pending on `Priority`, because no node has idle CPUs.
+  - The reproduction check and the `cpu_model` record are unchanged. The Monday 18:00 fallback (c) applies.
+- Logged in protocol 18 Section 10.
+
+### 2026-10-20 09:56 Code → Supervisor | Codex | Zayd: RCC timing retry 70530 (index 2, RCC_UH0710_33) completed before the deadline with exact reproduction; fallback (c) not applied
+Status: INFO
+
+- Resolves: 2026-10-18 10:58 Code entry (the open 70530 retry).
+- **One `sacct` check, 20 Oct 09:46 SAST:** `70530_2` COMPLETED, exit 0:0, on mscluster52. Start 2026-10-18 18:46:27 UTC (20:46 SAST), end 18:46:52 UTC (20:46 SAST), elapsed 0:25.
+- **Deadline:** it completed on Sunday 18 Oct at 20:46 SAST, before the predeclared Monday 19 Oct 18:00 SAST stop rule. So fallback (c) does not apply, and the section goes into the table, not into a post-deadline note.
+- **Pull** 09:55 SAST, documented quiet artifact pull, `-n` first. Two files:
+  - new: `results/diagnostics/ranking_stage_runtime_rcc_bigbatch_shared/RCC_UH0710_33_seed1/uniform_mean/summary.json`;
+  - changed, committed file: `.../provenance/slurm_job_ids.txt`, which gains the 70528 and 70530 submission lines; the earlier content is unchanged. Zayd OK'd it before the real pull.
+- **Read locally from the pulled `summary.json`:**
+  - `status`: `complete`;
+  - `reproduction.rankings`: posterior-|PCC|, Moran's I, mean intensity and oracle are all `identical (full-ranking SHA-256)`; `posterior_max_abs_difference` 8.2e-7;
+  - `environment.cpu_model`: `Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz` (node mscluster52, job 70530, task 2, 2 OpenMP threads, Python 3.11.5, NumPy 2.4.6).
+- **RCC timing collection status:** 8/8 `complete`, all on i9-10940X, labelled "shared node, not exclusive". Exact reproduction holds in 7 sections (28/28 full-ranking checks identical). UH0505_12 has no saved ranking to compare against, as before.
+- No summary or table was generated, and there is no interpretation here. `build_current_evidence_tables.py` doesn't read this root, so it wasn't rerun.
+- Logged in protocol 18 Section 10. The uncommitted files are listed for Codex in Zayd's session.
+
+### 2026-10-20 10:25 Supervisor → Code | Codex: Outcome of the 19 October progress update (as reported by Zayd)
+Status: INFO
+
+- **Framing accepted:** the bounded contribution, a controlled empirical evaluation of spatial context, segmentation, ranking and evaluation choices.
+- **Report content is our decision.** That includes whether Tests V, N and R go in the body or the appendix.
+- **New request:** more formal statistical analysis instead of score comparisons alone, with Mann–Whitney mentioned. A predeclared statistical-analysis plan follows separately. It runs on saved per-section results only: no retraining and no new cluster scoring unless stated.
+- **Title:** the proposed title ("Spatial Aware Peak Ranking in Mass Spectrometry Imaging") was not accepted. The supervisor will record the recommended title once Zayd confirms it.
+- **Next phase:** report writing (due 31 October), plus the statistics.
+
+### 2026-10-20 10:28 Supervisor → Code | Codex | Zayd: Title correction; predeclared statistical-analysis plan (Section 6.6 "Stats"), saved results only
+Status: OPEN (Code: build after Zayd's OK; Codex: review)
+
+- **Correction to my previous entry:** the supervisor's recommended title is **"Spatial Aware Peak Ranking in Mass Spectrometry Imaging"**. She replaced our "Evaluating Spatial Context and Peak Ranking for MSI".
+- **Statistical-analysis plan, predeclared before any test output exists.** Copy it verbatim into protocol 18 as Section 6.6 before writing code. It is analysis of saved per-section results, run locally. The existing practical labels ("helps", "equivalent", …) stay unchanged; the tests are reported **beside** them, never replacing them.
+  1. **Paired comparisons:** every rule-labelled comparison in the family (protocol 18 Sections 6–7 and Tests S, V, N, R; Code lists the family, about 20, in the chat before computing anything). For each:
+     - n;
+     - the exact two-sided Wilcoxon signed-rank p (`scipy.stats.wilcoxon`, exact method; zero differences reported, `zero_method="wilcox"`);
+     - the Hodges–Lehmann median paired difference with an exact distribution-free 95% CI (Walsh averages);
+     - matched-pairs rank-biserial r;
+     - the sign count;
+     - a Holm-adjusted p across the whole family.
+  2. **Units:**
+     - Average the training seeds per section before testing when 3 seeds exist (Test R arms); otherwise use seed 1.
+     - GBM is also reported at PDX-line level: average the 2 sections per line, n = 4, so the minimum attainable two-sided p is 0.125. This must be stated.
+     - CAC is one biopsy: its tests are within-specimen. RCC is 8 subjects.
+     - Development sections are excluded wherever the original comparison excluded them.
+  3. **Mann–Whitney U, only for independent groups.** Per-peak quality of the *selected* bins of two rankings, e.g. each selected bin's maximum |PCC| with any class mask, for IG vs posterior correlation within each section. The selected sets aren't paired. Report U, p, and the common-language effect size per section, plus a per-collection summary with no pooled p.
+     - Code first checks whether per-bin mask correlations are saved locally. If they aren't, this item is "not done" and must not trigger new cluster work without a separate OK.
+  4. **Mixed model (descriptive):** score ~ method + (1 | section) [+ (1 | seed) where seeds exist], per collection, for IG vs correlation and VAE vs PCA-5. Report the fixed-effect estimate and its 95% CI. No model selection; if it fails to converge, report "not converged".
+  5. **Output:** `results/diagnostics/statistics_6_6/` (`tests.csv`, `mann_whitney.csv`, `mixed_models.csv`, `summary.json` with provenance and input hashes). Tests use known toy data (e.g. a hand-checked Wilcoxon/HL case).
+- **Wording rule, fixed now:**
+  - p-values describe these sections, not a population.
+  - With n = 8 the smallest possible p is 0.0078, and with n = 4 it is 0.125.
+  - A comparison is called "statistically supported" only if the Holm-adjusted p < 0.05 **and** the practical label is "helps" (or its opposite). Otherwise the practical label stands alone.
+- **Scope:** no retraining and no new scoring. The optional random-list chance baseline is *not* part of this plan.
+
+### 2026-10-20 10:35 Codex → Code | Supervisor: Review of final PCA summary and RCC timing evidence
+Status: INFO
+
+- Resolves: 2026-10-18 10:48 Code entry and 2026-10-20 09:56 Code entry, evidence awaiting commit. All three files in `pca_reconstruction_V/summary_local/` regenerated byte for byte with the approved CAC 360TopL rerun; the fixed wording remains "Reconstruction error does not separate PCA-5 from the VAE."
+- RCC timing is complete 8/8 on i9-10940X under the "shared node, not exclusive" label. Seven comparable sections contain 28/28 `identical (full-ranking SHA-256)` checks; UH0505_12 retains the expected unavailable comparison. Retry 70530 completed before the declared deadline and its provenance lines append without changing the earlier record.
+- Committed: `c62be27f` (`Add PCA summary and complete RCC timing evidence`). The new Section 6.6 statistics plan remains a predeclaration in the chat only; no statistics code or output was reviewed or committed here.

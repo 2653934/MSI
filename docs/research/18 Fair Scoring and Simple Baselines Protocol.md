@@ -1064,6 +1064,25 @@ A test rebuilds the IG matched groups from these files.
               - **Validity, read locally:**
                 - The 360TopL rerun is `complete`. Its explained-variance gate passes: PCA-5 7.9e-8, PCA-20 4.7e-8, both under 1e-6. Its code record equals the primary 23 sections'.
                 - RCC timing: 7 summaries `complete`, all on the i9-10940X. All 24 full-ranking checks are `identical (full-ranking SHA-256)`: 6 sections × posterior-|PCC|, Moran's I, mean intensity and oracle. UH0505_12 has no saved ranking (not available, as before).
+              - **PCA reconstruction summary** (supervisor 10:45; summariser `7eef7b8d`, equal to HEAD), about 10:45 SAST.
+                - Command: `summarise_pca_reconstruction_v.py --rerun CAC/360TopL=results/diagnostics/pca_reconstruction_V/rerun_360TopL_bigbatch_i9/CAC/360TopL_seed1/summary.json --output results/diagnostics/pca_reconstruction_V/summary_local`, without `--conservative-not-done`.
+                - **Printed wording: "Reconstruction error does not separate PCA-5 from the VAE."**
+                - GBM 8/8, CAC 8/8 (360TopL from the labelled rerun), RCC 8/8 reported alone.
+                - Counts and median ratios are in `summary_local/summary.json` and the supervisor chat (10:48).
+              - **RCC timing retry 70528** (index 2, RCC_UH0710_33 only; Zayd's OK), submitted 10:46 SAST (08:46 UTC).
+                - Same `--wrap` command and root as 70179. `--exclude=mscluster[42-54,56-70,72-73,75,77-89]` adds mscluster77, so mscluster55, 71, 74 and 76 are allowed.
+                - `OverSubscribe=OK`; pending on `Priority`. The input file is visible from the login node (19,568 bytes).
+              - **RCC timing retry widened** (Zayd's OK, 18 Oct; the requirement is the CPU model, not the original five nodes):
+                - One `sinfo -p bigbatch -N` at 10:56 SAST: every node with a recorded i9-10940X (52, 55, 58, 71, 73, 77, 79, 81, 84, 86, 87) was `allocated` with 0 idle CPUs; none was down or drained.
+                - **70528** was still PENDING and was cancelled (`CANCELLED`, never started).
+                - **70530** submitted 10:56 SAST (08:56 UTC): index 2 (RCC_UH0710_33) only, with the same `--wrap` command and root, not exclusive (`OverSubscribe=OK`).
+                - Allowed nodes: mscluster52, 55, 58, 71, 73, 79, 81, 84, 86, 87. `--exclude=mscluster[42-51,53-54,56-57,59-70,72,74-78,80,82-83,85,88-89]` excludes mscluster77 (the failure), mscluster54 (the 17 Oct file-visibility incident), 74 and 76 (model unrecorded) and every other `bigbatch` node.
+                - The reproduction check and the `cpu_model` record are unchanged. The Monday 19 Oct 18:00 fallback (c) applies.
+              - **20 October, outcome of 70530** (one `sacct` check, 09:46 SAST; chat 09:56):
+                - `70530_2` COMPLETED, exit 0:0, on mscluster52. It ran 18:46:27–18:46:52 UTC on 18 Oct (20:46 SAST), before the Monday 19 Oct 18:00 SAST stop rule, so fallback (c) does not apply.
+                - **Pull** 09:55 SAST (documented quiet artifact pull, `-n` first). It brought 2 files: the new `ranking_stage_runtime_rcc_bigbatch_shared/RCC_UH0710_33_seed1/uniform_mean/summary.json`, and `provenance/slurm_job_ids.txt`, which gains the 70528/70530 lines with its earlier content unchanged. Zayd OK'd the change to that committed file before the pull.
+                - **Read locally:** `complete`. All 4 full-ranking checks (posterior-|PCC|, Moran's I, mean intensity, oracle) are `identical (full-ranking SHA-256)`; the posterior's maximum difference is 8.2e-7. `cpu_model` is `Intel(R) Core(TM) i9-10940X CPU @ 3.30GHz`.
+                - **RCC timing:** 8/8 `complete` on i9-10940X ("shared node, not exclusive"). Exact reproduction holds in 7 sections (28/28 checks); UH0505_12 has no saved ranking to compare against.
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.
