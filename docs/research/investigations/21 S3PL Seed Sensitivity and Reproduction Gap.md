@@ -56,6 +56,9 @@ Sources: `code/msi/baselines/s3pl/train.py`, `main.py`, `utils/helpers.py`, `uti
    | GBM paper-TIC | 282–601 | — |
    | CAC p = 9, released, 10 epochs | 41–63 | 53–84 |
 
+10. **Cluster copies of the code (checked 20 October before any submission):** the 13 S3PL code and runner files on the cluster match HEAD once carriage returns are removed. Five of them are CRLF on the cluster: `config.json`, `data_configs.py`, `utils/helpers.py`, `utils/PeakEvaluation.py` and `model/Attention3DConvAutoencoder.py`. These are the copies that produced every saved S3PL run, so they are left unchanged (supervisor chat 11:58).
+11. **GPU allocation:** `bigbatch` has no GPU Gres configured, so Slurm cannot reserve a GPU. Investigation 21 jobs are not exclusive. Each one uses `cuda:0`, refuses any GPU that is not an RTX 3090, and logs other GPU processes at start. GPU runtimes are therefore descriptive only.
+
 ## Plan and costs
 
 See the chat entry of 20 October (Code → Supervisor, Investigation 21 code facts and plan). Order: A, then D and B, then C. A uses saved data only. B, C and D each need Zayd's OK and the pre-submission checklist.
@@ -74,4 +77,31 @@ The scores are S3PL's in-job mSCF1, recomputed unrounded. The primary decomposit
 
 ### Gate (GBM12_2 released seed-1 repeat)
 
-Job 72135 failed before running S3PL: the `--wrap` shell has no `source`. Not retried; see protocol 18 Section 10.
+- **Job 72135** failed before running S3PL, because the `--wrap` shell has no `source`.
+- **The retry, 72136, passed.** It is bit-identical to job 53121 in all 10 losses, `mixed_f1`, mSCF1 and the peak-list SHA-256. Saved released runs are therefore reused.
+
+### Part D (20 October; awaiting the supervisor's check)
+
+Output: `code/msi/results/diagnostics/s3pl_seed_investigation_21/part_d/`.
+
+- **Label:** "does not explain; seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind".
+- **Collection means:** paper-TIC 0.303, released helper 0.324 (per-section means over seeds 1–3).
+- **Paired TIC − released** (n = 8): exact p = 0.742, Hodges–Lehmann −0.012 [−0.154, 0.099].
+- **Provenance note (Codex review 20:51):** `part_d/summary.json` was produced **before the short-list change**. Its recorded code hashes are:
+  - `summarise_s3pl_investigation_21_bd.py` `4c4780ffb62177c1…`;
+  - `summarise_s3pl_seed_investigation_21.py` `dca84cc0643c204b…`;
+  - `paired_statistics.py` `7a5b79a8e5d8ba46…`.
+
+  The committed code (`da3bddab`) has `e791516e2b621b1a…` and `68d4e70bccc66730…` for the two scripts; `paired_statistics.py` is unchanged. The D numbers are unchanged, because all 48 D runs have native peak counts, so the short-list rule never applies to them. The Part D output is kept as produced; it was not regenerated or edited.
+
+### Part B (in progress)
+
+- **Done:** chunks 1 and 2 (72139, 72190). In 72190, 6 CAC tasks failed on a race to create a shared output folder (a setup fault).
+- **Stopped,** waiting for Zayd's OK on the fix; see the chat, 14:06.
+- **15:35 (fix approved):** the submitter now checks that output folders exist, and all subfolders were created. My folder command also made 160 stray empty folders in `$HOME/msi`. Stopped before any submission; the cleanup needs Zayd's OK (chat 15:40).
+- **15:38–20:33:** the cleanup was done, the 6 failed tasks were retried (72269), and chunks 72276, 72303 and 72440 ran with no failures. Released seeds 1–10 now exist for all 16 sections, and they were pulled at 20:33.
+- **20:34: the summariser refused one run.** CAC 240TopL seed 7 returned 256 of 257 peaks. That is the released code's own cut-off: only 256 distinct m/z were ever selected. It is the only deviation in 160 runs. Stopped for a decision (chat 20:36).
+- **20:39, decision (supervisor, option 1; Zayd's OK):** the run is kept, and the balanced 8 × 10 design stands.
+  - **The rule:** a run may hold fewer peaks than `num_GT_peaks` only if that number equals its logged distinct-selection count. That count is recorded for all 140 tasks in `reproducibility/s3pl_investigation_21/provenance/selection_counts.tsv`. A count above native, or any other shortfall, is refused.
+  - **Reported beside Parts A and B:** "1/160 released runs returned 256 of 257 peaks (released distinct-m/z cut-off; CAC 240TopL seed 7)".
+  - **Disclosure:** Code saw this run's in-job mSCF1 (0.143) in its Slurm log on the cluster before any summary was computed. The rule was decided on validity: the released code keeps all of its distinct selections when there are fewer than the target. **The decision would be the same for any score value.**

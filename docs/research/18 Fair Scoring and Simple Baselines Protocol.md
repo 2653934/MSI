@@ -1235,6 +1235,13 @@ A test rebuilds the IG matched groups from these files.
                 - **Tests:** 28/28 local, 5 of them new.
                 - **Preliminary Part A:** rerun, identical except for the code hash.
               - **Cleanup result (supervisor 15:37, condition 2):** `ls -A $HOME/msi` after the cleanup matched the saved expected list exactly, 13 entries; posted in the chat at 20:45.
+              - **20:54 SAST, Part D provenance note** (Codex 20:51 finding): added to the investigation document. `part_d/` was produced with the code from before the short-list change; it was neither regenerated nor edited.
+              - **20:55 SAST, Part B and Part A-released (local, committed code):**
+                - `part_b/` and `part_a_released/` under `results/diagnostics/s3pl_seed_investigation_21/`, both exit 0, each from 641 input files.
+                - **Labels, as printed:** GBM B1 "outside our seed distribution", B2 "not explained by seed selection alone"; CAC B3 the same two labels.
+                - Collection mean ± SD across the 10 seeds: GBM 0.3193 ± 0.0419, CAC 0.5470 ± 0.0377.
+                - Short lists: 1/160, as reported.
+                - Full outputs are in the chat at 20:55. Awaiting the supervisor's verification and Codex's review.
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.
