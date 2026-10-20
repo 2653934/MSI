@@ -1,0 +1,81 @@
+{
+  "GBM": {
+    "sections_complete": 8,
+    "sections_expected": 8,
+    "mse_comparisons": {
+      "primary_raw_inverse_transform": {
+        "central_only": {
+          "pca5_mse_exceeds_vae_count": 0,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 0.6312267027718396
+        },
+        "uniform_mean": {
+          "pca5_mse_exceeds_vae_count": 2,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 0.6100820549434588
+        }
+      },
+      "secondary_clip_zero_then_tic": {
+        "central_only": {
+          "pca5_mse_exceeds_vae_count": 0,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 0.6363470103252308
+        },
+        "uniform_mean": {
+          "pca5_mse_exceeds_vae_count": 2,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 0.6152022742039542
+        }
+      }
+    }
+  },
+  "CAC": {
+    "sections_complete": 8,
+    "sections_expected": 8,
+    "mse_comparisons": {
+      "primary_raw_inverse_transform": {
+        "central_only": {
+          "pca5_mse_exceeds_vae_count": 7,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 1.056858632935469
+        },
+        "uniform_mean": {
+          "pca5_mse_exceeds_vae_count": 6,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 1.0629702708648812
+        }
+      },
+      "secondary_clip_zero_then_tic": {
+        "central_only": {
+          "pca5_mse_exceeds_vae_count": 7,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 1.0878220195666408
+        },
+        "uniform_mean": {
+          "pca5_mse_exceeds_vae_count": 7,
+          "sections": 8,
+          "median_pca5_to_vae_mse_ratio": 1.0937006378335157
+        }
+      }
+    }
+  },
+  "RCC": {
+    "sections_complete": 8,
+    "sections_expected": 8,
+    "comparison": "none; no saved VAE reconstruction, reported alone"
+  },
+  "fixed_wording": "Reconstruction error does not separate PCA-5 from the VAE.",
+  "notes": [
+    "Cosine similarity floors each row norm at 1e-8 separately (the older torch form); the difference from the product-floor form is negligible at these norms. Descriptive only (supervisor chat 2026-10-17 21:53, item f)."
+  ],
+  "reruns": [
+    {
+      "collection": "CAC",
+      "section": "360TopL",
+      "label": "rerun_cross_cpu_gate",
+      "source": "results/diagnostics/pca_reconstruction_V/rerun_360TopL_bigbatch_i9/CAC/360TopL_seed1/summary.json",
+      "replaces": "C:/Users/zayds/Documents/Research/MSI/code/msi/results/diagnostics/pca_reconstruction_V/CAC/360TopL_seed1/summary.json",
+      "cpu_record": "results/diagnostics/pca_reconstruction_V/rerun_360TopL_bigbatch_i9/provenance/cpu_model.txt"
+    }
+  ]
+}
