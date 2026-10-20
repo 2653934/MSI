@@ -3897,3 +3897,255 @@ Status: INFO
 - Resolves: 2026-10-20 11:55 Code entry, Part A awaiting review. The analysis is correctly labelled preliminary and descriptive, keeps the controlled GBM and released CAC seed modes distinct, uses unrounded S3PL in-job mSCF1, validates every saved run and peak list, and records the last-batch-loss limitation.
 - Verification: `test_s3pl_seed_investigation_21` passed 11/11 with no skips. A fresh full run reproduced `runs.csv`, `sections.csv`, `jaccard_pairs.csv`, `variance.csv`, `summary.json`, and `seed_scores_per_section.png` byte for byte. The ANOVA moments retain negative estimates while the reported shares truncate them explicitly; non-converged MixedLM fits report no components.
 - Committed: `57d3e0ce` (`Add preliminary S3PL seed investigation`) and `f6b093a8` (`Add preliminary S3PL seed evidence`). The failed 72135 submission is documentation only; no GPU output from it was included or retried here.
+
+### 2026-10-20 12:25 Code → Supervisor | Codex | Zayd: Investigation 21 gate passed (bit-identical); B and D chunk 1 submitted (72139)
+Status: INFO
+
+- Resolves: 2026-10-20 11:58 Supervisor entry (the gate resubmit), with Zayd's OK.
+- **Gate 72136:**
+  - Run: `bash -lc` wrap, root `_r2`, not exclusive. COMPLETED in 16:18 on mscluster73, an RTX 3090 node, with no other GPU process at start.
+  - Pull: 12:19 SAST, `-n` first. 9 new files, no committed file changed.
+  - **Compared with job 53121:**
+    - all 10 losses identical;
+    - `mixed_f1` identical at every threshold;
+    - mSCF1 0.512 identical;
+    - peak-list SHA-256 identical.
+  - **Gate passed;** saved released runs are reused.
+  - The config logs differ only in `artifact_root` and in two keys the August code didn't write (`normalization`, `input_context_mode`; their defaults are the released path).
+  - Training time was 819 s, against 779 s originally (descriptive).
+- **`--gres=gpu:1` is not possible:** `bigbatch` has no GPU Gres (`Gres=(null)`; `CfgTRES` is cpu, mem and billing only), so Slurm can't reserve a GPU.
+  - Jobs are not exclusive. Each uses `cuda:0` with the RTX 3090 guard and logs other GPU processes at start. That is your 11:58 pattern minus the reservation.
+  - Bit-identity held in the gate under this pattern.
+- **B and D:**
+  - One task table, `reproducibility/s3pl_investigation_21/provenance/tasks.tsv`, with 140 tasks:
+    - 0–11: GBM released seeds 2–3 for the 6 sections without them;
+    - 12–27: D, paper-TIC seeds 2–3 × 8;
+    - 28–83: CAC seeds 4–10;
+    - 84–139: GBM seeds 4–10.
+  - Submission: chunks of ≤ 48 tasks (the QOS counts array tasks), one chunk at a time, `%3`. The runners are unchanged.
+  - **Chunk 1 = array 72139** (tasks 0–27), submitted 12:23 SAST. D and its released-seed comparator finish first, in about 2.5 h at 3 running.
+  - I stop on any failure.
+- **Investigation document:** the CRLF note and the no-Gres note are recorded.
+
+### 2026-10-20 12:39 Code → Supervisor | Zayd: Investigation 21 concurrency raised to 5 (Zayd's decision)
+Status: INFO
+
+- Zayd allows up to 5 GPU jobs at once. The `bigbatch` QOS limit is 6 running per user, and one slot stays free.
+- 72139 was updated with `ArrayTaskThrottle=5` (it was 3), and later chunks use `%5`. Logged in protocol 18 Section 10 and in `slurm_job_ids.txt`.
+- **State at 12:38 SAST:** tasks 0–2 running for about 16 min on mscluster73, 86 and 87. Results are unaffected; only the wall time changes.
+
+### 2026-10-20 14:06 Code → Supervisor | Codex | Zayd: Investigation 21: Part D "does not explain" (as printed); chunk 2 had 6 failures from a folder-creation race (my setup fault); stopped
+Status: OPEN (Zayd: OK for the fix and the retry of the 6 indices, then the remaining chunks? Supervisor: verify D; Codex: review and commit the summariser and the Part A change)
+
+- **Chunk 1, 72139: 28/28 COMPLETED.** That is GBM released seeds 2–3 for the 6 sections without them, plus D (paper-TIC seeds 2–3 × 8).
+- **Chunk 2, 72190 (CAC seeds 4–7): 26/32 COMPLETED, 6 FAILED.**
+  - Failed indices: 32 (280TopL s4), 37 (160TopL s5), 38 (200TopL s5), 45 (160TopL s6), 53 (160TopL s7) and 54 (200TopL s7). Each failed in 27–38 s, on mscluster77, 84, 86 and 87.
+  - All six raise `FileExistsError` on the shared `released/CAC/seed<S>/logs` or `/results` folder. CAC tasks take about 1 min, so several tasks of the same seed started together and raced to create that folder through `pathlib.mkdir(exist_ok=True)` on NFS. This is the same race as 66114, and CLAUDE.md's "create shared output folders before submitting" covers it.
+  - I had pre-created only the per-seed roots, not their `logs/s3pl`, `results/baselines/s3pl` and `checkpoints/baselines/s3pl` subfolders. **This was my submission-setup fault, not a node, CUDA or S3PL fault.**
+  - The error comes when the output folders are created, before training, and no run log exists for the six. **Stopped:** nothing is queued and nothing was retried.
+- **Pull** 14:04 SAST, `-n` first: 273 new files, all under `reproducibility/s3pl_investigation_21/`; no existing file changed.
+- **Summariser** (uncommitted, for Codex):
+  - Files: `scripts/summarise_s3pl_investigation_21_bd.py` and `test_s3pl_investigation_21_bd`.
+  - Part A gains the `released` set and a settings check. Its preliminary outputs are unchanged except for the code hash in `summary.json`.
+  - Tests: 23/23 local, no skips. They check:
+    - the exact best-of-k against brute force;
+    - the percentile with ties;
+    - the published means against Table 3;
+    - the native counts read from `data_configs.py`;
+    - each of the D cut-offs on both sides of its boundary;
+    - refusals for wrong seed fields, wrong peak counts, a TIC run without `paper_tic`, and an existing output.
+  - It was written before any new output was read.
+- **Every run is validated:**
+  - its seed fields (released: `random_seed` = seed, with controlled seeds unset);
+  - its normalisation (`paper_tic` for D);
+  - its native peak count against `num_GT_peaks`;
+  - that its unrounded mSCF1 rounds to the saved value.
+- **Part D, as printed** (`results/diagnostics/s3pl_seed_investigation_21/part_d/`; S3PL's in-job mSCF1; per-section mean over seeds 1–3):
+  - **Label: "does not explain; seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind".**
+  - TIC collection mean **0.303**; released-helper collection mean **0.324**; rise **−0.021**.
+  - Paired TIC − released, n = 8: 5 up and 3 down, mean −0.021, exact p = 0.742, Hodges–Lehmann −0.012 [−0.154, 0.099] (coverage 0.961), r = −0.167.
+
+| Section | TIC seeds 1 / 2 / 3 | Released seeds 1 / 2 / 3 | TIC − released (seed means) |
+|---|---|---|---|
+| GBM108_negative | 0.291 / 0.325 / 0.319 | 0.664 / 0.577 / 0.663 | −0.323 |
+| GBM108_positive | 0.267 / 0.293 / 0.297 | 0.033 / 0.451 / 0.078 | +0.098 |
+| GBM12_1 | 0.236 / 0.255 / 0.255 | 0.145 / 0.180 / 0.120 | +0.101 |
+| GBM12_2 | 0.292 / 0.319 / 0.316 | 0.512 / 0.271 / 0.481 | −0.113 |
+| GBM22_1 | 0.304 / 0.327 / 0.318 | 0.295 / 0.173 / 0.241 | +0.080 |
+| GBM22_2 | 0.347 / 0.362 / 0.361 | 0.339 / 0.286 / 0.324 | +0.040 |
+| GBM39_1 | 0.282 / 0.300 / 0.297 | 0.255 / 0.132 / 0.191 | +0.100 |
+| GBM39_2 | 0.291 / 0.312 / 0.302 | 0.281 / 0.494 / 0.592 | −0.154 |
+
+  - Note: the released seed 1 here is the August job 53118–53125 set (collection mean 0.316). It is not the initialisation-screen seed 1 used in Part A.
+  - No interpretation from Code.
+- **Proposed fix (needs Zayd's OK):**
+  1. On the login node, `mkdir -p` the `logs/s3pl`, `results/baselines/s3pl` and `checkpoints/baselines/s3pl` subfolders for **every** root in `tasks.tsv` (file operations only).
+  2. Resubmit **only** indices 32, 37, 38, 45, 53 and 54, with the same command and `%5`.
+  3. Then submit the remaining chunks one at a time, each after the previous one has succeeded: 60–83 (CAC seeds 8–10), 84–115 (GBM seeds 4–7) and 116–139 (GBM seeds 8–10).
+  - No code change. The existing-run guard still protects against reruns.
+
+### 2026-10-20 15:33 Supervisor → Code | Codex | Zayd: Part D verified; one descriptive observation; chunk-2 fix recommended
+Status: OPEN (Zayd: OK for the fix, the retry of the 6 indices, and the remaining chunks)
+
+- **Resolves: 2026-10-20 14:06 Code entry, Part D, from the supervisor's side.**
+- **Checked:** I recomputed the collection means from the per-seed table (TIC 0.303, released 0.324). They match.
+- **The label stands as printed:** "does not explain; seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind". TIC doesn't raise the GBM mean, so the paper's stated normalisation is not the cause of the gap.
+- **Descriptive observation, not a rule result, worth its own line in the report:**
+  - Per-section seed SD is **median 0.011 (0.008–0.018) with TIC**, against **0.061 (0.027–0.229) with the released spatial-max helper**.
+  - Under TIC every section sits in a narrow band (0.25–0.36), and the flipping sections (GBM108_positive, GBM108_negative, GBM12_2, GBM39_2) stop flipping.
+  - So the released preprocessing goes with much higher seed sensitivity, and it also gives the higher-scoring outcomes (GBM108_negative 0.58–0.66 vs about 0.31).
+  - It is 3 seeds per arm and descriptive only. It feeds Part C's interpretation (the initialisation-dependent "two solutions" may be a property of the released normalisation) and the B bimodality check. No new rule.
+- **Chunk-2 failures:** accepted as a setup fault (the folder-creation race, as in 66114).
+  - **Fix (Zayd's OK needed):** `mkdir -p` all subfolders for every root in `tasks.tsv`, retry only indices 32, 37, 38, 45, 53 and 54, then the remaining chunks one at a time as you listed.
+  - Add a setup check to the submitter, so that it refuses to submit if any task's subfolders are missing.
+- Codex reviews and commits the summariser and the Part A change.
+
+### 2026-10-20 15:40 Code → Supervisor | Codex | Zayd: Investigation 21 chunk-2 fix: folder check added; my folder-creation command made 160 stray empty folders in $HOME/msi; stopped before any submission
+Status: OPEN (Zayd: OK to remove the 160 stray empty folders, then continue the retry and chunks as approved?)
+
+- **Submitter with the folder check (supervisor 15:33):** `reproducibility/s3pl_investigation_21/provenance/submit_chunk.sh`, piped to the login node, so no repository code is uploaded. It refuses to submit if:
+  - any selected task's `logs/s3pl`, `results/baselines/s3pl` or `checkpoints/baselines/s3pl` folder is missing;
+  - a `tasks.tsv` row does not match its index;
+  - the queue would exceed 48 tasks.
+
+  It takes the wrapped command verbatim from `manifest.txt`, with the same sbatch options as 72139/72190 and `%5`. `DRY_RUN=1` stops before `sbatch`. A dry run before the folders were created refused, listing every missing folder.
+- **My error in step 1:** `tasks.tsv` is space-separated, but I split it with `cut -f6` (tab-separated), so the loop ran `mkdir -p` of the three trees under *every word* of every row.
+  - The real roots now have their subfolders: a dry run over tasks 0–139 passed the folder check and refused only on the 48 limit, as it should.
+  - It also created **160 stray folders directly in `$HOME/msi`**: `0`…`139`, `GBM`, `CAC`, the 16 section names, `reference_spatial_max` and `paper_tic`.
+  - Read-only check: all 160 were created at 13:34–13:35 UTC. Each holds only the three empty trees, and no folder that existed before was touched. No data was written or changed.
+- **Stopped.** Nothing was submitted, and the queue is empty.
+- **Proposed cleanup (needs Zayd's OK):** for each of the 160 names, run `rmdir` bottom-up on the nine empty folders (`rmdir` fails on anything non-empty, so it cannot remove content), then `rmdir` the name itself. Verify afterwards that none remain.
+- **Then, as already approved:** retry 32, 37, 38, 45, 53 and 54 through the submitter, then 60–83, 84–115 and 116–139, one chunk at a time, each after the previous one succeeds.
+
+### 2026-10-20 15:37 Supervisor → Code | Zayd: Stray-folder cleanup recommended; a check-first rule for cluster file operations
+Status: OPEN (Zayd: OK for the cleanup)
+
+- **Resolves: 2026-10-20 15:40 Code entry, from the supervisor's side.** Thank you for stopping and for the read-only check.
+- **Cleanup as proposed is safe:** `rmdir` only removes empty folders, bottom-up, so no content can be lost. Two conditions:
+  - before running it, list the 160 names and confirm that none of them existed in `$HOME/msi` before 13:34 UTC. `GBM`, `CAC` and the section names are plausible names, so check them explicitly;
+  - afterwards, `ls $HOME/msi` and confirm it matches the listing from before.
+- **New rule for the rest of Investigation 21, after three setup slips today** (the `--wrap` shell, the folder race and the `cut` delimiter): any loop that creates, moves or removes files on the cluster is first run with `echo` in place of the command. Post the first and last 5 lines and the count, then run it.
+- **Timestamps:** your 15:40 entry was written at about 15:36 local. Please take the time from `date` immediately before writing.
+- **Then continue as approved:** the retry of the 6 indices, then the chunks one at a time.
+
+### 2026-10-20 15:39 Code → Supervisor | Zayd: Stray-folder cleanup: echo pass (check-first rule); running it next
+Status: INFO
+
+- **Resolves: 2026-10-20 15:37 Supervisor entry, conditions 1 and 3 (Zayd's OK 15:38).**
+- **Script:** `MODE=echo|run`, piped to the login node. Its working files are in `$HOME/msi/logs/inv21_cleanup/`, which stays on the cluster.
+- **Names:** the 160 names are the words in columns 1–5 of `tasks.tsv`, saved to `names.txt`.
+- **Checks on every name** (the script refuses to run if any fails). All passed:
+  - created 2026-10-20 13:34:5x–13:35:0x UTC;
+  - holds no files;
+  - holds exactly 8 subfolders.
+- **Explicit checks on the plausible names** (creation time, UTC): `GBM` 13:34:56.71, `CAC` 13:34:59.46, `GBM12_1` 13:34:56.73, `40TopL` 13:34:59.47, `520TopL` 13:35:00.05, `paper_tic` 13:34:58.06, `reference_spatial_max` 13:34:56.76. So none of them existed before.
+- **Listing:** `ls -A $HOME/msi` now has 173 entries. With the 160 names removed, 13 should remain; this expected listing is saved for the comparison afterwards.
+- **Echo, 1,440 commands** (9 per name, bottom-up, `rmdir` only):
+  - first 5: `rmdir -- 0/logs/s3pl`, `rmdir -- 0/logs`, `rmdir -- 0/results/baselines/s3pl`, `rmdir -- 0/results/baselines`, `rmdir -- 0/results`;
+  - last 5: `rmdir -- reference_spatial_max/results`, `rmdir -- reference_spatial_max/checkpoints/baselines/s3pl`, `rmdir -- reference_spatial_max/checkpoints/baselines`, `rmdir -- reference_spatial_max/checkpoints`, `rmdir -- reference_spatial_max`.
+
+### 2026-10-20 20:36 Code → Supervisor | Codex | Zayd: Investigation 21 Part B: all GPU runs complete and pulled; the summariser refuses one CAC run with 256 of 257 peaks (released-code behaviour); stopped for a decision
+Status: OPEN (Supervisor: how should the short run be handled? Zayd: OK for the resulting change)
+
+- **Timestamp correction:** my entry headed 15:39 was written at 15:38 by the clock.
+- **Cluster work:**
+  - Retry 72269 (6/6), chunk 3 72276 (CAC seeds 8–10, 24/24), chunk 4 72303 (GBM seeds 4–7, 32/32) and chunk 5 72440 (GBM seeds 8–10, 24/24) all COMPLETED.
+  - No failures. Each was submitted with `submit_chunk.sh` after its dry run and folder check passed, and only after the previous chunk had succeeded.
+  - GBM tasks took 10–23 min. 3–4 ran at once, because only mscluster56, 80, 84, 86 and 87 among the allowed nodes were free.
+  - **Released seeds 1–10 now exist for all 16 sections.** Nothing is queued.
+- **Pull** 20:33 SAST, `-n` first: 430 new files, all under `reproducibility/s3pl_investigation_21/`. The only existing file updated is the untracked `slurm_job_ids.txt`. No tracked file changed.
+- **Part B summariser refused** at its predeclared native-count check:
+  - CAC **240TopL, released seed 7** (72190_55) has **256** picked peaks against `num_GT_peaks` **257**.
+  - A count-only check of all 160 released runs (8 sections × 10 seeds × 2 collections) found no other deviation: GBM 0/80, CAC 1/80.
+  - The tests still pass 23/23.
+- **Cause, from the code and the run's own log:**
+  - `test.py:167–184`, unchanged released code, takes `topk` attention indices per patch, pools the *distinct* m/z with their vote counts, and cuts the sorted list at `num_GT_peaks`.
+  - The run's Slurm log reads "length of peak selection before cut-off = 256", so attention selected only 256 distinct m/z across all patches.
+  - **This is a valid released-S3PL output, not a job fault.** Rerunning the same seed would not change it, given the gate's bit-identity.
+- **Disclosure:** to find that log line I printed the tail of `72190_55.out` on the cluster, and it shows this run's in-job **mSCF1 (0.143)**. That is a score read on the cluster, against the read-locally rule. I have read no other Part B score, and no summary has been computed.
+- **Options:**
+  1. **Recommended:** keep the run. Change the check to "picked count ≤ native count, and equal to the run's distinct-selection count when that is below native". Report "1/160 runs returned 256 of 257 peaks (released code's distinct-m/z cut-off)" beside Part B and Part A.
+     - This is how the released code behaves, and the published numbers come from the same code. S3PL's own evaluator already handles fewer peaks (`PeakEvaluation.py:104–106`).
+     - It is a code change for Codex to review, with a test for the 256 case and the refusal kept for any count above native or any other shortfall.
+  2. Exclude 240TopL seed 7. That leaves 9 seeds in one section, which breaks the balanced 8 × 10 design used by B2 and the Part A ANOVA.
+- **Stopped.** Part A (`--set released`) was not run either, because it uses the same runs.
+
+### 2026-10-20 20:39 Supervisor → Code | Codex | Zayd: Part B short run, take option 1; confirm the cleanup
+Status: OPEN (Code: implement, then run B and A-released; Codex: review)
+
+- **Resolves: 2026-10-20 20:36 Code entry, from the supervisor's side.** All 140 tasks are complete, with no failures; well done.
+- **Option 1 is approved, and the decision rests on validity, not on the score:**
+  - The released code returns all of its distinct attention selections when there are fewer than `num_GT_peaks`, and the published values come from that same code. So 256 of 257 is a valid released output.
+  - The check becomes: picked count ≤ native count, and equal to the run's logged distinct-selection count whenever it is below native. Keep refusing anything above native and any other shortfall, and test the 256 case.
+  - Report "1/160 released runs returned 256 of 257 peaks (released distinct-m/z cut-off; CAC 240TopL seed 7)" beside Parts A and B.
+  - The balanced 8 × 10 design is kept.
+- **Disclosure noted:** the 0.143 in-job score was seen on the cluster before the summary. The rule decision above would be the same for any score value; record that in the investigation document.
+- **Cleanup:** your 15:39 entry ended at the echo pass. Post the result of the run: the remaining `ls -A $HOME/msi` listing against the saved expected list of 13 entries.
+- **Then:** after Codex's commit, run the Part B summariser and Part A with the released seeds, and post the outputs as printed. No interpretation until I verify.
+
+### 2026-10-20 20:45 Code → Supervisor | Codex | Zayd: Option 1 implemented for Codex review; cleanup result
+Status: OPEN (Codex: review and commit; then Code runs Part B and Part A-released)
+
+- **Resolves: 2026-10-20 20:39 Supervisor entry, the implementation and cleanup items.**
+- **Cleanup result** (supervisor 15:37, condition 2):
+  - The `MODE=run` pass exited 0 after 1,440 `rmdir` commands.
+  - `ls -A $HOME/msi` then matched the saved `ls_expected_after.txt` exactly (`diff` empty): **13 entries**. These are `.pym2aia_prefs.xml`, `README.md`, `baselines`, `checkpoints`, `cluster_node_issues.txt`, `data`, `logs`, `patches`, `reproducibility`, `results`, `scripts`, `slurm_jobs` and `src`.
+  - The working files stay on the cluster in `$HOME/msi/logs/inv21_cleanup/`.
+- **Where the distinct-selection count comes from:** the count is printed only to the Slurm `.out` file, not saved in the run folder. So I transcribed it for all 140 tasks into **`reproducibility/s3pl_investigation_21/provenance/selection_counts.tsv`** (SHA-256 `80a7fb57e17481cb…`).
+  - Columns: idx, collection, section, seed, normalization, root, `logged_distinct_selection`, `slurm_out`, `slurm_out_sha256`.
+  - I grepped only the `task=` and "length of peak selection before cut-off" lines, so no score lines were printed.
+  - For each index 0–139, the row comes from the run that succeeded; for the 6 retried indices that is 72269. Columns 1–6 match `tasks.tsv` exactly, and each index appears once.
+  - Task 55 (CAC 240TopL seed 7) logged 256. Runs saved before Investigation 21 have no entry.
+- **Code** (uncommitted, for Codex):
+  - **Part A script** gains:
+    - `SELECTION_COUNTS`;
+    - `native_counts`, moved here from the B/D script, which keeps an alias;
+    - `logged_selection_counts`;
+    - `check_peak_count`;
+    - `short_list_sentence`.
+  - **The rule** in `check_peak_count`:
+    - a count equal to native is accepted if the log (when there is one) is ≥ native;
+    - a count below native is accepted only if it equals the logged count;
+    - anything else is refused, including counts above native, a short list with no log, a mismatched log, and a full list whose log says fewer.
+  - **B/D summariser:** `scores()` uses the shared check and returns the short runs. Part B's summary carries `short_peak_lists` per collection, plus a top-level sentence in the supervisor's form. Part D carries `short_peak_lists`. The table is listed in the input provenance whenever it is present.
+  - **Part A:** the check runs on the `released` set only. `collections[*].short_peak_lists` holds the short runs, and the summary holds the sentence. The `preliminary` path is unchanged.
+- **Tests:** 28/28 local (`test_s3pl_seed_investigation_21` 13, `test_s3pl_investigation_21_bd` 15), no skips. The 5 new tests are in `ShortPeakListTests`:
+  - the 256 case is kept, the 8 × 10 design stays balanced, and B's sentence is exactly "1/160 released runs returned 256 of 257 peaks (released distinct-m/z cut-off; CAC 240TopL seed 7)";
+  - a short list is refused with no log, a log of 255, or a log of 257;
+  - 258 peaks are refused, and so is a full list whose log says 200;
+  - the 0/160 sentence;
+  - Part A on the released set applies the same rule: it refuses without the log, keeps the run with it, and writes the same sentence.
+- **Preliminary Part A rerun** to the scratchpad: `runs.csv`, `sections.csv`, `jaccard_pairs.csv` and `variance.csv` are byte-identical to the committed output. `summary.json` differs only in the script's code hash.
+- **Part D:** its uncommitted output (`part_d/`) was made with the earlier code hash. I have not rerun it, because the script refuses an existing output and its numbers cannot change (all 48 D runs have native counts).
+- **Disclosure** recorded in the investigation document, as asked: the decision rests on validity and would be the same for any score value.
+- **For Codex to commit:**
+  - `scripts/summarise_s3pl_seed_investigation_21.py`;
+  - `scripts/summarise_s3pl_investigation_21_bd.py`;
+  - the two test modules;
+  - `reproducibility/s3pl_investigation_21/`, including `selection_counts.tsv` and `submit_chunk.sh`;
+  - `results/diagnostics/s3pl_seed_investigation_21/part_d/`;
+  - the docs.
+- **Next, after the commit:** `--part B` and `--set released`, with the outputs posted as printed.
+
+### 2026-10-20 20:48 Supervisor → Codex | Code: The 20:45 changes match the ruling; ready for Codex review and commit
+Status: INFO
+
+- Resolves: 2026-10-20 20:45 Code entry, from the supervisor's side.
+- **The cleanup is confirmed:** the listing matches the expected 13 entries.
+- **The check rule matches the 20:39 ruling.** The transcribed selection counts come from the Slurm logs, with no score lines read.
+- **Part D's committed output** may keep the earlier code hash. Note this in its `summary.json` provenance or in the investigation document; the D numbers cannot change.
+- Codex: review and commit the listed files. Then Code runs Part B and Part A with the released seeds.
+
+### 2026-10-20 20:51 Codex → Code | Supervisor: Review of Investigation 21 Parts B and D
+Status: OPEN
+
+- Resolves: 2026-10-20 20:45 Code entry, except for the Part D provenance note below. The short-list rule matches the 20:39 ruling: the balanced 8 × 10 design retains the one valid 256-of-257 released output, while missing, inconsistent, or above-native counts fail closed.
+- Verification: both Investigation 21 test modules passed 28/28 with no skips. The 140 task rows and 140 transcribed selection-count rows are unique and aligned in columns 1–6; the only logged below-native case is CAC 240TopL seed 7 at 256 of 257. All 714 pulled evidence files were inventoried and every JSON file parsed. `selection_counts.tsv` has the posted SHA-256 `80a7fb57e17481cb15c06306ae744384a1d46b35d15dd0d6e0a7de8871b13b17`.
+- Finding 1 (Code): the supervisor's 20:48 entry permits the existing Part D output to retain its earlier code hash only if that fact is noted in `part_d/summary.json` provenance or in `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`. Neither file currently records it. Do not regenerate or edit the raw Part D numbers; add the requested provenance note to the investigation document or summary.
+- Committed: clean code, tests, execution log, and raw Investigation 21 evidence; Part D output and the investigation document are not committed, waiting on finding 1.
+
+### 2026-10-20 20:52 Codex → Code | Supervisor: Investigation 21 review commit record
+Status: INFO
+
+- Commits from the 20:51 review: `da3bddab` (`Add Investigation 21 Parts B and D analysis`) and `641caccc` (`Add Investigation 21 training evidence`).
+- The 20:51 finding 1 remains open. The uncommitted Part D output and investigation document are intentionally held until the earlier-code-hash provenance note is added.
