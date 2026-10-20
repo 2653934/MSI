@@ -13,10 +13,17 @@ Seed sets:
 - ``preliminary`` (chat 11:46, Q6): GBM = the controlled initialisation screen (init seeds
   1-3, sample-order seed 1); CAC = released ``random_seed`` 1-3. The two collections use
   different seed modes, and this is stated in every output.
+- ``released`` (chat 11:46, Q6; after Part B): released ``random_seed`` 1-10 for GBM and
+  CAC. This is the primary decomposition.
 
 mSCF1 is S3PL's own in-job evaluator (``metrics.json``), not the fair-scoring evaluator.
 It is recomputed unrounded as the mean of ``mixed_f1`` and must round to the saved
 ``mSCF1``, or the script stops.
+
+Released runs must hold ``num_GT_peaks`` picked peaks. Fewer are accepted only when they
+equal the run's logged distinct-selection count (released code keeps all of its pooled
+distinct selections when there are fewer than ``num_GT_peaks``; supervisor chat
+2026-10-20 20:39); such runs are listed in the outputs.
 """
 
 import argparse
@@ -77,7 +84,95 @@ def preliminary_locations(collection, section, seed):
     return base / "logs" / "s3pl" / f"{name}.json", base / "results" / "baselines" / "s3pl" / name
 
 
-LOCATORS = {"preliminary": (preliminary_locations, (1, 2, 3))}
+INVESTIGATION_ROOT = Path("reproducibility") / "s3pl_investigation_21"
+
+
+def _run_paths(base, name):
+    return base / "logs" / "s3pl" / f"{name}.json", base / "results" / "baselines" / "s3pl" / name
+
+
+def released_locations(collection, section, seed):
+    """Released ``random_seed`` runs (Part B): saved runs reused after gate 72136 passed."""
+    name = run_name(collection, section)
+    if seed == 1:
+        return _run_paths(Path(""), name)
+    if collection == "GBM" and seed in (2, 3) and section in ("GBM108_negative", "GBM108_positive"):
+        return _run_paths(Path("reproducibility") / "s3pl_massnet"
+                          / f"{section}_p3_reference_spatial_max_seed{seed}", name)
+    if collection == "CAC" and seed in (2, 3):
+        return _run_paths(Path("reproducibility") / "s3pl_cac_seeds" / f"seed{seed}_released", name)
+    return _run_paths(INVESTIGATION_ROOT / "released" / collection / f"seed{seed}", name)
+
+
+def paper_tic_locations(collection, section, seed):
+    """GBM paper-TIC runs (Part D); seed 1 predates the predeclaration."""
+    if collection != "GBM":
+        raise ValueError("Part D is GBM only")
+    name = run_name(collection, section) + "_paper_tic"
+    if seed == 1:
+        return _run_paths(Path("reproducibility") / "s3pl_massnet" / f"{section}_p3_paper_tic_seed1", name)
+    return _run_paths(INVESTIGATION_ROOT / "paper_tic" / "GBM" / f"seed{seed}", name)
+
+
+LOCATORS = {"preliminary": (preliminary_locations, (1, 2, 3)),
+            "released": (released_locations, tuple(range(1, 11)))}
+SEED_MODE["released"] = {"GBM": "released: random_seed = seed", "CAC": "released: random_seed = seed"}
+DEFAULT_OUTPUT["released"] = DEFAULT_OUTPUT["preliminary"].parent / "part_a_released"
+
+
+# "length of peak selection before cut-off" per Investigation 21 task, transcribed from the
+# Slurm .out files (task and cut-off lines only); runs saved earlier have no entry.
+SELECTION_COUNTS = INVESTIGATION_ROOT / "provenance" / "selection_counts.tsv"
+
+
+def native_counts(path=ROOT / "baselines" / "s3pl" / "data_configs.py"):
+    """The released native peak counts (``num_GT_peaks``), read without importing S3PL."""
+    import ast
+    for node in ast.parse(Path(path).read_text()).body:
+        if isinstance(node, ast.Assign) and any(getattr(t, "id", None) == "num_GT_peaks" for t in node.targets):
+            return ast.literal_eval(node.value)
+    raise ValueError(f"{path}: num_GT_peaks not found")
+
+
+def logged_selection_counts(root):
+    """{(collection, section, seed, normalization): logged distinct-selection count}."""
+    path = Path(root) / SELECTION_COUNTS
+    if not path.exists():
+        return {}
+    with path.open(newline="") as handle:
+        return {(r["collection"], r["section"], int(r["seed"]), r["normalization"]):
+                int(r["logged_distinct_selection"]) for r in csv.DictReader(handle, delimiter="\t")}
+
+
+def check_peak_count(record, native, logged, normalization="reference_spatial_max"):
+    """Refuse a released run whose peak count is not explained by the released code.
+
+    Released S3PL pools the distinct top-z selections of all patches and keeps the first
+    ``num_GT_peaks`` (``test.py:167-184``). A run may therefore hold fewer peaks only if
+    that equals its logged distinct-selection count. Returns a short-list record or None."""
+    n = record["n_peaks"]
+    key = (record["collection"], record["section"], record["seed"], normalization)
+    if n == native and logged.get(key, native) >= native:
+        return None
+    if n < native and logged.get(key) == n:
+        return {"collection": record["collection"], "section": record["section"],
+                "seed": record["seed"], "n_peaks": n, "native": native,
+                "results_folder": record["results_folder"]}
+    raise ValueError(f"{record['results_folder']}: {n} peaks, native count {native}, "
+                     f"logged distinct selection {logged.get(key)}")
+
+
+def short_list_sentence(short, total):
+    if not short:
+        return f"0/{total} released runs returned fewer than num_GT_peaks peaks"
+    if len(short) == 1:
+        s = short[0]
+        return (f"1/{total} released runs returned {s['n_peaks']} of {s['native']} peaks (released "
+                f"distinct-m/z cut-off; {s['collection']} {s['section']} seed {s['seed']})")
+    detail = "; ".join(f"{s['collection']} {s['section']} seed {s['seed']}: {s['n_peaks']} of {s['native']}"
+                       for s in short)
+    return (f"{len(short)}/{total} released runs returned fewer than num_GT_peaks peaks (released "
+            f"distinct-m/z cut-off; {detail})")
 
 
 def file_record(root, relative):
@@ -132,6 +227,23 @@ def load_run(root, collection, section, seed, locate):
         "sample_order_seed": config.get("sample_order_seed"),
         "results_folder": str(results).replace("\\", "/"),
     }, set(peaks), files
+
+
+def check_settings(record, mode, seed, normalization="reference_spatial_max"):
+    """Refuse a run whose saved seed fields or normalisation differ from what the set claims.
+
+    ``mode`` is "released" (random_seed = seed, controlled seeds unset) or "controlled"
+    (initialization_seed = seed, sample_order_seed = 1). Runs from before the
+    normalisation option existed carry no normalisation key; that is the released helper."""
+    if mode == "released":
+        ok = (record["random_seed"] == seed and record["initialization_seed"] is None
+              and record["sample_order_seed"] is None)
+    else:
+        ok = record["initialization_seed"] == seed and record["sample_order_seed"] == 1
+    allowed = (None, "reference_spatial_max") if normalization == "reference_spatial_max" else (normalization,)
+    if not ok or record["normalization"] not in allowed:
+        raise ValueError(f"{record['results_folder']}: saved settings do not match {mode} seed {seed}, "
+                         f"{normalization}")
 
 
 def jaccard(a, b):
@@ -206,11 +318,21 @@ def fit_crossed(rows):
 def summarise(root, seed_set, mixed=True):
     locate, seeds = LOCATORS[seed_set]
     runs, sections, pairs, variance, collections, files = [], [], [], [], {}, []
+    if seed_set == "released":
+        native, logged = native_counts(), logged_selection_counts(root)
+        if logged:
+            files.append(SELECTION_COUNTS)
     for collection, names in SECTIONS.items():
-        matrix, model_rows = [], []
+        matrix, model_rows, short = [], [], []
         for section in names:
             loaded = [load_run(root, collection, section, seed, locate) for seed in seeds]
-            for record, _, used in loaded:
+            mode = "controlled" if (seed_set, collection) == ("preliminary", "GBM") else "released"
+            for (record, _, used), seed in zip(loaded, seeds):
+                check_settings(record, mode, seed)
+                if seed_set == "released":
+                    note = check_peak_count(record, native[section], logged)
+                    if note:
+                        short.append(note)
                 record["seed_mode"] = SEED_MODE[seed_set][collection]
                 runs.append(record)
                 files.extend(used)
@@ -251,6 +373,8 @@ def summarise(root, seed_set, mixed=True):
             "section_seed_sd_min": float(min(per_section_sd)),
             "section_seed_sd_max": float(max(per_section_sd)),
         }
+        if seed_set == "released":
+            collections[collection]["short_peak_lists"] = short
         anova = anova_components(matrix)
         record = {"collection": collection, "seed_mode": SEED_MODE[seed_set][collection],
                   "n_sections": len(names), "n_seeds": len(seeds), "label": "descriptive",
@@ -331,6 +455,9 @@ def run(root, output, seed_set, mixed=True, figure=True):
             "versions": versions(),
         },
     }
+    if seed_set == "released":
+        short = [s for c in collections.values() for s in c["short_peak_lists"]]
+        summary["short_peak_lists"] = short_list_sentence(short, len(runs))
     output.mkdir(parents=True)
     write_csv(output / "runs.csv", runs)
     write_csv(output / "sections.csv", sections)

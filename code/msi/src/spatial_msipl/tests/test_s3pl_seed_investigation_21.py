@@ -16,16 +16,22 @@ except ImportError:
     HAVE_STATSMODELS = False
 
 
-def write_run(root, collection, section, seed, score, loss, peaks):
-    log, results = inv.preliminary_locations(collection, section, seed)
+def write_run(root, collection, section, seed, score, loss, peaks,
+              locate=inv.preliminary_locations, controlled=None, normalization=None):
+    log, results = locate(collection, section, seed)
     (root / log).parent.mkdir(parents=True, exist_ok=True)
     (root / results).mkdir(parents=True, exist_ok=True)
-    (root / log).write_text(json.dumps({"n_epochs": 2, "train_history": [0.5, loss],
-                                        "random_seed": seed}))
+    if controlled is None:
+        controlled = locate is inv.preliminary_locations and collection == "GBM"
+    config = {"n_epochs": 2, "train_history": [0.5, loss],
+              "random_seed": 1 if controlled else seed,
+              "initialization_seed": seed if controlled else None,
+              "sample_order_seed": 1 if controlled else None}
+    (root / log).write_text(json.dumps(config))
     mixed = {"0.3": score + 0.03, "0.4": score + 0.01, "0.5": score - 0.01, "0.6": score - 0.03}
     (root / results / "metrics.json").write_text(json.dumps({
         "dataset": section, "mixed_f1": mixed, "mSCF1": round(score, 3),
-        "number_picked_peaks": len(peaks), "normalization": "reference_spatial_max"}))
+        "number_picked_peaks": len(peaks), "normalization": normalization}))
     (root / results / f"picked_peaks_{section}.csv").write_text("0\n" + "\n".join(peaks) + "\n")
 
 
