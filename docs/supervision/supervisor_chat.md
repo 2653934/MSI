@@ -4149,3 +4149,137 @@ Status: INFO
 
 - Commits from the 20:51 review: `da3bddab` (`Add Investigation 21 Parts B and D analysis`) and `641caccc` (`Add Investigation 21 training evidence`).
 - The 20:51 finding 1 remains open. The uncommitted Part D output and investigation document are intentionally held until the earlier-code-hash provenance note is added.
+
+### 2026-10-20 20:54 Code → Codex | Supervisor: Part D provenance note added (Codex 20:51 finding)
+Status: INFO (Codex: ready to commit)
+
+- **Resolves: Codex 20:51 review, the open finding.**
+- Added to `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`, under Part D:
+  - `part_d/summary.json` was produced before the short-list change. Its recorded hashes are `summarise_s3pl_investigation_21_bd.py` `4c4780ffb62177c1…`, `summarise_s3pl_seed_investigation_21.py` `dca84cc0643c204b…` and `paired_statistics.py` `7a5b79a8e5d8ba46…`.
+  - The committed scripts (`da3bddab`) have `e791516e2b621b1a…` and `68d4e70bccc66730…`; `paired_statistics.py` is unchanged.
+  - The D numbers are unchanged, because all 48 D runs have native peak counts.
+- The Part D output was neither regenerated nor edited.
+- Next: Part B and Part A-released, run locally against the committed code.
+
+### 2026-10-20 20:55 Code → Supervisor | Codex | Zayd: Investigation 21 Part B and Part A (released seeds 1–10): outputs as printed
+Status: OPEN (Supervisor: verify; Codex: review and commit the outputs)
+
+- **Runs:** local, against the committed code (`da3bddab`/`641caccc`; scripts and `selection_counts.tsv` unchanged against HEAD).
+  - `summarise_s3pl_investigation_21_bd.py --part B` → `results/diagnostics/s3pl_seed_investigation_21/part_b/` (exit 0).
+  - `summarise_s3pl_seed_investigation_21.py --set released` → `…/part_a_released/` (exit 0).
+  - Each records 641 input files: 160 runs × (config log, `metrics.json`, peak list, `runtime_metrics.json`), plus `selection_counts.tsv`.
+- **Metric:** S3PL's in-job mSCF1, unrounded. The published values are given to 2 decimals.
+- **Short lists, as printed in both outputs:** "1/160 released runs returned 256 of 257 peaks (released distinct-m/z cut-off; CAC 240TopL seed 7)".
+
+**Labels, as printed**
+- **GBM, B1:** "outside our seed distribution". **B2:** "not explained by seed selection alone" (smallest k: none).
+- **CAC, B3** (B1 and B2 for CAC): "outside our seed distribution"; "not explained by seed selection alone" (smallest k: none).
+
+**Collection mean ± SD across the 10 seed-level collection means**
+
+| | Published | Mean ± SD | Seed-level min / max | Per-section seed SD, median (min–max) |
+|---|---|---|---|---|
+| GBM | 0.496 | 0.3193 ± 0.0419 | 0.2260 / 0.3735 | 0.0882 (0.0305–0.2002) |
+| CAC | 0.601 | 0.5470 ± 0.0377 | 0.4960 / 0.5910 | 0.0456 (0.0346–0.2094) |
+
+- **Seed-level means, seeds 1–10:**
+  - GBM: 0.3155, 0.3207, 0.3362, 0.3058, 0.2260, 0.3138, 0.3561, 0.3735, 0.3568, 0.2891.
+  - CAC: 0.5910, 0.5819, 0.5105, 0.5805, 0.4960, 0.5202, 0.5162, 0.5827, 0.5746, 0.5167.
+
+**Best-of-k:** the exact expected maximum over k of the 10 seeds, per section, then the mean over sections.
+
+| k | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| GBM | 0.3193 | 0.3785 | 0.4020 | 0.4143 | 0.4218 | 0.4266 | 0.4296 | 0.4316 | 0.4330 | 0.4343 |
+| CAC | 0.5470 | 0.5844 | 0.5922 | 0.5950 | 0.5966 | 0.5976 | 0.5984 | 0.5990 | 0.5995 | 0.5999 |
+
+**Per section, over 10 seeds** (percentile = share of our seeds below the published value, ties counted as one half)
+
+| Section | Mean | SD | Min | Max | Published | Percentile |
+|---|---|---|---|---|---|---|
+| GBM108_negative | 0.543 | 0.200 | 0.070 | 0.664 | 0.66 | 60.0 |
+| GBM108_positive | 0.183 | 0.188 | 0.024 | 0.459 | 0.47 | 100.0 |
+| GBM12_1 | 0.145 | 0.045 | 0.075 | 0.218 | 0.27 | 100.0 |
+| GBM12_2 | 0.436 | 0.112 | 0.271 | 0.522 | 0.55 | 100.0 |
+| GBM22_1 | 0.258 | 0.064 | 0.173 | 0.335 | 0.47 | 100.0 |
+| GBM22_2 | 0.325 | 0.031 | 0.283 | 0.365 | 0.61 | 100.0 |
+| GBM39_1 | 0.216 | 0.065 | 0.132 | 0.302 | 0.38 | 100.0 |
+| GBM39_2 | 0.449 | 0.185 | 0.056 | 0.609 | 0.56 | 60.0 |
+| 40TopL | 0.664 | 0.038 | 0.588 | 0.694 | 0.68 | 40.0 |
+| 160TopL | 0.488 | 0.041 | 0.422 | 0.527 | 0.53 | 100.0 |
+| 200TopL | 0.642 | 0.041 | 0.573 | 0.677 | 0.61 | 30.0 |
+| 240TopL | 0.601 | 0.163 | 0.143 | 0.677 | 0.67 | 80.0 |
+| 280TopL | 0.362 | 0.057 | 0.209 | 0.394 | 0.63 | 100.0 |
+| 360TopL | 0.623 | 0.035 | 0.549 | 0.646 | 0.64 | 50.0 |
+| 400TopL | 0.420 | 0.050 | 0.313 | 0.476 | 0.35 | 10.0 |
+| 520TopL | 0.576 | 0.209 | 0.166 | 0.707 | 0.70 | 70.0 |
+
+**Bimodality check (Part A, descriptive):** the largest gap between consecutive sorted seed scores, with its split; then the mean Jaccard overlap of the peak lists across seed pairs (min–max); then the Pearson r of final last-batch loss vs mSCF1.
+
+| Section | Range | Largest gap | Split | Jaccard mean (min–max) | Loss r |
+|---|---|---|---|---|---|
+| GBM108_negative | 0.594 | 0.280 | 2 below / 8 above | 0.586 (0.042–0.968) | −0.589 |
+| GBM108_positive | 0.435 | 0.345 | 7 below / 3 above | 0.223 (0.012–0.953) | −0.834 |
+| GBM12_1 | 0.144 | 0.043 | 2 below / 8 above | 0.571 (0.179–0.925) | 0.124 |
+| GBM12_2 | 0.250 | 0.201 | 3 below / 7 above | 0.675 (0.350–0.974) | 0.411 |
+| GBM22_1 | 0.162 | 0.068 | 3 below / 7 above | 0.650 (0.354–0.974) | 0.293 |
+| GBM22_2 | 0.082 | 0.038 | 3 below / 7 above | 0.872 (0.742–0.986) | −0.175 |
+| GBM39_1 | 0.171 | 0.053 | 3 below / 7 above | 0.578 (0.232–0.969) | −0.220 |
+| GBM39_2 | 0.553 | 0.225 | 1 below / 9 above | 0.465 (0.041–0.968) | −0.276 |
+| 40TopL | 0.106 | 0.044 | 2 below / 8 above | 0.689 (0.449–0.874) | −0.287 |
+| 160TopL | 0.106 | 0.059 | 3 below / 7 above | 0.627 (0.345–0.834) | 0.569 |
+| 200TopL | 0.104 | 0.047 | 3 below / 7 above | 0.752 (0.579–0.919) | 0.756 |
+| 240TopL | 0.534 | 0.448 | 1 below / 9 above | 0.653 (0.123–0.925) | −0.584 |
+| 280TopL | 0.185 | 0.122 | 1 below / 9 above | 0.588 (0.150–0.912) | −0.388 |
+| 360TopL | 0.097 | 0.063 | 2 below / 8 above | 0.767 (0.443–0.937) | −0.261 |
+| 400TopL | 0.163 | 0.063 | 1 below / 9 above | 0.520 (0.263–0.839) | −0.495 |
+| 520TopL | 0.541 | 0.392 | 2 below / 8 above | 0.524 (0.115–0.932) | −0.211 |
+
+- The sorted seed scores per section are in `part_a_released/sections.csv` (`sorted_scores`), with the lowest-loss and highest-mSCF1 seeds alongside.
+
+**Released-seed variance decomposition** (`score ~ 1 + (1|section) + (1|seed)`; 8 sections × 10 seeds; descriptive)
+
+| | ANOVA var section / seed / residual | ANOVA shares | MixedLM |
+|---|---|---|---|
+| GBM | 0.0189 / −0.0004 / 0.0170 | 0.526 / 0 / 0.474 | not converged; no components reported |
+| CAC | 0.0113 / 0.0002 / 0.0101 | 0.523 / 0.008 / 0.469 | converged: 0.0113 / 0.0002 / 0.0101, shares 0.523 / 0.008 / 0.469; flagged singular or boundary ("The MLE may be on the boundary of the parameter space.") |
+
+- Negative ANOVA moments are shown as computed; the shares truncate them at 0.
+- No interpretation from Code. Nothing goes into the report until the supervisor verifies.
+
+### 2026-10-20 20:57 Supervisor → Code | Codex | Zayd: Part B and Part A (released) verified; wording for the report; Part C next
+Status: OPEN (Codex: review and commit the outputs; Code: Part C prerequisites)
+
+- **Resolves: 2026-10-20 20:54 and 20:55 Code entries, from the supervisor's side.**
+- **Checks:**
+  - the collection mean ± SD from the 10 seed-level means: GBM 0.3194 ± 0.0419, CAC 0.5470 ± 0.0378;
+  - best-of-10 equals the mean of the per-section maxima: GBM 0.4343, CAC 0.59975;
+  - the published per-section means: GBM 0.496, CAC 0.601.
+  - All match.
+- **The predeclared labels stand.** B1, B2 and B3: "outside our seed distribution" and "not explained by seed selection alone", for both collections.
+- **Wording for the report** (descriptive beside the labels):
+  - **GBM:**
+    - The published 0.496 is about 4.2 SD above our mean across 10 seeds (0.319 ± 0.042), and above every seed-level collection mean (max 0.374).
+    - Even taking the best of 10 seeds in every section reaches only 0.434.
+    - The gap is **section-specific**: in 6/8 sections the published value is above all 10 of our seeds. The largest is GBM22_2, published 0.61 against our maximum 0.365. GBM108_negative and GBM39_2 are within our range.
+    - Seed selection can't explain it.
+    - The remaining candidates are the data version or preprocessing of those sections (not the TIC choice, per Part D) and the paper's tuned-on-test hyperparameters. These are named as untested, not as findings.
+  - **CAC:** the published 0.601 is just outside our range (seed-level max 0.591), about 1.4 SD above our mean (0.547 ± 0.038). Best-of-10 reaches 0.5998, 0.001 short.
+    - The label "not explained by seed selection alone" stands. The report adds that this margin is within the published values' 2-decimal rounding (the per-section published values average 0.60125), so CAC is **consistent with** a favourable seed or best-of-several selection, but not shown to be.
+  - **Why seeds change the values** (variance decomposition, 8 × 10): about 52% of the variance is between sections, about 0–1% is a seed main effect, and about 47% is a section × seed interaction, in both collections.
+    - Seeds don't shift whole collections; they flip particular sections between distinct outcomes.
+    - On GBM these are GBM108_negative, GBM108_positive, GBM12_2 and GBM39_2; on CAC, 240TopL and 520TopL. The largest gaps are 0.20–0.45, and in those sections the peak-list overlap drops to J ≈ 0.01–0.12 for some seed pairs.
+    - In flipping sections, the two outcomes select largely different peaks.
+  - **Loss vs score:** no consistent relationship (r from −0.83 to +0.76). Lower final training loss doesn't predict better peaks.
+  - **Part D context:** with TIC normalisation, seed SD collapses to about 0.01. Flipping is a property of the released spatial-max preprocessing, which also produces the high-scoring outcomes.
+- **Part C next:**
+  - first the default-path bit-identity test for the opt-in seed flags (`3624b56b`), for Codex;
+  - then the 20 C runs as specified (init 1–5 at order 1, order 1–5 at init 1, three repeats), using the same submitter and checks as B, after Zayd's OK.
+
+### 2026-10-20 20:58 Codex → Code | Supervisor: Review of Investigation 21 released-seed results
+Status: INFO
+
+- Resolves: 2026-10-20 20:57 Supervisor entry, the requested review and commit. It also closes the 20:51 Codex finding: the investigation document now records that Part D predates the short-list change, gives both old and committed code-hash prefixes, and explains why the scientific output is unchanged.
+- Verification: fresh runs from committed code reproduced all 8 files in `part_a_released/` and `part_b/` byte for byte. For Part D, `sections.csv` and every scientific field in `summary.json` reproduced exactly; only the documented code provenance and added short-list field differ under the current code. The labels, 80 runs per collection, 641 provenance inputs per A/B output, approved 256-of-257 disclosure, and posted collection means were checked directly.
+- Tests remain 28/28 from the 20:51 review, with no code changes since that run. The supervisor independently verified the labels and summary values at 20:57.
+- Committed: `12529e0d` (`Add Investigation 21 seed distribution results`).
