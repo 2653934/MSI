@@ -609,6 +609,68 @@ Written into this protocol on 20 October at 10:47 SAST, before any statistics co
 - **Q7:** mixed models use statsmodels `MixedLM` (local uv environment only). Every model is labelled descriptive, and singular or boundary fits are flagged.
 - **Zero differences:** counted and reported, together with what the installed scipy does with them under `method="exact"`.
 
+### 6.7 Investigation 21: S3PL GBM reproduction gap and seed sensitivity (supervisor chat 20 October 10:53, Zayd-approved scope; predeclared before any new output exists)
+
+The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-20 10:53 Supervisor → Code | Codex | Zayd: New predeclared Investigation 21: S3PL GBM reproduction gap and seed sensitivity (parts A–D, Zayd-approved scope)". It was written into this protocol on 20 October at 11:42 SAST, before any Investigation 21 code was written or run. The investigation document is `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`. Later notes are added below it, never inside it.
+
+**Why.** Our S3PL GBM is 0.30–0.34 (3 seeds) against the published 0.496. The gap is systematic (in 7/8 sections the published value is above all our seeds), and single sections swing hugely between seeds (GBM108_positive: 0.026 / 0.444 / 0.079). The supervisor asked us to explain statistically what causes the gap and why seeds change the result. Known candidate causes:
+- (1) initialisation and seed luck, including best-of-N reporting;
+- (2) the components of the seed (weight init, data order, GPU nondeterminism);
+- (3) preprocessing: the paper says TIC, but the released helper normalises by the per-spectrum maximum;
+- (4) tuned-on-test hyperparameters in the paper (investigation 19). This is reported, not tested.
+
+**First, verify and post (code facts, no runs):**
+- what S3PL's seed actually sets (torch init, DataLoader shuffle, patch sampling, numpy/python RNG, cuDNN flags);
+- whether per-run peak lists and the training loss are saved for GBM seeds 1–3 and CAC seed 1;
+- the exact GPU time per run from the saved records.
+
+**A. Saved data only (no compute):**
+- variance decomposition per collection: score ~ (1 | section) + (1 | seed), reporting section, seed and residual variance shares;
+- per-section seed SD;
+- top-K Jaccard overlap of the selected peaks between seeds, if the lists are saved;
+- final training loss vs mSCF1 across seeds, per section (descriptive, n = 3).
+
+**B. Seed distribution (GBM and CAC, as reproducing contrast):** S3PL with the released protocol unchanged (10 epochs, published p and z, native peak count, our scorer), **seeds 1–10** on all 8 sections of each. Reuse saved seeds 1–3 only if the code facts show a fixed seed reproduces bit for bit; otherwise rerun them. Report:
+- per-section mean, SD, min and max;
+- collection mean ± SD across the 10 seed-level collection means;
+- the per-section percentile of the published value within our 10 seeds.
+
+Predeclared questions and labels:
+- **B1, consistency:** where the published collection mean sits against our 10 seed-level collection means. Label "inside our seed distribution" if it is ≤ their maximum, otherwise "outside our seed distribution".
+- **B2, best-of-k:** per section, the expected maximum over k seeds (exact, from all k-subsets of the 10), averaged over sections, for k = 1…10. Report the smallest k at which it reaches the published mean. Label "consistent with per-section best-of-k selection (k = …)" if k ≤ 10, otherwise "not explained by seed selection alone".
+- **B3:** the same for CAC (published 0.601).
+
+**C. What part of the seed matters (3 GBM sections with the largest seed SD in the saved seeds 1–3, chosen now from saved data; Code names them):** a small S3PL change gives separate RNG streams for (i) weight init and (ii) data order, with the production default **bit-identical** (a test is required).
+- **Arm "init varies":** 5 init seeds, data order fixed.
+- **Arm "order varies":** 5 order seeds, init fixed.
+- **Arm "repeat":** the production seed 1 run 3 times, to measure the nondeterminism floor.
+- Report the per-section SD of each arm. A component is "dominant" if its SD is ≥ 2× the other's in ≥ 2 of the 3 sections. If the repeat SD is ≥ half the smaller arm's SD, the conclusion is "dominated by nondeterminism".
+
+**D. Preprocessing:** GBM, 8 sections × seeds 1–3, with true TIC normalisation in place of the released max-normalisation helper; everything else unchanged. Use the seed-mean per section, paired against the released-helper seed-mean. Label:
+- **"explains the gap"** if the TIC collection mean is ≥ 0.446 (within 0.05 of 0.496);
+- **"partly"** if it rises by ≥ +0.05 but stays below 0.446;
+- **"does not explain"** otherwise.
+- Section 6.6-style statistics (Wilcoxon, Hodges–Lehmann CI) are reported beside the label.
+
+**Rules:**
+- Cached data where the S3PL loader allows it, `batch` for CPU scoring, GPU quarantine respected, and new output roots only.
+- Each arm needs the pre-submission checklist and Zayd's OK. Order: A, then D and B, then C.
+- All outcomes are reported, including "not explained".
+- (4) is discussed in the report and not tested.
+
+#### Addendum: correction note and answers to Q1–Q6 (supervisor chat 20 October 11:46; written before any Part B, C or D output)
+
+Written into this protocol on 20 October at 11:54 SAST. The verbatim text above is unchanged.
+
+- **Correction:** the released helper `reference_spatial_max` normalises by the maximum over a *spatial* axis of the `(1, D, p, p)` patch, not per spectrum. Part D's question is unchanged: the paper's stated TIC normalisation (`paper_tic`) against the released helper.
+- **Q1:** Part B uses the released `random_seed` 1–10 (the paper's protocol). The initialisation-screen numbers quoted above are controlled runs and are described as such.
+- **Q2:** reuse of saved released runs is approved behind a gate. B, C and D run on RTX 3090 nodes. The GBM12_2 released seed-1 repeat runs first. If it is bit-identical to job 53121 (all losses, mSCF1 and the peak-list SHA-256), saved released runs are reused; otherwise every saved run in B is rerun. The outcome is reported either way.
+- **Q3:** B1–B3 and D use S3PL's own in-job mSCF1 (the metric of the published 0.496 / 0.601), stated as S3PL's evaluator, not the fair-scoring one.
+- **Q4:** D runs as specified. Its label carries: "seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind." The cut-offs stand.
+- **Q5:** C runs as specified. Disclosed: GBM108_positive's initialisation and order pattern was largely visible from saved runs. C's new information is GBM108_negative, GBM12_2 and the repeat arm. A bit-identity test of the default path for the opt-in seed flags (`3624b56b`) is added before any C run.
+- **Q6:** Part A now is "preliminary" (GBM: initialisation screen; CAC: released seeds 1–3; the different seed modes are stated). After B, the same analysis on released seeds 1–10 is the primary decomposition. New descriptive item for A and B: a per-section bimodality check (seed-score plot and the largest gap between sorted scores). Any bimodality wording waits for the data.
+- **Order:** Part A (local); the GBM12_2 repeat gate (1 GPU run); B and D; the rest of C. At most 3 GPU tasks running at once, quarantine excluded, new output roots only, and the pre-submission checklist before each submission.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -1140,6 +1202,9 @@ A test rebuilds the IG matched groups from these files.
                 - **RCC timing:** 8/8 `complete` on i9-10940X ("shared node, not exclusive"). Exact reproduction holds in 7 sections (28/28 checks); UH0505_12 has no saved ranking to compare against.
               - **20 October 10:39 SAST, Section 6.6 (statistics plan):** the supervisor's 10:28 plan was copied verbatim into Section 6.6 before any statistics code existed. The proposed comparison family was posted to the chat for confirmation; nothing is computed until the supervisor confirms it. Local only; no cluster work.
               - **20 October 10:47–11:00 SAST, Section 6.6 run (local only; chat 10:46 and 11:00):** the family amendment was written as the dated Section 6.6 addendum before any code. Built `paired_statistics.py`, `compute_statistics_6_6.py` and `test_statistics_6_6.py` (14/14 local). All 38 rows reproduce their saved decisions' per-section values to 1e-12. Output `results/diagnostics/statistics_6_6/`, byte-identical on a second run. A first development run showed estimates beside 3 non-converged mixed models; the code was fixed to report "not converged" only, and that run was copied to the session scratchpad (its `tests.csv` is identical to the final run). Item 3 (Mann–Whitney) is "not done". Uncommitted, for Codex.
+              - **20 October 11:42 SAST, Section 6.7 (Investigation 21):** the supervisor's 10:53 predeclaration was copied verbatim into Section 6.7 and `investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md` was started. Code facts were checked from the S3PL code and saved records only (no compute, no cluster work); facts and a costed plan were posted to the chat. Nothing is built or submitted until the supervisor checks that post; B, C and D each need Zayd's OK.
+              - **20 October 11:54 SAST, Section 6.7 addendum and Part A (local):** the supervisor's 11:46 correction note and Q1–Q6 answers were written as the dated Section 6.7 addendum. Part A (preliminary) was built (`scripts/summarise_s3pl_seed_investigation_21.py`, `test_s3pl_seed_investigation_21` 11/11 local) and run to `results/diagnostics/s3pl_seed_investigation_21/part_a_preliminary/`; a second run was byte-identical in all 6 files. Uncommitted, for Codex.
+              - **20 October 11:53 SAST (09:53 UTC), Investigation 21 gate job 72135 (Zayd's OK):** GBM12_2 released seed-1 repeat via `sbatch --wrap` around the unchanged `run_s3pl_massnet_gbm.sh`; `bigbatch`, `--exclusive`, recorded RTX 3090 nodes only (quarantine and mscluster54 excluded), in-job RTX 3090 guard; root `reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat/`. **FAILED** in 0 s on mscluster87, exit 127: `source: not found` (the wrap runs `/bin/sh`). No S3PL code ran; only the provenance folder exists. Stopped per Zayd's stop-on-failure instruction; fix proposed in the chat. Cluster S3PL code checked against HEAD first: 13 files, identical after removing carriage returns (5 cluster copies are CRLF, the same copies that made every saved S3PL run).
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.
