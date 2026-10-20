@@ -1,0 +1,9 @@
+purpose=Investigation 21 Parts B and D (protocol 18 Section 6.7 and its 11:54 addendum; chat 2026-10-20 10:53, 11:46, 11:58); Zayd's OK 2026-10-20
+table=tasks.tsv: idx collection section seed normalization root (140 tasks; chunks submitted one at a time, %3, <=48 tasks)
+B=released random_seed (initialization_seed and sample_order_seed unset), 10 epochs, published p/z (GBM p3 z256 via run_s3pl_massnet_gbm.sh; CAC config.json defaults p9 z256 via main.py as run_s3pl_cac_seeds.sh), native peak count
+D=GBM paper_tic, released random_seed 2-3
+reuse=saved released runs (GBM seed 1 x8 jobs 53118-53125; GBM108 pair seeds 2-3; CAC seeds 1-3) after gate 72136 passed (bit-identical to 53121)
+node_sharing=not exclusive; bigbatch has no GPU gres; cuda:0 with RTX 3090 guard; other GPU processes logged at start
+exclude=mscluster[44-45,47-51,54,57,59-70,72,74-76,78,82-83,85,88-89]
+command=bash -lc 'cd $HOME/msi && line=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" reproducibility/s3pl_investigation_21/provenance/tasks.tsv) && read -r idx coll sec seed norm root <<< "$line" && [ "$idx" = "$SLURM_ARRAY_TASK_ID" ] && echo task="$line" node=$SLURMD_NODENAME && ! ls $HOME/msi/$root/logs/s3pl/${sec}_Attention3D* >/dev/null 2>&1 && source $HOME/miniconda3/etc/profile.d/conda.sh && conda activate s3pl_env && echo gpu_compute_apps_at_start: && (nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader || true) && python -c "import sys,torch; n=torch.cuda.get_device_name(0); print(n, flush=True); sys.exit(0 if n.split()[-1]==str(3090) else 3)" && if [ "$coll" = GBM ]; then bash slurm_jobs/run_s3pl_massnet_gbm.sh $sec 10 true 3 $HOME/msi/$root $norm $seed; else [ "$norm" = reference_spatial_max ] && [ -f /datasets/zsuliman/msi_data/cac/$sec.imzML ] && cd baselines/s3pl && python main.py --data_dir /datasets/zsuliman/msi_data/cac/$sec.imzML --artifact_root $HOME/msi/$root --random_seed $seed; fi'
+created_utc=2026-10-20T10:22:59Z

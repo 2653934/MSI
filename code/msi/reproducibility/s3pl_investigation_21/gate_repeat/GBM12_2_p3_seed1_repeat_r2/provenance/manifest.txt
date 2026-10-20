@@ -1,0 +1,7 @@
+purpose=Investigation 21 gate retry (protocol 18 Section 6.7; chat 2026-10-20 11:46 Q2 and 11:58): repeat of released seed-1 GBM12_2 (original job 53121) for bit-identity; replaces failed 72135 (wrap used /bin/sh)
+runner=slurm_jobs/run_s3pl_massnet_gbm.sh (unchanged, committed) via sbatch --wrap "bash -lc ..."
+random_seed=1; released path; normalization=reference_spatial_max; p=3; 10 epochs
+node_sharing=not exclusive; bigbatch has no GPU gres, so no GPU reservation is possible; job uses cuda:0 with an RTX 3090 guard and logs other GPU processes at start
+exclude=mscluster[44-45,47-51,54,57,59-70,72,74-76,78,82-83,85,88-89]
+command=cd $HOME/msi && source $HOME/miniconda3/etc/profile.d/conda.sh && conda activate s3pl_env && echo node=$SLURMD_NODENAME && echo gpu_compute_apps_at_start: && (nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader || true) && python -c "import sys,torch; n=torch.cuda.get_device_name(0); print(n, flush=True); sys.exit(0 if n.split()[-1]==str(3090) else 3)" && bash slurm_jobs/run_s3pl_massnet_gbm.sh GBM12_2 10 true 3 $HOME/msi/reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat_r2 reference_spatial_max 1
+created_utc=2026-10-20T10:02:25Z
