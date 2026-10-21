@@ -4283,3 +4283,78 @@ Status: INFO
 - Verification: fresh runs from committed code reproduced all 8 files in `part_a_released/` and `part_b/` byte for byte. For Part D, `sections.csv` and every scientific field in `summary.json` reproduced exactly; only the documented code provenance and added short-list field differ under the current code. The labels, 80 runs per collection, 641 provenance inputs per A/B output, approved 256-of-257 disclosure, and posted collection means were checked directly.
 - Tests remain 28/28 from the 20:51 review, with no code changes since that run. The supervisor independently verified the labels and summary values at 20:57.
 - Committed: `12529e0d` (`Add Investigation 21 seed distribution results`).
+
+### 2026-10-20 21:06 Code → Supervisor | Codex | Zayd: Investigation 21 Part C: default-path bit-identity test, Part C summariser and task table, for Codex review; nothing submitted
+Status: OPEN (Codex: review and commit; Supervisor: confirm the nondeterminism aggregation; Zayd: OK for one cluster test job before the C runs)
+
+- **Resolves: 2026-10-20 20:57 Supervisor entry, the "default-path bit-identity test" item, from Code's side (pending Codex).**
+- **Bit-identity test, `baselines/s3pl/tests/test_seed_flags_default.py`.** It compares against a frozen reference, `tests/fixtures/pre_seed_flags/train.py`: today's `train.py` with **only** the `3624b56b` hunks reversed (`git diff 3624b56b^ 3624b56b -- …/train.py` applied with `patch -R`). A README in that folder records how it was made, and its SHA-256 is `197b5f40…`.
+  - **Text level (no torch; runs locally):**
+    - The two files differ only by the two lines 3624b56b replaced and its 22 added lines. Those lines are the RNG-stream changes `np.random.seed(… if sample_order_seed is None else …)` and `SubsetRandomSampler(…, generator=sampler_generator)`; the added lines are the flag parsing, the guarded `sampler_generator` and init reseed, and the guarded prints.
+    - A second check: the two RNG-changing statements run only inside `if … is not None` guards.
+  - **Run level (torch; runs on the cluster only):**
+    - It trains on a tiny synthetic HDF5 section on CPU (80 pixels, 24 bins, p = 3, 2 epochs, peak evaluation off) three times: the frozen copy, the current code with neither flag set, and the current code with init 1 / order 1.
+    - With neither flag set, the current code must match the frozen copy exactly: the full saved config (including `train_history`), every weight tensor and the picked-peak file. It must also write no `peak_vote_diagnostics.csv`.
+    - The controlled run must differ, which shows the comparison can fail.
+  - **Local result:** 2/2 text-level tests pass. The run-level class skips here ("No module named 'torch'"; torch is never installed locally).
+  - **Cluster coverage:** I added `tests.test_seed_flags_default` to the S3PL module list in `slurm_jobs/run_fair_scoring_tests.sh`.
+  - **Empirical support:** gate 72136, run on today's code with the default path, was bit-identical to the August job 53121, which predates `3624b56b`.
+- **Part C plan** (Section 6.7 C; chat 11:42 plan; 11:46 Q5): GBM108_positive, GBM108_negative and GBM12_2, with released settings (10 epochs, p3, z256, `reference_spatial_max`, `random_seed` 1).
+  - **19 new runs, not the planned 20.** The plan counted 2 new GBM12_2 repeats, but gate 72136 is already one of them (Q2: "GBM12_2, already in C's repeat arm").
+  - **New runs:**
+    - init 4–5 at order 1 for GBM108_negative and GBM12_2: 4 runs;
+    - order 2–5 at init 1: 11 runs (GBM108_positive's order 2 is saved);
+    - repeats: GBM108_positive repeat 2, GBM108_negative repeats 1–2, and GBM12_2 repeat 2: 4 runs.
+  - **Reused saved runs:**
+    - `s3pl_massnet/<sec>_p3_rng_init{1..3}_order1` for all three sections, plus init 4–5 for GBM108_positive;
+    - `GBM108_positive_p3_rng_init1_order2`;
+    - the August originals 53118, 53119 and 53121;
+    - `GBM108_positive_p3_seed1_repeat1`;
+    - gate `GBM12_2_p3_seed1_repeat_r2`.
+  - I checked that the saved controlled runs have `random_seed` 1, 10 epochs, p3, z256 and the released normalisation, with their init and order fields set.
+  - **Task table:** `reproducibility/s3pl_investigation_21/part_c/provenance/tasks.tsv` (19 rows: idx coll sec seed norm root init order; init/order `-` for repeats). Each run gets its own root under `part_c/`, because controlled runs share a training name.
+  - **Manifest:** `part_c/provenance/manifest.txt` holds the wrapped command. It is the Part B command, except that controlled rows call `run_s3pl_massnet_gbm.sh … 1 <init> <order>`, plus a `[ "$coll" = GBM ]` guard. It keeps the same exclude list, RTX 3090 guard and existing-run guard.
+  - **Submitter:** `submit_chunk.sh` now takes `PROV=<provenance dir>`, defaulting to Part B's, and reads extra columns.
+- **Part C summariser, `scripts/summarise_s3pl_investigation_21_c.py`**, written before any C run:
+  - It reports per-section SDs (ddof = 1) for the init, order and repeat arms.
+  - **"Dominant":** a component's SD is ≥ 2× the other's in ≥ 2 of 3 sections. **Edge case, fixed now:** an SD of 0 is never dominant.
+  - **Nondeterminism:** the repeat SD is ≥ half the smaller arm's SD.
+  - **For the supervisor to confirm before the runs:** Section 6.7 doesn't say how the 3 sections combine for the nondeterminism clause. The script applies the same "≥ 2 of 3" count, never counts a repeat SD of 0, and reports per-section values beside it. Identical scores give an SD of exactly 0.
+  - **Nondeterminism check (descriptive):** per section, whether the 3 repeats are bit-identical in all losses, `mixed_f1` and the peak-list SHA-256, plus the number of distinct peak lists.
+  - Every run is validated: its saved seeds match its arm, the normalisation is released, `mSCF1` rounds correctly and the native peak count holds. A short list is refused, because Part C has no logged-count table.
+  - Output goes to `results/diagnostics/s3pl_seed_investigation_21/part_c/`, and the script exits 3 if that exists.
+- **Tests, local:**
+  - `test_s3pl_investigation_21_c`: 9/9, no skips. They check that the new-run locations equal the task table exactly (19), that the saved runs are reused, the init-dominant / order-dominant (2 of 3) / neither / zero-SD cases, the nondeterminism clause, refusals for wrong seeds, and an existing output.
+  - With Parts A/B/D: 37/37.
+  - `test_seed_flags_default`: 2/2, with 1 class skipped (torch).
+- **Order after Codex's commit:**
+  1. Upload the committed code (`-n` first, `sha256sum` check).
+  2. Write the Part C `tasks.tsv` and manifest to the cluster, checking `sha256sum` against the commit.
+  3. **Run the cluster test job, which needs Zayd's OK as a separate `sbatch`.** `test_seed_flags_default` must *run* there, not skip.
+  4. Echo-first `mkdir` of the 19 roots' subfolders.
+  5. Dry run, then submit 0–18 at `%5`.
+  6. When the runs finish: pull with `-n` first, run the summariser, and post the outputs as printed.
+- **Pre-submission checklist:**
+  1. The loader is S3PL's own HDF5 patches (the `--cache-spectra` rule doesn't apply).
+  2. 10–23 min per run (Part B GBM) against `--time=02:00:00`.
+  3. `bigbatch`, the recorded RTX 3090 nodes, quarantine excluded, not exclusive, with the 3090 guard.
+  4. New roots only under `part_c/`. Existing-run guard plus folder check.
+
+### 2026-10-20 21:11 Supervisor → Code | Codex | Zayd: Part C setup approved; nondeterminism aggregation confirmed
+Status: OPEN (Codex: review and commit; Zayd: OK for the test job and the C runs)
+
+- **Resolves: 2026-10-20 21:06 Code entry, from the supervisor's side.**
+- **Bit-identity test:** good design. A frozen pre-3624b56b copy, a run-level comparison of the config, weights and peaks, plus a control that must differ. It must *run* (not skip) in the cluster test job before any C submission.
+- **19 new runs instead of 20:** accepted. Gate 72136 is the second GBM12_2 repeat, as ruled at 11:46 (Q2).
+- **Nondeterminism aggregation confirmed:** "≥ 2 of 3 sections", where a repeat SD of 0 never counts, with per-section values and the bit-identity check reported beside it. This is a clarification written before any C output exists, not a change to the rule. Add it to the Section 6.7 addendum.
+- **The edge case "an SD of 0 is never dominant" is accepted.**
+- **Order as listed:** Codex's commit → upload → task table and manifest sha256 → the cluster test job (Zayd's OK; `batch` CPU is fine) → echo-first `mkdir` → dry run → submit 0–18 at `%5` → pull → summarise → post as printed.
+
+### 2026-10-21 08:55 Codex → Code | Supervisor: Review of Investigation 21 Part C setup
+Status: OPEN
+
+- Resolves: 2026-10-20 21:06 Code entry, the requested implementation review. The frozen fixture has the posted SHA-256 `197b5f4053c860cb4d9df1fcefbeb1e16553eaf2c751a39db46e82ca1eaf7f2`; its test limits the difference from current `train.py` to the guarded `3624b56b` seed-stream changes and includes a controlled run that must differ.
+- Verification: the Investigation 21 suite passed 37/37 locally. The seed-flag module passed both text-level tests; its torch-backed run-level class skipped locally as expected and is included in `run_fair_scoring_tests.sh`, where it must run without a skip before Part C submission. Shell syntax passed for the submitter, manifest command and cluster test script.
+- Task provenance: 19 unique roots and sequential indices; 15 controlled rows plus 4 repeat rows exactly match the approved plan. The manifest retains the GBM guard, released settings, existing-run refusal and RTX 3090 guard. The parameterised submitter preserves the Part B/D default and accepts Part C's two extra columns.
+- Finding 1 (Code): the supervisor's 20 October 21:11 entry requires the confirmed nondeterminism aggregation and zero-SD rules to be added to the Section 6.7 addendum before the runs. Protocol 18 still says the aggregation is Code's reading "posted for the supervisor to confirm" and does not record the confirmation or the accepted zero-SD edge cases. Add a dated clarification: aggregation is at least 2 of 3 sections; repeat SD 0 never counts toward nondeterminism; SD 0 never makes a component dominant. Do not change the already committed implementation.
+- Committed: `3877fab4` (`Add Investigation 21 Part C setup`). The frozen fixture intentionally retains the source file's existing trailing spaces so the comparison remains an exact frozen-code test. The cluster test and Part C runs remain gated on finding 1 and the stated user approval.
