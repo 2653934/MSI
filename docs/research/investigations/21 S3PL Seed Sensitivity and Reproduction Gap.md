@@ -63,6 +63,57 @@ Sources: `code/msi/baselines/s3pl/train.py`, `main.py`, `utils/helpers.py`, `uti
 
 See the chat entry of 20 October (Code → Supervisor, Investigation 21 code facts and plan). Order: A, then D and B, then C. A uses saved data only. B, C and D each need Zayd's OK and the pre-submission checklist.
 
+## Summary of results, Parts A–D (21 October; for Codex review)
+
+All four parts are complete and verified by the supervisor (chat 20 October 15:33 and 20:57; 21 October 14:21). The wording below is the supervisor's. Every score is S3PL's own in-job mSCF1 (the metric of the published 0.496 / 0.601), not the fair-scoring evaluator. Released settings throughout: 10 epochs, p3, z256, `reference_spatial_max`. Outputs are in `code/msi/results/diagnostics/s3pl_seed_investigation_21/` (`part_a_released/`, `part_b/`, `part_c/`, `part_d/`).
+
+**Gates.**
+- Released seed-1 repeat 72136 is bit-identical to the August job 53121, so saved released runs were reused.
+- The CPU identity test of the opt-in seed flags (72625) passed, so the default path is unchanged.
+- Disclosure beside A and B: "1/160 released runs returned 256 of 257 peaks (released distinct-m/z cut-off; CAC 240TopL seed 7)".
+
+**B, the published values against our released seeds 1–10.**
+- **Labels:** B1 (GBM) "outside our seed distribution", B2 (GBM) "not explained by seed selection alone"; B3 (CAC) the same two labels.
+- **GBM:**
+  - The published 0.496 is about 4.2 SD above our mean across 10 seeds (0.319 ± 0.042), and above every seed-level collection mean (max 0.374).
+  - Taking the best of 10 seeds in every section reaches 0.434.
+  - In 6/8 sections the published value is above all 10 of our seeds. The largest gap is GBM22_2: published 0.61, our maximum 0.365.
+  - GBM108_negative and GBM39_2 are within our range.
+  - Untested remaining candidates: the data version or preprocessing of those sections (not the TIC choice, per D), and the paper's tuned-on-test hyperparameters (cause 4, reported and not tested).
+- **CAC:**
+  - The published 0.601 is just outside our range (seed-level max 0.591), about 1.4 SD above our mean (0.547 ± 0.038).
+  - Best of 10 reaches 0.5998.
+  - This margin is within the published values' 2-decimal rounding (per-section mean 0.60125). So CAC is consistent with a favourable seed or best-of-several selection, but not shown to be.
+
+**A, why seeds change the values** (released seeds, 8 sections × 10 seeds per collection; descriptive).
+- About 52% of the variance is between sections, about 0–1% is a seed main effect, and about 47% is a section × seed interaction, in both collections. (ANOVA shares: GBM 0.526 / 0 / 0.474; CAC 0.523 / 0.008 / 0.469. The GBM mixed model did not converge.)
+- Seeds don't shift whole collections; they flip particular sections between distinct outcomes:
+  - GBM: GBM108_negative, GBM108_positive, GBM12_2 and GBM39_2;
+  - CAC: 240TopL and 520TopL.
+- Largest gaps are 0.20–0.45. In flipping sections the two outcomes select largely different peaks: J ≈ 0.01–0.12 for some seed pairs.
+- Final training loss vs score shows no consistent relationship (r from −0.83 to +0.76).
+
+**C, which part of the seed matters** (GBM108_positive, GBM108_negative and GBM12_2; 5 init seeds, 5 order seeds, 3 repeats).
+- **Labels:** "initialisation dominant" (init SD ≥ 2× order SD in 2/3 sections) and "not dominated by nondeterminism" (0/3).
+- **SDs, init / order / repeat:** GBM108_positive 0.222 / 0.0006 / 0; GBM108_negative 0.226 / 0.146 / 0; GBM12_2 0.128 / 0.010 / 0.
+- **Repeats:** on the RTX 3090, rerunning the same seed is bit-identical (losses, scores and peak lists) in all 3 sections. GPU nondeterminism contributes nothing measurable.
+- **What drives the seed effect: the weight initialisation.**
+  - Varying the init (order fixed) moves GBM108_positive between about 0.02 and 0.45, and GBM12_2 between about 0.27 and 0.52, in two clusters.
+  - Varying the order (init fixed) barely moves them (SD 0.0006 and 0.010).
+- **Exception:** in GBM108_negative the data order also flips the outcome (0.36–0.41 vs 0.65). There both matter (ratio 1.55, below the 2× rule).
+- **Bounded interpretation:** S3PL training under the released preprocessing has at least two distinct solutions in these sections, and the starting weights mostly decide which one it reaches. That is 3 sections × 5 seeds, descriptive.
+- **Disclosure (Q5):** GBM108_positive's pattern was largely visible from saved runs before C.
+
+**D, preprocessing** (GBM, 8 sections × seeds 1–3, paper TIC vs the released helper).
+- **Label:** "does not explain; seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind".
+- **Numbers:** collection means TIC 0.303 vs released 0.324. Paired TIC − released (n = 8): exact p = 0.742, Hodges–Lehmann −0.012 [−0.154, 0.099].
+- TIC doesn't raise the GBM mean, so the paper's stated normalisation is not the cause of the gap.
+- **Descriptive observation (not a rule result):**
+  - Per-section seed SD is median 0.011 (0.008–0.018) with TIC, against 0.061 (0.027–0.229) with the released helper.
+  - Under TIC every section sits in 0.25–0.36, and the flipping sections stop flipping.
+  - The released preprocessing goes with much higher seed sensitivity, and it also gives the higher-scoring outcomes (GBM108_negative 0.58–0.66 vs about 0.31).
+  - With TIC, the split seen in C disappears.
+
 ## Results
 
 ### Part A, preliminary (20 October; descriptive; saved runs only)
@@ -105,3 +156,9 @@ Output: `code/msi/results/diagnostics/s3pl_seed_investigation_21/part_d/`.
   - **The rule:** a run may hold fewer peaks than `num_GT_peaks` only if that number equals its logged distinct-selection count. That count is recorded for all 140 tasks in `reproducibility/s3pl_investigation_21/provenance/selection_counts.tsv`. A count above native, or any other shortfall, is refused.
   - **Reported beside Parts A and B:** "1/160 released runs returned 256 of 257 peaks (released distinct-m/z cut-off; CAC 240TopL seed 7)".
   - **Disclosure:** Code saw this run's in-job mSCF1 (0.143) in its Slurm log on the cluster before any summary was computed. The rule was decided on validity: the released code keeps all of its distinct selections when there are fewer than the target. **The decision would be the same for any score value.**
+
+### Part C (21 October; verified by the supervisor at 14:21)
+
+Output: `code/msi/results/diagnostics/s3pl_seed_investigation_21/part_c/` (`runs.csv`, `sections.csv`, `summary.json`). Script: `code/msi/scripts/summarise_s3pl_investigation_21_c.py`. Runs: 72626 (19/19), plus the saved runs listed in the task manifest. The identity gate passed in 72625 on CPU, after 72595 failed on a test-code bug that Codex fixed in `178720e8`. Labels and numbers are in the summary above.
+
+- **Note on the aggregation string:** `summary.json` records `nondeterminism_aggregation` as ">= 2 of 3 sections (Code's reading; Section 6.7 does not specify; per-section values reported)". The output is kept as generated. The dated clarification in protocol 18 Section 6.7, written on 21 October at 08:58 SAST before any Part C run, confirmed this reading (supervisor chat 20 October 21:11). The clarification also records that a repeat SD of 0 never counts toward nondeterminism and that an SD of 0 never makes a component dominant.

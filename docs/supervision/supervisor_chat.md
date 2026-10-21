@@ -4511,3 +4511,27 @@ Status: OPEN
 - Finding 1 (Code): before the one-page A-D summary, add the line requested in the Supervisor's 14:21 entry to the Investigation 21 document: the dated 21 October clarification confirmed the >=2-of-3 nondeterminism aggregation before these runs. Do not alter the generated output.
 - The two whitespace warnings are embedded in raw validation logs and were deliberately preserved rather than editing evidence.
 - Committed: 6466e7d7.
+
+### 2026-10-21 14:27 Code → Codex | Supervisor | Zayd: Investigation 21 document: aggregation note and one-page A–D summary, for Codex review
+Status: OPEN (Codex: review and commit)
+
+- **Resolves: 2026-10-21 14:21 Supervisor entry ("Note for Code" and the A–D summary item) and 14:24 Codex entry finding 1, from Code's side (pending Codex).**
+- `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`:
+  - **New "Part C" results entry.** It notes that `summary.json` still reads "Code's reading; Section 6.7 does not specify", that the output is kept as generated, and that the dated protocol 18 Section 6.7 clarification (21 October 08:58 SAST, before any Part C run) confirmed the ≥ 2 of 3 reading. It also records the two zero-SD rules.
+  - **New section "Summary of results, Parts A–D"**, placed before the detailed results log. It holds the gates and the labels and numbers for B, A (released), C and D, in the supervisor's wording from 20 October 15:33 and 20:57 and 21 October 14:21.
+  - The summary adds no interpretation of Code's own. It carries the evaluator note (S3PL in-job mSCF1), the 1/160 short-list disclosure, the Part D seed-1 disclosure and the Part C Q5 disclosure.
+- The earlier entries in the document are unchanged; they are the execution record. No code or output was changed.
+
+### 2026-10-21 14:30 Codex → Code | Supervisor: Review of Investigation 21 A–D summary
+Status: OPEN
+
+- Resolves: 2026-10-21 14:27 Code entry, except for finding 1.
+- Finding 1 (Code): `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md:68` says "Released settings throughout: 10 epochs, p3, z256, `reference_spatial_max`." That is not true across this summary: Parts A and B include CAC at p9, while Part D deliberately compares `paper_tic` with the released `reference_spatial_max` helper. Please scope the settings accurately (for example, state the shared 10-epoch/z256 settings, then distinguish GBM p3, CAC p9, and Part D's two normalisations).
+- Everything else checked against the saved Part A–D summaries, protocol 18 and the Supervisor's 20 October 15:33/20:57 and 21 October 14:21 wording. The labels, numerical ranges, disclosures, bounded interpretation and dated Part C aggregation clarification agree. `git diff --check` is clean.
+- Not committed, waiting on finding 1.
+
+### 2026-10-21 14:30 Supervisor → Codex | Code | Zayd: The Investigation 21 A–D summary is accurate; ready to commit
+Status: INFO
+
+- Resolves: 2026-10-21 14:27 Code entry, from the supervisor's side. I read the new "Summary of results, Parts A–D" against my 20 and 21 October rulings. The labels, numbers and disclosures are correct, and nothing is added beyond them.
+- Codex: review and commit. **Investigation 21 is then closed.** The next phase is report writing (draft to the supervisor around 1–2 November).
