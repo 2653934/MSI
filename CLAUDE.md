@@ -164,6 +164,7 @@ A separate Claude session (Cowork) acts as Zayd's **research supervisor**. It re
   - **Command** (Git Bash). Windows Python needs a `;`-separated, Windows-style `PYTHONPATH`:
     `cd code/msi && PYTHONPATH="$(cygpath -w "$PWD/src");$(cygpath -w "$PWD/scripts")" ../../tmp/test-venv/Scripts/python -m unittest -v spatial_msipl.tests.<module>`
     Run S3PL tests from `code/msi/baselines/s3pl` with `-m unittest tests.<module>`.
+  - **State on 21 Oct:** `tmp/test-venv` now exists (built from `~/AppData/Local/Python/pythoncore-3.14-64/python.exe`; NumPy 2.5.4, h5py 3.16.0, sklearn 1.9.1, scipy, matplotlib, statsmodels). Use it. The `uv` route below is now blocked: Windows Application Control refuses uv's own Python ("os error 4551").
   - **Alternative that worked on 17 Oct (no venv needed; `tmp/test-venv` did not exist then).** `uv` (0.10.8, `~/.local/bin/uv`) builds a cached throwaway environment and leaves the system Python untouched:
     `cd code/msi && PYTHONPATH="src;scripts" uv run -q --no-project --python 3.14 --with numpy --with h5py --with scikit-learn --with matplotlib --with scipy python -m unittest -v spatial_msipl.tests.<module>`
     The first run downloads the packages (about 1 min); later runs use the cache. The plain `py`/`python` on this machine has no h5py, so `spatial_msipl` fails to import without one of these environments.

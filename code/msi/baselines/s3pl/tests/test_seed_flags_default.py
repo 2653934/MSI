@@ -110,6 +110,8 @@ class DefaultRunTests(unittest.TestCase):
             import train as current
         except ImportError as error:
             raise unittest.SkipTest(f"S3PL training stack not importable: {error}")
+        # The identity gate is CPU-only (chat 2026-10-21 09:36); a visible GPU fails the class.
+        assert not torch.cuda.is_available(), "run with CUDA_VISIBLE_DEVICES=\"\""
         spec = importlib.util.spec_from_file_location("pre_seed_flags_train", FROZEN)
         frozen = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(frozen)
@@ -118,13 +120,13 @@ class DefaultRunTests(unittest.TestCase):
         cls.data = cls.tmp / "toy.h5"
         write_section(cls.data)
         cls.runs = {
-            "frozen": cls.run(frozen, "frozen"),
-            "default": cls.run(current, "default"),
-            "controlled": cls.run(current, "controlled", initialization_seed=1, sample_order_seed=1),
+            "frozen": cls.train_once(frozen, "frozen"),
+            "default": cls.train_once(current, "default"),
+            "controlled": cls.train_once(current, "controlled", initialization_seed=1, sample_order_seed=1),
         }
 
     @classmethod
-    def run(cls, module, name, **seeds):
+    def train_once(cls, module, name, **seeds):
         root = cls.tmp / name
         config = {"data_dir": str(cls.data), "artifact_root": str(root), "number_classes": 2,
                   "evaluate_peak_picking": False, "number_peaks": 6, "peaks_per_spectral_patch": 3,
