@@ -4439,3 +4439,75 @@ Status: INFO
 
 - Resolves: 2026-10-21 10:05 Code entry, from the supervisor's side. The rename, the CUDA assertion and the CPU-only invocation of the seed-flag module are exactly as ruled, and nothing scientific changed.
 - Ready to commit (Codex, or Zayd if Codex has no credits). Then the re-upload, the test job and Part C, as approved.
+
+### 2026-10-21 10:52 Code → Supervisor | Codex | Zayd: Part C identity gate passed (72625, CPU); Part C runs submitted (72626, 19 tasks at %5)
+Status: INFO
+
+- **Upload** from clean HEAD `449a757b` (fix `178720e8`), `-n` first: the 2 fixed files match HEAD by `sha256sum`.
+- **Test job 72625** (`batch`, mscluster129, 5:55): COMPLETED 0:0.
+  - Main suite: 259 tests, OK, 3 skipped. S3PL modules: 25 tests, OK.
+  - `test_seed_flags_default`: `Ran 4 tests … OK`. `test_default_path_is_bit_identical_to_the_frozen_copy … ok` and `test_controlled_run_is_detected_as_different … ok`, with no skip.
+  - The log shows `GPU available: False` three times and device `cpu`.
+- **Folders:** echo-first pass, then 57 subfolders were created under the 19 `part_c/` roots, none of which existed before. Count check: 172 directories, 2 files.
+- **Dry run** passed for 19 tasks.
+- **72626** submitted at 08:51 UTC (10:51 SAST): tasks 0–18 at `%5`, on `bigbatch`, not exclusive, with the recorded exclude list and the RTX 3090 guard.
+  - Expected 10–23 min per run (Part B GBM), against `--time=02:00:00`.
+  - I'll check on the polling rules and post the summariser output as printed when all 19 are done.
+
+### 2026-10-21 13:18 Code → Supervisor | Codex | Zayd: Investigation 21 Part C: all 19 runs complete and pulled; summariser outputs as printed (no interpretation)
+Status: OPEN (Supervisor: verify; Codex: review and commit the outputs)
+
+- **72626: 19/19 COMPLETED 0:0** (08:51–11:10 UTC = 10:51–13:10 SAST; 10:18–16:43 per task). Only mscluster71 and mscluster79 were free, so at most 2 ran at once. No failures and no retries.
+- **Pull** 13:17 SAST, documented artifact pull, `-n` first: 117 new files.
+  - 111 are under `reproducibility/s3pl_investigation_21/part_c/`: 15 controlled runs × 6 files, 4 repeats × 5, plus the updated untracked `provenance/slurm_job_ids.txt`.
+  - 6 are test logs (72595 and 72625) under `results/validation/fair_scoring_env_tests/`.
+  - No tracked file changed.
+- **Summariser:** `scripts/summarise_s3pl_investigation_21_c.py` (committed code, defaults), exit 0, no terminal output. It wrote `results/diagnostics/s3pl_seed_investigation_21/part_c/` (`runs.csv`, `sections.csv`, `summary.json`; 144 provenance inputs). A second run into the scratchpad was byte-identical in all 3 files.
+
+**`summary.json` → `C`, as printed:**
+- `dominant_label`: "initialisation dominant"
+- `sections_init_ge_2x_order`: 2; `sections_order_ge_2x_init`: 0
+- `nondeterminism_label`: "not dominated by nondeterminism"
+- `nondeterminism_aggregation`: ">= 2 of 3 sections (Code's reading; Section 6.7 does not specify; per-section values reported)". This string is from the committed code; the dated Section 6.7 clarification of 21 October now records the supervisor's confirmation of this reading.
+- `sections_repeat_ge_half_smaller_arm`: 0; `sections_repeats_bit_identical`: 3
+
+**`sections.csv`, as printed** (SD ddof = 1; S3PL in-job mSCF1, unrounded; scores in seed order 1–5, repeats as original / r1 / r2)
+
+| Section | init SD | order SD | repeat SD | init scores | order scores | repeat scores | init ≥ 2× order | order ≥ 2× init | repeat ≥ ½ smaller | repeats bit-identical | distinct repeat peak lists |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| GBM108_positive | 0.22201698 | 0.00055677 | 0.0 | 0.025885, 0.443947, 0.079035, 0.447815, 0.022879 | 0.025885, 0.025557, 0.026316, 0.025557, 0.02686 | 0.03346 ×3 | True | False | False | True | 1 |
+| GBM108_negative | 0.22637947 | 0.14630899 | 0.0 | 0.357041, 0.570212, 0.659235, 0.583063, 0.102849 | 0.357041, 0.413679, 0.646797, 0.654369, 0.648593 | 0.663621 ×3 | False | False | False | True | 1 |
+| GBM12_2 | 0.12783972 | 0.01032990 | 0.0 | 0.508193, 0.273358, 0.48849, 0.271947, 0.51892 | 0.508193, 0.523067, 0.499305, 0.519561, 0.503003 | 0.511742 ×3 | True | False | False | True | 1 |
+
+- **`runs.csv`:** 39 rows (3 sections × (5 init + 5 order + 3 repeat); init 1 / order 1 is shared by both arms).
+  - Every run: RTX 3090, `reference_spatial_max`, `random_seed` 1.
+  - Native peak counts: GBM108_positive 581, GBM108_negative 937, GBM12_2 981.
+  - The repeat runs in each section share one peak-list SHA-256 (GBM108_positive `7150362663a4…`, GBM108_negative `12009a598e55…`, GBM12_2 `c541e57a252d…`).
+- **`summary.json` notes, as printed:** descriptive arms of 5 and 3 runs, n = 3 sections; S3PL in-job mSCF1, not the fair-scoring evaluator; the init and order arms share the init 1 / order 1 run; GBM108_positive's pattern was largely visible before Part C (Q5); the GPU jobs were not exclusive.
+- No interpretation from Code. Nothing goes into the report until the supervisor verifies.
+
+### 2026-10-21 14:21 Supervisor → Code | Codex | Zayd: Part C verified; wording for the report; Investigation 21 complete
+Status: OPEN (Codex: review and commit; Code: one note)
+
+- **Resolves: 2026-10-21 10:52 and 13:18 Code entries, from the supervisor's side.** The identity gate passed on CPU with no skip, and all 19 runs succeeded. Well run.
+- **Checked:** I recomputed the three init and order SDs from the printed scores (0.2220 / 0.00056; 0.2264 / 0.1463; 0.1278 / 0.0103). They match. The ratios are 399×, 1.55× and 12.4×, so 2 of 3 sections are init ≥ 2× order, and the label holds.
+- **Labels stand:** "initialisation dominant" and "not dominated by nondeterminism".
+- **Wording for the report** (descriptive beside the labels):
+  - **Repeats:** on the RTX 3090, rerunning the same seed is bit-identical (losses, scores and peak lists) in all 3 sections. GPU nondeterminism contributes nothing measurable.
+  - **What drives the seed effect:** the weight initialisation. Varying the init (data order fixed) moves GBM108_positive between about 0.02 and 0.45, and GBM12_2 between about 0.27 and 0.52, in two clusters. Varying the data order (init fixed) barely moves them (SD 0.0006 and 0.010).
+  - **Exception, stated plainly:** in GBM108_negative the data order also flips the outcome (0.36–0.41 vs 0.65), so there both the init and the order matter (ratio 1.55, below the 2× rule).
+  - **Interpretation, bounded:** S3PL training under the released preprocessing has at least two distinct solutions in these sections, and the starting weights mostly decide which one it reaches. With TIC normalisation (Part D) the split disappears. That is 3 sections × 5 seeds, descriptive.
+- **Note for Code:** `summary.json`'s `nondeterminism_aggregation` string still says "Code's reading; Section 6.7 does not specify". Don't edit the output. Add a line to the investigation document saying the dated 21 October clarification confirmed this reading before the runs.
+- **Investigation 21 (A–D) is complete.** Next, Code writes a one-page summary of A–D into the investigation document (results only, with the labels and the numbers above) for Codex to review. Then report writing.
+
+### 2026-10-21 14:24 Codex → Code | Supervisor: Review of Part C outputs and gate logs
+Status: OPEN
+
+- Resolves: 2026-10-21 13:18 Code entry and the Codex review-and-commit part of the 2026-10-21 14:21 Supervisor entry.
+- The corrected CPU identity gate is clean: job 72625 records 259 main tests passing with 3 expected skips, 25 S3PL module tests passing, and all 4 seed-flag tests passing. Both run-level identity tests ran without a skip; all three device reports say `GPU available: False`. The failed 72595 attempt is retained unchanged as provenance.
+- Part C evidence is structurally complete: 19 task roots, 110 per-run evidence files, the task table, manifest and Slurm job-ID record. All JSON files parse, all runs record an RTX 3090, and the generated summary covers 144 provenance inputs, 39 run rows and 3 section rows.
+- I regenerated `runs.csv`, `sections.csv` and `summary.json` with the committed Part C summariser in a fresh temporary directory. All three regenerated files are byte-identical to the submitted outputs.
+- The declared conclusions are supported: 2 of 3 sections meet init SD >= 2x order SD, yielding `initialisation dominant`; all three repeat arms have zero SD, bit-identical results and one peak-list hash, yielding `not dominated by nondeterminism`. These agree with the Supervisor's independent recomputation at 14:21.
+- Finding 1 (Code): before the one-page A-D summary, add the line requested in the Supervisor's 14:21 entry to the Investigation 21 document: the dated 21 October clarification confirmed the >=2-of-3 nondeterminism aggregation before these runs. Do not alter the generated output.
+- The two whitespace warnings are embedded in raw validation logs and were deliberately preserved rather than editing evidence.
+- Committed: 6466e7d7.
