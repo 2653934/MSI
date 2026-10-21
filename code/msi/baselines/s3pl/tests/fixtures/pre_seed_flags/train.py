@@ -1,0 +1,212 @@
+import os
+import random
+import json
+import time
+try:
+    import resource  # peak host RSS (Linux); absent on Windows
+except ImportError:
+    resource = None
+import numpy as np
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, SubsetRandomSampler
+from torchvision import transforms
+import tqdm
+
+from model.Attention3DConvAutoencoder import Attention3DConvAutoencoder
+from test import ablate_patch_context, test
+from utils.data_source import build_patch_dataset
+from utils.nonlocal_shuffle import NONLOCAL_SHUFFLE_SEED
+from utils.helpers import artifact_directories, normalize_spectra, resolve_data_paths
+
+def train(config):   
+    input_context_mode = config.get("input_context_mode", "none")
+    if input_context_mode not in ("none", "tile_centre", "shuffle_nonlocal"):
+        raise ValueError(f"Unsupported training input context: {input_context_mode}")
+    # Test N (protocol 18 Section 6.5): the patches themselves carry shuffled
+    # nonlocal neighbours, and the reconstruction target is that input patch.
+    shuffle_seed = NONLOCAL_SHUFFLE_SEED if input_context_mode == "shuffle_nonlocal" else None
+    if shuffle_seed is not None:
+        config["neighbour_shuffle_seed"] = shuffle_seed
+        config["reconstruction_target"] = "input patch (shuffled nonlocal neighbours, real centre)"
+    random_seed = config["random_seed"]
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        torch.cuda.reset_peak_memory_stats()
+
+    total_started_at = time.perf_counter()
+
+    data_dir = config["data_dir"]
+    directory_name = os.path.dirname(__file__)
+    filepath, folderpath, dataname = resolve_data_paths(data_dir, directory_name)
+    artifact_dirs = artifact_directories(config, directory_name)
+
+    normalization = config.get("normalization", "reference_spatial_max")
+    transform = transforms.Lambda(
+        lambda x: torch.tensor(
+            normalize_spectra(x, normalization), dtype=torch.float32
+        )
+    )
+    if shuffle_seed is None:
+        training_dataset, mz_list = build_patch_dataset(
+            filepath,
+            config["spectral_patch_size"],
+            transform,
+        )
+    else:
+        training_dataset, mz_list = build_patch_dataset(
+            filepath,
+            config["spectral_patch_size"],
+            transform,
+            neighbour_shuffle_seed=shuffle_seed,
+        )
+    num_input_channels = len(mz_list)
+    
+    dataset_size = len(training_dataset)
+    indices = list(range(dataset_size))
+    np.random.seed(random_seed)
+    np.random.shuffle(indices)
+
+    train_indices = indices
+    test_indices = indices
+
+    train_sampler = SubsetRandomSampler(train_indices)
+    training_loader = DataLoader(training_dataset, batch_size=config["batch_size"], shuffle=False, drop_last=True, sampler=train_sampler)
+
+    model = Attention3DConvAutoencoder(config["batch_size"], kernel_depth_d1=config["kernel_depth_d1"], kernel_depth_d2=config["kernel_depth_d2"], dropout=config["dropout"], spectral_patch_size=config["spectral_patch_size"])
+    criterion = nn.MSELoss()
+
+    if use_cuda:
+        model = model.cuda()
+
+    for path in artifact_dirs.values():
+        path.mkdir(parents=True, exist_ok=True)
+    training_name = dataname + '_' + model._get_name() + '_' + str(config["n_epochs"]) + 'epochs_' + str(config["peaks_per_spectral_patch"]) + '_' + 'spectral_patch_size_' + str(config["spectral_patch_size"])
+    if normalization != "reference_spatial_max":
+        training_name += "_" + normalization
+    if input_context_mode != "none":
+        training_name += "_train_" + input_context_mode
+    path_to_weights = artifact_dirs["weights"] / (training_name + '.pt')
+    if input_context_mode != "none" and (
+        path_to_weights.exists()
+        or (artifact_dirs["logs"] / (training_name + '.json')).exists()
+    ):
+        raise FileExistsError(f"Refusing to overwrite training-control artifacts for {training_name}")
+
+    pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(path_to_weights)
+    print('Samples in training folder: ' + str(len(training_dataset)))
+    print('input channels = ' + str(num_input_channels))
+    print('trainable parameters: ' + str(pytorch_total_params))
+    print('GPU available: ' + str(use_cuda))
+    print('normalization: ' + normalization)
+    print('input context mode: ' + input_context_mode)
+    
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["learning_rate"])
+
+    # Item C2 (15 October), opt-in and logging only: state-dict copies at the
+    # listed epochs and per-epoch timing/loss/memory records. Neither draws
+    # random numbers nor changes any computation or the data order.
+    checkpoint_epochs = sorted(set(int(e) for e in config.get("checkpoint_epochs") or []))
+    if any(e < 1 or e > config["n_epochs"] for e in checkpoint_epochs):
+        raise ValueError("checkpoint_epochs must lie within 1..n_epochs")
+    epoch_details = []
+    train_started_at = time.perf_counter()
+    train_history = []
+    for epoch in range(config["n_epochs"]):
+        model.train()
+        epoch_started_at = time.perf_counter()
+        batch_loss_sum = 0.0
+        batch_count = 0
+
+        with tqdm.tqdm(training_loader, unit="batch") as bar:
+            for batch in bar:
+                bar.set_description(f"Epoch {epoch}")
+                optimizer.zero_grad()
+
+                X_batch, _ = batch
+                y_batch = X_batch  # Keep the original real-patch reconstruction target.
+                if input_context_mode != "shuffle_nonlocal":  # already in the patch
+                    X_batch = ablate_patch_context(X_batch, input_context_mode)
+
+                if use_cuda:
+                    X_batch = X_batch.cuda()
+                    y_batch = y_batch.cuda()
+
+                y_pred, binary_mask, attention_mask = model(X_batch)
+
+                loss = criterion(y_pred, y_batch)
+                loss.backward()
+                optimizer.step()
+
+                batch_loss = loss.item()
+                batch_loss_sum += batch_loss
+                batch_count += 1
+                bar.set_postfix_str(str(criterion._get_name()) + '=' + str(batch_loss))
+
+        loss = loss.item()
+        train_history.append(loss)
+        if checkpoint_epochs:
+            completed = epoch + 1
+            epoch_details.append({
+                "epoch": completed,
+                "last_batch_loss": loss,
+                "epoch_mean_loss": batch_loss_sum / batch_count,
+                "batches": batch_count,
+                "epoch_seconds": time.perf_counter() - epoch_started_at,
+                "peak_gpu_memory_allocated_bytes_so_far": (
+                    int(torch.cuda.max_memory_allocated()) if use_cuda else None),
+                "peak_host_rss_kib_so_far": (
+                    resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if resource else None),
+            })
+            if completed in checkpoint_epochs:
+                torch.save(model.state_dict(),
+                           str(artifact_dirs["weights"] / f"{training_name}_epoch{completed}.pt"))
+
+    training_seconds = time.perf_counter() - train_started_at
+    torch.save(model.state_dict(), str(path_to_weights))
+
+    config["training_name"] = training_name
+    config["train_history"] = train_history
+    if checkpoint_epochs:
+        config["epoch_details"] = epoch_details
+        config["epoch_checkpoints"] = {
+            str(e): f"{training_name}_epoch{e}.pt" for e in checkpoint_epochs}
+
+    with open(artifact_dirs["logs"] / (training_name + '.json'), 'w') as f:
+        json.dump(config, f, indent=4)
+
+    evaluation_started_at = time.perf_counter()
+    mSCF1 = test(config, test_indices)
+    evaluation_seconds = time.perf_counter() - evaluation_started_at
+    total_seconds = time.perf_counter() - total_started_at
+
+    runtime_metrics = {
+        "dataset": dataname,
+        "normalization": normalization,
+        "device": torch.cuda.get_device_name(0) if use_cuda else "cpu",
+        "training_seconds": training_seconds,
+        "evaluation_seconds": evaluation_seconds,
+        "total_seconds": total_seconds,
+        "peak_gpu_memory_bytes": (
+            int(torch.cuda.max_memory_allocated()) if use_cuda else None
+        ),
+    }
+    if checkpoint_epochs:
+        runtime_metrics["peak_host_rss_kib"] = (
+            resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if resource else None)
+        runtime_metrics["training_seconds_scope"] = (
+            "training loop only; patch dataset built before the timer; evaluation separate")
+    resultfolder = artifact_dirs["results"] / training_name
+    resultfolder.mkdir(parents=True, exist_ok=True)
+    with open(resultfolder / "runtime_metrics.json", "w") as f:
+        json.dump(runtime_metrics, f, indent=4)
+
+    print("Runtime metrics:", runtime_metrics)
+    return mSCF1

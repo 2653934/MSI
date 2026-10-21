@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Investigation 21 chunk submitter (protocol 18 Section 6.7; chat 2026-10-20 15:33).
-# Piped to the login node: [DRY_RUN=1] bash -s -- <indices> <label> [afterok-job]
+# Piped to the login node: [DRY_RUN=1] [PROV=<provenance dir>] bash -s -- <indices> <label> [afterok-job]
+# PROV defaults to the Part B/D folder; Part C uses reproducibility/s3pl_investigation_21/part_c/provenance.
 # <indices> is a Slurm array list such as 32,37,38 or 60-83. Refuses to submit if any
 # selected task's output subfolders are missing (the 72190 mkdir race), if a task row
 # does not match its index, or if the submission would exceed the bigbatch QOS (48).
@@ -9,7 +10,7 @@ INDICES=$1
 LABEL=$2
 AFTER=${3:-}
 cd "$HOME/msi"
-PROV=reproducibility/s3pl_investigation_21/provenance
+PROV=${PROV:-reproducibility/s3pl_investigation_21/provenance}
 EXCLUDE='mscluster[44-45,47-51,54,57,59-70,72,74-76,78,82-83,85,88-89]'
 
 expand() {
@@ -23,7 +24,7 @@ missing=0
 count=0
 for i in $(expand "$INDICES"); do
     count=$((count + 1))
-    read -r idx coll sec seed norm root <<< "$(sed -n "$((i + 1))p" "$PROV/tasks.tsv")"
+    read -r idx coll sec seed norm root _ <<< "$(sed -n "$((i + 1))p" "$PROV/tasks.tsv")"
     if [ "$idx" != "$i" ]; then echo "REFUSE: row $((i + 1)) has index '$idx', expected $i"; exit 4; fi
     for sub in logs/s3pl results/baselines/s3pl checkpoints/baselines/s3pl; do
         if [ ! -d "$root/$sub" ]; then echo "MISSING: $i $root/$sub"; missing=1; fi

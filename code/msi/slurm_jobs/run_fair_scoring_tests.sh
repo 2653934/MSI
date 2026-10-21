@@ -57,7 +57,8 @@ PY
     2>&1 | tee "$RECORD_DIR/${SLURM_JOB_ID}_unittest.log"
 # Test N (protocol 18 Section 6.5): the S3PL patch tests run from the S3PL folder,
 # where m2aia, pyimzml and torch let the real-m2aia and training-call tests run.
+# Investigation 21 Part C: the seed flags' default path against its frozen copy (torch, CPU).
 (cd baselines/s3pl && "$PYTHON" -m unittest -v tests.test_nonlocal_shuffle \
-    tests.test_frozen_patch_context tests.test_h5_data_source) \
+    tests.test_frozen_patch_context tests.test_h5_data_source tests.test_seed_flags_default) \
     2>&1 | tee "$RECORD_DIR/${SLURM_JOB_ID}_s3pl_unittest.log"
 echo "All fair-scoring tests passed under s3pl_env."
