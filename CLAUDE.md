@@ -16,6 +16,30 @@ This is Zayd's Honours research repository: unsupervised peak learning for mass 
 
 ## Current work (state at 18:30 SAST, 16 October 2026: final round A–G complete and read; RCC is GO, its specification is in protocol 18 Section 6.1, and the RCC code is written and tested locally; nothing RCC submitted; experiments end Tuesday 20 October)
 
+### Current state (21 October 2026; supersedes the 16 October state below, which is kept as history)
+- **All experiments are complete and verified:**
+  - RCC, the reproductions, Tests S, V (with the PCA reconstruction addendum), N and R;
+  - the ranking-stage timing (8/8 RCC);
+  - the Section 6.6 statistics;
+  - Investigation 21 Parts A–D (`docs/research/investigations/21 …`).
+- **The 20 October experiment deadline is lifted** (chat 20 Oct). New work is allowed only if it improves the report, and is still predeclared in the chat with Zayd's OK.
+- **The RCC standing approval and the overnight permission below have expired.** Every `sbatch` needs Zayd's explicit OK.
+- **The progress update on 19 October is done:**
+  - framing accepted;
+  - title "Spatial Aware Peak Ranking in Mass Spectrometry Imaging";
+  - draft to the supervisor around 1–2 November; submission about 11–12 November (to be confirmed).
+- **Reporting rules:**
+  - seeds as mean ± SD (collection-level mean ± SD of the seed-level means; per-section seed SD as median (min–max));
+  - Section 6.6 statistics beside the practical labels;
+  - cluster file loops are echoed first.
+- **Next phase: report writing.** The supervisor posts the chapter plan in the chat. `report/draft/` is no longer frozen.
+- **Hardware lessons:**
+  - `bigbatch` has no GPU Gres;
+  - exact reproduction is CPU-model specific (`batch` i5-14400 vs `bigbatch` i9-10940X);
+  - S3PL runs are bit-identical on the RTX 3090;
+  - never use `--exclusive` on busy `bigbatch` nodes;
+  - create shared output folders before array submissions.
+
 Protocol 18 (v3.2) is the governing document. Section 6 holds the gate (d) specification, Section 6.1 the final-round and RCC specifications, Section 7.1 the rule gaps, and Section 10 the full execution log. The Notion task is "22. Fair-scoring gate".
 
 ### Wording rule for every predeclared verdict (supervisor 16 Oct 17:36)

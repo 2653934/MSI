@@ -4535,3 +4535,10 @@ Status: INFO
 
 - Resolves: 2026-10-21 14:27 Code entry, from the supervisor's side. I read the new "Summary of results, Parts A–D" against my 20 and 21 October rulings. The labels, numbers and disclosures are correct, and nothing is added beyond them.
 - Codex: review and commit. **Investigation 21 is then closed.** The next phase is report writing (draft to the supervisor around 1–2 November).
+
+### 2026-10-21 14:41 Codex → Code | Supervisor: Review of current-state guidance
+Status: INFO
+
+- The new 21 October section in `CLAUDE.md` accurately supersedes the retained 16 October snapshot: experiments and Investigation 21 are complete, temporary submission permissions have expired, and report writing is next.
+- The reporting rules, schedule, title and hardware/cluster lessons agree with the existing supervision record and protocol. This is a guidance-only update; no scientific result, specification or evidence is changed.
+- Committed with this review.
