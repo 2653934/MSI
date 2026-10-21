@@ -4358,3 +4358,40 @@ Status: OPEN
 - Task provenance: 19 unique roots and sequential indices; 15 controlled rows plus 4 repeat rows exactly match the approved plan. The manifest retains the GBM guard, released settings, existing-run refusal and RTX 3090 guard. The parameterised submitter preserves the Part B/D default and accepts Part C's two extra columns.
 - Finding 1 (Code): the supervisor's 20 October 21:11 entry requires the confirmed nondeterminism aggregation and zero-SD rules to be added to the Section 6.7 addendum before the runs. Protocol 18 still says the aggregation is Code's reading "posted for the supervisor to confirm" and does not record the confirmation or the accepted zero-SD edge cases. Add a dated clarification: aggregation is at least 2 of 3 sections; repeat SD 0 never counts toward nondeterminism; SD 0 never makes a component dominant. Do not change the already committed implementation.
 - Committed: `3877fab4` (`Add Investigation 21 Part C setup`). The frozen fixture intentionally retains the source file's existing trailing spaces so the comparison remains an exact frozen-code test. The cluster test and Part C runs remain gated on finding 1 and the stated user approval.
+
+### 2026-10-21 08:58 Code → Supervisor | Codex | Zayd: Part C aggregation clarification added to the Section 6.7 addendum (Codex finding 1); proceeding to Part C cluster work
+Status: OPEN (Codex: review and commit the docs-only change)
+
+- **Resolves: 2026-10-21 08:55 Codex entry, finding 1, from Code's side (pending Codex).**
+- Added to protocol 18, after the Section 6.7 Q1–Q6 addendum: "Clarification: Part C aggregation (supervisor chat 20 October 21:11; written 21 October 08:58 SAST, before any Part C output exists)". It records:
+  - nondeterminism counts if the repeat SD is ≥ half the smaller arm's SD in at least 2 of the 3 sections, with per-section values and the bit-identity check beside it;
+  - a repeat SD of 0 never counts toward nondeterminism;
+  - an SD of 0 never makes a component dominant.
+- It states that this is a clarification, not a rule change, and that the verbatim text and the committed summariser (`3877fab4`) are unchanged. No code was changed.
+- Docs-only, so per Zayd I continue without waiting: upload of committed code → Part C task table and manifest (sha256 against `3877fab4`) → cluster test job (`test_seed_flags_default` must run) → echo-first `mkdir` → dry run → submit 0–18 at `%5`. Zayd gave his OK for this sequence on 21 October.
+
+### 2026-10-21 09:12 Code → Supervisor | Codex | Zayd: Part C gate failed: cluster test job 72595 crashed in `test_seed_flags_default` (a test-code bug, not a node or CUDA fault); stopped before any mkdir or submission
+Status: OPEN (Codex: fix and commit the test; Zayd: OK to re-upload and rerun the test job)
+
+- **Done before the failure (logged in protocol 18 Section 10):**
+  - Upload from clean HEAD `2293ed5a`, `-n` first: the 15 tracked files match HEAD by `sha256sum`. The 16th file was the untracked editor file `baselines/s3pl/.pym2aia_prefs.xml` (timestamp only).
+  - Part C `tasks.tsv` and `manifest.txt` were copied to the cluster and match `3877fab4` by `sha256sum`.
+- **Test job 72595** (`batch`, mscluster131, 06:59:57–07:07:48 UTC = 08:59–09:07 SAST, 7:51) ended **FAILED 1:0**.
+  - Main suite: `Ran 259 tests … OK (skipped=3)`.
+  - S3PL module run: crashed with `TypeError: DefaultRunTests.run() missing 1 required positional argument: 'name'`. The S3PL log is `results/validation/fair_scoring_env_tests/72595_s3pl_unittest.log`.
+- **Cause** (`baselines/s3pl/tests/test_seed_flags_default.py:127`): `DefaultRunTests` defines a classmethod `run(cls, module, name, **seeds)`. That name replaces `unittest.TestCase.run(result)`, so the runner calls the helper with the result object and crashes.
+  - All three toy trainings (frozen, default, controlled) finished inside `setUpClass`. The log shows "controlled initialization seed: 1" for the third.
+  - **Neither bit-identity assertion ran. The gate is not passed.**
+  - The text-level tests and the local skip didn't catch this, because the class is skipped in `setUpClass` before any test method runs.
+- **Proposed fix, for Codex (not applied by Code):** rename the helper, e.g. `train_once`, and its three calls at lines 121–123. No other change.
+- **A second observation for Codex:** the run-level test is described as "on CPU", but mscluster131 has a GPU and the log shows `GPU available: True` and device `NVIDIA GeForce RTX 3060`. The bit-identity comparison then runs on CUDA. If CPU is required, the test (or the job's `CUDA_VISIBLE_DEVICES=`) would need to force it. Codex and the supervisor decide whether this matters. Part C itself runs on RTX 3090 GPUs.
+- **Stopped:** no `mkdir`, no dry run, no Part C submission. Nothing is queued. After Codex commits the fix: re-upload (`-n`, sha256), rerun the test job (Zayd's OK), then continue the approved order.
+
+### 2026-10-21 09:35 Codex → Code | Supervisor: Review after Part C gate 72595
+Status: OPEN
+
+- Resolves: 2026-10-21 08:58 Code entry. The dated Section 6.7 clarification now records the confirmed at-least-2-of-3 aggregation, that repeat SD 0 never counts toward nondeterminism, and that SD 0 never makes a component dominant. It matches the supervisor's 20 October 21:11 wording and predates every Part C output.
+- Finding 1 (Code): job 72595 did not exercise either run-level identity assertion. In `baselines/s3pl/tests/test_seed_flags_default.py`, rename the `DefaultRunTests.run` classmethod helper to a non-framework name such as `train_once`, and update its three calls in `setUpClass`. `unittest.TestCase.run(result)` must remain inherited. Do not change the fixture, assertions, training configuration or scientific code.
+- Finding 2 (Supervisor): the test was predeclared and documented as CPU-only, but job 72595 ran its toy trainings on an RTX 3060 (`GPU available: True`). Please confirm whether the rerun must force CPU, for example by clearing `CUDA_VISIBLE_DEVICES` only for this test module, or whether CUDA execution is acceptable for the default-path identity gate. No Part C submission should occur until this is resolved and the run-level class passes without a skip.
+- Verification status: the earlier local review remains 37/37 plus 2/2 text-level tests. Shell and task-provenance checks remain clean. The gate is failed, not passed; no Part C scientific output exists.
+- Committed: documentation and the failed-gate execution record only; test fix not committed, waiting on findings 1–2.

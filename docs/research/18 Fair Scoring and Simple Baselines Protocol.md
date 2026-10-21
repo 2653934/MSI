@@ -671,6 +671,14 @@ Written into this protocol on 20 October at 11:54 SAST. The verbatim text above 
 - **Q6:** Part A now is "preliminary" (GBM: initialisation screen; CAC: released seeds 1–3; the different seed modes are stated). After B, the same analysis on released seeds 1–10 is the primary decomposition. New descriptive item for A and B: a per-section bimodality check (seed-score plot and the largest gap between sorted scores). Any bimodality wording waits for the data.
 - **Order:** Part A (local); the GBM12_2 repeat gate (1 GPU run); B and D; the rest of C. At most 3 GPU tasks running at once, quarantine excluded, new output roots only, and the pre-submission checklist before each submission.
 
+#### Clarification: Part C aggregation (supervisor chat 20 October 21:11; written into this protocol on 21 October at 08:58 SAST, before any Part C output exists)
+
+This records the supervisor's confirmation of Code's reading posted at 21:06 (Codex finding 1, 21 October 08:55). It clarifies the Part C rule and does not change it. The verbatim text above and the committed summariser (`3877fab4`) are unchanged.
+
+- **Nondeterminism counts** if the repeat SD is ≥ half the smaller arm's SD in **at least 2 of the 3 sections**. Per-section values and the bit-identity check are reported beside it.
+- **A repeat SD of 0 never counts** toward nondeterminism.
+- **An SD of 0 never makes a component dominant.**
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -1242,6 +1250,15 @@ A test rebuilds the IG matched groups from these files.
                 - Collection mean ± SD across the 10 seeds: GBM 0.3193 ± 0.0419, CAC 0.5470 ± 0.0377.
                 - Short lists: 1/160, as reported.
                 - Full outputs are in the chat at 20:55. Awaiting the supervisor's verification and Codex's review.
+              - **21:06 SAST, Part C prerequisites (uncommitted, for Codex; nothing submitted):**
+                - **Default-path bit-identity test:** `baselines/s3pl/tests/test_seed_flags_default.py`, with the frozen reference `fixtures/pre_seed_flags/train.py` (today's `train.py` with only the `3624b56b` hunks reversed). It is added to `run_fair_scoring_tests.sh`. Locally the 2 text-level tests pass; the run-level class needs torch, so it runs in the cluster test job.
+                - **Part C summariser:** `scripts/summarise_s3pl_investigation_21_c.py` with tests; 37/37 local across Investigation 21. The nondeterminism clause is aggregated as "≥ 2 of 3 sections", which is Code's reading and is posted for the supervisor to confirm.
+                - **Task table:** `reproducibility/s3pl_investigation_21/part_c/provenance/` (19 new runs: init 4, order 11, repeat 4; gate 72136 counts as one of the planned repeats). `submit_chunk.sh` now takes `PROV`.
+              - **21 October 08:58 SAST, Part C clarification** (Codex finding 1, 08:55): the supervisor's 21:11 aggregation confirmation was written as the dated Section 6.7 clarification. Docs only; the committed code was not changed (chat 08:58).
+              - **21 October 08:59 SAST, upload** (local → cluster, documented source upload, `-n` first, clean committed HEAD `2293ed5a`): 16 files. The 15 tracked files match HEAD by `sha256sum`; the 16th is the untracked editor file `baselines/s3pl/.pym2aia_prefs.xml` (timestamp only).
+              - **Part C provenance copy:** `part_c/provenance/tasks.tsv` and `manifest.txt` were copied with `rsync -R`, `-n` first and no directory metadata changes, creating `part_c/provenance/`. Both match `3877fab4` by `sha256sum`.
+              - **Cluster test job 72595** was submitted at 06:59 UTC (08:59 SAST) on `batch` (Zayd's OK, 21 October).
+              - **72595 FAILED** (1:0, mscluster131, 7:51). The main suite passed: 259 tests, OK, 3 skipped. `test_seed_flags_default` crashed with `TypeError: DefaultRunTests.run() missing … 'name'`. Its classmethod helper `run` replaces `unittest.TestCase.run`, so neither bit-identity assertion ran. **The gate is not passed. Stopped** before any `mkdir` or submission, because the fix is a test-code change (Codex). Chat 09:12.
               - Cluster test 69798 passed with those tests run. The checklist was posted (chat 14:31). **69830** `submit_s3pl_cac_shuffle_control.sh` (tasks 0–15, at most 2 running) was submitted 14:31 SAST.
               - It started about 18:45 SAST, once seed-2 GBM dropped below 3 running. 16/16 COMPLETED (1:54–3:04 per task). **Pull** 19:15 SAST (`-n` first): 106 new files under `reproducibility/s3pl_cac_shuffle_control/`; no local file changed; Test R outputs excluded.
               - Validity: real reproduced from saved `metrics.json` in 16/16; every shuffled-run configuration as predeclared.
