@@ -1,0 +1,754 @@
+{
+  "protocol": "protocol 18 Section 6.7 (Investigation 21), Part C; supervisor chat 2026-10-20 10:53, 11:42 plan, 11:46 Q5, 20:57",
+  "part": "C",
+  "evaluator": "S3PL in-job mSCF1 (metrics.json); not the fair-scoring evaluator",
+  "C": {
+    "dominant_label": "initialisation dominant",
+    "sections_init_ge_2x_order": 2,
+    "sections_order_ge_2x_init": 0,
+    "nondeterminism_label": "not dominated by nondeterminism",
+    "nondeterminism_aggregation": ">= 2 of 3 sections (Code's reading; Section 6.7 does not specify; per-section values reported)",
+    "sections_repeat_ge_half_smaller_arm": 0,
+    "sections_repeats_bit_identical": 3
+  },
+  "notes": [
+    "Descriptive arms of 5 runs (init, order) and 3 runs (repeat) per section; n = 3 sections.",
+    "S3PL in-job mSCF1 (metrics.json), recomputed unrounded; not the fair-scoring evaluator.",
+    "The init and order arms share the init 1 / order 1 run.",
+    "GBM108_positive's init and order pattern was largely visible from saved runs before Part C (chat 11:46 Q5); its new information is the repeat arm.",
+    "Investigation 21 GPU jobs were not exclusive (bigbatch has no GPU gres)."
+  ],
+  "provenance": {
+    "inputs": [
+      {
+        "path": "logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 877,
+        "sha256": "b3e7a8be5d2d87f2a58d9dcf36abd05ad08d9a8d456bb05c4f0b3b7a3d18606a"
+      },
+      {
+        "path": "logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 874,
+        "sha256": "536b7062a612c57049a600af915f67267dde4f3911899b3124be6dc9656cb3b9"
+      },
+      {
+        "path": "logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 858,
+        "sha256": "dc25b1359e868f2e502685dd5f5a87f1d6a41c8448f236e6d8bdd185bda361c3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat_r2/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1017,
+        "sha256": "b7b5462343c7a24d6d621534e492f76b277e991893048f9ea6b7375ab641c5b8"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat_r2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2108,
+        "sha256": "fd393fde637a4babcb88f23ef107ba515408c22a2cdc7e5e2851b5abb7c2cf5c"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat_r2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9366,
+        "sha256": "c541e57a252d35e9810ad7b0dda7697302c96ad35682c7b84528987d3da00b26"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/gate_repeat/GBM12_2_p3_seed1_repeat_r2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "49cf675e0c0355af096dc758e879d17ce3bad128fa5578695895d278f0fa713e"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order2/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1099,
+        "sha256": "936c861af7805d508ee7114f478f0fe52fc333cef3f3e926d3f0c15fb920b571"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order2/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2155,
+        "sha256": "c4623e3e2d63fd166305b17d79a4f4422167b617c3653456e2fe2cdb630f8fc8"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order2/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8981,
+        "sha256": "799d36dad90afc516c739fd6f8c6b4d365890cd792e73fa41418f786b69af861"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order2/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "4ebdcd71f0b6ffc5bbf5fc058bfa1cdab8e3cd7ddfdade0c64193fea5926f31b"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order3/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1094,
+        "sha256": "d251c199b13994a31d612a5bca7af6cf16d5d77b5327d8ee804c26795d861d3a"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order3/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2146,
+        "sha256": "b60c4d8f353da615b0649549d2119b183b41ce8a664f616fab50600a9f7c9b7a"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order3/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8935,
+        "sha256": "e3e2f64bcda279944a368e1a9dc8dd5511bb9aa0c5562080696341be69515813"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order3/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "d805e94da46aab371aeb7d934546e229ce1614123809162c2199d340cb60bc79"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order4/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1096,
+        "sha256": "ffa9ed6c80c9d87381f64079f95e6e03ce61f1e001143138a8886b7629fd6e69"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order4/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2150,
+        "sha256": "59ca6f27731b23d8cf836f69fc3756d1ed94a08f241e9ea8bf63aa5de3561d6c"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order4/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8952,
+        "sha256": "f12a284633f6598618e3544378b006f301a39e661afcdd3a06c89617c633c6ad"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order4/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 290,
+        "sha256": "6b68622b75f8f3b6bb77d2c4b764e76d76c5dc9fbc7176c37830c0093ac63034"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order5/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1094,
+        "sha256": "ac70a50aa22a8a322391d289848ee380692d7f5e0c718d129c0e477fbaaf1abf"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order5/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2147,
+        "sha256": "d38b0d4ecbec74fb0110d32955ead5482abf2aaf1cffc285960bdf2019b3d912"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order5/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8937,
+        "sha256": "15654770501358bde9e87572d6482d5e6f7384d433b23c6828993285313261d1"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init1_order5/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "804298a0fa48d4895ecf4d1f22578adff334300f6a446c319eeeb888b1de0247"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init4_order1/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1094,
+        "sha256": "5e7262f626b21cb7bb7ae30cfc634b70df25944884ad419c061a2e2b73aad95f"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init4_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2146,
+        "sha256": "bb4a743c821e58d31a28ee0a26511b715a85b625ac163814a8604639b23d7357"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init4_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8950,
+        "sha256": "26a840e7e299d38f0a0f31426167ab908ae1a795ff8a031dea7ad9a0bce0c2f6"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init4_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "0b1119bffa4f29193c8fbc2edeed32ebd6b14fe23bb3bb58b3569daf7228a2f0"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init5_order1/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1094,
+        "sha256": "01699ed4ae6d735d65ac020607df05559134f9ac5badaa69fc2889ba8f214419"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init5_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2170,
+        "sha256": "aeeff73e8738839f8a8343e2f2d70b16fcb942174e4eb85368c32c8a2be8a702"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init5_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 9134,
+        "sha256": "90c4f1c4a7f495829c0c101b31f8c50ec89b96331d0d51ae94eb923a3ce83a50"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_rng_init5_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "24a37d02069651173a442d49e9c690fe5e70d39aeddd2901661e288ffa55ef5e"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat1/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1037,
+        "sha256": "648898b6e714c8dcc64203fc3cd9ce3c5e22c81a1ea6be108d71430ed64a6022"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2151,
+        "sha256": "dcdd8d8d7b2ec24fc9e85311563ef711c9b518c57ae5f1669e83168e28da7ecb"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8947,
+        "sha256": "12009a598e558f3090469e116f8a4de22a92bb9954bb1a72a043da3205ec38c3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "8606805afcabda58a127b5a03e7bc076803a9fa139d4619893b0d504de667c0a"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat2/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1037,
+        "sha256": "06f3669f8a2476e655c46bd8d99dc9a6e1940196923c74babe52fb8fb0908c0a"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat2/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2151,
+        "sha256": "dcdd8d8d7b2ec24fc9e85311563ef711c9b518c57ae5f1669e83168e28da7ecb"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat2/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8947,
+        "sha256": "12009a598e558f3090469e116f8a4de22a92bb9954bb1a72a043da3205ec38c3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_negative_p3_seed1_repeat2/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 289,
+        "sha256": "b84d352382e945c4f81b0009417bc3247dd2cc70a30bfb7bfbdbae3b03b8dd10"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order3/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1093,
+        "sha256": "856de7f3819f0457eb48f5cc22fbe91910f6a7413f4324011ae0437963297f3d"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order3/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2087,
+        "sha256": "ef532db09e94bd574b72876652bdaae214bafd16021cf7177103e7ef67aa2503"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order3/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5774,
+        "sha256": "5b8500ca56e1bcc0de1e50de011922540ec5f3afdc949d26321f9fb45d050738"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order3/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "5d9920bc4d5613f870098a1892724c17a7405c478f115cc1a3060903b7597fe3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order4/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1095,
+        "sha256": "832add16c9174207bea94ceedc928bbb17712c4580abfbe7a9936a2a8376541b"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order4/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2085,
+        "sha256": "7c02f7e39a3327e38721cdf0d2953bc1a90765360bc24e5ecc04ccd2a7f02540"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order4/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5769,
+        "sha256": "1c6dd8c103931b10659afbf5d37d4564d4ddbf44c6310d1003f0c07f533266c9"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order4/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "ec3f040b9170d491923e2d6b342c14360c3e860cefb43a73f06f3faea873ca9d"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order5/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1097,
+        "sha256": "4f56693bcc0b48f4e9bdb57833f6d9809585ffdc48a6ad29cdc500fc7cd9e75c"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order5/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2139,
+        "sha256": "74ce517b3690a3722cb99cea0c5cb0f5419c6ba18f7fee11088305139e519f80"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order5/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5767,
+        "sha256": "67290f1e3ec104dfe611502a74257b7457842ca2146802c05974518592837393"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_rng_init1_order5/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 290,
+        "sha256": "d5b3c7364a0d3d61e83cb68c885916abc4e56d8ab7c3f45a7bcab7b272c8cc75"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_seed1_repeat2/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1034,
+        "sha256": "5c5d3ae7e2fe188667e10ab602c1ee0562f56ba4d518addc1524e82607aebab3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_seed1_repeat2/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2136,
+        "sha256": "c80a7bc8e54583ee03a6f871ead9660d50142d00c954a9e142631f3e73f6180a"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_seed1_repeat2/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5746,
+        "sha256": "7150362663a49bf4bc1c852934c08a9db727495752364287e1711d782a6dff79"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM108_positive_p3_seed1_repeat2/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 290,
+        "sha256": "3e336d4fb5ba4eae731c0e2b9cdbef9690940790c576444f9cea3898262566d0"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order2/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1074,
+        "sha256": "f32c15122aaf236f318c65cdc332b11533bb5d1d45aa80ff4477c9d75471cc5d"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2109,
+        "sha256": "46059656a837cc23a919d05331911d80a88ac3e52cdb586e24d0e39e284c2c6e"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9370,
+        "sha256": "f33b2f777536a3660df84feac78201865e20657e6fb2feb282229e2104d4d2b6"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "10840e7cc9d92b1a5d2004e2dbdcfc24f69331ae796f54fed877488357a30010"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order3/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1072,
+        "sha256": "eb44aae43f012a1db4a441584de3b6e82f9a5acdacdf7de039a56daf3b7d6859"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order3/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2106,
+        "sha256": "097b481e048ee638ba3605efd2a5c10b79d98449101e47cf1154a0ff7b8d8211"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order3/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9368,
+        "sha256": "bd815053714f076223e6482acfed6dba196aa60c438decc18fa4e293364ad538"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order3/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "6eb0bfde0bb7e0a433571eb9f280976f71ca18d7fbbd6a83025214f123fefbf3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order4/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1073,
+        "sha256": "8d87e2a388303a1513315e8ff1fe10e06ca6a991888b05a9a113dee38784b490"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order4/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2107,
+        "sha256": "1761c03b710d8afc48eb269db237e1e4917d05fa9b83f4e017dd0e782df887db"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order4/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9371,
+        "sha256": "4eb85f52a24038be5f366e9a5a6b85f6e34e5fd41334fd592dc26d11091e4585"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order4/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 283,
+        "sha256": "1355c8cf3d2269f7148015baa2ea763ca93f83022038c2cc0448e45656094754"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order5/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1074,
+        "sha256": "e512919b2bd7e48ba24f84799995eb28cd2f7736c9c894e33f1a0fe66f87da33"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order5/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2135,
+        "sha256": "4c84bb42ce18eb111899954c2b7f4161a0104efded93991c416e09155f3606a2"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order5/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9379,
+        "sha256": "486abffad0c0aeab63873545910c27e87ca6d1c03cf0da33a8d663ffe1d36474"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init1_order5/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "79534030acc0de5d789e7ab2f46288f8931ee94d5e2df4a99dd14bbed6a7fb15"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init4_order1/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1071,
+        "sha256": "41bdfba45fe12a0af291273c3b914a7ee7e7721e8a104235bfab9439f24d36ad"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init4_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2147,
+        "sha256": "f59765975c1e2149cb6eb495805884467814b94872ec901e3a2e2b5ec6ba1a18"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init4_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9426,
+        "sha256": "5726c517c946def7059f612ce6b0c9b89bbbcdfe7a2eed153f20947afd1dcee3"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init4_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "891746115ab874434d182131ed18ea15f974ac3a7171c45cccfb9041f823486b"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init5_order1/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1070,
+        "sha256": "15c4ae98971fe8e4209d681dfc156b6427046b43f45f32628930685e31d46f72"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init5_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2110,
+        "sha256": "b9c0a7f88961b7fbd7d4f305d41329fbeac5f09ae11178cb0ad558a357b63d98"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init5_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9369,
+        "sha256": "a3a70e09cd0bbc8f73852f4ae2dae4489e3f792e6fb38394e95ed7eb3ecfadde"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_rng_init5_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "1f98c48afaa73060cb20f2f587a5e605165aae706eb56c55b0c3a33cfa496045"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_seed1_repeat2/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1010,
+        "sha256": "07139d2bef82246ab86efe8d995d21b04fb3069a1bac9261eda65d4082de671e"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_seed1_repeat2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2108,
+        "sha256": "fd393fde637a4babcb88f23ef107ba515408c22a2cdc7e5e2851b5abb7c2cf5c"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_seed1_repeat2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9366,
+        "sha256": "c541e57a252d35e9810ad7b0dda7697302c96ad35682c7b84528987d3da00b26"
+      },
+      {
+        "path": "reproducibility/s3pl_investigation_21/part_c/GBM12_2_p3_seed1_repeat2/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "c3ee1464e307398fd47a901b79c5c290f8a4ce5934ece95459435d8108e3067c"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init1_order1/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1079,
+        "sha256": "a81a05047f038138221811f7d5d062b3c4123aec34e8ef3b8e5c4e31db177e7a"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init1_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2158,
+        "sha256": "d27cf6d1e6201828e9f51e87c8f7f09912e2ed561cea784cda20028d264703b4"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init1_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8987,
+        "sha256": "d00d59226862123d32aa8fc930e31582fadc961268b959a3ef2ffca7c3612b37"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init1_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "d771d32985222b6b35fe184ff1c383367e47ef780121c615f5a211e6084f6a56"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init2_order1/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1076,
+        "sha256": "faf07173cdac220fb419b75887d821f727444b8c42094559f2c5761cbc2b8e65"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init2_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2149,
+        "sha256": "68155da8174e5b0fde21543bb7ed9b7e68c09dbad8bd9bc46ce36545397ddd9d"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init2_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8954,
+        "sha256": "f89ab7afb65bca876c17ddc039922fafafc0f2f76276ec0da05e4bd8bf50f66b"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init2_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "8e4b4744849d811945194b9220fd3c391eb79a3c82d0122636370181230197ff"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init3_order1/logs/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1079,
+        "sha256": "48a149803670fba2d3abd3a63d9e1d159fae00cad29147922da7695a11888e76"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init3_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2149,
+        "sha256": "0d072cb883b4f6c83d49a441d9e5d6957d1bea443f97747a808adb7040b3ed34"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init3_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8961,
+        "sha256": "3b50e3883f9b5057d407a5dab3f8b1504a0b471e5f17eea3284c7c15342c6c56"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_negative_p3_rng_init3_order1/results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 290,
+        "sha256": "83459ee40bd1b38323d4ee1c4bc2befc685da78873f13cbf0c475f6e036e3a70"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order1/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1079,
+        "sha256": "341a6e4a53924a5a2d0dad0422315f25fca018821a25449ebb28cad514afed0e"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2087,
+        "sha256": "15ed506b9c91eaa1ac262d69ff838415ceed67cbbc661cfd1b4ecf37c28c0e1d"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5764,
+        "sha256": "1f57782e98e99c792307363134b6b8461008b782cdff036016c78ebd43a8728a"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "7d4cd99ecd8bc8f9ae888125cc65408cb10d594ea9f1bcd8422ff5c61cb72ac2"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order2/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1080,
+        "sha256": "14a270ba5e75fddaa06fb52db5fa8da541a3695cf90c2868eb8dc77fc36365eb"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order2/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2085,
+        "sha256": "7c02f7e39a3327e38721cdf0d2953bc1a90765360bc24e5ecc04ccd2a7f02540"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order2/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5765,
+        "sha256": "9cf750e7db26b55abf12fac6f61c34f618ab906402bf23e9b31e9ebbc4aab7b2"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init1_order2/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "1d5fc9b08955cd898c96c568dbaf8fb2d78186438d215a5aee8b5b9284dd29ea"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init2_order1/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1079,
+        "sha256": "37f85be96d6db1c2adf7b1b967054bb1e9d38c200d72855243844e5f5ab3ca87"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init2_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2154,
+        "sha256": "099c6fc425bed632b5c22cc2d89da3f5403f39551b7266c307e1c3e8dfcdcb32"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init2_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5540,
+        "sha256": "4923f33690018ade90669b66537b8e60caa390fb1f3fd0392308920beac4189d"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init2_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 291,
+        "sha256": "d76e51137866fa8ee59a1931667d99485941fb36ebbdcfdfb6ded9ebc087079b"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init3_order1/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1079,
+        "sha256": "b7f9ce747df6e50e72b6317034a7262144a145b4ce664b25e520d9d23708ebcc"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init3_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2124,
+        "sha256": "037a892d96789e555da7a2905e11acfbdb1bcfe2b060824a60516441c2d00095"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init3_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5679,
+        "sha256": "4030c189ada1e9607bb196879e35e10381dc32e8352c1ac12b5ca4c9a19f0676"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init3_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 290,
+        "sha256": "4a73b81646914ea6b055cd4449ba2da557ac534e6da5bedff94bed17fd92f6e7"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init4_order1/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1080,
+        "sha256": "79f77039b4124e651968e278777787ee1c210d1442fac6f9ff2a4ce2cdc528a3"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init4_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2149,
+        "sha256": "fc77da6ae77b98f233662223d9ecfdeffef41b21dad0ac263b85cdc53fcbb922"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init4_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5540,
+        "sha256": "47fde2b1fcf6e9bfdcd59a481b589c131d40a3585e30802c5a240dc798d85f4b"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init4_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 292,
+        "sha256": "51355e7bc02191d9fe5c9bab684a5989b19a14592be6ae92ef391aff706810dd"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init5_order1/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1081,
+        "sha256": "38b45aaba6b5c7ecc5b4a13d7c64eefe656b2efbc2dcc1e3d0b51c6cdc4d1700"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init5_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2140,
+        "sha256": "3fe2cc8286b416d9f3281d64027d8312a3aa9b8ef16515609915d925c12577ba"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init5_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5796,
+        "sha256": "d47cbd7727e771830ee1cdd7e9343edbf145fbb337abdeda2d747bf5d4bea5d4"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_rng_init5_order1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 292,
+        "sha256": "008d0332f01e5273809c68eebcc386b3c4ac4591a4b116b39a0f0f7b7ac6a98e"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_seed1_repeat1/logs/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 936,
+        "sha256": "1ac32cdcb93b1427f083612a9e168468861f17ed1b31eabfcb52f2c493148b4e"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_seed1_repeat1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 1790,
+        "sha256": "491c0e3be83b8d810278cd2e13cec83ba74814c68b99b6c472ac3284c8a85360"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_seed1_repeat1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5746,
+        "sha256": "7150362663a49bf4bc1c852934c08a9db727495752364287e1711d782a6dff79"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM108_positive_p3_seed1_repeat1/results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 246,
+        "sha256": "017de743e0e242a7d04a5cb88b49ac8b84078352810a7992c1055595a31e7ee8"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init1_order1/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1053,
+        "sha256": "66e155e51a6ee1f871fa74f47a8df2374a43346d1ef349ab2ac76256d9b432d0"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init1_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2095,
+        "sha256": "bec4577f67cf2813bfa01592405eb526771e2f72d125feb7a3544615be43f256"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init1_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9372,
+        "sha256": "55a1dcc9c46e36d5c46b6c7c7a17490bb60b7ad962dc1c0fb539b51e17e554b2"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init1_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "232d0e262e6823bd8c0d93efb85516348be4caa499669b4ff73ec81328f691ac"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init2_order1/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1058,
+        "sha256": "c3bb92bfb7d5d8c101d96a43ca9d030808ed3c33f051c1e45fd2c0e731bbb004"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init2_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2143,
+        "sha256": "0e812654a680a40253c046ef18a59084b240016d60d7d63fb834796d71fafac4"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init2_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9429,
+        "sha256": "d5dab54368ea026c01bb488b481473e34912d58c07c0299a910c4a3317041f85"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init2_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 284,
+        "sha256": "1b58774f1d803e346cd05948b8f527fcf9f6215cd0126a285d3321c3bf064d0b"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init3_order1/logs/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3.json",
+        "bytes": 1055,
+        "sha256": "7ee5c3f234ded4c28aa1b066455cbc6a83483bf0c51c6c321c8c770e8529a1ad"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init3_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 2140,
+        "sha256": "84e3619b98b8ea61cfff4c3cfeda55a9e58f20764df394e3cbb36434694ec596"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init3_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9372,
+        "sha256": "d06559fe0b5637a444351570f74802f5dfaad1a0d5b965842fce94ab5b60e5ca"
+      },
+      {
+        "path": "reproducibility/s3pl_massnet/GBM12_2_p3_rng_init3_order1/results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 283,
+        "sha256": "eb0b4d83e52334361765dc960930b1ad22d92bf3005b296616eeb13851ed92db"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 1805,
+        "sha256": "b9b66372d9c1ca8c2f975d11e54f1ae3c02e0452b48d70dd84f5b2019cb17406"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_negative_256peaks_z_patchsize_3.csv",
+        "bytes": 8947,
+        "sha256": "12009a598e558f3090469e116f8a4de22a92bb9954bb1a72a043da3205ec38c3"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM108_negative_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 244,
+        "sha256": "ed26489ccb18552bb70aa45638324b94893a8ffc2ae1422e74797fd897d60203"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 1790,
+        "sha256": "491c0e3be83b8d810278cd2e13cec83ba74814c68b99b6c472ac3284c8a85360"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM108_positive_256peaks_z_patchsize_3.csv",
+        "bytes": 5746,
+        "sha256": "7150362663a49bf4bc1c852934c08a9db727495752364287e1711d782a6dff79"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM108_positive_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 245,
+        "sha256": "e218b224a8a0dc086e9a8cc38826097557a88ee5403445ffc9bdeac7848b3c95"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/metrics.json",
+        "bytes": 1770,
+        "sha256": "01ffd3bd44aaa63e232c498d6affec3ec6378f3894a324764c349a5033e8fdb2"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/picked_peaks_GBM12_2_256peaks_z_patchsize_3.csv",
+        "bytes": 9366,
+        "sha256": "c541e57a252d35e9810ad7b0dda7697302c96ad35682c7b84528987d3da00b26"
+      },
+      {
+        "path": "results/baselines/s3pl/GBM12_2_Attention3DConvAutoencoder_10epochs_256_spectral_patch_size_3/runtime_metrics.json",
+        "bytes": 237,
+        "sha256": "3632cdae121e838e30437cb43c1516cf8f5f36cfb328706cf1105e5280c9987e"
+      }
+    ],
+    "code": {
+      "summarise_s3pl_investigation_21_c.py": "0c5aa49b3b7300c3731ebc8fa231d75f9b097045f0a561586af611b5281db06f",
+      "summarise_s3pl_seed_investigation_21.py": "68d4e70bccc667302bb33cb53ac2b93c6b703fc865de9de064fc5ae751cce3db"
+    },
+    "versions": {
+      "python": "3.14.5",
+      "numpy": "2.5.4",
+      "statsmodels": "0.15.0"
+    }
+  }
+}
