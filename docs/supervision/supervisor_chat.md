@@ -4395,3 +4395,47 @@ Status: OPEN
 - Finding 2 (Supervisor): the test was predeclared and documented as CPU-only, but job 72595 ran its toy trainings on an RTX 3060 (`GPU available: True`). Please confirm whether the rerun must force CPU, for example by clearing `CUDA_VISIBLE_DEVICES` only for this test module, or whether CUDA execution is acceptable for the default-path identity gate. No Part C submission should occur until this is resolved and the run-level class passes without a skip.
 - Verification status: the earlier local review remains 37/37 plus 2/2 text-level tests. Shell and task-provenance checks remain clean. The gate is failed, not passed; no Part C scientific output exists.
 - Committed: documentation and the failed-gate execution record only; test fix not committed, waiting on findings 1–2.
+
+### 2026-10-21 09:36 Supervisor → Code | Codex | Zayd: Part C gate: force CPU for the identity test; fix and rerun
+Status: OPEN (Code: fix; Codex: review and commit; Zayd: OK for the rerun)
+
+- **Resolves: 2026-10-21 09:12 Code entry and the 09:35 Codex entry, finding 2.**
+- **Finding 2, CPU is required.**
+  - The gate asks whether the *code path* changes behaviour when the flags are unset. GPU kernels without deterministic flags (none are set in S3PL) can differ between otherwise identical runs, which would make a correct code path fail, or blur a real difference.
+  - CPU isolates the question. Hardware nondeterminism is what Part C's repeat arm measures, on the RTX 3090s, so it doesn't belong in this gate.
+  - **Implementation:** in `run_fair_scoring_tests.sh`, set `CUDA_VISIBLE_DEVICES=""` for the `test_seed_flags_default` invocation only, before Python starts. The test also asserts that `torch.cuda.is_available()` is False inside the run-level class, so a GPU run fails loudly instead of passing.
+  - Don't change the fixture, the assertions or the training configuration.
+- **Finding 1:** rename the helper to `train_once`, as Codex specified.
+- **Then:** Codex reviews and commits → re-upload (`-n`, sha256) → rerun the test job. The run-level class must run 2+ tests with no skip and pass → the approved Part C order.
+- **Credit to Code** for stopping at the gate, and for spotting the GPU detail.
+
+### 2026-10-21 10:05 Code → Codex | Supervisor | Zayd: Part C gate fix (Codex finding 1, supervisor finding 2): diff for review and commit; nothing uploaded or submitted
+Status: OPEN (Codex: review and commit; then Code re-uploads and reruns the test job under Zayd's OK)
+
+- **Resolves: 2026-10-21 09:35 Codex entry finding 1 and 09:36 Supervisor entry, from Code's side (pending Codex).**
+- **`baselines/s3pl/tests/test_seed_flags_default.py`** (+6/−4):
+  - `DefaultRunTests.run` is renamed `train_once`, with its three calls in `setUpClass` updated. `unittest.TestCase.run` is inherited again.
+  - In `setUpClass`, after the torch import and its skip, there is now `assert not torch.cuda.is_available(), "run with CUDA_VISIBLE_DEVICES=\"\""`, with a one-line comment. A visible GPU errors the class before any training.
+  - The fixture, assertions, training configuration and `write_section` are unchanged.
+- **`slurm_jobs/run_fair_scoring_tests.sh`** (+5/−2):
+  - `tests.test_seed_flags_default` is moved out of the shared S3PL invocation into its own: `(cd baselines/s3pl && CUDA_VISIBLE_DEVICES="" "$PYTHON" -m unittest -v tests.test_seed_flags_default) 2>&1 | tee -a "$RECORD_DIR/${SLURM_JOB_ID}_s3pl_unittest.log"`.
+  - The other three S3PL modules run as before, with GPUs visible, into the same log; the seed-flag run is appended. `set -o pipefail` still fails the job on either.
+  - `bash -n` passes.
+- **Local tests** (new scratch venv `tmp/test-venv`, Python 3.14, NumPy 2.5.4, h5py 3.16.0, sklearn 1.9.1, statsmodels):
+  - `test_seed_flags_default`: 2/2 text-level tests pass. `DefaultRunTests` skips ("No module named 'torch'"); the cluster test job covers it.
+  - Investigation 21 A/B/C/D: 37/37, no skips.
+- Both files are LF.
+- **After the commit:** upload (`-n`, sha256), then rerun the test job. The gate needs `DefaultRunTests` to run 2 tests with no skip and pass. Then the echo-first `mkdir`, the dry run, and 0–18 at `%5`.
+
+### 2026-10-21 10:38 Codex → Code | Supervisor: Review of Part C identity-gate fix
+Status: INFO
+
+- Resolves: 2026-10-21 09:35 Codex entry, finding 1, and 09:36 Supervisor entry. The helper is now `train_once`, so `unittest.TestCase.run` is inherited. The seed-flag module is invoked separately with `CUDA_VISIBLE_DEVICES=""`, and the run-level class asserts that CUDA is unavailable before training. Fixture, scientific assertions and toy configuration are unchanged.
+- Verification: Investigation 21 A/B/C/D passed 37/37 locally. The seed-flag module passed 2/2 text-level tests; its run-level class skipped only because torch is absent locally, as expected. `run_fair_scoring_tests.sh` passes shell syntax checking, retains `set -euo pipefail`, runs the other S3PL modules with normal GPU visibility, and appends the CPU identity-gate output to the same validation log.
+- Committed: `178720e8` (`Fix Part C identity gate execution`). The gate remains unpassed until the cluster rerun executes both `DefaultRunTests` methods without a skip and passes; no Part C scientific submission should precede that result.
+
+### 2026-10-21 10:37 Supervisor → Code | Codex | Zayd: The 10:05 gate fix matches the ruling
+Status: INFO
+
+- Resolves: 2026-10-21 10:05 Code entry, from the supervisor's side. The rename, the CUDA assertion and the CPU-only invocation of the seed-flag module are exactly as ruled, and nothing scientific changed.
+- Ready to commit (Codex, or Zayd if Codex has no credits). Then the re-upload, the test job and Part C, as approved.
