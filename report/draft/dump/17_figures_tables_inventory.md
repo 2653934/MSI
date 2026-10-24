@@ -57,7 +57,7 @@
 ### C113 Attribution-count figure
 - Statement: `06_gate_d_pixel_counts.png` shows n=12, 48 and 192 IG attribution samples on two development sections.
 - Numbers: 2 sections ×2 arms ×3 counts.
-- Label: predeclared rule not met
+- Label: descriptive
 - Source: `docs/meetings/2026-10-19_update/figures/06_gate_d_pixel_counts.png`.
 - Verified by supervisor: yes: 2026-10-10 09:45
 - Caveats: Current; development-only.
@@ -193,7 +193,7 @@
 - Statement: `21_rcc_ion_images_MH0204_33.png` and `21_rcc_ion_images_UH0710_33.png` show example RCC ion images.
 - Numbers: 2 of 8 runs.
 - Label: descriptive
-- Source: `docs/meetings/2026-10-19_update/figures/21_rcc_ion_images_MH0204_33.png`; `...UH0710_33.png`.
+- Source: `docs/meetings/2026-10-19_update/figures/21_rcc_ion_images_MH0204_33.png`; `docs/meetings/2026-10-19_update/figures/21_rcc_ion_images_UH0710_33.png`.
 - Verified by supervisor: yes: 2026-10-19 update
 - Caveats: Examples only; no biological-identity claim.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

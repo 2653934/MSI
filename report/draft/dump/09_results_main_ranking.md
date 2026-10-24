@@ -30,7 +30,7 @@
 ### C047 IG versus legacy msiPL
 - Statement: Both VAE/IG arms beat reproduced legacy msiPL at K_bin in every GBM and CAC section.
 - Numbers: GBM legacy 0.414 vs IG 0.518 centre/0.511 uniform; CAC 0.402 vs 0.528/0.560; 8/8 wins in all four arms.
-- Label: practical rule has 2 of 3 clauses met; budget-stability clause not assessable
+- Label: descriptive
 - Source: `code/msi/results/publication/current_evidence/aggregate_method_results.csv`; protocol 18 Section 7.1; `docs/research/investigations/14 Primary Results Claim-Evidence Ledger.md`.
 - Verified by supervisor: yes: 2026-10-20 11:31
 - Caveats: Package comparison, not proof IG or spatial context caused the gain; legacy is not K_peak-matched.
@@ -48,7 +48,7 @@
 ### C049 Attribution-pixel count gate
 - Statement: Increasing IG sampling from 12 to 48 or 192 pixels per component did not meet the promotion rule; production n=12 stands.
 - Numbers: Best case centre n=192: +0.017 GBM108_positive and +0.024 40TopL; required ≥+0.02 on both.
-- Label: predeclared rule not met
+- Label: descriptive
 - Source: `code/msi/results/publication/current_evidence/gate_d_pixel_counts.csv`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 4.2; protocol 18 Section 6.
 - Verified by supervisor: yes: 2026-10-10 09:45
 - Caveats: Two development sections only; other IG settings remain untested.

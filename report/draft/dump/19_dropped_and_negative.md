@@ -93,8 +93,8 @@
 ### C105 Negative IG pixel-count result
 - Statement: Increasing attribution samples to 48 or 192 did not meet the setting-change rule.
 - Numbers: Best n=192 pair +0.017/+0.024; threshold +0.02 on both.
-- Label: predeclared rule not met
-- Source: protocol 18 Section 6; `gate_d_pixel_counts.csv`.
+- Label: descriptive
+- Source: `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Section 6; `code/msi/results/publication/current_evidence/gate_d_pixel_counts.csv`.
 - Verified by supervisor: yes: 2026-10-10 09:45
 - Caveats: Production n=12 stands.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

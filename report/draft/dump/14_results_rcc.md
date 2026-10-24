@@ -39,7 +39,7 @@
 ### C082 Cancer/normal sensitivity
 - Statement: Removing the dominant unannotated class shrinks the posterior-correlation advantage; correlation beats IG in five of eight runs and falls below mean intensity, variance and Moran's I.
 - Numbers: IG−posterior about −0.045; IG ahead 3/8, posterior ahead 5/8; unannotated 45–78% of pixels.
-- Label: descriptive; no verdict
+- Label: descriptive
 - Source: `code/msi/results/diagnostics/fair_scoring_baselines/rcc_cancer_normal_sensitivity/decisions_20261017_local/`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.5.
 - Verified by supervisor: yes: 2026-10-19 update
 - Caveats: Necessary qualifier to every RCC headline; cancer/normal subset follows the dataset subset definition.

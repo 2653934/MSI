@@ -84,7 +84,7 @@
 ### C093 Did more IG sampling rescue IG
 - Statement: No tested pixel-count increase rescued IG under the promotion rule, but untested IG formulations remain outside scope.
 - Numbers: Best n=192 changes +0.017 GBM and +0.024 CAC; rule required +0.02 on both.
-- Label: predeclared rule not met
+- Label: descriptive
 - Source: protocol 18 Section 6; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 4.2.
 - Verified by supervisor: yes: 2026-10-10 09:45
 - Caveats: Two development sections, one attribution formulation.

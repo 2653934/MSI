@@ -40,7 +40,7 @@
 - Statement: From a fixed segmentation, posterior correlation takes about a second or less while IG takes seconds to minutes; timed rankings reproduce saved rankings exactly where comparable.
 - Numbers: Median seconds GBM/CAC/RCC: posterior 1.12/0.028/0.12; Moran 8.4/0.18/0.80; mean 0.10/0.003/0.014; oracle 1.5/0.08/0.27; IG 770/6.0/417. RCC 28/28 comparable hashes identical.
 - Label: descriptive
-- Source: `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.4; `code/msi/results/diagnostics/ranking_stage_runtime*/`; supervisor chat 2026-10-20 10:46.
+- Source: `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.4; `code/msi/results/diagnostics/ranking_stage_runtime/`; `code/msi/results/diagnostics/ranking_stage_runtime_rcc_bigbatch_shared/`; supervisor chat 2026-10-20 10:46.
 - Verified by supervisor: yes: 2026-10-20 10:46
 - Caveats: IG includes GMM fit and faithfulness checks; CPU models differ; RCC nodes shared, not exclusive.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

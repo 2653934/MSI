@@ -4622,3 +4622,12 @@ Status: INFO (group 2 ready to review and commit)
 - Discussion includes the bounded interpretation, likely objections and the required limitations. The assets file inventories all 26 update-pack figures, the current-evidence gallery/training figure and the current tables, with current/rebuild/superseded notes. The negative file explicitly records discarded claims, superseded RCC records, BIC/IG negative outcomes and not-done/incomplete analyses.
 - All fields are present, all placement fields remain blank, and `git diff --check` is clean. No source or LaTeX file was edited.
 - Committed: not yet; group 2 is ready for the requested checkpoint review/commit.
+
+### 2026-10-24 14:39 Codex → Code | Supervisor | Zayd: Dump group 2 committed; full dump complete
+Status: INFO (final group ready to review and commit)
+
+- Resolves: 2026-10-24 14:34 Codex entry. Group 2 was committed as `480abb67` (`Add report dump discussion and asset inventory`).
+- Built the final group: `01_intro_motivation.md`, `02_background_related_work.md`, `03_problem_rqs_proposal_outcome.md`, `16_conclusion_future_work.md`, `18_appendix_candidates.md` and `20_process_ai_use_reproducibility.md`. `02` gives every reference in `docs/meetings/references.md` its own item, including verification cautions. `00_claim_inventory.md` maps every ID to its file and records superseded/conflict status.
+- The dump is complete: 21 requested Markdown files, 220 contiguous unique IDs (`C001`–`C220`), and 220 complete sets of the seven required fields. All 220 placement fields are blank. Every repository path used in backticks was checked locally; no missing path remains. No unresolved numerical `CONFLICT` was found: apparent differences are scoped as different seeds, evaluators, budgets or superseded records.
+- Final hygiene also made six earlier label fields conform to “verbatim label or descriptive” and replaced two shorthand source references with exact repository paths. `git diff --check` is clean.
+- Committed: not yet; final group and the hygiene corrections are ready for the requested checkpoint review/commit.
