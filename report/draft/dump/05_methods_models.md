@@ -98,3 +98,29 @@
 - Verified by supervisor: yes: bounded wording accepted 2026-10-20 10:25
 - Caveats: Do not call selected bins biomarkers or biological identities.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+### C225 IG path, baseline and aggregation
+- Statement: Production IG integrates the assigned GMM-component posterior along a trapezoidal path from the section-wide mean TIC-normalised spectrum to each sampled centre and valid neighbour, then ranks bins by mean absolute attribution across central and context paths. The current draft's trapezoidal equation is the implemented rule.
+- Numbers: 64 trapezoidal intervals including both endpoints; 12 sampled pixels per component in production.
+- Label: descriptive
+- Source: `code/msi/src/spatial_msipl/attribution.py`; `code/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py`; `code/msi/src/spatial_msipl/tests/test_attribution_analytic_reference.py`; `report/draft/sections/methodology.tex`.
+- Verified by supervisor: yes: `docs/research/17 Supervisor Review Response and Report Completion Plan.md` (2026-10-08), formula correction
+- Caveats: Missing neighbour slots stay masked and zero. The older right-endpoint equation in `report/draft/previous_version/sections/methodology.tex` is SUPERSEDED by the current methodology and this item; the analytic test validates a synthetic reference, not every real attribution.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C226 Threshold-derived mSCF1 reference rule
+- Statement: The S3PL-compatible reference set uses the nearest position in each class's ranked PCC list as a threshold-derived rank cutoff and unions the selected class lists; it is not always a literal binwise PCC-above-threshold filter.
+- Numbers: Four PCC thresholds: 0.3, 0.4, 0.5 and 0.6.
+- Label: descriptive
+- Source: `code/msi/baselines/s3pl/utils/PeakEvaluation.py`; `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Sections 2 and 3.3; `report/draft/sections/methodology.tex`.
+- Verified by supervisor: yes: `docs/research/17 Supervisor Review Response and Report Completion Plan.md` (2026-10-08), scoring-description correction
+- Caveats: A description of the reference as literal r ≥ threshold in older report material is SUPERSEDED by this item. This is a scoring definition, not an independent biological ground truth.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C227 Audited peak-group scoring contract
+- Statement: Peak-level scoring requires a label-free structural audit and reviewer-approved partition hashes before scores can be produced. A reference group is positive only when its apex is reference-positive, whereas a predicted group is selected when any of its bins is selected.
+- Numbers: P1 hard gap 50 ppm, shallow-basin merge below 5% with at most 100 ppm merged width; S1 rejects a partition if any group width reaches 0.5 Da in any section.
+- Label: descriptive
+- Source: `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Sections 3.1–3.3; `code/msi/src/spatial_msipl/tests/test_peak_groups.py`; `code/msi/src/spatial_msipl/tests/test_fair_scoring_pipeline.py`.
+- Verified by supervisor: yes: protocol 18 v3.1, 2026-10-09
+- Caveats: S2 large-group size is descriptive and S3 singleton fraction informational; only S1 is a rejection rule. The audit prevents unreviewed grouping, but does not detect over-splitting (C008).
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

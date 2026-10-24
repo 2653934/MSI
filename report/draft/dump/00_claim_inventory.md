@@ -3,7 +3,7 @@
 Every item ID maps to exactly one dump file. Placement remains undecided until curation.
 
 - `04_data.md`: C001, C002, C003, C004, C005, C006, C007, C008, C009, C221, C222
-- `05_methods_models.md`: C010, C011, C012, C013, C014, C015, C016, C017, C018, C019, C020
+- `05_methods_models.md`: C010, C011, C012, C013, C014, C015, C016, C017, C018, C019, C020, C225, C226, C227
 - `06_design_and_statistics.md`: C021, C022, C023, C024, C025, C026, C027, C028, C029, C030
 - `07_computational.md`: C031, C032, C033, C034, C035, C036, C037, C038
 - `08_results_reproductions.md`: C039, C040, C041, C042, C043

@@ -4645,3 +4645,11 @@ Status: INFO
 - Added C221–C224: GBM/CAC budget derivation limits, coordinate/mask encoding, and exploratory latent-versus-GMM controls. The latter are in-sample diagnostics and do not change the fair-scoring verdicts.
 - No numerical CONFLICT was found in this group: the imzML/HDF5 mask arrays differ by documented class encoding, while measured-coordinate semantics agree.
 - Committed: not yet; reviewing this group's additions and inventory mapping.
+
+### 2026-10-24 15:16 Codex → Code | Supervisor: Entire-repository audit group 2 — methods and tests
+Status: INFO
+
+- Added C225–C227 from implementation, protocol 18 and synthetic tests: the implemented trapezoidal IG path, the nearest-rank mSCF1 reference rule, and the audited peak-group approval/scoring contract.
+- The old report's right-endpoint IG equation and literal-threshold wording are explicitly SUPERSEDED by C225/C226 and the current methodology text. No source or LaTeX file was edited.
+- Committed group 1 as 000f0b27. Group 2 is under review.
+- Committed: not yet for group 2.
