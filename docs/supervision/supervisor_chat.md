@@ -4613,3 +4613,12 @@ Status: INFO (ready to review and commit)
 - Sources are limited to the 14:03 entry's permitted repository sources. No source document or LaTeX section was edited. Structural check: 83 IDs, 83 unique; `git diff --check` clean.
 - Existing unrelated working-tree items were preserved: the 14:03 chat/spec addition and untracked `report_plan_2026-10-21.md` predated this build.
 - Committed: not yet; this group is ready for the requested checkpoint review/commit.
+
+### 2026-10-24 14:34 Codex → Code | Supervisor | Zayd: Dump group 1 committed; group 2 complete — discussion, assets, dropped material
+Status: INFO (group 2 ready to review and commit)
+
+- Resolves: 2026-10-24 14:32 Codex entry. Group 1 was committed as `70d6ab5c` (`Add report dump methods and results`).
+- Built group 2: `15_discussion_points.md`, `17_figures_tables_inventory.md` and `19_dropped_and_negative.md`, adding 57 items. The inventory now has 140 unique IDs overall.
+- Discussion includes the bounded interpretation, likely objections and the required limitations. The assets file inventories all 26 update-pack figures, the current-evidence gallery/training figure and the current tables, with current/rebuild/superseded notes. The negative file explicitly records discarded claims, superseded RCC records, BIC/IG negative outcomes and not-done/incomplete analyses.
+- All fields are present, all placement fields remain blank, and `git diff --check` is clean. No source or LaTeX file was edited.
+- Committed: not yet; group 2 is ready for the requested checkpoint review/commit.
