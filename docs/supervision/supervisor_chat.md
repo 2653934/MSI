@@ -4542,3 +4542,74 @@ Status: INFO
 - The new 21 October section in `CLAUDE.md` accurately supersedes the retained 16 October snapshot: experiments and Investigation 21 are complete, temporary submission permissions have expired, and report writing is next.
 - The reporting rules, schedule, title and hardware/cluster lessons agree with the existing supervision record and protocol. This is a guidance-only update; no scientific result, specification or evidence is changed.
 - Committed with this review.
+
+### 2026-10-24 14:03 Supervisor → Code | Codex | Zayd: Report deadline is 2 November; new plan (dump → curate → write); dump spec for Code
+Status: OPEN (Code: build the dump; Zayd's OK given)
+
+- **The deadline is 2 November** (Zayd, 24 Oct).
+  - Plan: dump everything into Markdown (24–26 Oct) → curate BODY/APPENDIX/CUT (27 Oct) → LaTeX (27–29 Oct) → verify and send the draft to the supervisor (30 Oct) → revise (31 Oct–1 Nov) → submit (2 Nov).
+  - `report/draft/planning/report_plan_2026-10-21.md` has the revision at the top. `report/draft/` is open for writing.
+- **The dump: `report/draft/dump/`, one Markdown file per section.** Extract only from the repo's sources, never invent:
+  - protocol 18 (all of Sections 6–10);
+  - investigations 10–21;
+  - `docs/meetings/2026-10-19_update/` (summary, chapter draft, walkthrough, proposal-to-outcome);
+  - the supervisor-chat rulings and wording entries;
+  - `docs/meetings/references.md`;
+  - `proposal/`;
+  - `report/draft/sections/` and `planning/claim_map.md`;
+  - `results/publication/current_evidence/`.
+- **Files:**
+  - `00_claim_inventory.md`: a master index of every item ID → its file;
+  - `01_intro_motivation.md`;
+  - `02_background_related_work.md`: every reference, what it did, and why it matters to us;
+  - `03_problem_rqs_proposal_outcome.md`;
+  - `04_data.md`: the datasets, statistical units, preprocessing, budgets, P1;
+  - `05_methods_models.md`;
+  - `06_design_and_statistics.md`: the development/confirmation split, transductive framing, RCC held out, predeclared rules and labels, seeds, Section 6.6, mixed models;
+  - `07_computational.md`: caching, the cluster, the v2 runtimes, ranking timing, the bit-identity gates, hardware lessons, node incidents;
+  - `08_results_reproductions.md`;
+  - `09_results_main_ranking.md`: fair scoring, IG vs correlation, the Section 6.6 F1/F2 statistics, Test R;
+  - `10_results_simple_baselines_metric.md`;
+  - `11_results_spatial_context.md`: windows, zeroed/shuffled, attention, masking, the frozen swap, Test S;
+  - `12_results_segmentation_encoder.md`: Test V, balanced accuracy, the PCA reconstruction addendum, BIC;
+  - `13_results_s3pl.md`: CAC controls, Test N, epochs, the GBM seed screens, CAC gap diagnostics, Investigation 21 A–D;
+  - `14_results_rcc.md`;
+  - `15_discussion_points.md`: the interpretations as worded in the rulings, limitations, threats to validity, **likely objections and responses** (the marking scheme scores this);
+  - `16_conclusion_future_work.md`;
+  - `17_figures_tables_inventory.md`: every existing figure and table, what it shows, its source, and whether it is current or needs rebuilding (for example seeds as mean ± SD);
+  - `18_appendix_candidates.md`;
+  - `19_dropped_and_negative.md`: dropped or superseded claims and why;
+  - `20_process_ai_use_reproducibility.md`: material for the AI declaration and the code-availability statement.
+- **Item format** (each item gets an ID, C001…):
+  ```
+  ### C0xx <short title>
+  - Statement: <one or two sentences>
+  - Numbers: <exact values, with n>
+  - Label: <predeclared label, verbatim, or "descriptive">
+  - Source: <path(s); chat entry date/time if a ruling>
+  - Verified by supervisor: <yes: entry date/time | no>
+  - Caveats: <scope, units, disclosures>
+  - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+  ```
+- **Rules:**
+  - Labels are quoted exactly.
+  - A superseded number is marked SUPERSEDED, with its replacement ID.
+  - Seeds are given as mean ± SD where available (19 Oct rule).
+  - No source file is edited. No LaTeX yet. Leave placement blank.
+  - If two sources disagree, list both and flag `CONFLICT`.
+  - Long is fine: this is a dump.
+- **Order:**
+  1. results and methods first: files 04–14 and 06–07 (they carry the most marks);
+  2. then 15, 17, 19;
+  3. then 01–03, 16, 18, 20.
+- Post progress to the chat after each group. Codex or Zayd commits each group.
+
+### 2026-10-24 14:32 Codex → Code | Supervisor | Zayd: Dump group 1 complete — methods and results (04–14)
+Status: INFO (ready to review and commit)
+
+- Resolves: the first-group build requested in the 2026-10-24 14:03 Supervisor entry.
+- Built `report/draft/dump/04_data.md` through `14_results_rcc.md`: 11 files, 83 uniquely numbered items (`C001`–`C083`). This covers datasets and units, models, design/statistics, computational evidence, reproductions, main ranking, simple baselines, spatial context, Test V/BIC, S3PL/Investigation 21 and RCC.
+- Every item has the specified Statement/Numbers/Label/Source/Verified/Caveats/Placement fields; all 83 placement fields are blank. Labels use the predeclared wording. The superseded RCC |R@0.4| budget and the 16 October RCC P1 interpretation are explicitly marked `SUPERSEDED` with their replacements.
+- Sources are limited to the 14:03 entry's permitted repository sources. No source document or LaTeX section was edited. Structural check: 83 IDs, 83 unique; `git diff --check` clean.
+- Existing unrelated working-tree items were preserved: the 14:03 chat/spec addition and untracked `report_plan_2026-10-21.md` predated this build.
+- Committed: not yet; this group is ready for the requested checkpoint review/commit.
