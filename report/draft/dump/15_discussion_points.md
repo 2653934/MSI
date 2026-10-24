@@ -98,3 +98,11 @@
 - Verified by supervisor: yes: 2026-10-20 20:57 and 2026-10-21 14:21
 - Caveats: Does not identify every source of the paper gap; supplements unavailable and tuned-on-test hyperparameters remain a discussion point.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+### C228 Full-map correlation versus sampled-pixel IG
+- Statement: The posterior-correlation control ranks bins using all measured pixels, while production IG estimates attributions from sampled pixels; this difference belongs beside any explanation of their score gap.
+- Numbers: Posterior correlation uses all measured pixels; IG uses 12 sampled pixels per GMM component and 64 integration intervals.
+- Label: descriptive
+- Source: `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Section 4, “Stated asymmetry”; `code/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py`.
+- Verified by supervisor: yes: protocol 18 v3, 2026-10-09
+- Caveats: The paired comparison fixes the GMM and budget but is not a pure integration-rule ablation; the sampled-pixel asymmetry and metric alignment in C088 both limit causal interpretation.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

@@ -4653,3 +4653,11 @@ Status: INFO
 - The old report's right-endpoint IG equation and literal-threshold wording are explicitly SUPERSEDED by C225/C226 and the current methodology text. No source or LaTeX file was edited.
 - Committed group 1 as 000f0b27. Group 2 is under review.
 - Committed: not yet for group 2.
+
+### 2026-10-24 15:17 Codex → Code | Supervisor: Entire-repository audit groups 3–4 — omissions and historical conflict
+Status: INFO
+
+- Added C228–C230: the full-map-versus-sampled-IG asymmetry, an unimplemented conditional S3PL GBM rerank, and stale GBM values in the previous report.
+- C230 flags a historical CONFLICT inside the old report: one paragraph gives legacy GBM 0.414 and a later matched-count paragraph gives 0.3643 without a version qualifier. The saved tuned-count aggregate and 8 October supervisor review identify 0.4142 as the corrected value. The older 0.4562 uniform IG mean is also SUPERSEDED by 0.5111.
+- Committed group 2 as d0aec4f7. Group 3 additions are under review; no source or LaTeX file was edited.
+- Committed: not yet for this group.

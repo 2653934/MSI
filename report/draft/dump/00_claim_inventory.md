@@ -13,8 +13,8 @@ Every item ID maps to exactly one dump file. Placement remains undecided until c
 - `12_results_segmentation_encoder.md`: C064, C065, C066, C067, C068, C223, C224
 - `13_results_s3pl.md`: C069, C070, C071, C072, C073, C074, C075, C076, C077
 - `14_results_rcc.md`: C078, C079, C080, C081, C082, C083
-- `15_discussion_points.md`: C084, C085, C086, C087, C088, C089, C090, C091, C092, C093, C094
-- `19_dropped_and_negative.md`: C095, C096, C097, C098, C099, C100, C101, C102, C103, C104, C105, C106
+- `15_discussion_points.md`: C084, C085, C086, C087, C088, C089, C090, C091, C092, C093, C094, C228
+- `19_dropped_and_negative.md`: C095, C096, C097, C098, C099, C100, C101, C102, C103, C104, C105, C106, C229, C230
 - `17_figures_tables_inventory.md`: C107, C108, C109, C110, C111, C112, C113, C114, C115, C116, C117, C118, C119, C120, C121, C122, C123, C124, C125, C126, C127, C128, C129, C130, C131, C132, C133, C134, C135, C136, C137, C138, C139, C140
 - `01_intro_motivation.md`: C141, C142, C143, C144, C145, C146
 - `02_background_related_work.md`: C147, C148, C149, C150, C151, C152, C153, C154, C155, C156, C157, C158, C159, C160, C161, C162, C163, C164, C165, C166, C167, C168, C169, C170, C171, C172, C173, C174, C175, C176, C177, C178, C179, C180, C181, C182, C183, C184, C185, C186, C187, C188, C189, C190
@@ -30,4 +30,5 @@ Every item ID maps to exactly one dump file. Placement remains undecided until c
 - C103: earlier IG-over-legacy headline is SUPERSEDED IN PART by C044–C048.
 - C121 and C127: older S3PL seed figures require rebuilding for the released ten-seed evidence in C042/C074.
 - C132 and C136: older current-evidence gallery/aggregate assets are valid historical seed-1 evidence but SUPERSEDED IN PART as headline material.
+- C230: historical-draft `CONFLICT` between 0.414 and 0.3643 legacy GBM means within one previous report section; the supervisor correction and saved tuned-count aggregate identify C047 as replacement.
 - No unresolved numerical `CONFLICT` was found among the extracted current sources; apparent differences were traced to seed set, evaluator, budget or superseded output and are stated in the relevant caveats.

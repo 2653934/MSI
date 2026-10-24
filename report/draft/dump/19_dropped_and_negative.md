@@ -107,3 +107,20 @@
 - Verified by supervisor: yes: relevant 15–20 October rulings
 - Caveats: Do not impute or silently omit missing sections.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+### C229 Unimplemented S3PL GBM matched-budget rerank
+- Statement: The protocol reserved an S3PL GBM matched-K rerank if S3PL were placed in the main comparative table, but it was not implemented. The released S3PL GBM reproduction and the fair-scored VAE rankings therefore remain distinct protocols.
+- Numbers: 0 matched-K S3PL GBM rerank outputs.
+- Label: descriptive
+- Source: `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Section 5; `code/msi/results/publication/current_evidence/README.md`.
+- Verified by supervisor: no
+- Caveats: This is a documented uncompleted conditional analysis, not a failed S3PL run; retain the native evaluator, budget and seed qualifiers in C042/C074.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C230 Superseded GBM values in previous report
+- Statement: SUPERSEDED: the previous report draft's GBM 0.3643 legacy and 0.4562 uniform-context IG values came from an older count/version comparison. The corrected tuned-count seed-1 evidence is 0.4142 legacy and 0.5111 uniform-context IG at the shared section-specific budget.
+- Numbers: Older 0.3643/0.4562; replacement 0.4142/0.5111, each mean over n=8 GBM sections.
+- Label: descriptive
+- Source: `report/draft/previous_version/sections/results.tex`; `docs/research/17 Supervisor Review Response and Report Completion Plan.md`; `code/msi/results/publication/current_evidence/aggregate_method_results.csv`.
+- Verified by supervisor: yes: `docs/research/17 Supervisor Review Response and Report Completion Plan.md` (2026-10-08)
+- Caveats: CONFLICT within the historical draft: its baseline-reproduction paragraph says tuned legacy GBM 0.414, while its later “primary matched-count” paragraph says legacy 0.3643 without a version qualifier. The saved aggregate and supervisor correction establish C047 as replacement; fair scoring C044–C046 supersedes the old headline.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
