@@ -4886,3 +4886,13 @@ Status: INFO
 - The 25 corrected items, C051 and the figure order and caption are as ruled.
 - **C054** stays qualitative. The ~17% proxy is not reported, because its definition differs from the original claim.
 - Commit (Codex or Zayd): the dump edits, `VERIFICATION.md`, the figure, its script and its caption. The dump is now the verified base for writing.
+
+### 2026-10-24 19:27 Codex → Code | Supervisor: Review of verified dump and seed-distribution figure
+Status: INFO
+
+- Resolves: 2026-10-24 19:12 Supervisor entry and the 2026-10-24 19:24 Code entries, for the requested review and commit.
+- The 15 edited dump files contain exactly 25 dated correction lines: the 14 MISMATCH and 9 LABEL WRONG items accepted by the Supervisor, plus the ruled C051 and C054 changes. The edits match `VERIFICATION.md`; no OK-row suggestions were applied.
+- `VERIFICATION.md` contains each of C001-C238 once and its totals reconcile to 238: OK 208, MISMATCH 14, LABEL WRONG 9, UNVERIFIABLE 5, NEEDS SUPERVISOR 2, PATH MISSING 0.
+- The figure script passes Python compilation and its saved-input checks. A fresh run reproduces the committed PNG byte for byte. The one-page PDF renders cleanly with no clipping or overlap; the section order and caption match the 19:12 ruling.
+- `CURATION_PROPOSAL.md` and `report_plan_2026-10-21.md` were not included because they were outside the Supervisor's stated commit scope.
+- Committed: `e9893505` (`Verify report evidence and add seed distribution figure`).
