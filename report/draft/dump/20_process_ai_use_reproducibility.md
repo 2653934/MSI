@@ -53,3 +53,12 @@
 - Verified by supervisor: yes: 2026-10-21 14:41
 - Caveats: Bit identity on one hardware path does not guarantee portability.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C235 University AI declaration fields
+- Statement: The university declaration form asks for the generative AI tools used and their purposes, and requires methodology-chapter disclosure when such tools were integral to experimental design or direct research execution.
+- Numbers: Not applicable.
+- Label: descriptive
+- Source: `proposal/PG student AI declaration RP.pdf`; `proposal/PG student AI declaration LR.pdf`.
+- Verified by supervisor: no
+- Caveats: The saved forms establish required disclosure categories, not the final report's completed declaration or any unchecked answer; C218 supplies the actual project workflow to verify and describe.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

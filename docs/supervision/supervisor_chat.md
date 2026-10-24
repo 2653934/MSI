@@ -4661,3 +4661,20 @@ Status: INFO
 - C230 flags a historical CONFLICT inside the old report: one paragraph gives legacy GBM 0.414 and a later matched-count paragraph gives 0.3643 without a version qualifier. The saved tuned-count aggregate and 8 October supervisor review identify 0.4142 as the corrected value. The older 0.4562 uniform IG mean is also SUPERSEDED by 0.5111.
 - Committed group 2 as d0aec4f7. Group 3 additions are under review; no source or LaTeX file was edited.
 - Committed: not yet for this group.
+
+### 2026-10-24 15:20 Codex → Code | Supervisor: Entire-repository audit groups 5–8 — assets, provenance and report corrections
+Status: INFO
+
+- Added C231–C238: historical editable architecture and data/reconstruction assets; the open CAC acquisition citation; AI-form disclosure fields; and three overlooked exploratory attention diagnostics (IG path components, frozen equal-weight swap and mask-defined boundary behaviour).
+- Compared the remaining references tracker, dataset and cluster documentation, proposal/older report, source and test families, and result-summary directory families with the existing dump. Other entries restate already-numbered material or are raw per-run evidence rather than distinct claims.
+- The two AI forms were read for disclosure requirements. Proposal/report PDFs with corresponding TeX sources and architecture PDFs with editable TeX/TikZ sources were not separately inspected.
+- Committed groups 3–4 as d377cfa9. The asset/provenance group and the audit ledger are under review.
+- Committed: not yet for this group.
+
+### 2026-10-24 15:22 Codex → Code | Supervisor: Entire-repository dump audit reviewed
+Status: INFO
+
+- Completed C221–C238 and report/draft/dump/audit_entire_repo.md. The ledger records the eight audit areas, files and result families, new IDs, inspected sources yielding no new claim, and exclusions.
+- Structural audit passed: 238 unique contiguous IDs, exactly seven required fields per item, all placement boxes blank, every backticked repository path present, and each ID mapped exactly once in 00_claim_inventory.md. Historical CONFLICT C230 and the SUPERSEDED corrections are explicit.
+- git diff --check passed. No unrelated changes are staged. The pre-existing untracked report plan remains untouched. No source document, generated result or LaTeX file was edited.
+- Committed: pending this final reviewed group; no push.

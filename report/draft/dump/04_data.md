@@ -80,6 +80,7 @@
 - Verified by supervisor: yes: 2026-10-16 17:36
 - Caveats: The system is not fully autonomous; BIC did not validate these values (C067).
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
 ### C221 GBM and CAC budget provenance
 - Statement: The shared bin budget is each section's tuned legacy msiPL `unique_nearest_bins` count. GBM released S3PL targets equal the project's mixed PCC 0.4 reference-set size in every section, whereas CAC released targets match none of the project's four reference-set sizes; the targets' upstream derivation remains unverified.
 - Numbers: GBM 8/8 matches at PCC 0.4; CAC 0/8 matches at PCC 0.3, 0.4, 0.5 or 0.6; legacy tuning tolerance 50 bins.
@@ -96,4 +97,13 @@
 - Source: `docs/research/03 Datasets and Preprocessing.md`; `code/msi/results/validation/gbm_imzml_h5/comparison.json`.
 - Verified by supervisor: no
 - Caveats: The GBM source masks are not byte-identical because official imzML uses 0=background, 1=normal, 2=tumour while the HDF5 reconstruction uses coverage plus 0=normal, 1=tumour. This is an encoding difference, not a numerical conflict.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C234 CAC acquisition citation remains unverified
+- Statement: The references tracker identifies S3PL as the released source for the CAC collection but leaves the original acquisition paper unconfirmed. A final dataset-provenance sentence should distinguish the release used here from an original acquisition citation once verified.
+- Numbers: Not applicable.
+- Label: descriptive
+- Source: `docs/meetings/references.md` Sections 5–6; `docs/research/investigations/19 Upstream Repository and Paper Audit.md`.
+- Verified by supervisor: no
+- Caveats: Open bibliographic check, not evidence that the CAC dataset lacks an original citation. Do not invent a source citation.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

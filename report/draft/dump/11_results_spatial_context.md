@@ -80,3 +80,30 @@
 - Verified by supervisor: yes: 2026-10-17 08:37
 - Caveats: CAC P1 is a two-budget check, not independent partition evidence.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C236 Central and neighbour IG ranking components
+- Statement: A frozen attention-model diagnostic scored rankings from central-path IG, neighbour-path IG and their production combination separately on two exploratory sections. The components produce different peak lists and scores, so the combined ranking cannot be assumed to measure only centre or only context.
+- Numbers: 160TopL real combined/central/neighbour mSCF1 0.4662/0.4593/0.4507 at K=210; GBM22_2 real 0.4364/0.4306/0.4252 at K=464 (n=2 sections).
+- Label: descriptive
+- Source: `code/msi/results/diagnostics/spatial_ig_component_ablation/160TopL/summary.json`; `code/msi/results/diagnostics/spatial_ig_component_ablation/GBM22_2/summary.json`.
+- Verified by supervisor: no
+- Caveats: Both paths belong to one jointly trained contextual checkpoint; the component lists are mechanistic diagnostics, not separately trained method comparisons.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C237 Frozen learned-weight ablation
+- Statement: Replacing the trained attention weights with equal weights at inference gave slightly higher peak scores but slightly worse reconstruction on both exploratory sections. Learned weights therefore had no peak-score advantage in this same-checkpoint intervention.
+- Numbers: Uniform-minus-learned mSCF1 +0.0099 on 160TopL and +0.0038 on GBM22_2 (n=2 sections); 202/210 and 452/464 selected bins shared.
+- Label: descriptive
+- Source: `docs/research/investigations/13 Spatial Context Claim-Evidence Ledger.md`; `code/msi/results/diagnostics/spatial_attention_uniform_weight_ablation/160TopL/summary.json`; `code/msi/results/diagnostics/spatial_attention_uniform_weight_ablation/GBM22_2/summary.json`.
+- Verified by supervisor: no
+- Caveats: Outcome-known sections and seed 1 only; the intervention changes weights only at inference and is not the separately trained uniform-mean comparison in C058. Both gains are below the 0.02 practical signal.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C238 Attention at tissue boundaries
+- Statement: Real-neighbour attention departs somewhat more from uniform averaging at mask-defined boundaries than in interiors, but a post-hoc label-alignment check finds no consistent preference for same-label neighbours.
+- Numbers: Real attention-versus-uniform median half-L1: CAC boundary 0.011–0.014 versus interior 0.003–0.005 (48 boundary centres); GBM 0.020–0.028 versus 0.003–0.011 (32 boundary centres). Same-label excess positive in 50–56% CAC and 41–50% GBM centres across three seeds.
+- Label: descriptive
+- Source: `docs/research/investigations/13 Spatial Context Claim-Evidence Ledger.md`; `code/msi/results/diagnostics/spatial_attention_boundary/160TopL/summary.json`; `code/msi/results/diagnostics/spatial_attention_boundary_alignment/GBM22_2/summary.json`.
+- Verified by supervisor: no
+- Caveats: Labels define groups only after inference; sampled pixels within two development sections are dependent and do not establish a collection-wide boundary benefit or a peak-score mechanism.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

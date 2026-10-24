@@ -305,3 +305,30 @@
 - Verified by supervisor: no
 - Caveats: Check against Test R seed-mean reporting and final statistics before reuse; rebuild if they show seed-1 only.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C231 Historical architecture diagrams
+- Statement: The previous report preserves editable vector diagrams for legacy msiPL, proposed Spatial-msiPL, evaluated Spatial-msiPL and S3PL, plus a four-way architecture comparison. These can support a methods figure after their captions are checked against the final evaluated pipeline.
+- Numbers: Four standalone architecture panels and one comparison diagram.
+- Label: descriptive
+- Source: `report/draft/previous_version/figures/architecture_panels/architecture_msipl.tex`; `report/draft/previous_version/figures/architecture_panels/architecture_proposed_spatial_msipl.tex`; `report/draft/previous_version/figures/architecture_panels/architecture_evaluated_spatial_msipl.tex`; `report/draft/previous_version/figures/architecture_panels/architecture_s3pl.tex`; `report/draft/previous_version/figures/model_architecture_comparison.tikz`.
+- Verified by supervisor: no
+- Caveats: The proposed panel is proposal history, not the final evaluated architecture; the editable text sources represent the PDFs, so the PDFs need no separate evidentiary reading.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C232 Dataset coverage and mask visualisations
+- Statement: The repository has GBM and CAC collection-level coverage/mask overviews, per-section TIC and mask overlays, and GBM imzML/HDF5 semantic-comparison panels that can illustrate measured-pixel coverage and the mask-encoding audit.
+- Numbers: Two collection-level coverage/mask pairs; eight GBM and eight CAC per-section galleries; GBM semantic comparison across eight sections.
+- Label: descriptive
+- Source: `results/README.md`; `results/datasets/gbm_massnet_overview_coverage.png`; `results/datasets/cac_overview_coverage.png`; `code/msi/results/visualisations/gbm_imzml_comparison/semantic_disagreements_overview.png`.
+- Verified by supervisor: no
+- Caveats: These illustrate the data contract in C222 rather than establishing a new biological result; individual ion images are examples, not identified molecules.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C233 Historical GBM reconstruction figure
+- Statement: A separate previous-draft GBM reconstruction panel shows section-level uniform-mean versus centre-only MSE and remains available for the reconstruction control.
+- Numbers: Eight paired GBM sections; uniform wins 4/8 and centre-only 4/8.
+- Label: descriptive
+- Source: `report/draft/previous_version/images/gbm_reconstruction_validation.png`; `report/draft/previous_version/sections/results.tex`; `docs/research/01 Results Record.md` subsection “Whole-GBM reconstruction validation”.
+- Verified by supervisor: no
+- Caveats: Historical seed-1 reconstruction evidence; check the caption and current seed-reporting rule before reuse. It does not show peak-ranking benefit.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
