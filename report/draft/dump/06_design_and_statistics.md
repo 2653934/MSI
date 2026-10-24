@@ -60,7 +60,8 @@
 - Label: descriptive
 - Source: `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Section 6.6 addendum; supervisor chat 2026-10-20 11:31.
 - Verified by supervisor: yes: 2026-10-20 11:31
-- Caveats: F3 (k=17) and F4 (k=9) cannot attain Holm significance at n=8.
+- Caveats: At bin level, F3 (k=17) and F4 (k=9) cannot attain Holm significance at n=8; F3 at P1 (k=16) cannot either. F4 at P1 has k=6 and can: row 30 (CAC central_only S1 − plain, P1) has Holm p=0.047 but is not "statistically supported" because its practical label is "equivalent".
+- Corrected: 2026-10-24 per VERIFICATION.md (F4 at P1 has k=6 and is attainable)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C028 Statistical units

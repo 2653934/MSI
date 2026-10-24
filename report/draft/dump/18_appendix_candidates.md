@@ -29,11 +29,12 @@
 
 ### C212 Protocol and evidence map
 - Statement: Include a compact chronology of predeclarations, decision rules, superseded records and artifact paths.
-- Numbers: Protocol 18 Sections 6–10; 220 dump items when complete.
+- Numbers: Protocol 18 Sections 6–10; 238 dump items.
 - Label: descriptive
 - Source: protocol 18; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Appendix A.
 - Verified by supervisor: yes: report plan 2026-10-24 14:03
 - Caveats: Summarise; do not reproduce the entire execution log in the body.
+- Corrected: 2026-10-24 per VERIFICATION.md (item count 238)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C213 Proposal-to-outcome table

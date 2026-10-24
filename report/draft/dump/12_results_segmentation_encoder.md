@@ -2,11 +2,12 @@
 
 ### C064 Test V primary outcome
 - Statement: PCA-5→GMM→correlation is mixed on GBM and CAC and equivalent on RCC versus the VAE pipeline; the nonlinear encoder is therefore not shown necessary.
-- Numbers: Seed-1 PCA−VAE: GBM +0.023, 5/8; CAC −0.013, 4/8; RCC approximately equivalent. Three-seed descriptive VAE−PCA: GBM +0.042 5/8; CAC −0.012/−0.023 2/8; RCC −0.011 3/7.
+- Numbers: Seed-1 VAE−PCA-5: GBM +0.023, 5/8 (VAE higher); CAC −0.013, 4/8; RCC approximately equivalent. Three-seed descriptive VAE−PCA: GBM +0.042 5/8; CAC −0.012/−0.023 2/8; RCC −0.011 3/7.
 - Label: GBM "mixed"; CAC "mixed"; RCC "equivalent"
 - Source: protocol 18 Section 6.4; `code/msi/results/diagnostics/segmentation_control_V/decisions_20261017_local/`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Sections 6.8–6.9.
 - Verified by supervisor: yes: 17–18 October result rulings
-- Caveats: Seed-1 verdict is primary; seed-mean result is descriptive.
+- Caveats: Seed-1 verdict is primary; seed-mean result is descriptive. RCC: unannotated class, 45–78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (`rcc_nobg`), but this was not independently verified; GMM K=3 is class-informed.
+- Corrected: 2026-10-24 per VERIFICATION.md (difference is VAE − PCA-5; RCC NA caveat and K=3 note)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C065 Segmentation accuracy

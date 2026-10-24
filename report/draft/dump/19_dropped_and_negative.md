@@ -82,12 +82,13 @@
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C104 Negative BIC result
-- Statement: No label-free K was obtained from BIC: it improved to the boundary K=6 in every tested arm.
-- Numbers: 4/4 GBM/CAC development arms plus 8/8 RCC runs select largest candidate K=6.
+- Statement: No label-free K was obtained from BIC: it selected the largest candidate, K=6, in every tested arm, with no minimum within the predeclared range.
+- Numbers: 4/4 GBM/CAC development arms plus 15/15 RCC run-arms (UH0505_12 uniform_mean not done) select largest candidate K=6.
 - Label: descriptive
 - Source: protocol 18 Sections 6 and 10; current BIC evidence.
 - Verified by supervisor: yes: 2026-10-16 17:36
 - Caveats: Say “largest candidate,” not “six clusters.”
+- Corrected: 2026-10-24 per VERIFICATION.md (15/15 RCC run-arms; largest-candidate wording)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C105 Negative IG pixel-count result

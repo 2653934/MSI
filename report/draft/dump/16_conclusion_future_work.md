@@ -28,12 +28,13 @@
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C206 Conclusion: reproducibility boundary
-- Statement: Learned-baseline reproductions constrain general claims: msiPL is close on all datasets, S3PL is close on CAC/RCC but its GBM paper result remains outside the ten-seed distribution.
-- Numbers: GBM S3PL 0.3193 ± 0.0419 vs 0.496.
+- Statement: Learned-baseline reproductions constrain general claims: msiPL is close on all datasets and S3PL on RCC; the published S3PL CAC mean is just outside the ten-seed distribution, within the published rounding, and the GBM result is far outside it.
+- Numbers: GBM S3PL 0.3193 ± 0.0419 vs 0.496; CAC 0.5470 ± 0.0377 (maximum seed mean 0.591) vs 0.601.
 - Label: "outside our seed distribution"
 - Source: C039–C043 and C074–C077.
 - Verified by supervisor: yes: 2026-10-20 20:57
-- Caveats: Unresolved rather than attributed to one cause.
+- Caveats: Unresolved rather than attributed to one cause. CAC is consistent with a favourable seed or best-of-several selection, but not shown to be.
+- Corrected: 2026-10-24 per VERIFICATION.md (CAC also outside the seed distribution)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C207 Future work: label-free configuration and validation

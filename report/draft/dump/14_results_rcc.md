@@ -6,7 +6,8 @@
 - Label: centre rule fall-through; uniform "incomplete; no verdict"
 - Source: `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.5; `code/msi/results/diagnostics/fair_scoring_baselines/rcc/decisions_20261017_local/`.
 - Verified by supervisor: yes: 2026-10-17 verdict amendment
-- Caveats: Centre 8/8; uniform 7/7 valid because UH0505_12 failed IG completeness. RCC verdict is bin-level only.
+- Caveats: Centre 8/8; uniform 7/7 valid because UH0505_12 failed IG completeness. RCC verdict is bin-level only. Centre label in Section 7.1 wording: "Neither predeclared verdict applies, because IG scored below posterior-|PCC| in every section." Unannotated class, 45–78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (`rcc_nobg`), but this was not independently verified. GMM K=3 equals the number of label classes: label-free in training and ranking, class-informed in its component count.
+- Corrected: 2026-10-24 per VERIFICATION.md (RCC NA caveat, K=3 note and Section 7.1 wording)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C079 RCC IG versus posterior
@@ -33,23 +34,26 @@
 - Label: "incomplete"
 - Source: `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.9; Test R decision tables.
 - Verified by supervisor: yes: 2026-10-19 update
-- Caveats: Missing IG seed-arms prevent the predeclared context verdict.
+- Caveats: Missing IG seed-arms prevent the predeclared context verdict. Unannotated class, 45–78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (`rcc_nobg`), but this was not independently verified. GMM K=3 is class-informed in its component count.
+- Corrected: 2026-10-24 per VERIFICATION.md (RCC NA caveat and K=3 note)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C082 Cancer/normal sensitivity
-- Statement: Removing the dominant unannotated class shrinks the posterior-correlation advantage; correlation beats IG in five of eight runs and falls below mean intensity, variance and Moran's I.
-- Numbers: IG−posterior about −0.045; IG ahead 3/8, posterior ahead 5/8; unannotated 45–78% of pixels.
+- Statement: Removing the dominant unannotated class shrinks the posterior-correlation advantage. In central_only, correlation beats IG in five of eight runs and falls below mean intensity, variance and Moran's I; in uniform_mean (7 runs) correlation beats IG in six of seven and stays above mean intensity, below variance and Moran's I.
+- Numbers: central_only IG−posterior about −0.045, IG ahead 3/8, posterior ahead 5/8 (posterior 0.380 vs mean intensity 0.397, variance 0.444, Moran 0.443); uniform_mean −0.077, IG ahead 1/7 (posterior 0.427 vs mean intensity 0.414, variance 0.444, Moran 0.439); unannotated 45–78% of pixels.
 - Label: descriptive
 - Source: `code/msi/results/diagnostics/fair_scoring_baselines/rcc_cancer_normal_sensitivity/decisions_20261017_local/`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.5.
 - Verified by supervisor: yes: 2026-10-19 update
 - Caveats: Necessary qualifier to every RCC headline; cancer/normal subset follows the dataset subset definition.
+- Corrected: 2026-10-24 per VERIFICATION.md (statement held for central_only only; uniform_mean added)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C083 RCC BIC and P1 status
 - Statement: RCC BIC selects K=6 everywhere, and RCC P1 is a budget sensitivity rather than an independent partition verdict.
-- Numbers: 8/8 BIC selections at largest candidate K=6; bin spacing ≈0.083 Da.
+- Numbers: 15/15 RCC run-arms (8/8 central_only, 7/7 uniform_mean; UH0505_12 uniform_mean not done) select the largest candidate K=6, with no minimum within the predeclared range; bin spacing ≈0.083 Da.
 - Label: descriptive
 - Source: protocol 18 Sections 6.1 and 10; `code/msi/results/diagnostics/gate_d_bic_rcc/`.
 - Verified by supervisor: yes: 2026-10-17 verdict amendment
 - Caveats: Current RCC decision tables are `decisions_20261017_local`; `decisions_20261016_local` is SUPERSEDED, with unchanged values but obsolete P1 interpretation.
+- Corrected: 2026-10-24 per VERIFICATION.md (15/15 run-arms; BIC wording rule)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

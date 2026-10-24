@@ -1,12 +1,13 @@
 # Results: main ranking comparison
 
 ### C044 Seed-1 IG versus posterior correlation
-- Statement: Holding each fitted GMM fixed, IG scored below posterior correlation in every valid seed-1 comparison across all three datasets.
+- Statement: Holding each fitted GMM fixed, IG scored below posterior correlation in every valid seed-1 comparison across all three datasets, at bin level.
 - Numbers: 47/47 valid section–arm comparisons; GBM differences −0.225/−0.233, CAC −0.078/−0.047, RCC −0.156/−0.185 (centre/uniform; RCC uniform n=7).
-- Label: "mixed / not resolved by the predeclared rule"
+- Label: "Neither predeclared verdict applies, because IG scored below posterior-|PCC| in every section" (summariser fall-through "mixed / not resolved by the predeclared rule"); RCC uniform_mean "incomplete; no verdict (7/8 runs)"
 - Source: `code/msi/results/publication/current_evidence/fair_scoring_collection_summary.csv`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Sections 4.1 and 6.5; protocol 18 Section 7.1.
 - Verified by supervisor: yes: 2026-10-20 11:31
 - Caveats: Paired dependent comparisons, not 47 independent biological samples; use C024 wording.
+- Corrected: 2026-10-24 per VERIFICATION.md (Section 7.1 wording; RCC uniform label; bin level, seed 1)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C045 Three-seed IG versus posterior correlation
@@ -20,11 +21,12 @@
 
 ### C046 F1 statistical support
 - Statement: IG being below posterior correlation is statistically supported in all six collection×arm comparisons at bin level.
-- Numbers: Holm p≤0.04688; all section differences negative; rank-biserial r=−1. Example seed-mean rows: GBM centre −0.2445, CAC centre −0.07735, RCC centre about −0.14.
+- Numbers: Holm p≤0.04688; all section differences negative; rank-biserial r=−1. Example seed-mean rows: GBM centre −0.2445, CAC centre −0.07735, RCC centre −0.1516 (n=7).
 - Label: "statistically supported"
 - Source: `code/msi/results/diagnostics/statistics_6_6/tests.csv`; supervisor chat 2026-10-20 11:31.
 - Verified by supervisor: yes: 2026-10-20 11:31
-- Caveats: Holm values sit at the smallest attainable p for n=6–8. CAC uniform P1 is not supported (p=0.078; 7/8).
+- Caveats: The raw p-values sit at the smallest attainable p for each n (6–8); Holm-adjusted values are 0.047. Seed-mean n: GBM uniform 7, RCC centre 7, RCC uniform 6 (sections with all three seeds). CAC uniform P1 is not supported (p=0.078; 7/8).
+- Corrected: 2026-10-24 per VERIFICATION.md (RCC centre value; seed-mean n; Holm wording)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C047 IG versus legacy msiPL
@@ -33,7 +35,8 @@
 - Label: descriptive
 - Source: `code/msi/results/publication/current_evidence/aggregate_method_results.csv`; protocol 18 Section 7.1; `docs/research/investigations/14 Primary Results Claim-Evidence Ledger.md`.
 - Verified by supervisor: yes: 2026-10-20 11:31
-- Caveats: Package comparison, not proof IG or spatial context caused the gain; legacy is not K_peak-matched.
+- Caveats: Package comparison, not proof IG or spatial context caused the gain; legacy is not K_peak-matched. Seed 1 only. Protocol 18 Section 7.1(2): 2 of 3 "IG beats legacy" clauses met; the budget-stability clause is not assessable, so the rule is not called met.
+- Corrected: 2026-10-24 per VERIFICATION.md (seed mode; Section 7.1(2) clause disclosure)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C048 F2 statistical support versus legacy

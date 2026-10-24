@@ -38,11 +38,12 @@
 
 ### C073 S3PL training length
 - Statement: Longer S3PL training worsens peak quality; the released 10-epoch checkpoint is not an unfair handicap.
-- Numbers: Mean CAC 0.591→0.336 and GBM 0.316→0.212 from epoch 10 to 100; epoch 10 best in 15/16 sections, exception GBM108_positive.
+- Numbers: Mean CAC 0.591→0.335 and GBM 0.316→0.212 from epoch 10 to 100; epoch 10 best in 15/16 sections, exception GBM108_positive.
 - Label: descriptive
-- Source: protocol 18 Section 10 item C2; `code/msi/results/publication/current_evidence/training_curves_s3pl.csv`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.3.
+- Source: protocol 18 Section 10 item C2; `code/msi/reproducibility/s3pl_e100/seed1_released/results/baselines/s3pl/`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.3.
 - Verified by supervisor: yes: 2026-10-16 17:36
-- Caveats: Report fixed 10 epochs; never select per-section best checkpoints. No label-free early-stopping signal was identified.
+- Caveats: Report fixed 10 epochs; never select per-section best checkpoints. No label-free early-stopping signal was identified. S3PL seed 1, S3PL in-job evaluator. `training_curves_s3pl.csv` holds last-batch loss only, not mSCF1.
+- Corrected: 2026-10-24 per VERIFICATION.md (CAC epoch-100 mean 0.335; mSCF1 source; seed and evaluator)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C074 Ten-seed S3PL distributions
@@ -60,7 +61,8 @@
 - Label: "does not explain; seed 1 existed before the predeclaration (0.289 vs 0.316) and was seen during the inventory; seeds 2–3 are blind"
 - Source: `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`; supervisor chat 2026-10-20 15:33.
 - Verified by supervisor: yes: 2026-10-20 15:33
-- Caveats: Released seed 1 differs from the controlled initialisation-screen seed 1.
+- Caveats: Released seed 1 differs from the controlled initialisation-screen seed 1. Seeds 1–3; S3PL in-job mSCF1 (metrics.json), not the fair-scoring evaluator.
+- Corrected: 2026-10-24 per VERIFICATION.md (evaluator and seed disclosure)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C076 Investigation 21 source of seed variation

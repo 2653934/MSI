@@ -2,11 +2,12 @@
 
 ### C141 MSI as spatial molecular measurement
 - Statement: MSI records a mass spectrum at each measured tissue coordinate, producing a high-dimensional spatial data cube without requiring a target list in advance.
-- Numbers: Each section contains thousands of locations and tens of thousands of spectral bins in the evaluated data.
+- Numbers: Each section contains about a thousand to several thousand locations and 1,481–85,062 spectral bins, depending on the dataset (CAC 1,481; RCC 10,200; GBM 85,062).
 - Label: descriptive
 - Source: `proposal/proposal.tex` Introduction and Background; `report/draft/sections/introduction.tex`.
 - Verified by supervisor: no
 - Caveats: Avoid the proposal's unqualified clinical claims; the project evaluates computational peak rankings, not diagnostic deployment.
+- Corrected: 2026-10-24 per VERIFICATION.md (bin and pixel ranges per dataset)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C142 Peak-selection problem

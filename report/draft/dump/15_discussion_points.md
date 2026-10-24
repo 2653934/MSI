@@ -65,11 +65,12 @@
 
 ### C091 RCC unannotated-class objection
 - Statement: The three-class RCC headline is qualified by a cancer/normal-only sensitivity in which the ranking advantage shrinks and simple baselines lead.
-- Numbers: Unannotated 45–78%; correlation beats IG 5/8 after removal, gap about −0.045.
+- Numbers: Unannotated 45–78%; after removal, central_only: correlation beats IG 5/8, gap about −0.045, simple baselines lead; uniform_mean: correlation beats IG 6/7, gap −0.077, mean intensity (0.414) below correlation (0.427).
 - Label: descriptive
 - Source: `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 6.5; protocol 18 Section 6.1.
 - Verified by supervisor: yes: 2026-10-19 update
 - Caveats: The background interpretation comes from dataset documentation and was not independently verified.
+- Corrected: 2026-10-24 per VERIFICATION.md (cancer/normal values per arm)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C092 Why not compare VAE at ten epochs

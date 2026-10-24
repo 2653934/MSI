@@ -4686,3 +4686,203 @@ Status: INFO
 - The four audit commits are 000f0b27, d0aec4f7, d377cfa9 and 3e2f33f3. No push was made.
 - Post-commit working tree contains only the pre-existing untracked report plan. No unrelated change is staged.
 - Committed: this closing entry pending its own documentation commit.
+
+### 2026-10-24 16:19 Code → Supervisor: Dump verification progress — 09 main ranking
+Status: INFO
+- 09 (C044–C050) checked against tests.csv, collection summary, RCC 1017 and Test R decisions: OK 4, MISMATCH 1 (C046), LABEL WRONG 2 (C044, C047). Details in `report/draft/dump/VERIFICATION.md`.
+
+### 2026-10-24 16:19 Code → Supervisor: Dump verification progress — 13 S3PL
+Status: INFO
+- 13 (C069–C077) checked against Investigation 21 parts B–D, Test N, the S3PL seed-rule JSON and the 100-epoch metrics: OK 7, MISMATCH 1 (C073), LABEL WRONG 1 (C075).
+
+### 2026-10-24 16:21 Code → Supervisor: Dump verification progress — 14 RCC
+Status: INFO
+- 14 (C078–C083) checked against RCC and cancer/normal 1017 decisions, Test R section table, mixed models and RCC BIC summaries: OK 2, MISMATCH 2 (C082 uniform arm, C083 count), LABEL WRONG 2 (C078, C081: NA caveat missing).
+
+### 2026-10-24 16:21 Code → Supervisor: Dump verification progress — 08 reproductions
+Status: INFO
+- 08 (C039–C043) checked against Investigations 19/21, part_b and the aggregate table: OK 4, LABEL WRONG 1 (C042: evaluator disclosure missing).
+
+### 2026-10-24 16:22 Code → Supervisor: Dump verification progress — 10 simple baselines and metric
+Status: INFO
+- 10 (C051–C054) checked against the collection summary, budget-sensitivity means and segmentation-vs-score JSON: OK 2, NEEDS SUPERVISOR 1 (C051: posterior max variant beats mean intensity on CAC), UNVERIFIABLE 1 (C054: 20–25% has no saved artifact).
+
+### 2026-10-24 16:24 Code → Supervisor: Dump verification progress — 11 spatial context
+Status: INFO
+- 11 (C055–C063, C236–C238) checked against tests.csv, Test S decisions and the attention diagnostic summaries: OK 9, MISMATCH 1 (C059 mixes two audits), LABEL WRONG 2 (C055 superseded GBM seed-1 label; C063 exact label and NA caveat).
+
+### 2026-10-24 16:25 Code → Supervisor: Dump verification progress — 12 segmentation and encoder
+Status: INFO
+- 12 (C064–C068, C223–C224) checked against Test V decisions, tests.csv, PCA reconstruction, BIC and latent diagnostics: OK 6, MISMATCH 1 (C064: difference is VAE − PCA-5, not PCA − VAE).
+
+### 2026-10-24 16:26 Code → Supervisor: Dump verification progress — 06 design and statistics
+Status: INFO
+- 06 (C021–C030) checked against protocol 18 §§6.3, 6.6, 7, tests.csv/summary.json, mixed models and Test R tables: OK 9, MISMATCH 1 (C027: F4 at P1 has k = 6 and is attainable).
+
+### 2026-10-24 16:28 Code → Supervisor: Dump verification progress — 07 computational
+Status: INFO
+- 07 (C031–C038) checked against Investigations 10/16, runtime v2 and the ranking-stage summaries: OK 7, MISMATCH 1 (C035: RCC timings are the superseded 7-run table; 8-run artifact gives 0.11/0.75/0.013/0.25/372 s).
+
+### 2026-10-24 16:29 Code → Supervisor: Dump verification progress — 04 data
+Status: INFO
+- 04 (C001–C009, C221, C222, C234) checked against the RCC export report, GBM imzML comparison, protocol 18 §0/§6.6 and configs: OK 11, MISMATCH 1 (C001: PDX line is reported beside, not the Holm test unit).
+
+### 2026-10-24 16:30 Code → Supervisor: Dump verification progress — 05 methods and models
+Status: INFO
+- 05 (C010–C020, C225–C227) checked against model/attribution code, Investigations 11/12 and protocol 18 §§3–4, 6.1: OK 14 (wording notes on C019 parameter source and C225 interval count).
+
+### 2026-10-24 16:30 Code → Supervisor: Dump verification progress — 15 discussion points
+Status: INFO
+- 15 (C084–C094, C228) checked against the same artifacts as 09–14 and protocol 18 §4: OK 11, MISMATCH 1 (C091: cancer/normal statement holds for central_only only).
+
+### 2026-10-24 16:31 Code → Supervisor: Dump verification progress — 16 conclusion and future work
+Status: INFO
+- 16 (C203–C208) checked against the verified result items and the 2026-10-20 11:31 and 20:57 rulings: OK 5, MISMATCH 1 (C206: CAC is also "outside our seed distribution"). C040 in file 08 re-marked LABEL WRONG for the same reason.
+
+### 2026-10-24 16:31 Code → Supervisor: Dump verification progress — 19 dropped and negative
+Status: INFO
+- 19 (C095–C106, C229, C230) checked against the result items, protocol 18 §5 and the previous draft: OK 13, MISMATCH 1 (C104: RCC BIC is 15/15 run-arms, not 8/8). SUPERSEDED/CONFLICT flags present and correct.
+
+### 2026-10-24 16:32 Code → Supervisor: Dump verification progress — 03 problem, RQs, proposal-to-outcome
+Status: INFO
+- 03 (C191–C202) checked against proposal.tex RQs and proposal_to_outcome.md rows 1–14: OK 12 (notes: quote RQ2 verbatim; label the 0.46 in C198 as the September value).
+
+### 2026-10-24 16:33 Code → Supervisor: Dump verification progress — 17 figures and tables inventory
+Status: INFO
+- 17 (C107–C140, C231–C233) checked for paths, row counts and caption status: OK 37. Caption notes carried over from C063, C064, C073 and C040 (rebuilds must use the corrected values).
+
+### 2026-10-24 16:33 Code → Supervisor: Dump verification progress — 18 appendix candidates
+Status: INFO
+- 18 (C209–C214) checked: OK 5, MISMATCH 1 (C212: the dump has 238 items, not 220).
+
+### 2026-10-24 16:34 Code → Supervisor: Dump verification progress — 20 process, AI use, reproducibility
+Status: INFO
+- 20 (C215–C220, C235) checked against chat test records (72625, 6.6 rerun) and the declaration form: OK 5, UNVERIFIABLE 2 (C218, C219: process statements Zayd must confirm).
+
+### 2026-10-24 16:34 Code → Supervisor: Dump verification progress — 01 introduction and motivation
+Status: INFO
+- 01 (C141–C146) checked: OK 4, MISMATCH 1 (C141: "tens of thousands of bins" holds for GBM only), UNVERIFIABLE 1 (C142, conceptual).
+
+### 2026-10-24 16:35 Code → Supervisor: Dump verification progress — 02 background and related work
+Status: INFO
+- 02 (C147–C190) checked for bib keys and consistency with references.bib and the references.md tracker (publisher records not checked online): OK 42, UNVERIFIABLE 1 (C167, authors unverified), NEEDS SUPERVISOR 1 (C168, unpublished report citation form). 20 cited works have no bib entry yet.
+
+### 2026-10-24 16:35 Code → Supervisor: Dump verification complete — non-OK items (C001–C238)
+Status: OPEN
+Context: Sequential pass of all 20 dump files; no subagents, no cluster access, no dump or source edited. Numbers recomputed from the cited CSV/JSON with local pandas scripts.
+Evidence: `report/draft/dump/VERIFICATION.md` (one row per ID, corrections included).
+- Totals: OK 208, MISMATCH 14, LABEL WRONG 9, UNVERIFIABLE 5, NEEDS SUPERVISOR 2, PATH MISSING 0. (File 08 is now OK 3 / LABEL WRONG 2: C040 was re-marked after file 16.)
+- **MISMATCH:**
+  - C001: the PDX line is reported beside the tests, not the Holm unit (sections are).
+  - C027: F4 at P1 has k = 6 and is attainable (row 30 Holm 0.047).
+  - C035: RCC ranking times are from the superseded 7-run table; the 8-run artifact gives 0.11/0.75/0.013/0.25/372 s.
+  - C046: RCC centre seed-mean is −0.152 (n = 7), not about −0.14.
+  - C059: the half-L1 ranges mix the typical-pixel and boundary audits.
+  - C064: the difference is VAE − PCA-5, not PCA − VAE.
+  - C073: CAC epoch-100 mean is 0.335, not 0.336; the cited CSV holds loss only.
+  - C082, C091: the cancer/normal statements hold for central_only only; uniform is −0.077 (1/7), and mean intensity does not lead.
+  - C083, C104: RCC BIC is 15/15 run-arms.
+  - C141: "tens of thousands of bins" holds for GBM only.
+  - C206: CAC S3PL is also outside the seed distribution.
+  - C212: 238 items, not 220.
+- **LABEL WRONG:**
+  - C044: §7.1 wording; RCC uniform is "incomplete; no verdict".
+  - C047: seed 1; 2 of 3 legacy clauses met.
+  - C040: CAC "outside our seed distribution" omitted.
+  - C042, C075: S3PL in-job evaluator not named.
+  - C055: GBM seed-1 "equivalent" is superseded; Holm 0.13 not given beside "helps".
+  - C063: exact "does not meet the 'helps' rule (labelled mixed)" wording; RCC NA caveat missing.
+  - C078, C081: RCC NA caveat and class-informed K = 3 missing.
+- **UNVERIFIABLE:**
+  - C054: "20–25% duplicate TPs" has no saved artifact.
+  - C142: conceptual.
+  - C167: authors unverified.
+  - C218, C219: process statements for Zayd.
+- **NEEDS SUPERVISOR:**
+  - C051: posterior_abs_pcc_max (0.626/0.629) beats mean intensity (0.612) on CAC. Should "strongest label-free ranking" be restricted to the predeclared balanced variant?
+  - C168: citation form of the unpublished Wits report.
+Questions / requests:
+1. Accept the corrections in VERIFICATION.md as the basis for editing the dump (Codex/Zayd edit; Code did not)?
+2. C051: restrict to the primary balanced variant, or reword?
+3. C054: drop the 20–25% figure, or approve a recomputation from the saved partition summaries?
+
+### 2026-10-24 16:37 Code → Supervisor: Investigation 21 figure built (per-section S3PL mSCF1, released seeds 1–10)
+Status: OPEN
+Context: Figure requested in the curation proposal (body figure "NEW"). It was built locally from saved artifacts only. Not committed.
+Evidence:
+- `report/draft/images/s3pl_released_seed_distributions.png` and `.pdf`
+- script `code/msi/scripts/plot_s3pl_seed_distributions.py`
+- inputs `code/msi/results/diagnostics/s3pl_seed_investigation_21/part_b/sections.csv` and `part_a_released/sections.csv`
+- **Content:**
+  - Two panels, GBM and CAC; each section shows its 10 released-seed scores (jittered dots), the mean of the 10 seeds (bar) and the published value (hollow diamond).
+  - The panel titles give the seed-level collection mean ± SD and the published mean: GBM 0.319 ± 0.042 vs 0.496; CAC 0.547 ± 0.038 vs 0.601.
+  - The y-axis states "S3PL mSCF1 (in-job evaluator)".
+- **Checks in the script:**
+  - It refuses to plot unless Part B and Part A (released) cover the same 16 sections.
+  - Each section must have 10 seeds whose sorted scores equal Part A's `sorted_scores` and whose mean equals Part A's `mean`. All passed.
+  - Colours are the validated two-slot palette (CVD ΔE 24.7).
+- **What it shows:** on GBM the published value is above our seed mean in all 8 sections, and above every seed in GBM12_1, GBM22_1, GBM22_2 and GBM39_1. On CAC it lies within or near the seed cloud except 280TopL (above) and 400TopL (below).
+- **Caption must state:**
+  - CAC 240TopL seed 7 returned 256/257 peaks (kept, per the 20:39 ruling);
+  - published values are 2-decimal;
+  - CAC is "just outside, within rounding" (20:57 ruling).
+Questions / requests:
+1. Approve the figure for the body, or name changes (e.g. sort sections by gap, add the best-of-k expectation)?
+
+### 2026-10-24 16:37 Code → Supervisor: Correction to the Investigation 21 figure entry
+Status: INFO
+- Corrects the "What it shows" line of the previous entry, which was read off the plot. The values below are recomputed from `part_b/sections.csv`.
+- **GBM:** the published value is above our 10-seed mean in 8/8 sections. It is above every seed in 6/8: GBM108_positive, GBM12_1, GBM12_2, GBM22_1, GBM22_2 and GBM39_1. The two exceptions are GBM108_negative and GBM39_2.
+- **CAC:** the published value is above the seed mean in 6/8 (below in 200TopL and 400TopL) and above every seed in 2/8 (160TopL, 280TopL). It is below every seed in 0/8.
+
+### 2026-10-24 19:12 Supervisor → Code | Codex | Zayd: Verification accepted; rulings on C051, C054, C168; figure approved
+Status: OPEN (Code: apply; Codex or Zayd: commit)
+
+- **Resolves: 2026-10-24 16:35, 16:37 and 16:37 Code entries.** A thorough pass, and it caught real errors (the stale 7-run RCC timing, the C046 value, the C064 sign, the RCC cancer/normal scope).
+- **Q1:** all 14 MISMATCH and 9 LABEL WRONG corrections in `VERIFICATION.md` are accepted. **Code applies them to the dump items now.** For each edited item:
+  - add a line `- Corrected: 2026-10-24 per VERIFICATION.md (<one-phrase reason>)`;
+  - change nothing else.
+  - Codex or Zayd then commits.
+- **Q2, C051:** restrict "strongest label-free ranking" to the **predeclared** rankings, i.e. the balanced posterior variant, Moran's I, mean intensity, variance and the oracle. On CAC that is mean intensity (0.612), with balanced correlation, Moran's I and variance within 0.02.
+  - Add to the caveats: "a non-predeclared max-aggregation variant (posterior_abs_pcc_max) scores 0.626–0.629; it was not part of the predeclared comparison and is reported descriptively only."
+  - That variant goes in the appendix, not the headline.
+- **Q3, C054:** recomputation from the saved partition summaries is approved: local only, one short script, numbers as printed. If the 20–25% figure can't be reproduced exactly, drop the number and keep the qualitative statement (duplicate bins of one peak inflate bin-level TPs, which motivates P1).
+- **C168:** cite as "Mazarura, T., Jarvis, D. and Bau, H. (2025). *Autoencoder-based Representation Learning for Mass Spectrometry Imaging.* Honours research report, School of Computer Science and Applied Mathematics, University of the Witwatersrand. Unpublished." Zayd confirms the form with the supervisor, who is a co-author.
+- **C167:** cut, as in the curation proposal. **C218 and C219:** Zayd provides these.
+- **Figure `s3pl_released_seed_distributions`: approved for the body.** Two small changes:
+  1. Order the sections the same way as the other report figures (GBM by PDX line; CAC by section name).
+  2. The caption (draft it beside the figure, in a `.txt`) states: the in-job evaluator; 10 released seeds; published values to 2 decimals; the 256/257 disclosure; GBM "outside our seed distribution", above every seed in 6/8 sections; CAC "outside our seed distribution", within the published rounding.
+  - Don't add best-of-k to the figure; it goes in the text.
+- **After that, stop.** The next step is Zayd's curation and the writing.
+
+### 2026-10-24 19:24 Code → Supervisor | Codex | Zayd: Rulings of 19:12 applied; ready for commit
+Status: INFO
+- Resolves: 2026-10-24 19:12 Supervisor entry (Code's part).
+- **Q1:** all 14 MISMATCH and 9 LABEL WRONG corrections are applied to the dump, each with a `- Corrected: 2026-10-24 per VERIFICATION.md (<reason>)` line.
+  - 15 dump files changed, +68/−43.
+  - A check confirms the 25 expected items (the 23 above plus C051 and C054) carry a Corrected line and no others do.
+  - OK-row suggestions in VERIFICATION.md were not applied.
+- **Q2, C051:** restricted to the predeclared rankings, as ruled. The non-predeclared `posterior_abs_pcc_max` caveat was added verbatim.
+- **Q3, C054:** **not reproduced; the number is dropped.**
+  - One local script, with the definition fixed before running: 1 − (P1 collapse TP groups / bin-level TP bins), IG at K_bin, mixed classes, pooled over PCC 0.3–0.6, read from `with_approved_partitions/GBM*/…/summary.json`.
+  - It printed: central_only pooled 16.6% (13.3–19.7% across section-arms not shown separately: centre 14.5–18.1%); uniform_mean pooled 16.9% (13.3–19.7%).
+  - This is a proxy, because the saved files hold TP counts, not per-bin reference membership, so the exact quantity behind "20–25%" can't be rebuilt locally.
+  - C054 now carries the qualitative statement only.
+- **Figure:**
+  - Sections are now in the publication-figure order (GBM108_positive, GBM108_negative, GBM12_1 … GBM39_2; CAC 40TopL … 520TopL, as in `audit_spatial_publication_aggregate.py`).
+  - The caption draft is in `report/draft/images/s3pl_released_seed_distributions_caption.txt` and covers every point you listed. Best-of-k is not on the figure.
+- **Not done by Code:** C167 cut, the C168 citation form, and C218/C219 are for curation and Zayd. Nothing is committed: dump edits, VERIFICATION.md, the figure, its script and the caption are for Codex or Zayd.
+
+### 2026-10-24 19:24 Code → Supervisor: Correction to the previous entry (C054 figures)
+Status: INFO
+- The C054 line should read:
+  - central_only pooled 16.6%, range 14.5–18.1% across the 8 sections;
+  - uniform_mean pooled 16.9%, range 13.3–19.7%.
+- Neither matches 20–25%, so the number stays dropped.
+
+### 2026-10-24 19:25 Supervisor → Code | Codex | Zayd: The 19:12 rulings are applied correctly; ready to commit
+Status: INFO
+- Resolves: the 2026-10-24 19:24 Code entries, from the supervisor's side.
+- The 25 corrected items, C051 and the figure order and caption are as ruled.
+- **C054** stays qualitative. The ~17% proxy is not reported, because its definition differs from the original claim.
+- Commit (Codex or Zayd): the dump edits, `VERIFICATION.md`, the figure, its script and its caption. The dump is now the verified base for writing.

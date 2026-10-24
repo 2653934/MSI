@@ -10,12 +10,13 @@
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C040 S3PL CAC reproduction
-- Statement: S3PL on CAC is close to the published collection mean, although individual sections differ.
+- Statement: S3PL on CAC is close to the published collection mean at seed 1, although individual sections differ; across ten released seeds the published mean lies just outside our seed distribution.
 - Numbers: Seed-1 0.5915 vs 0.601 published; ten released seeds 0.5470 ± 0.0377, seed-level range 0.4960–0.5910; per-section seed SD median 0.0456 (0.0346–0.2094).
-- Label: descriptive
+- Label: "outside our seed distribution"; "not explained by seed selection alone"
 - Source: `docs/research/investigations/19 Upstream Repository and Paper Audit.md`; `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`.
 - Verified by supervisor: yes: 2026-10-20 20:57
-- Caveats: One of 160 released runs returned 256/257 peaks (CAC 240TopL seed 7); S3PL's in-job evaluator is used.
+- Caveats: One of 160 released runs returned 256/257 peaks (CAC 240TopL seed 7); S3PL's in-job evaluator is used. The margin is within the published 2-decimal rounding (per-section mean 0.60125), so CAC is consistent with a favourable seed or best-of-several selection, but not shown to be.
+- Corrected: 2026-10-24 per VERIFICATION.md (Part B CAC labels and rounding qualifier)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C041 S3PL RCC reproduction
@@ -33,7 +34,8 @@
 - Label: "outside our seed distribution"; "not explained by seed selection alone"
 - Source: `docs/research/investigations/19 Upstream Repository and Paper Audit.md`; `docs/research/investigations/21 S3PL Seed Sensitivity and Reproduction Gap.md`; supervisor chat 2026-10-20 20:57.
 - Verified by supervisor: yes: 2026-10-20 20:57
-- Caveats: Published scores are rounded; no supplementary tables were publicly available; do not select the best seed as baseline.
+- Caveats: Published scores are rounded; no supplementary tables were publicly available; do not select the best seed as baseline. S3PL in-job mSCF1, not the fair-scoring evaluator.
+- Corrected: 2026-10-24 per VERIFICATION.md (evaluator disclosure)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C043 Upstream audit

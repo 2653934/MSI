@@ -1,12 +1,13 @@
 # Data
 
 ### C001 GBM collection and statistical unit
-- Statement: GBM contains eight sections from four PDX lines (108, 12, 22 and 39), two sections per line; the inferential unit is the PDX line.
+- Statement: GBM contains eight sections from four PDX lines (108, 12, 22 and 39), two sections per line; sections are not independent, and PDX-line summaries (n=4) are reported beside every GBM test.
 - Numbers: 8 sections; 4 PDX lines; 2 sections per line.
 - Label: descriptive
 - Source: `docs/meetings/2026-10-19_update/results_chapter_draft.md`; `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Section 6.6.
 - Verified by supervisor: yes: 2026-10-20 11:31
-- Caveats: Do not describe eight sections as eight independent patients.
+- Caveats: Do not describe eight sections as eight independent patients. The Holm-family tests use the 8 sections (seed-averaged); PDX-line tests (n=4, minimum p 0.125) sit outside Holm.
+- Corrected: 2026-10-24 per VERIFICATION.md (PDX line is reported beside the tests, not the Holm test unit)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C002 CAC collection and statistical unit

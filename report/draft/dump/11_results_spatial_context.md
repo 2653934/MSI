@@ -3,10 +3,11 @@
 ### C055 Core uniform-context comparison
 - Statement: Uniform 3×3 context helps CAC IG at seed 1 but gives no consistent GBM benefit.
 - Numbers: CAC +0.031, 8/8; GBM −0.0067, 5/8. Under three-seed averaging CAC +0.023 bin and +0.027 P1, 8/8; GBM incomplete, +0.000 bin over 7 sections.
-- Label: CAC "helps"; GBM seed 1 "equivalent" and three-seed "incomplete"
+- Label: CAC "helps"; GBM three-seed "incomplete (7/8)" (seed-1 "equivalent" SUPERSEDED, Test R Decision 2)
 - Source: `code/msi/results/publication/current_evidence/aggregate_method_results.csv`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Sections 5.2 and 6.9.
 - Verified by supervisor: yes: 2026-10-20 11:31
-- Caveats: CAC is one biopsy; under correlation ranking its context difference is 0.000, so this effect belongs to IG ranking.
+- Caveats: CAC is one biopsy; under correlation ranking its context difference is 0.000, so this effect belongs to IG ranking. Section 6.6 beside CAC "helps": Holm 0.133 (bin) / 0.125 (P1), not statistically supported.
+- Corrected: 2026-10-24 per VERIFICATION.md (GBM seed-1 label superseded; Holm beside "helps")
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C056 Window and zero/shuffle controls
@@ -38,11 +39,12 @@
 
 ### C059 Attention mechanism
 - Statement: Real-neighbour attention stayed near uniform, while shuffled-neighbour models learned much more selective weights, showing the mechanism can respond when inputs differ.
-- Numbers: Real normalised entropy 0.98–0.999; masked 0.998–0.999; attention-vs-uniform half-L1 real 0.003–0.028 vs shuffled 0.16–0.32; neighbour-centre median cosine ≈0.98.
+- Numbers: Real normalised entropy 0.98–0.999; masked 0.998–0.999; attention-vs-uniform half-L1 (64-centre typical-pixel audit) real 0.003–0.023 vs shuffled 0.185–0.315; neighbour-centre median cosine ≈0.98.
 - Label: descriptive
 - Source: `docs/research/investigations/13 Spatial Context Claim-Evidence Ledger.md`; `docs/meetings/2026-10-19_update/results_chapter_draft.md` Section 5.4.
 - Verified by supervisor: yes: 2026-10-16 17:36
-- Caveats: Sampled pixels/two development sections; not proof attention cannot help in another design.
+- Caveats: Sampled pixels/two development sections; not proof attention cannot help in another design. Boundary-audit values are separate (C238).
+- Corrected: 2026-10-24 per VERIFICATION.md (half-L1 ranges from one audit, not two mixed)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C060 Centre masking
@@ -74,11 +76,12 @@
 
 ### C063 Spatial segmentation Test S results
 - Statement: Spatially smoothed segmentation was never labelled “helps”: four decided comparisons were equivalent, one mixed, and RCC uniform incomplete.
-- Numbers: GBM centre +0.013 5/8 equivalent; GBM uniform +0.029 3/8 mixed; CAC centre −0.001 4/8 equivalent; CAC uniform +0.004 5/8 equivalent; RCC centre −0.012 5/8 equivalent; RCC uniform −0.023 4/7 incomplete.
-- Label: "equivalent" (4); "mixed" (1); "incomplete; no verdict" (1)
+- Numbers: GBM centre +0.013 5/8 equivalent; GBM uniform +0.029 3/8, median 0.000, does not meet the 'helps' rule; CAC centre −0.001 4/8 equivalent; CAC uniform +0.004 5/8 equivalent; RCC centre −0.012 5/8 equivalent; RCC uniform −0.023 4/7 incomplete.
+- Label: "equivalent" (4); "does not meet the 'helps' rule (labelled mixed)" (1); "incomplete; no verdict" (1)
 - Source: `docs/research/investigations/20 Has Spatial Context Been Ruled Out.md`; `code/msi/results/diagnostics/spatial_segmentation_S/decisions_20261017_local/`.
 - Verified by supervisor: yes: 2026-10-17 08:37
-- Caveats: CAC P1 is a two-budget check, not independent partition evidence.
+- Caveats: CAC P1 is a two-budget check, not independent partition evidence. GBM uniform mean is driven by two sections. RCC: unannotated class, 45–78% of pixels; the dataset's own Cardinal workflow treats these pixels as background (`rcc_nobg`), but this was not independently verified; GMM K=3 is class-informed.
+- Corrected: 2026-10-24 per VERIFICATION.md (exact GBM uniform label; RCC NA caveat and K=3 note)
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
 
 ### C236 Central and neighbour IG ranking components
