@@ -2,7 +2,7 @@
 
 Every item ID maps to exactly one dump file. Placement remains undecided until curation.
 
-- `04_data.md`: C001, C002, C003, C004, C005, C006, C007, C008, C009
+- `04_data.md`: C001, C002, C003, C004, C005, C006, C007, C008, C009, C221, C222
 - `05_methods_models.md`: C010, C011, C012, C013, C014, C015, C016, C017, C018, C019, C020
 - `06_design_and_statistics.md`: C021, C022, C023, C024, C025, C026, C027, C028, C029, C030
 - `07_computational.md`: C031, C032, C033, C034, C035, C036, C037, C038
@@ -10,7 +10,7 @@ Every item ID maps to exactly one dump file. Placement remains undecided until c
 - `09_results_main_ranking.md`: C044, C045, C046, C047, C048, C049, C050
 - `10_results_simple_baselines_metric.md`: C051, C052, C053, C054
 - `11_results_spatial_context.md`: C055, C056, C057, C058, C059, C060, C061, C062, C063
-- `12_results_segmentation_encoder.md`: C064, C065, C066, C067, C068
+- `12_results_segmentation_encoder.md`: C064, C065, C066, C067, C068, C223, C224
 - `13_results_s3pl.md`: C069, C070, C071, C072, C073, C074, C075, C076, C077
 - `14_results_rcc.md`: C078, C079, C080, C081, C082, C083
 - `15_discussion_points.md`: C084, C085, C086, C087, C088, C089, C090, C091, C092, C093, C094

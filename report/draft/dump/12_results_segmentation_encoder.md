@@ -44,3 +44,20 @@
 - Verified by supervisor: yes: 2026-10-16 17:36
 - Caveats: Development sections; no IG rerun; does not alter the paired IG-versus-posterior comparison at fixed K.
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+### C223 Saved latent information versus GMM agreement
+- Statement: On two exploratory sections, expert-class information can be accessible in frozen real- and shuffled-context latents even when the saved unsupervised GMM partitions them differently. This separates representation content from the particular clusterer's post-hoc mask agreement.
+- Numbers: GBM22_2 real/shuffled GMM class ARI 0.165/0.888, while both label-trained linear probes were about 0.985 balanced accuracy and ten-neighbour purity about 0.978; 160TopL GMM ARI 0.474/0.383, probe 0.752/0.747 and purity 0.760/0.762 (n=2 sections).
+- Label: descriptive
+- Source: `docs/research/01 Results Record.md` subsection “Saved latent information versus the fitted GMM”; `code/msi/results/diagnostics/spatial_latent_separability/GBM22_2.json`; `code/msi/results/diagnostics/spatial_latent_separability/160TopL.json`.
+- Verified by supervisor: no
+- Caveats: The probe uses labels and random pixel folds within each training section, so it is neither unsupervised nor patient-independent validation; the sections were outcome-known.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C224 Clusterer-selection caution
+- Statement: A tied-covariance GMM on frozen GBM22_2 real-context latents yields much higher post-hoc class ARI than the saved full-covariance GMM, despite worse label-free BIC. Selecting it because of mask agreement would be label-guided method selection.
+- Numbers: GBM22_2 class ARI 0.899 tied covariance versus 0.165 saved full covariance (n=1 exploratory section).
+- Label: descriptive
+- Source: `docs/research/01 Results Record.md` subsection “Saved latent information versus the fitted GMM”; `code/msi/results/diagnostics/spatial_unsupervised_clusterers/GBM22_2.json`.
+- Verified by supervisor: no
+- Caveats: Frozen-latent diagnostic only; no alternative clusterer was promoted into fair scoring, and this does not overturn the production GMM comparison.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT

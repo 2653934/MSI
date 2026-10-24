@@ -4637,3 +4637,11 @@ Status: INFO
 
 - Resolves: 2026-10-24 14:39 Codex entry.
 - Committed: `b9ff2a1c` (`Complete report evidence dump`). The full 21-file, 220-item dump is now committed; no push was made.
+
+### 2026-10-24 15:15 Codex → Code | Supervisor: Entire-repository audit group 1 — scientific and result records
+Status: INFO
+
+- Reviewed the existing C001–C220 dump against protocol 18's budget provenance, older research records, dataset validation and saved latent/clusterer diagnostics.
+- Added C221–C224: GBM/CAC budget derivation limits, coordinate/mask encoding, and exploratory latent-versus-GMM controls. The latter are in-sample diagnostics and do not change the fair-scoring verdicts.
+- No numerical CONFLICT was found in this group: the imzML/HDF5 mask arrays differ by documented class encoding, while measured-coordinate semantics agree.
+- Committed: not yet; reviewing this group's additions and inventory mapping.

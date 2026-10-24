@@ -80,3 +80,20 @@
 - Verified by supervisor: yes: 2026-10-16 17:36
 - Caveats: The system is not fully autonomous; BIC did not validate these values (C067).
 - Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+### C221 GBM and CAC budget provenance
+- Statement: The shared bin budget is each section's tuned legacy msiPL `unique_nearest_bins` count. GBM released S3PL targets equal the project's mixed PCC 0.4 reference-set size in every section, whereas CAC released targets match none of the project's four reference-set sizes; the targets' upstream derivation remains unverified.
+- Numbers: GBM 8/8 matches at PCC 0.4; CAC 0/8 matches at PCC 0.3, 0.4, 0.5 or 0.6; legacy tuning tolerance 50 bins.
+- Label: descriptive
+- Source: `docs/research/18 Fair Scoring and Simple Baselines Protocol.md` Section 0; `code/msi/baselines/s3pl/data_configs.py`.
+- Verified by supervisor: yes: protocol 18 v3, 2026-10-09
+- Caveats: GBM equality suggests but does not prove mask-derived upstream targets. Never describe CAC released targets as mask-derived. RCC has the separate released-target convention in C006.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
+
+### C222 Measured-coordinate and mask validation
+- Statement: The GBM HDF5 and official imzML packages have matching measured-coordinate sets in all sections after translating their different mask encodings. Unmeasured grid locations must remain outside the biological classes; CAC 280TopL also requires coordinate-based alignment because its mask grid has unmeasured locations.
+- Numbers: GBM 8/8 sections matched semantically; CAC 280TopL has 4,160 measured spectra and 89.98% grid coverage.
+- Label: descriptive
+- Source: `docs/research/03 Datasets and Preprocessing.md`; `code/msi/results/validation/gbm_imzml_h5/comparison.json`.
+- Verified by supervisor: no
+- Caveats: The GBM source masks are not byte-identical because official imzML uses 0=background, 1=normal, 2=tumour while the HDF5 reconstruction uses coverage plus 0=normal, 1=tumour. This is an encoding difference, not a numerical conflict.
+- Placement: [ ] BODY  [ ] APPENDIX  [ ] CUT
