@@ -400,5 +400,148 @@ class SummariserTests(unittest.TestCase):
         self.assert_refused("P1 present for RCC")
 
 
+class IgStepsAllowListTests(unittest.TestCase):
+    """Opt-in --ig-steps-allow-list (protocol 18 Section 6.3 IG completeness reruns;
+    supervisor chat 2026-10-30 16:53): the rerun root is accepted only for a listed
+    seed-2/3 arm at its listed step with a passing gmm_gate_v2.json."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.project = Path(self.tmp.name)
+        self.fair = self.project / "fair"
+        self.output = self.project / "out"
+        for collection, sections in SECTIONS.items():
+            for section in sections:
+                for arm in ("central_only", "uniform_mean"):
+                    for seed in (1, 2, 3):
+                        write_summary(self.fair, self.project, collection, section, arm,
+                                      seed, 0.4, 0.5)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def rerun(self, section="GBM39_2", seed=3, arm="uniform_mean", steps=128, gate=True,
+              collection="GBM"):
+        relative = (f"results/experiments/ig_steps_rerun_20261030/{section}_seed{seed}/"
+                    f"{arm}/steps{steps}")
+        if gate is not None:
+            target = self.project / relative
+            target.mkdir(parents=True, exist_ok=True)
+            (target / "gmm_gate_v2.json").write_text(json.dumps({"passed": gate}))
+        write_summary(self.fair, self.project, collection, section, arm, seed, 0.4, 0.5,
+                      attribution=f"{PREFIX}{relative}/attribution")
+
+    def allow(self, entries):
+        path = self.project / "ig_steps_summary.json"
+        path.write_text(json.dumps({"decision_steps": entries}))
+        return path
+
+    def run_summariser(self, allow_list=None):
+        command = [sys.executable, str(SCRIPTS / "summarise_test_r.py"), "--fair-root",
+                   self.fair, "--project-root", self.project, "--output", self.output]
+        if allow_list is not None:
+            command += ["--ig-steps-allow-list", allow_list]
+        return subprocess.run(command, capture_output=True, text=True,
+                              env=dict(os.environ, PYTHONPATH=str(SCRIPTS)))
+
+    def test_listed_arm_at_its_step_with_a_passing_gate_is_accepted_and_recorded(self):
+        self.rerun()
+        result = self.run_summariser(self.allow({"GBM39_2 s3 uniform_mean": 128}))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        decisions = json.loads((self.output / "decisions.json").read_text())
+        self.assertEqual(decisions["ig_steps_allow_list"]["arms"],
+                         {"GBM39_2 s3 uniform_mean": 128})
+
+    def test_rerun_root_is_refused_without_the_allow_list(self):
+        self.rerun()
+        result = self.run_summariser()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("is not the seed-3 root", result.stderr)
+
+    def test_wrong_step_unlisted_arm_failed_or_missing_gate_is_refused(self):
+        cases = (
+            (dict(steps=256), {"GBM39_2 s3 uniform_mean": 128}),
+            (dict(), {"GBM39_2 s2 uniform_mean": 128}),
+            (dict(), {"GBM39_1 s3 uniform_mean": 128}),
+            (dict(gate=False), {"GBM39_2 s3 uniform_mean": 128}),
+            (dict(gate=None), {"GBM39_2 s3 uniform_mean": 128}),
+        )
+        for rerun, entries in cases:
+            with self.subTest(rerun=rerun, entries=entries):
+                shutil.rmtree(self.project / "results" / "experiments", ignore_errors=True)
+                shutil.rmtree(self.output, ignore_errors=True)
+                self.rerun(**rerun)
+                result = self.run_summariser(self.allow(entries))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("is not the seed-3 root", result.stderr)
+
+    def place(self, attribution_relative, gate=True):
+        """A GBM39_2 s3 uniform_mean summary whose latent_mean.npy sits in
+        <project>/<attribution_relative>, with gmm_gate_v2.json where the code looks
+        (the folder above it), so that only the exact path match can refuse it."""
+        local = self.project / attribution_relative.strip("/")
+        local.parent.mkdir(parents=True, exist_ok=True)
+        (local.parent / "gmm_gate_v2.json").write_text(json.dumps({"passed": gate}))
+        write_summary(self.fair, self.project, "GBM", "GBM39_2", "uniform_mean", 3, 0.4, 0.5,
+                      attribution=f"{PREFIX}{attribution_relative}")
+
+    def test_exact_path_match_refuses_prefix_suffix_and_sibling_trees(self):
+        approved = "results/experiments/ig_steps_rerun_20261030/GBM39_2_seed3/uniform_mean/steps128"
+        cases = {
+            "extra prefix": f"backup/{approved}/attribution",
+            "extra suffix": f"{approved}/attribution/extra",
+            "sibling tree": approved.replace("results/experiments", "results/diagnostics")
+                            + "/attribution",
+        }
+        allow = self.allow({"GBM39_2 s3 uniform_mean": 128})
+        for label, attribution in cases.items():
+            with self.subTest(label):
+                shutil.rmtree(self.project / "results", ignore_errors=True)
+                shutil.rmtree(self.project / "backup", ignore_errors=True)
+                shutil.rmtree(self.output, ignore_errors=True)
+                self.place(attribution)
+                self.assertIn("/ig_steps_rerun_20261030/GBM39_2_seed3/uniform_mean/steps128/",
+                              f"/{attribution}/")   # the old substring check would accept it
+                result = self.run_summariser(allow)
+                self.assertNotEqual(result.returncode, 0, label)
+                self.assertIn("is not the seed-3 root", result.stderr)
+
+    def test_trailing_slash_is_normalised(self):
+        approved = "results/experiments/ig_steps_rerun_20261030/GBM39_2_seed3/uniform_mean/steps128"
+        self.place(f"{approved}/attribution/")
+        result = self.run_summariser(self.allow({"GBM39_2 s3 uniform_mean": 128}))
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_only_integer_steps_of_seeds_2_and_3_enter_the_list(self):
+        from summarise_test_r import read_allow_list
+        path = self.allow({"RCC_UH0505_12 s1 uniform_mean": 128,
+                           "RCC_UH0505_12 s2 central_only": 256,
+                           "RCC_UH9912_01 s3 uniform_mean": "pending",
+                           "GBM39_2 s3 uniform_mean": "not done"})
+        self.assertEqual(read_allow_list(path), {("RCC_UH0505_12", 2, "central_only"): 256})
+        self.assertEqual(read_allow_list(None), {})
+
+    def test_default_output_is_identical_to_the_saved_decisions_apart_from_line_endings(self):
+        """Read-only check against the committed 17 October decisions (explicit paths).
+
+        Identical apart from line endings: the reference files are LF in git but may be
+        CRLF in a Windows working tree (and in uploads made from it), and the summariser
+        writes the platform's newline, so both sides are compared with CRLF -> LF
+        (supervisor chat 2026-10-30 17:07). The summariser's output is not changed."""
+        fair = ROOT / "results" / "diagnostics" / "fair_scoring_baselines"
+        saved = fair / "test_r" / "decisions_20261017_local"
+        if not (saved / "decisions.json").is_file():
+            self.skipTest("saved Test R decisions not present in this workspace")
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS / "summarise_test_r.py"), "--fair-root", fair,
+             "--project-root", ROOT, "--output", self.output],
+            capture_output=True, text=True, env=dict(os.environ, PYTHONPATH=str(SCRIPTS)))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in ("decisions.json", "section_table.csv"):
+            generated = (self.output / name).read_bytes().replace(b"\r\n", b"\n")
+            reference = (saved / name).read_bytes().replace(b"\r\n", b"\n")
+            self.assertEqual(generated, reference, name)
+
+
 if __name__ == "__main__":
     unittest.main()

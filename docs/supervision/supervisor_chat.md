@@ -5460,3 +5460,347 @@ Status: INFO
 - Committed code and decision records: `4f3ed9b0` (`Replace IG component-order proxy with direct gate`).
 - Committed pulled evidence separately as ruled: `e92a2653` (`Add IG completeness rerun evidence`).
 - The remaining uncommitted report-style and release-manifest work is unrelated and was excluded from both commits.
+
+### 2026-10-30 15:18 Code → Zayd | Supervisor: Gate v2 uploaded (13/13 match HEAD); D34–D36 added; item 5 findings; two checklists (cluster test job; archive-hash job): waiting for Zayd's OK
+Status: OPEN (Zayd: OK for A and/or B)
+- Resolves: 2026-10-30 15:06 Supervisor entry (Code's parts: D34–D36, upload, item 5 interleaved).
+- **Decision log:** D34 (licence (b)), D35 (pipeline-only scope) and D36 (cleaned copies) added after D33. Uncommitted.
+- **Upload, 15:15 SAST (13:15 UTC),** from the clean HEAD `157ac61b`. The documented command was used, plus **one narrowing exclude, `--exclude='/tmp/'`.** The `-n` preview showed two empty folders, `code/msi/tmp/gate-v2-tests/` (no files; the independent test run's scratch area), and I didn't want to create them on the cluster.
+  - 8 files: the 7 gate-v2 files plus the untracked editor file `.pym2aia_prefs.xml` (timestamp only).
+  - **sha256sum, cluster vs HEAD: 13/13 match.** That covers the 7 changed files plus `ig_steps_sections.sh`, `test_r_sections.sh`, `run_fair_scoring_tests.sh`, the IG script and both evaluators.
+- **Item 5 (read only; written into `docs/research/03` → "Provenance check"):**
+  - **GBM HDF5 source:** `ST002045_massNet.7z` = Metabolomics Workbench **ST002045**, project PR001292, DOI 10.21228/M8Q70T, released 2022-01-04.
+  - **`gbm_data.zip` and `cac_data.zip`:** both use the S3PL-style packaging. `cac_data.zip` probably came from the CAC example-data share linked in the S3PL README. Neither download URL nor date was recorded; Zayd may remember them.
+  - **Full SHA-256s already recorded** (fail-closed job scripts): `gbm_data.zip` and `CardinalWorkflows_1.44.0.tar.gz`. Pending: `ST002045_massNet.7z`, `cac_data.zip` and `ST001857_msiPLData.zip` (the last is not used in the report). See B.
+  - **RCC citation (`man/rcc-data.Rd`):** Dill et al. (2010), *Anal. Bioanal. Chem.*, "Multivariate statistical differentiation of renal cell carcinomas based on lipidomic analysis by ambient ionization imaging mass spectrometry", 2969–2978. The upstream file has typos and gives the volume as "298". **Check the volume against the publisher record before citing.**
+
+**A. Cluster test job (gate v2):** `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh`
+1. **Hashes:** 13/13 match HEAD `157ac61b`.
+2. **Outputs:** `results/validation/fair_scoring_env_tests/<jobid>_*`, named by job ID, so nothing is overwritten. The tests use temporary folders; the pulled-outputs check reads explicit paths only.
+3. **Roots:** a single job, so there is no mkdir race.
+4. **Time and memory:** `batch`, 2 CPUs, 8G, 30 min. 78479 took 5:01; the 11 new tests add about 2 s.
+5. **Partition:** `batch` is up (61 idle at 15:17). I have 0 jobs queued.
+- **Gate:** `test_ig_steps` runs 26/26 and `test_test_r` runs 19/19, none skipped, and every other module passes.
+- After that comes the CPU checklist for `submit_ig_steps.sh gate 0-11`.
+
+**B. Archive-hash job (item 5):**
+```
+sbatch --parsable -p batch -c 1 --mem=1G -t 00:15:00 -J archive-sha -o logs/archive-sha-%j.out \
+  --wrap 'out=$HOME/msi/results/validation/dataset_archive_hashes; mkdir -p "$out" && cd /datasets/zsuliman/msi_data/zips && sha256sum * > "$out/$SLURM_JOB_ID.sha256"'
+```
+1. **Hashes:** `--wrap`, so no repo script is involved (as with 72135).
+2. **Outputs:** it reads `/datasets/.../zips` only (no write, move or delete there). It writes one new file, `results/validation/dataset_archive_hashes/<jobid>.sha256`, into a folder that doesn't exist yet.
+3. **Roots:** a single task, so there is no race.
+4. **Time and memory:** 5 archives, 1.46 GB. Hashing is I/O-bound, under a minute; 1G and 15 min is ample. This is why it runs inside Slurm and not on the login node.
+5. **Partition:** `batch`.
+- **Check:** the job must reproduce the two recorded hashes (`a69a4246…097f`, `301a3815…c485`). If either differs, stop and post.
+
+### 2026-10-30 15:20 Code → Supervisor | Zayd: A and B submitted (78515 test job; 78516 archive hashes)
+Status: INFO
+- Resolves: 2026-10-30 15:18 Code entry (Zayd's OK given in the session).
+- Both submitted at 15:19 SAST (13:19 UTC) on `batch`: **78515** `run_fair_scoring_tests.sh` and **78516** archive-hash `--wrap` job. Logged in P18 §10.
+- One check in about 6 min: `sacct`, then the short logs.
+
+### 2026-10-30 15:21 Supervisor → Code: CAC archive origin confirmed
+Status: INFO
+- `cac_data.zip` comes from the CAC example-data link in the S3PL README (https://clousi.hs-mannheim.de/index.php/s/ETC4i3j9QpweAJx), confirmed by Zayd. It is added to `03` "Provenance check". Use it in the release README with the job-B SHA-256; the date was not recorded.
+
+### 2026-10-30 15:27 Code → Zayd | Supervisor: 78515 passed (gate v2 26/26 on the cluster); 78516 hashes done; checklist for `submit_ig_steps.sh gate 0-11`: waiting for Zayd's OK
+Status: OPEN (Zayd: OK to submit the gate job)
+Context: one `sacct` check at about 15:25 SAST. Short logs only. Logged in P18 §10.
+- **78515 COMPLETED 0:0 (5:01):**
+  - main suite: 285 tests OK, 3 skipped (the known local-artifact skips);
+  - **`test_ig_steps` 26/26 ran and passed**, including the read-only check that v2 passes 12/12 on the cluster's 78483 outputs;
+  - `test_test_r` 19/19;
+  - S3PL suites: 25 and 4 tests OK;
+  - empty `.err`.
+- **78516 COMPLETED 0:0 (2:04):**
+  - **both recorded hashes were reproduced** (`gbm_data.zip`, CardinalWorkflows);
+  - new: `ST002045_massNet.7z` `7b1f296b…aafe1`, `cac_data.zip` `30274f25…f298e`, `ST001857_msiPLData.zip` `9aeae99a…63e7f0`. The full values are in `docs/research/03` → Provenance check and in `results/validation/dataset_archive_hashes/78516.sha256` (on the cluster; it comes down with the next pull).
+  - Item 5 now leaves open only the download URLs and dates of `gbm_data.zip` and `cac_data.zip` (for Zayd) and the RCC volume check against the publisher.
+
+**Gate-job checklist:** `bash slurm_jobs/submit_ig_steps.sh gate 0-11` (CPU, `batch`, `%4`)
+1. **Script hashes match HEAD `157ac61b`:** yes (13/13 at 15:15; unchanged since). Includes `run_ig_steps_gate_v2.sh`, `check_ig_steps_gate.py`, `submit_ig_steps.sh` and the matched evaluator.
+2. **Outputs are new (state checked on the cluster at 15:26):**
+   - `gmm_gate_v2.json` is absent in all 12 roots. The job and the submitter both refuse an existing one.
+   - Matched evaluation is absent for tasks 4 and 8 (`central_only` RCC_UH0505_12 s1 at 64 and 128 steps, IG valid), so only these two run the evaluation.
+   - Task 1 is `needs_more_ig_steps`, so it gets v2 only and no evaluation.
+   - The other 9 already have a complete evaluation, so they get v2 only.
+   - `gmm_gate.json` (v1) is never touched.
+3. **Roots are pre-created:** all 12 task roots exist from 78483, and each task writes only inside its own root, so there is no shared-parent mkdir.
+4. **Time and memory:**
+   - 2 CPUs, 8G, 1 h per task.
+   - v2 is a seconds-long file comparison (the same check ran 12/12 in under 1 min locally).
+   - The two evaluations are on RCC_UH0505_12 (1,462 px × 10,200 bins), far below the 0.91 GB peak of the largest GBM fair-scoring run.
+5. **Partition and queue:** `batch` is up (61 idle). I have 0 jobs queued. No GPU.
+- **Stops:**
+  - exit 5 (v2 fails) on any task: stop and post;
+  - exit 3 (existing output): stop and post;
+  - any other failure: post.
+- **Then:**
+  - pull;
+  - `summarise_ig_steps.py` (residuals, decision steps, controls);
+  - the fair-scoring checklist (`fair`, rows 0, 2–11);
+  - the task-13 GPU checklist (256 steps for UH0505_12 `central_only` s2).
+
+### 2026-10-30 15:29 Code → Supervisor | Zayd: Gate job 78549 submitted (gate 0-11)
+Status: INFO
+- Resolves: 2026-10-30 15:27 Code entry (Zayd's OK given in the session).
+- 78549 was submitted at 15:28 SAST (13:28 UTC) on `batch`, `%4`. Logged in P18 §10.
+- One check in about 10 min.
+
+### 2026-10-30 15:45 Code → Zayd | Supervisor: Gate job 78549 clean; residual table; checklists C (fair scoring) and D (task 13, 256 steps): waiting for Zayd's OK
+Status: OPEN (Zayd: OK for C and/or D; and one pull question)
+Context: 78549 had 12/12 tasks COMPLETED 0:0, all `.err` empty. Pull at 15:42; summariser run locally. Logged in P18 §10.
+Evidence: `results/diagnostics/ig_steps_20261030/summary_pre_fair_scoring/{residuals,gmm_gate,controls}.csv, summary.json`.
+- **Gate v2: 12/12 pass.** Tasks 4 and 8 now have a complete matched evaluation. v1 shows `passed` false for tasks 1, 4 and 8 (identity only), as expected.
+- **Completeness, normalised residual median / p95 (rule: ≤ 0.05 / ≤ 0.15):**
+
+| Arm | 64 (saved) | 128 | Steps entering the decisions |
+|---|---|---|---|
+| RCC_UH0505_12 uniform s1 | 0.00019 / 0.175 ✗ | 0.00010 / 0.043 ✓ | **128** |
+| RCC_UH0505_12 centre s2 | 0.00029 / 0.338 ✗ | 0.00009 / 0.195 ✗ | **pending → 256 (task 13)** |
+| RCC_UH9912_01 uniform s3 | 0.00016 / 0.156 ✗ | 0.00006 / 0.033 ✓ | **128** |
+| GBM39_2 uniform s3 | 0.00070 / 0.189 ✗ | 0.00063 / 0.049 ✓ | **128** |
+
+- **Controls (descriptive):**
+  - the 64-step reruns reproduce the saved residuals to about 1e-6 in all four arms;
+  - at 128 steps, p95 is 0.061 / 0.0096 / 0.0047 / 0.0071 (RCC_UH0505_12 centre s1, RCC_UH9912_01 uniform s1, GBM39_2 uniform s1, 40TopL uniform s1);
+  - mSCF1 and Jaccard come after fair scoring (C).
+- **Pull question (Zayd):** the cluster's `ig_steps_rerun_20261030/provenance/slurm_job_ids.txt` is the committed file plus one appended line (`78549 stage=gate …`). I held it back under the rule against overwriting committed files. **OK to pull it** (and the next appended lines) and leave it for Codex to commit?
+
+**C. Fair scoring:** `bash slurm_jobs/submit_ig_steps.sh fair 0,2-11` (CPU, `batch`, `%4`; 11 rows)
+1. **Hashes:** they match HEAD `157ac61b` (13/13 at 15:15, unchanged), including `run_ig_steps_fair_scoring.sh` (reads v2) and the unchanged evaluator.
+2. **Outputs:** `results/diagnostics/fair_scoring_baselines/ig_steps_20261030/` doesn't exist on the cluster. Each task refuses an existing output (exit 3).
+   - Row 1 is left out because it is not valid at 128; the job would skip it anyway.
+   - Per row: v2 passed, IG valid and evaluation complete, all checked on the cluster at 15:43.
+3. **Roots:** the submitter pre-creates every parent `…/<scope>/<section>_seed<S>/<arm>/` before `sbatch`; each task creates only its `steps<N>/`.
+4. **Time and memory:** 2 CPUs, 8G, 2 h. The same evaluator took 18 s (RCC) to 47 s (GBM39_2) per scope on seed 1, with a peak of 0.91 GB on the largest GBM section. GBM/CAC rows run bin level and P1, RCC bin level only.
+5. **Partition:** `batch` (61 idle). I have 0 jobs queued.
+
+**D. Task 13, 256 steps:** `SBATCH_PARTITION=batch bash slurm_jobs/submit_ig_steps.sh ig 13` (GPU)
+1. **Hashes:** `run_ig_steps_rerun.sh` with v2 (committed `4f3ed9b0`, uploaded, matches HEAD).
+2. **Outputs:** the root `ig_steps_rerun_20261030/RCC_UH0505_12_seed2/central_only/steps256/` is absent. The job refuses an existing `attribution/`, `gmm_gate.json` or `gmm_gate_v2.json`.
+3. **Roots:** the submitter pre-creates the parent.
+4. **Time and memory:** task 1 (same arm, 128 steps) took 4:44 on an RTX 3060, so 256 steps should take about 10 min. 24G and 3 h are kept.
+5. **Partition:** `batch` (D52: the same partition as this arm's 128-step run), with the quarantine `--exclude` and the CUDA warm-up. v1 is a record only; v2 decides.
+- **Stops:** v2 fails (exit 5): stop and post. Not valid at 256 (exit 4): the arm stays "not done" by the rule, and I post. Then fair scoring for row 13, if valid, with its own short checklist.
+- C and D are independent and can run at the same time.
+
+### 2026-10-30 15:45 Supervisor → Code | Zayd: C and D fine; pull the provenance log; escalation beyond 256 fixed now, before task 13 runs
+Status: RULING
+- Resolves: 2026-10-30 15:45 Code entry.
+- **Verified from the table:**
+  - 3 of the 4 failed arms pass at 128 steps (p95 0.043, 0.033 and 0.049);
+  - the 64-step reruns reproduce the saved residuals;
+  - p95 falls with more steps in every arm, as expected from IG's discretisation error.
+- **C and D:** both checklists are complete, and they can run at the same time once Zayd says OK.
+- **Pull question: yes.** `slurm_job_ids.txt` is an append-only log, so pulling the version with the appended line is not an overwrite of evidence. Leave it for Codex.
+- **Predeclared now, before task 13 is scored (D10: no "not done" left in the paper):** if RCC_UH0505_12 `central_only` s2 fails at 256 steps, it continues with the same doubling, **512, then 1024**, with the same gate and one short checklist each. 1024 is the cap.
+  - Only if it still fails at 1024 is the arm reported as "not done (IG completeness not reached at 1024 steps)", with its residual trajectory.
+  - Add this to the §6.3 amendment as a dated line before task 13's result is read. Code adds it to D27 as a new row, D37.
+
+### 2026-10-30 15:51 Code → Supervisor | Zayd | Codex: Escalation written (P18 §6.3, D37) before task 13; C and D submitted (78582, 78583); provenance log pulled
+Status: INFO
+- Resolves: 2026-10-30 15:45 Supervisor entry (Code's part; Zayd's OK given in the session).
+- **Escalation:** the §6.3 note "Escalation beyond 256 steps" (512, then 1024 as the cap; "not done" only at 1024, with the residual trajectory) and **D37** were written at about 15:49 SAST, **before** task 13 was submitted.
+  - The note also records that the task table currently ends at 256: 512/1024 rows for this one arm would be a small code addition for Codex to commit before any such submission.
+- **Submitted at 15:49 SAST (13:49 UTC) on `batch`:**
+  - **78582:** fair scoring, rows 0 and 2–11;
+  - **78583:** task 13 (RCC_UH0505_12 `central_only` s2, 256 steps), with the quarantine excluded.
+- **Provenance log:** `slurm_job_ids.txt` was pulled as a single file, `-n` first. The diff is 3 appended lines only. Uncommitted, for Codex, together with D37 and the D34–D36 rows.
+- **Next:** one check in about 12 min.
+
+### 2026-10-30 16:08 Code → Supervisor | Zayd: Item 1 IG reruns complete: all 4 arms valid (3 at 128, 1 at 256); controls show the step count doesn't change results; checklist E (fair scoring for row 13): waiting for Zayd's OK
+Status: OPEN (Zayd: OK for E; Supervisor: note the control result for the methods)
+Context: 78582 (fair, 11/11 COMPLETED 0:0) and 78583_13 (256 steps, COMPLETED 0:0, gate v2 passed). Pull at 16:05 (75 new files; no tracked file changed). Summariser at 16:06. Logged in P18 §10.
+Evidence: `results/diagnostics/ig_steps_20261030/summary_post_fair_scoring/{summary.json,residuals.csv,controls.csv,gmm_gate.csv}`.
+- **Decision step counts (rule results as labelled):**
+
+| Arm | p95 at 64 / 128 / 256 | Enters the decisions at |
+|---|---|---|
+| RCC_UH0505_12 uniform s1 | 0.175 / **0.043** / — | 128 |
+| RCC_UH0505_12 centre s2 | 0.338 / 0.195 / **0.038** | 256 |
+| RCC_UH9912_01 uniform s3 | 0.156 / **0.033** / — | 128 |
+| GBM39_2 uniform s3 | 0.189 / **0.049** / — | 128 |
+
+  - **No arm is "not done" any more. D37 (512/1024) is not triggered.**
+- **Step-count control** (descriptive; fair-scoring bin-level IG mSCF1 at K_bin; Jaccard of the first K_bin IG bins):
+
+| Control (s1) | K_bin | mSCF1 saved 64 / rerun 64 / rerun 128 | 128 vs saved 64: Δ, Jaccard | 128 vs rerun 64: Δ, Jaccard |
+|---|---|---|---|---|
+| RCC_UH0505_12 centre | 1448 | 0.4007 / 0.4007 / 0.4007 | 0.0000, 1.000 | 0.0000, 1.000 |
+| RCC_UH9912_01 uniform | 2013 | 0.4226 / 0.4226 / 0.4228 | +0.0002, 0.9990 | +0.0002, 0.9990 |
+| GBM39_2 uniform | 911 | 0.5300 / 0.5300 / 0.5297 | −0.0003, 0.9978 | −0.0003, 0.9978 |
+| 40TopL uniform | 315 | 0.6827 / 0.6827 / 0.6827 | 0.0000, 1.000 | 0.0000, 1.000 |
+
+  - The only set differences are one-bin swaps at the K_bin boundary (ranks 2012/2012 and 911/910).
+  - **The rerun 64 reproduces the saved 64 exactly in 4/4 arms (Jaccard 1, Δ 0).** That includes **GBM39_2 uniform s1, whose saved IG is version 1**, so the 13:30 reproduction check passes and the production table value stands.
+  - It also includes the move from `bigbatch` RTX 3090 to `batch` RTX 3060.
+
+**E. Fair scoring for row 13:** `bash slurm_jobs/submit_ig_steps.sh fair 13` (CPU, `batch`)
+1. **Hashes:** as C (HEAD `157ac61b`, unchanged).
+2. **Outputs:** `fair_scoring_baselines/ig_steps_20261030/bin_level_only/RCC_UH0505_12_seed2/central_only/steps256/` doesn't exist; the task refuses an existing one. Row 13 has v2 passed, IG valid and evaluation complete.
+3. **Roots:** the submitter pre-creates the parent.
+4. **Time and memory:** one RCC row at bin level only. The same rows took 0:10–0:25 in 78582. 8G, 2 h.
+5. **Partition:** `batch`; nothing of mine is queued.
+- **After E:** the downstream regeneration into new folders, per 12:58 item 1 and D32 (composite root): matched evaluation is done; RCC seed-1 decision; Test R D1/D2; Test S RCC uniform; BIC RCC UH0505_12 uniform; Test V seed means; §6.6; evidence tables. The two CPU jobs (Test S, BIC) get their own checklist. Old and new labels will be posted side by side.
+
+### 2026-10-30 16:07 Supervisor → Code | Zayd: Item 1 IG reruns accepted; E fine; methods sentence fixed
+Status: RULING
+- Resolves: 2026-10-30 16:08 Code entry.
+- **Accepted:**
+  - all four arms are valid (3 at 128 steps, 1 at 256), so D37 is not triggered;
+  - the 64-step reruns reproduce the saved runs exactly in 4/4 arms, across both GPU types and including the version-1 GBM39_2 value, so the production table value stands;
+  - doubling the steps changed IG mSCF1 by at most 0.0003, with only single boundary-bin swaps.
+- **E: fine** once Zayd says OK. Then do the downstream regeneration as listed, with old and new labels side by side.
+- **Methods sentence (for the report):** "IG used 64 steps. Where the completeness check failed (4 of 144 run-arms), the arm was recomputed from its saved model with 128 or 256 steps. In four control arms, doubling the steps changed mSCF1 by at most 0.0003."
+- **Codex:** commit D34–D37, the provenance-log lines and the pulled evidence (separately from any code).
+
+### 2026-10-30 16:19 Code → Supervisor | Zayd | Codex: Downstream: RCC decision regenerated (uniform now has a verdict); Test R summariser refuses the composite (attribution-path check), so stopped; checklists F (Test S) and G (BIC)
+Status: OPEN (Supervisor: ruling on Test R and evidence tables; Zayd: OK for F and/or G)
+Context: 78676 (row 13 fair) COMPLETED 0:0 and was pulled. Composite built per D32. Logged in P18 §10.
+Evidence: `results/diagnostics/ig_steps_20261030/composite_root/manifest.csv` (240 files, 5 rerun overlays, SHA-256 per file); `fair_scoring_baselines/rcc/decisions_20261030_ig_steps_local/`.
+- **Composite:** all 5 overlay slots were empty in the saved trees, and every copy's SHA-256 equals its source. The rerun summaries' provenance keys (evaluator code hashes, parameters, approval) **equal** the saved campaigns', so the mixing checks accept them.
+- **RCC seed-1 decision, old → new (bin level, verdict scale):**
+  - `central_only`: "mixed / not resolved by the predeclared rule" → **unchanged** (−0.156, 0/8).
+  - **`uniform_mean`: "incomplete; no verdict (7/8 runs)" → "mixed / not resolved by the predeclared rule"** (8/8 runs, mean −0.169, 0/8 positive).
+  - §7.1 wording: "Neither predeclared verdict applies, because IG scored below posterior-|PCC| in every run (0/8)."
+- **Test R summariser: refused (exit 1, nothing written).**
+  - `expected_attribution()` requires `/test_r_training_seeds/<section>_seed<S>/<arm>/attribution/` for seeds 2/3. The reruns live in `/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/attribution/`.
+  - Seed 1 passes (it checks only `/<section>_seed1/`).
+  - Stopped, no patch (13:30 answer 3).
+- **Also blocked, on the same footing:**
+  - `build_current_evidence_tables.py` has no input-root argument (it reads `results/` relative to the script), so it can't read a composite.
+  - §6.6 (`compute_statistics_6_6.py --root`) can take a composite project root, but it reads the Test R and Test V decision folders, so it waits for Test R.
+- **Proposal, for a ruling (code for Codex; default paths bit-identical, with tests):**
+  1. **Test R:** extend `expected_attribution` to also accept the predeclared rerun root `/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/attribution/`, **only** for the three listed seed-2/3 arms and only with N = the decision step from `summary_post_fair_scoring/summary.json`. Everything else is still refused.
+  2. **Evidence tables:** add an opt-in `--results-root` (default `results/`) so the script can read the composite. A test shows the default output is byte-identical.
+- **Not blocked (do now, with Zayd's OK):**
+  - **F. Test S RCC_UH0505_12 `uniform_mean`.** CPU, `batch`, `sbatch --wrap`, no repo script change. The unchanged `evaluate_spatial_segmentation_s.py` with:
+    - `--input` the RCC_UH0505_12 HDF5;
+    - `--attribution-dir results/experiments/ig_steps_rerun_20261030/RCC_UH0505_12_seed1/uniform_mean/steps128/attribution`;
+    - `--fair-scoring-summary results/diagnostics/fair_scoring_baselines/ig_steps_20261030/bin_level_only/RCC_UH0505_12_seed1/uniform_mean/steps128/summary.json`;
+    - `--output results/diagnostics/spatial_segmentation_S_ig_steps_20261030/RCC/RCC_UH0505_12_seed1/uniform_mean` (new, absent).
+    - Arguments as in `run_spatial_segmentation_s.sh` (RCC has no partition arguments). 2 CPUs, 4G, 1 h. The 69631 Test S tasks fitted 4G/2 h for two arms; this is one small RCC arm.
+  - **G. BIC RCC_UH0505_12 `uniform_mean`.** CPU, `batch`, `sbatch --wrap`. The unchanged `select_gmm_k_bic.py --attribution-dir <the rerun attribution above> --production-k 3 --seed 1 --n-init 20 --output results/diagnostics/gate_d_bic_rcc_ig_steps_20261030/RCC_UH0505_12_seed1/uniform_mean` (new, absent), then `bic_segmentation_sensitivity.py` with the rerun fair summary above.
+    - Arguments as in `run_rcc_bic.sh`. 2 CPUs, 4G, 1 h (that script's own request).
+  - Both scripts were uploaded and match HEAD (checked at 15:15; their `.py` files are unchanged in `157ac61b`; I'll re-hash them in the submission call). Each refuses a stale output (exit 3).
+  - After F, the Test S summariser runs on a composite of `spatial_segmentation_S/` plus this one arm.
+
+### 2026-10-30 16:53 Supervisor → Code | Codex | Zayd: RCC uniform verdict accepted; both summariser changes approved (allow-list, opt-in); F and G fine
+Status: RULING
+- Resolves: 2026-10-30 16:19 Code entry.
+- **RCC seed 1:** `uniform_mean` goes from "incomplete; no verdict (7/8)" to "mixed / not resolved by the predeclared rule" (8/8, −0.169, 0/8 positive). The fall-through wording is correct. Stopping at the refusal was right.
+- **Proposal 1 (Test R): approved, with these conditions:**
+  - The rerun root is accepted only through an **explicit allow-list** read from `summary_post_fair_scoring/summary.json`: section, seed, arm and decision step N.
+  - The path must match that N exactly, and `gmm_gate_v2.json` there must show a pass.
+  - Seed 1 and all other arms are unchanged.
+  - Tests: any arm or step not on the list is refused; with no allow-list, the output is byte-identical to the saved decisions.
+- **Proposal 2 (evidence tables): approved:** an opt-in `--results-root`, default unchanged, plus a byte-identical test.
+- Codex reviews and commits both. Then run Test R, Test V seed means, §6.6 and the evidence tables on the composite. Post old and new labels side by side, including the Holm results.
+- **F and G:** complete, and they can run now in parallel with the code review, once Zayd says OK. Re-hash in the submission call as you said.
+
+### 2026-10-30 16:57 Code → Supervisor | Zayd: F and G submitted (78721 Test S, 78722 BIC); writing the two approved summariser changes
+Status: INFO
+- Resolves: 2026-10-30 16:53 Supervisor entry (F and G; Zayd's OK given in the session).
+- Both were submitted at 16:56 SAST (14:56 UTC) on `batch` via `sbatch --wrap`. In the same call: 3/3 script hashes matched HEAD, outputs absent, inputs present, gate v2 passed. Logged in P18 §10.
+- **Now:** writing the Test R allow-list and the evidence-table `--results-root`, with tests, uncommitted for Codex. One `sacct` check in about 10 min.
+
+### 2026-10-30 16:59 Code → Codex | Supervisor | Zayd: Test R allow-list written (default byte-identical); evidence tables need no change (inputs untouched, 7/7 byte-identical)
+Status: OPEN (Codex: review and commit; Supervisor: confirm dropping proposal 2)
+- Resolves: 2026-10-30 16:53 Supervisor entry (code part).
+- **`scripts/summarise_test_r.py` (uncommitted, LF):**
+  - new opt-in `--ig-steps-allow-list <summarise_ig_steps summary.json>`. `read_allow_list` keeps only seed-2/3 entries with an **integer** decision step; "pending", "not done" and seed 1 are ignored.
+  - `rerun_attribution_allowed` accepts the rerun root `/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/attribution/` only when:
+    - the arm is listed;
+    - N equals its listed step;
+    - the local `gmm_gate_v2.json` beside it has `"passed": true`.
+  - Seed 1 and every other arm keep the old check.
+  - When the option is used, `decisions.json` gains an `ig_steps_allow_list` block (source, arms, rule). Without the option, nothing changes.
+- **Tests (`test_test_r.py`, +5 → 24):**
+  - a listed arm is accepted and recorded;
+  - without the list, the rerun root is refused;
+  - wrong step, unlisted arm or seed, failed gate or missing gate is refused (5 sub-cases);
+  - only integer seed-2/3 entries enter the list;
+  - **without the list, the output is byte-identical to the committed `test_r/decisions_20261017_local/{decisions.json, section_table.csv}`** (read-only, explicit paths; skipped if absent).
+- **Local:** `test_test_r` 24/24 + `test_ig_steps` 26/26 = 50/50, none skipped. Git Bash works in my session.
+- **Evidence tables: proposal 2 not implemented. I propose dropping it.**
+  - `build_current_evidence_tables.py` reads only the seed-1 GBM/CAC fair scoring, gate (d) pixel counts, S3PL and the GBM/CAC BIC. None of the reruns touch these: they are RCC seed 1, seeds 2/3 and new control folders.
+  - I regenerated it unchanged into a scratch folder: **7/7 output files are byte-identical** to `results/publication/current_evidence/`. So "regenerate the evidence tables" holds with no code change, and nothing in them changes.
+  - RCC, Test R, §6.6 and BIC are not in that script; they go through their own summarisers.
+- **After the commit:** Test R (with the allow-list) and Test V seed means on the composite, then §6.6 on a composite project root, with old and new labels and Holm results side by side.
+
+### 2026-10-30 17:00 Supervisor → Code | Codex: Proposal 2 dropped; Test R allow-list ready for Codex
+Status: RULING
+- Resolves: 2026-10-30 16:59 Code entry.
+- **Proposal 2 is dropped.** The evidence-table script reads no rerun-affected input, and its unchanged regeneration is 7/7 byte-identical, so no code change is justified. Record it in P18 §10.
+- **The Test R allow-list matches the 16:53 conditions:** an explicit list, an exact step, a gate v2 pass and a byte-identical default. Codex reviews and commits.
+- **After the commit:** Test R, Test V seed means and §6.6, as listed. F and G results go in the same side-by-side post.
+
+### 2026-10-30 17:01 Codex → Code | Supervisor: Review of Test R IG-step allow-list
+Status: OPEN
+
+- The opt-in design, allow-list parsing, exact decision-step selection, gate-v2 requirement, seed-1/default behaviour and recorded provenance otherwise match the 16:53 and 17:00 rulings. The five new Python tests pass, including byte-identical default decisions. The full 50-test suite is reported clean by Code; the independent Windows run still cannot start Git Bash (`0xC0000142`), the already documented host issue rather than a new repository failure.
+- Finding 1: `scripts/summarise_test_r.py:107` uses `if fragment not in attribution`, which checks substring containment rather than the supervisor's required exact rerun path. A different provenance tree can contain the approved fragment and pass if it has a gate file at the corresponding relative location. Require the attribution provenance to equal the single expected cluster path for `results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/attribution` (with only the established trailing-slash normalisation, if needed), and add a refusal test for an otherwise valid path with an extra prefix or suffix.
+- Evidence tables: no finding. Dropping `--results-root` is consistent with the 17:00 ruling because the unchanged builder reads no rerun-affected inputs and its seven outputs regenerated byte-for-byte.
+- Committed: not committed, waiting on finding 1.
+
+### 2026-10-30 17:03 Supervisor → Code | Codex: Codex finding 1 upheld; exact path match required
+Status: RULING
+- Resolves: Codex's review of the Test R allow-list (finding 1).
+- **The finding is valid.** A substring check is looser than "the path must match that N exactly" (16:53).
+- **Code:**
+  - Compare the recorded attribution path for **equality** with the single expected path `<cluster project root>/results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/attribution`, normalising only the trailing slash.
+  - Add refusal tests for an otherwise valid path with an extra prefix, an extra suffix and a sibling tree.
+  - Post when done. Then I'll rerun the suite independently in the Linux VM, because Git Bash still fails on Codex's side, and Codex commits.
+
+### 2026-10-30 17:08 Code → Supervisor | Codex: Codex finding 1 fixed: exact path match plus refusal tests (52/52 local)
+Status: OPEN (Supervisor: independent Linux run; Codex: re-review and commit)
+- Resolves: 2026-10-30 17:01 Codex entry (finding 1) and the 17:03 Supervisor ruling.
+- **`rerun_attribution_allowed` (`scripts/summarise_test_r.py`):** the substring test is replaced by an **equality**.
+  - The recorded `latent_mean` path must split into the file name `latent_mean.npy` and a folder that equals exactly `/home-mscluster/zsuliman/msi/results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/attribution` (N = the listed decision step).
+  - Only a trailing slash is normalised.
+  - The gate v2 pass check is unchanged. The module docstring now states the exact rule.
+- **New tests (`IgStepsAllowListTests`, +2 → 26 in `test_test_r`):**
+  - `test_exact_path_match_refuses_prefix_suffix_and_sibling_trees`: an extra prefix (`backup/…`), an extra suffix (`…/attribution/extra`) and a sibling tree (`results/diagnostics/…` instead of `results/experiments/…`). Each case has a passing `gmm_gate_v2.json` where the code looks, and each asserts that the approved fragment *is* contained (so the old substring check would have accepted it). All are refused.
+  - `test_trailing_slash_is_normalised`: `…/attribution/` is accepted.
+- **Unchanged:** the allow-list parsing, seed 1 and all other arms, the byte-identical default (the test still passes against `decisions_20261017_local`).
+- **Local:** `test_test_r` 26/26 + `test_ig_steps` 26/26 = 52/52, none skipped. Uncommitted, LF.
+- **Run for the independent check:** from `code/msi`, `PYTHONPATH=src:scripts python3 -m unittest spatial_msipl.tests.test_test_r spatial_msipl.tests.test_ig_steps`.
+
+### 2026-10-30 17:07 Supervisor → Code | Codex: Independent Linux run: 51/52; the byte-identity test depends on line endings (CRLF working tree)
+Status: RULING (Code: small test fix; then I rerun it)
+- Resolves: 2026-10-30 17:08 Code entry (independent check).
+- **Run:** Linux VM, same working tree, the command from the entry. **52 tests, 1 failure.**
+  - The failure is the default byte-identity test: `decisions.json` differs only in line endings. The generated file has `\n`; the committed reference read from the working tree has `\r\n`.
+- **Cause:** `git ls-files --eol` shows `i/lf w/crlf` for both reference files. They are LF in git, but the Windows checkout converts them to CRLF (`.gitattributes` pins only `*.sh` and `*.py`).
+  - The test passed for Code on Windows because Python wrote CRLF there too.
+  - It would fail on Linux, and probably on the cluster as well, because the upload copies the CRLF working tree.
+  - The code is fine. The **test** is platform-dependent.
+- **The new logic is verified:** the exact-path rule (line 113: an equality check after `rpartition`, with only the trailing slash stripped) and all 7 refusal and acceptance cases pass here.
+- **Fix (Code):**
+  - Compare after normalising `\r\n` to `\n` on both sides, and say so in the test name and docstring: "identical apart from line endings".
+  - Do not change the summariser's output.
+  - Optionally, and separately for Codex to judge: add `*.json text eol=lf` and `*.csv text eol=lf` to `.gitattributes` so this can't recur. That is a whole-repo renormalisation, so it is **not** for this commit.
+- Post when done and I'll rerun the suite.
+
+### 2026-10-30 17:13 Code → Supervisor | Codex | Zayd: Line-ending test fix applied (52/52 local); F and G finished and pulled
+Status: OPEN (Supervisor: rerun the Linux suite; Codex: re-review and commit)
+- Resolves: 2026-10-30 17:07 Supervisor entry.
+- **Fix (`src/spatial_msipl/tests/test_test_r.py` only; the summariser is unchanged):**
+  - the test is renamed `test_default_output_is_identical_to_the_saved_decisions_apart_from_line_endings`;
+  - its docstring says why: the references are LF in git and CRLF in a Windows working tree or upload, and the summariser writes the platform newline;
+  - both sides are compared after `\r\n` → `\n`. Any content difference still fails (checked on a toy pair: LF vs CRLF compare equal, a changed value does not).
+- **Local:** `test_test_r` 26/26 + `test_ig_steps` 26/26 = 52/52, none skipped. The test file is LF.
+- **`.gitattributes` (`*.json`/`*.csv text eol=lf`):** not touched. Left for Codex to judge separately, as ruled.
+- **F and G:** 78721 (Test S, 0:23) and 78722 (BIC, 0:45) are both COMPLETED 0:0 with empty `.err`. Pulled at 17:11 (4 new files; no tracked file changed apart from the approved append-only job-ID log).
+  - Outputs: `results/diagnostics/spatial_segmentation_S_ig_steps_20261030/RCC/RCC_UH0505_12_seed1/uniform_mean/` and `results/diagnostics/gate_d_bic_rcc_ig_steps_20261030/RCC_UH0505_12_seed1/uniform_mean/`.
+  - Their values go in the side-by-side post with Test R, Test V and §6.6, after the commit.
+
+### 2026-10-30 17:16 Supervisor → Codex | Code: Independent Linux rerun: 52/52 OK; Codex may commit the Test R allow-list
+Status: RULING
+- Resolves: Code's line-ending fix entry.
+- **Linux VM, same working tree, same command: Ran 52 tests in 56.5 s, OK, none skipped.**
+- **Codex:** re-review finding 1 and the test fix, then commit. Commit the pulled F/G outputs and the job-ID log separately.
+- **Code:** after the commit, run Test R (with the allow-list), Test V seed means and §6.6 on the composite. Post them together with F (Test S) and G (BIC), old and new side by side.

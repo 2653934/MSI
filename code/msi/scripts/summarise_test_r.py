@@ -21,6 +21,15 @@ Fewer than 8 sections at a seed (or with all three seeds, for decision 2) gives
 parameters within a seed and collection, a K_bin that differs between seeds,
 summaries whose attribution path is not the expected seed root, and a missing P1
 on GBM/CAC (or a P1 on RCC). Local files only; no interpretation.
+
+Opt-in --ig-steps-allow-list (protocol 18 Section 6.3, IG completeness reruns;
+supervisor chat 2026-10-30 16:53): the summary.json of summarise_ig_steps.py. A
+seed-2/3 arm listed there with an integer decision step N may come from the rerun
+folder, and only if its recorded latent_mean.npy path equals exactly
+<cluster root>/results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/
+steps<N>/attribution/latent_mean.npy (trailing slash normalised; supervisor chat
+2026-10-30 17:03) and gmm_gate_v2.json beside it shows a pass. Seed 1 and every other arm keep the
+check above. Without the option the behaviour is unchanged.
 """
 
 import argparse
@@ -68,7 +77,46 @@ def parse_arguments():
     parser.add_argument("--project-root", type=Path, default=ROOT,
                         help="workspace root for the matched-evaluation summaries")
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--ig-steps-allow-list", type=Path, default=None,
+                        help="summarise_ig_steps.py summary.json; see the module docstring")
     return parser.parse_args()
+
+
+RERUN_ROOT = "ig_steps_rerun_20261030"
+
+
+def read_allow_list(path):
+    """{(section, seed, arm): N} for seed-2/3 arms with an integer decision step."""
+    if path is None:
+        return {}
+    decisions = json.loads(Path(path).read_text(encoding="utf-8"))["decision_steps"]
+    allowed = {}
+    for key, steps in decisions.items():
+        section, seed, arm = key.split()
+        if not seed.startswith("s") or not isinstance(steps, int) or isinstance(steps, bool):
+            continue
+        if int(seed[1:]) in NEW_SEEDS:
+            allowed[(section, int(seed[1:]), arm)] = steps
+    return allowed
+
+
+def rerun_attribution_allowed(attribution, section, arm, seed, allow_list, project_root):
+    """True only for a listed arm at its listed step whose gate v2 passed."""
+    steps = allow_list.get((section, seed, arm))
+    if steps is None:
+        return False
+    # Exact match (supervisor chat 2026-10-30 17:03): the recorded latent_mean.npy must
+    # sit directly in the single expected rerun folder; only a trailing slash is normalised.
+    expected = (f"{CLUSTER_PREFIX}results/experiments/{RERUN_ROOT}/{section}_seed{seed}/"
+                f"{arm}/steps{steps}/attribution")
+    directory, _, name = attribution.rpartition("/")
+    if name != "latent_mean.npy" or directory.rstrip("/") != expected:
+        return False
+    local = project_root / attribution.replace(CLUSTER_PREFIX, "")
+    gate = local.parent.parent / "gmm_gate_v2.json"
+    if not gate.is_file():
+        return False
+    return json.loads(gate.read_text(encoding="utf-8")).get("passed") is True
 
 
 def summary_path(fair_root, collection, section, arm, seed):
@@ -97,7 +145,8 @@ def balanced_accuracy(summary, project_root):
         "balanced_accuracy")
 
 
-def load(fair_root, project_root):
+def load(fair_root, project_root, allow_list=None):
+    allow_list = allow_list or {}
     records, keys, k_bins = {}, {}, {}
     for collection, sections in SECTIONS.items():
         for section in sections:
@@ -113,7 +162,9 @@ def load(fair_root, project_root):
                     if summary.get("class_subset") is not None:
                         raise SystemExit(f"{where}: class-subset analysis")
                     attribution = summary["provenance"]["source_artifacts"]["latent_mean"]["path"]
-                    if expected_attribution(section, arm, seed) not in attribution:
+                    if (expected_attribution(section, arm, seed) not in attribution
+                            and not rerun_attribution_allowed(attribution, section, arm, seed,
+                                                              allow_list, project_root)):
                         raise SystemExit(f"{where}: attribution {attribution} is not the "
                                          f"seed-{seed} root")
                     has_p1 = "P1" in summary.get("peak_level", {})
@@ -186,7 +237,8 @@ def seed_sd(values):
 
 def main():
     args = parse_arguments()
-    records = load(args.fair_root, args.project_root)
+    allow_list = read_allow_list(args.ig_steps_allow_list)
+    records = load(args.fair_root, args.project_root, allow_list)
 
     def value(collection, section, arm, seed, scale, name):
         row = records.get((collection, section, arm, seed))
@@ -292,6 +344,13 @@ def main():
         "notes": NOTES,
         "sd_definition": "sample standard deviation over the available seeds (ddof = 1)",
     }
+    if args.ig_steps_allow_list is not None:
+        decisions["ig_steps_allow_list"] = {
+            "source": str(args.ig_steps_allow_list),
+            "arms": {f"{section} s{seed} {arm}": steps
+                     for (section, seed, arm), steps in sorted(allow_list.items())},
+            "rule": ("protocol 18 Section 6.3 IG completeness reruns; rerun root accepted only "
+                     "for these arms at these steps with a passing gmm_gate_v2.json")}
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "decisions.json").write_text(json.dumps(decisions, indent=2) + "\n",
                                                 encoding="utf-8")
