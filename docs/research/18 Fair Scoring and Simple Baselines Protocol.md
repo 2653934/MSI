@@ -470,6 +470,12 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
   - task 1 stays "needs more steps" at 128;
   - task 13 (256 steps) is submitted only after the v2 gate is committed, and its GPU job applies v2.
 
+**Escalation beyond 256 steps (30 October, supervisor ruling 15:45, decision log D37; Zayd's OK; written at about 15:49 SAST, before task 13 was submitted or any 256-step result existed).**
+- If RCC_UH0505_12 `central_only` s2 still fails completeness at 256 steps, it continues with the same doubling, **512, then 1024**. Each step uses the same IG call, the same gate v2 and one short checklist.
+- **1024 is the cap.** Only if the arm still fails at 1024 is it reported as "not done (IG completeness not reached at 1024 steps)", with its residual trajectory (median and p95 at 64, 128, 256, 512 and 1024).
+- The completeness criterion itself is unchanged (median ≤ 0.05 and p95 ≤ 0.15 of the normalised residual).
+- **Implementation note:** the task table (`ig_steps_sections.sh`) currently ends at 256 steps (rows 12–15). 512 and 1024 rows for this one arm would be a small code addition (new rows appended, existing rows unchanged), committed by Codex before any such submission.
+
 ### 6.4 Test V: VAE segmentation vs a PCA segmentation (supervisor chat 17 October 12:42, Zayd-approved; predeclared before any output exists)
 
 The predeclaration below is copied verbatim from the supervisor chat entry "2026-10-17 12:42 Supervisor → Code: New predeclared Test V". It was written into this protocol on 17 October before any Test V code was written or run. Later notes are added below it, never inside it.
@@ -719,6 +725,55 @@ This records the supervisor's confirmation of Code's reading posted at 21:06 (Co
 - **Nondeterminism counts** if the repeat SD is ≥ half the smaller arm's SD in **at least 2 of the 3 sections**. Per-section values and the bit-identity check are reported beside it.
 - **A repeat SD of 0 never counts** toward nondeterminism.
 - **An SD of 0 never makes a component dominant.**
+
+### 6.8 msiPL Beta re-tune (supervisor chat 2026-10-30 12:58 item 2 and the 17:33 ruling; Zayd-approved; written at about 17:40 SAST, before any re-tune code was written or any re-tuned list existed or was scored)
+
+**Decision:** Zayd's, 30 October: a complete-results requirement before the report (decision log D10, D28). This section fills the empty RCC msiPL cell and makes the third clause of "IG beats legacy" (Section 7; Section 7.1 gap 2) assessable. It is a separately labelled analysis. No threshold, rule label or Holm family changes.
+
+**Item 2 as posted (verbatim, 12:58):**
+- **Why RCC is empty:** the RCC count is not reachable on the current grid. At Beta 0.0, 6/8 runs fall short (for example MH0204_33 gives 1,154 against 2,200).
+  - The sweep flattens near 0 (1,151 → 1,154), because `LearnPeaks` keeps only local maxima of the mean spectrum.
+  - A wider grid (Beta from −2.0 to 2.5, step 0.01) should find msiPL's **maximum attainable count**. This is a property of msiPL, not an incompleteness.
+- **Targets:** round(K_bin × m) for m ∈ {0.5, 0.75, 1, 1.5, 2}, on GBM, CAC and RCC, with the existing tolerance of 50.
+  - If a target cannot be reached, use msiPL's maximum count and label it `msipl_cap`.
+- **Consistency check:** m = 1 on GBM/CAC must reproduce the saved legacy lists and scores exactly (to 1e-12). If it doesn't, stop.
+- **Scoring:**
+  - Score every legacy list with the fair-scoring evaluator. Then assess the budget-stability clause of "IG beats legacy" with the existing Section 7.1 rule, as written.
+  - On RCC, also score **every ranking** at msiPL's own per-run count, so the main table has a count-matched RCC msiPL comparison wherever the target is capped.
+  - RCC msiPL rows are **descriptive, outside Holm**. The predeclared families stay as they are.
+
+**Answers fixed at 17:33, before any re-tuned list exists:**
+1. **m = 1 on GBM/CAC is the saved list,** because it defines K_bin.
+   - The consistency check recomputes `LearnPeaks` at the saved Beta (`beta_selection.json` → `chosen.beta`) from the restored weights. It must reproduce the saved `learned_peaks.csv` exactly (identical m/z array), and the scorer must reproduce the saved legacy scores (integer TP/FP/FN at every threshold; mSCF1 to 1e-12). Otherwise: stop and post.
+   - m ≠ 1 is re-selected on the new grid. **RCC m = 1 is re-selected** like the other multipliers.
+2. **Comparator: count-matched.** For every re-tuned list, its snapped unique-bin count n_m is the budget. Legacy msiPL and every ranking are scored at exactly n_m, at bin level, with all classes.
+   - Rankings are rebuilt with the fair evaluator's own functions over all bins (not truncated). Before scoring, the scorer must reproduce: the saved GMM posterior; the saved IG and L2 lists at K_bin (exact ties only); IG and L2 mSCF1 at K_bin (1e-12); and the first 2 × K_bin entries of every ranking in the saved `rankings_prefix.npz`. Otherwise it stops.
+3. **Clause 3 ("ordering stable across the budget multipliers"), operationalised here before any re-tuned list is scored.**
+   - For each collection × arm on GBM and CAC (the scope of clauses 1–2), clause 3 is met if IG mSCF1 > legacy mSCF1 in **≥ 7/8 sections at every m ∈ {0.5, 0.75, 1, 1.5, 2}**, both scored at n_m.
+   - Capped (`msipl_cap`) points are included, because they are count-matched anyway, and flagged.
+   - "IG beats legacy, robust to scoring" is reported as met only if clauses 1, 2 and 3 are all met. RCC stays descriptive.
+4. **RCC main-table cell:**
+   - per run, the m = 1 re-selected list (capped where the target is unreachable) at its unique-bin count n;
+   - legacy msiPL vs IG, posterior-|PCC|, mean intensity, variance, Moran's I and the oracle, all at n, at bin level;
+   - descriptive, outside Holm.
+   - The main table shows legacy at n, with a footnote giving the median n against K_bin and the count-matched IG and correlation values.
+5. **Seeds:** IG seed 1, both arms (as for clauses 1–2).
+   - The RCC_UH0505_12 `uniform_mean` seed-1 IG is the 128-step rerun (Section 6.3 amendment, 30 October), with its matched evaluation and fair scoring from `ig_steps_*_20261030`.
+
+**Implementation notes (fixed with the code, before any output):**
+- **Sweep:** `scripts/retune_msipl_beta.py`, env `msipl_legacy` (Python 3.6). It reuses `LearnPeaks`, `VAE_BN`, `load_dataset` and `tic_normalise` from `run_msipl_legacy_gbm.py`, as the existing tuner does.
+  - Grid: −2.0 to 2.5, step 0.01 (451 values), built by the existing `beta_grid`.
+  - Per m: target = `int(round(K_bin × m))`, the expression of `simple_baselines.budgets`, with the labels "0.5", "0.75", "1.0", "1.5" and "2.0".
+- **Selection rule (unchanged from `tune_msipl_massnet_beta.py`):** the closest raw learned-peak count to the target, with ties going to the larger Beta. Status is `within_tolerance` if |count − target| ≤ 50.
+  - Otherwise, if the target is above the grid's maximum count: the Beta with the maximum count (ties to the larger Beta), status `msipl_cap`.
+  - Otherwise (the target lies within the grid's count range but no count is within tolerance, or the target is below the minimum count): the closest count, status `closest_outside_tolerance`, flagged.
+- **Count used for scoring:** the snapped unique-bin count n_m (`nearest_unique_indices`), as in the fair evaluator. The raw count is recorded beside it.
+- **Scorer:** `scripts/score_msipl_retune.py` (s3pl_env). It imports the fair evaluator's functions. The production evaluator is **not** changed, so its code hash and every saved result stay valid.
+- **Roots (new):**
+  - `results/baselines/msipl/retune_20261030/<collection>/<section>/` (sweep CSV, and per m `learned_peaks.csv` plus `selection.json`);
+  - `results/diagnostics/fair_scoring_baselines/msipl_retune_20261030/<section>_seed1/<arm>/`.
+  - Saved msiPL folders and `/datasets` are read only.
+- **Cluster:** cluster test job → GBM22_2 pilot (time and MaxRSS) → the other 23 sections → scoring. CPU on `batch` unless the pilot shows more than 30 GB. No `--exclusive`. Each `sbatch` needs Zayd's OK on its checklist.
 
 ## 7. Decision thresholds
 
@@ -1344,6 +1399,84 @@ A test rebuilds the IG matched groups from these files.
     - the IG target per pixel is equal;
     - the component means and covariances after alignment are within 1e-6 (max 9.5e-7).
     - Tasks 1, 4 and 8 included. Table in chat 14:53. Script: scratchpad only (`direct_gate_check.py`), not committed.
+  - **Gate v2 committed by Codex:** `4f3ed9b0` (code and decision records) and `e92a2653` (pulled evidence). The local Windows Bash-dependent tests were blocked for Codex (Git Bash `0xC0000142`); the supervisor's independent Linux run gave 45/45 (chat 15:12).
+  - **15:15 SAST (13:15 UTC), upload** (local → cluster, documented source upload from `code/msi`, `-n` first, clean committed HEAD `157ac61b`). The documented command was used plus one narrowing `--exclude='/tmp/'`, because the preview showed two empty scratch folders under `code/msi/tmp/`.
+    - 8 files: `scripts/{check_ig_steps_gate,summarise_ig_steps}.py`, `slurm_jobs/{run_ig_steps_gate_v2,run_ig_steps_rerun,run_ig_steps_fair_scoring,submit_ig_steps}.sh`, `src/spatial_msipl/tests/test_ig_steps.py`, and the untracked `.pym2aia_prefs.xml` (timestamp only).
+    - `sha256sum` cluster vs HEAD: 13/13 match. That is the 7 changed files plus `ig_steps_sections.sh`, `test_r_sections.sh`, `run_fair_scoring_tests.sh`, the IG script and both evaluators.
+  - **15:19 SAST (13:19 UTC), two jobs submitted on `batch`** (Zayd's OK in the session; checklists in chat 15:18):
+    - **78515:** cluster test job `run_fair_scoring_tests.sh` (gate v2). Gate: `test_ig_steps` 26/26 and `test_test_r` 19/19 run, none skipped.
+    - **78516:** archive-hash job (`--wrap`; item 5). `sha256sum` of the five archives in `/datasets/zsuliman/msi_data/zips/`, which are read only, into `results/validation/dataset_archive_hashes/78516.sha256`. It must reproduce the two recorded hashes.
+    - **78515 COMPLETED 0:0** (5:01, mscluster129):
+      - main suite: 285 tests OK, 3 skipped (the known local-artifact skips);
+      - `test_ig_steps` 26/26 ran and passed, including the read-only check that gate v2 passes 12/12 on the cluster's 78483 outputs;
+      - `test_test_r` 19/19;
+      - S3PL suites: 25 and 4 tests OK;
+      - empty `.err`. **Gate passed.**
+    - **78516 COMPLETED 0:0** (2:04, mscluster143). Both recorded hashes were reproduced (`gbm_data.zip` `a69a4246…097f`, CardinalWorkflows `301a3815…c485`). The three new hashes are written into `docs/research/03` (Provenance check).
+  - **15:28 SAST (13:28 UTC), gate job 78549** (Zayd's OK in the session; checklist in chat 15:27): `bash slurm_jobs/submit_ig_steps.sh gate 0-11` on `batch` (script default), `%4`. It writes v2 in all 12 roots, plus the matched evaluation for tasks 4 and 8.
+    - **78549: 12/12 COMPLETED 0:0** (0–53 s each), with empty `.err`. v2 was written in all 12 roots. Tasks 4 and 8 ran the matched evaluation (complete). Task 1 is "IG completeness fails at 128 steps", with no evaluation.
+  - **15:42 SAST, pull** (documented artifact pull, `-n` first): 34 new files (v2 files, the tasks 4/8 evaluations, `78515_*` and `dataset_archive_hashes/78516.sha256`). **One committed file was held back** with an extra `--exclude`: `results/experiments/ig_steps_rerun_20261030/provenance/slurm_job_ids.txt`. The cluster copy is the committed one plus one appended line (`78549 stage=gate …`), and the CLAUDE.md rule is to ask before a pull changes a committed file. No tracked file changed.
+  - **15:42 SAST, `summarise_ig_steps.py`** (local; committed code): output `results/diagnostics/ig_steps_20261030/summary_pre_fair_scoring/`, exit 0. Gate v2 passes 12/12. Decision steps:
+    - RCC_UH0505_12 `uniform_mean` s1: **128**;
+    - RCC_UH9912_01 `uniform_mean` s3: **128**;
+    - GBM39_2 `uniform_mean` s3: **128**;
+    - RCC_UH0505_12 `central_only` s2: **pending** (fails at 128, p95 0.195; task 13 at 256 steps is next).
+    - The "missing" 256-step rows of the three passing arms are not run by design.
+  - **About 15:49 SAST:** the escalation beyond 256 steps (512, then 1024 as the cap; ruling 15:45, D37) was written into §6.3 before task 13 was submitted.
+  - **15:49 SAST (13:49 UTC), two submissions on `batch`** (Zayd's OK in the session; checklists C and D in chat 15:45):
+    - **78582:** `submit_ig_steps.sh fair 0,2-11` (11 rows, `%4`);
+    - **78583:** `SBATCH_PARTITION=batch submit_ig_steps.sh ig 13`, i.e. RCC_UH0505_12 `central_only` s2 at 256 steps, with the quarantine `--exclude`.
+  - **About 15:50 SAST, pull of the provenance log** (Zayd's OK; ruling 15:45: append-only log): `ig_steps_rerun_20261030/provenance/slurm_job_ids.txt`, single-file rsync, `-n` first. The only change is 3 appended lines (78549, 78582, 78583). Left for Codex to commit.
+  - **Outcome (one check, about 16:02 SAST):**
+    - **78582:** 11/11 COMPLETED 0:0 (0:06–2:01), all summaries `complete` (RCC bin level; GBM/CAC bin level and P1), empty `.err`.
+    - **78583_13:** COMPLETED 0:0 (4:03, mscluster143). Gate v2 passed (identity recorded only: false). **IG valid at 256 steps**, and the matched evaluation is complete. **No escalation to 512 is needed** (D37 not triggered).
+  - **16:05 SAST, pull** (documented, `-n` first): 75 new files (53 fair-scoring outputs, 22 for task 13). No tracked file changed.
+  - **16:06 SAST, `summarise_ig_steps.py`** → `results/diagnostics/ig_steps_20261030/summary_post_fair_scoring/` (exit 0).
+    - **Decision steps:** RCC_UH0505_12 `uniform_mean` s1 **128**; RCC_UH0505_12 `central_only` s2 **256** (p95 0.338 → 0.195 → 0.038 at 64/128/256); RCC_UH9912_01 `uniform_mean` s3 **128**; GBM39_2 `uniform_mean` s3 **128**.
+    - **Controls** (fair-scoring bin-level IG mSCF1 at K_bin):
+      - rerun 64 equals saved 64 in 4/4 arms (Jaccard 1, Δ 0). This includes **GBM39_2 `uniform_mean` s1 (saved IG version 1): reproduced exactly**, so the production table value stands (13:30 ruling).
+      - 128 vs 64: Δ 0.0000 / +0.0002 / −0.0003 / 0.0000, Jaccard 1 / 0.9990 / 0.9978 / 1 (RCC_UH0505_12 centre s1, RCC_UH9912_01 uniform s1, GBM39_2 uniform s1, 40TopL uniform s1). The only differences are one-bin swaps at the K_bin boundary.
+  - **16:08 SAST (14:08 UTC), 78676** (`submit_ig_steps.sh fair 13`; Zayd's OK): COMPLETED 0:0 (0:23), bin level `complete`. Pulled at 16:13 (3 new files plus the append-only provenance log, which now has 4 appended lines; Zayd's OK 15:45).
+  - **16:15 SAST, composite root** (D32; local copy, never a move): `results/diagnostics/ig_steps_20261030/composite_root/`.
+    - It holds 240 arm-level `summary.json` files copied from `fair_scoring_baselines/{rcc/bin_level_only, test_r/{bin_level_only,with_approved_partitions}, bin_level_only, with_approved_partitions}`.
+    - The 5 previously empty slots are filled with the rerun summaries at their decision steps: RCC_UH0505_12 uniform s1 (128); RCC_UH0505_12 centre s2 (256); RCC_UH9912_01 uniform s3 (128); GBM39_2 uniform s3 (128, bin level and P1).
+    - `manifest.csv` records destination, source, SHA-256 (each copy verified equal to its source) and role. The builder is `build_composite.py` beside it.
+    - Provenance keys (evaluator code, parameters, approval) of the rerun summaries equal those of the saved campaigns (checked on 4 pairs).
+  - **16:16 SAST, RCC seed-1 decision** (unchanged `summarise_rcc_fair_scoring.py`, `--root` composite `rcc/bin_level_only`) → `fair_scoring_baselines/rcc/decisions_20261030_ig_steps_local/`, exit 0.
+    - `central_only`: unchanged, "mixed / not resolved by the predeclared rule" (bin −0.156, 0/8).
+    - **`uniform_mean`: "incomplete; no verdict (7/8 runs)" → "mixed / not resolved by the predeclared rule"** (bin, 8/8 runs, mean −0.169, 0/8 positive; was −0.185 over 7).
+    - The 17 October tables stay as the record.
+  - **16:17 SAST, Test R summariser refused the composite** (unchanged `summarise_test_r.py --fair-root <composite>`, exit 1): "attribution …/ig_steps_rerun_20261030/RCC_UH0505_12_seed2/central_only/steps256/attribution/latent_mean.npy is not the seed-2 root". Its `expected_attribution` accepts only `/test_r_training_seeds/<section>_seed<S>/<arm>/attribution/` for seeds 2 and 3. **Stopped and posted, no patch** (13:30 answer 3). No output was written.
+  - **Ruling 16:53:** the RCC uniform verdict is accepted. Approved: a Test R allow-list (explicit, read from `summary_post_fair_scoring/summary.json`, matching path step and gate v2) and an opt-in `--results-root` for the evidence tables. Codex reviews both.
+  - **16:56 SAST (14:56 UTC), F and G on `batch`** (Zayd's OK; checklists in chat 16:19). Both are `sbatch --wrap`. In the same call: 3/3 script hashes matched HEAD, outputs absent, inputs present, gate v2 passed for the rerun.
+    - **78721 (F):** `evaluate_spatial_segmentation_s.py` on the RCC_UH0505_12 `uniform_mean` 128-step rerun → `results/diagnostics/spatial_segmentation_S_ig_steps_20261030/RCC/RCC_UH0505_12_seed1/uniform_mean`.
+    - **78722 (G):** `select_gmm_k_bic.py` and `bic_segmentation_sensitivity.py` on the same arm → `results/diagnostics/gate_d_bic_rcc_ig_steps_20261030/RCC_UH0505_12_seed1/uniform_mean`.
+  - **Evidence tables, about 16:58 SAST:** no regeneration change is needed, and the approved `--results-root` (proposal 2) was **dropped** (ruling 17:00).
+    - `build_current_evidence_tables.py` reads only the seed-1 GBM/CAC fair scoring, the gate (d) pixel counts, S3PL and the GBM/CAC BIC. No rerun touches any of these.
+    - Run unchanged into a scratch folder, its 7 outputs were byte-identical to `results/publication/current_evidence/`.
+  - **Test R allow-list** (ruling 16:53; uncommitted, for Codex): opt-in `--ig-steps-allow-list` in `summarise_test_r.py`. Without it, the output is byte-identical to `test_r/decisions_20261017_local/` (a test checks this).
+    - Codex finding 1 (17:01, upheld 17:03): the substring check was replaced by an exact path equality.
+    - Refusal tests cover an extra prefix, an extra suffix and a sibling tree.
+    - Local: 52/52 (`test_test_r` 26, `test_ig_steps` 26).
+    - The supervisor's independent Linux run (17:07) gave 51/52. The byte-identity test failed on line endings only: the references are LF in git but CRLF in the Windows working tree. The test now compares after CRLF → LF ("identical apart from line endings"); the summariser is unchanged. Local after the fix: 52/52.
+  - **F and G outcome** (one check, about 17:07): 78721 COMPLETED 0:0 (0:23), 78722 COMPLETED 0:0 (0:45), both with empty `.err`. **17:11 SAST pull** (`-n` first): 4 new files under `spatial_segmentation_S_ig_steps_20261030/` and `gate_d_bic_rcc_ig_steps_20261030/`. No tracked file changed apart from the approved provenance log.
+  - **Codex commits:** `c150fe28` (Test R allow-list and tests), `167dabae` (F/G evidence). Independent Linux run: 52/52 (chat 17:16).
+  - **17:20–17:25 SAST, downstream regeneration** (local; committed code; new output folders; old tables kept as the record). Before each new run, the old table was reproduced from the saved inputs; all were identical after line-ending normalisation, except §6.6 `summary.json`, which differs only in the recorded Python version (3.14.3 vs 3.14.5).
+    - **Test R:** `summarise_test_r.py --fair-root <composite> --ig-steps-allow-list summary_post_fair_scoring/summary.json` → `fair_scoring_baselines/test_r/decisions_20261030_ig_steps_local/` (exit 0; allow-list: GBM39_2 s3 uniform 128, RCC_UH0505_12 s2 centre 256, RCC_UH9912_01 s3 uniform 128).
+      - **Decision 1:** the incomplete list is empty. GBM uniform s3, RCC centre s2, RCC uniform s1 and RCC uniform s3 each go from "incomplete (7/8 sections)" to "replicates".
+      - The headline is still False: CAC centre and uniform at seed 2 "does not replicate", unchanged.
+      - **Decision 2 (three-seed):** RCC "incomplete (6/8 sections)" → **equivalent** (bin +0.018, 6/8); GBM "incomplete (7/8 sections)" → **equivalent** (bin −0.0035, 3/8; P1 −0.0075, 2/8); CAC unchanged, "helps" (bin +0.023, 8/8; P1 +0.027, 8/8).
+    - **Test V (d)**, VAE seed mean − PCA-5, descriptive (`summarise_segmentation_control_v.py --test-r-fair <composite test_r>` → `segmentation_control_V/decisions_20261030_with_test_r_ig_steps_local/`): RCC −0.011 (3/7) → −0.010 (3/8); GBM and CAC unchanged. Seed-1 verdicts unchanged.
+    - **Test S** (composite `ig_steps_20261030/composite_root_test_s/`: 47 saved summaries plus the 78721 arm, with a SHA-256 manifest) → `spatial_segmentation_S/decisions_20261030_ig_steps_local/`.
+      - **RCC uniform: "incomplete; no verdict (7/8 sections)" → "mixed (does not meet the 'helps' rule)"**, S1 − plain bin −0.021 (4/8), median +0.0001. One run is at −0.166.
+      - All other Test S labels are unchanged.
+    - **BIC RCC_UH0505_12 uniform** (78722): BIC selects K = 6, the largest candidate (monotone fall from K = 1 to 6; no interior minimum). Production refit ARI 1.0. **RCC BIC: 16/16 run-arms select K = 6** (was 15/15).
+    - **§6.6** (composite project root `ig_steps_20261030/composite_root_6_6/`: the 7 source folders, with Test R, Test S and Test V seed means replaced by the new tables under the names the script reads; SHA-256 manifest) → `results/diagnostics/statistics_6_6_ig_steps_20261030/`.
+      - Families are unchanged. 8 of 38 test rows change; **no Holm decision at 0.05 changes** (rows 3, 5, 6, 9, 10 and 30 significant before and after).
+      - Changes: row 5 (RCC centre IG − posterior) n 7 → 8, p 0.0156 → 0.0078, Holm 0.047 → 0.047; row 6 (RCC uniform) n 6 → 8, p 0.031 → 0.0078, Holm 0.047 → 0.047; row 3 (CAC centre P1) Holm 0.047 → 0.031 (step-down only); row 13 (F3, RCC uniform − centre) n 6 → 8, mean +0.026 → +0.018, p 0.063 → 0.109, Holm 0.75 → 1; row 33 (F4, Test S RCC uniform) n 7 → 8, p 0.94 → 0.74, Holm 1 → 1.
+      - The rows outside Holm (2, 11, 36) change only descriptively.
+      - Mann–Whitney is unchanged. The RCC uniform mixed model is still "not converged".
+    - **Evidence tables:** unchanged (7/7 byte-identical; see above).
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).

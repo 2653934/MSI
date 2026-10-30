@@ -50,6 +50,7 @@ PY
     spatial_msipl.tests.test_spatial_segmentation \
     spatial_msipl.tests.test_test_r \
     spatial_msipl.tests.test_ig_steps \
+    spatial_msipl.tests.test_msipl_retune \
     spatial_msipl.tests.test_ranking_stage_runtime \
     spatial_msipl.tests.test_runtime_v2 \
     spatial_msipl.tests.test_segmentation_control_v \
