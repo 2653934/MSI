@@ -26,7 +26,7 @@ COLLECTION="$(test_r_collection "$DATASET")"
 INPUT="$(test_r_input_for "$DATASET")"
 WEIGHTS="$(msipl_retune_weights "$DATASET")"
 OUTPUT="$(msipl_retune_output "$DATASET")"
-if [ -e "$OUTPUT/summary.json" ] || [ -e "$OUTPUT/sweep.csv" ] || [ -e "$OUTPUT/m1_reproduction.json" ]; then
+if [ -e "$OUTPUT/summary.json" ] || [ -e "$OUTPUT/sweep.csv" ] || [ -e "$OUTPUT/m1_reproduction.json" ] || [ -e "$OUTPUT/fast_path_check.json" ]; then
     echo "Output already exists: $OUTPUT (never overwritten)" >&2; exit 3
 fi
 for required in "$INPUT" "$WEIGHTS"; do

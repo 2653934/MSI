@@ -117,6 +117,56 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual((tmp / "summary.json").read_text(), "{}")
 
 
+class SweepLearnPeaksTests(unittest.TestCase):
+    """The once-per-section fast path equals LearnPeaks at every Beta of the ruled grid."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(ROOT / "baselines" / "msipl"))
+        from LearnPeaks import LearnPeaks
+        cls.legacy = staticmethod(LearnPeaks)
+        cls.grid = function_from(SCRIPTS / "tune_msipl_massnet_beta.py", "beta_grid")(
+            *retune.GRID)
+
+    def case(self, seed, bins, dtype, integer_mz=False):
+        rng = np.random.default_rng(seed)
+        if integer_mz:   # evenly spaced m/z: equidistant local maxima, argmin ties
+            mz = np.arange(100, 100 + bins).astype(dtype)
+        else:
+            mz = np.sort(rng.uniform(100, 1000, bins)).astype(dtype)
+        weights = [rng.normal(size=(bins, 16)).astype(dtype)] + [None] * 5 + \
+            [rng.normal(size=(16, 5)).astype(dtype)]
+        return (mz, weights, rng.random(bins).astype(dtype), 5,
+                rng.random(bins).astype(dtype))
+
+    def assert_identical_over_grid(self, mz, weights, deviation, latent, mean):
+        fast = retune.SweepLearnPeaks(mz, weights, deviation, latent, mean, chunk=37)
+        counts = set()
+        for beta in self.grid:
+            _, expected, _, _ = self.legacy(mz, weights, deviation, latent, beta, mean)
+            got = fast(beta)
+            self.assertEqual(got.dtype, np.asarray(expected).dtype, beta)
+            np.testing.assert_array_equal(got, expected, err_msg=str(beta))
+            counts.add(got.size)
+        self.assertGreater(len(counts), 20)   # the grid really spans many list sizes
+
+    def test_identical_to_learnpeaks_float64(self):
+        self.assert_identical_over_grid(*self.case(0, 600, np.float64))
+
+    def test_identical_to_learnpeaks_float32(self):
+        self.assert_identical_over_grid(*self.case(1, 600, np.float32))
+
+    def test_identical_with_equidistant_ties(self):
+        self.assert_identical_over_grid(*self.case(2, 500, np.float64, integer_mz=True))
+
+    def test_job_uses_fast_path_with_legacy_check(self):
+        source = (SCRIPTS / "retune_msipl_beta.py").read_text(encoding="utf-8")
+        self.assertIn("peaks = sweep_learn(beta)", source)
+        self.assertIn("check_betas = [GRID[1], 0.0, GRID[0]]", source)
+        self.assertIn("fast_path_check.json", source)
+        self.assertIn("fast_path_check.json", (JOBS / "run_msipl_retune_sweep.sh").read_text())
+
+
 class ScorerTests(unittest.TestCase):
     def setUp(self):
         import score_msipl_retune

@@ -26,6 +26,7 @@ import csv
 import json
 import os
 import sys
+import time
 
 import numpy as np
 
@@ -58,6 +59,47 @@ def select(records, target, tolerance=TOLERANCE):
                      key=lambda item: item["beta"])
         return capped, "msipl_cap"
     return closest, "closest_outside_tolerance"
+
+
+class SweepLearnPeaks(object):
+    """LearnPeaks (baselines/msipl/LearnPeaks.py) with every Beta-independent step done
+    once per section; only the threshold, the union and the unique step repeat per Beta.
+
+    Once: per latent unit, the top z_mean neuron, std-weighted input weights, their
+    descending order and sorted values, and the mean and std of the sorted values (the
+    same arrays the legacy code thresholds); the local maxima of the mean spectrum; and,
+    for every m/z bin, the nearest local maximum by the legacy expression (argmin of
+    |mz_LocalMax - mz|, first index on ties). Per Beta: T = mean + Beta * std, bins with
+    a value >= T in any unit, then the unique nearest local maxima. Peaks equal the
+    legacy Learned_mzPeaks; the job also checks that against LearnPeaks itself.
+    """
+
+    def __init__(self, mz, encoder_weights, standard_deviation, latent_dim, mean_spectrum,
+                 chunk=256):
+        from scipy.signal import argrelextrema
+        first, z_mean = encoder_weights[0], encoder_weights[6]
+        self.units = []
+        for unit in range(latent_dim):
+            neuron = first[:, np.argsort(-z_mean[:, unit])[0]]
+            weights = standard_deviation * neuron
+            order = np.argsort(weights)[::-1]
+            values = np.sort(weights)[::-1]
+            self.units.append((order, values, np.mean(values), np.std(values)))
+        local_max = np.squeeze(np.transpose(argrelextrema(mean_spectrum, np.greater)))
+        self.mz_local_max = np.asarray([mz[index] for index in local_max])
+        bins = np.asarray([mz[index] for index in range(len(mz))])
+        self.nearest = np.empty(len(bins), dtype=np.int64)
+        for start in range(0, len(bins), chunk):
+            block = bins[start:start + chunk]
+            self.nearest[start:start + chunk] = np.argmin(
+                np.abs(self.mz_local_max[np.newaxis, :] - block[:, np.newaxis]), axis=1)
+
+    def __call__(self, beta):
+        selected = np.zeros(len(self.nearest), dtype=bool)
+        for order, values, mean, deviation in self.units:
+            threshold = mean + beta * deviation
+            selected[order[values >= threshold]] = True
+        return self.mz_local_max[np.unique(self.nearest[selected])]
 
 
 def label(multiplier):
@@ -148,11 +190,36 @@ def main():
             print("m = 1 does not reproduce the saved list: stop and post", file=sys.stderr)
             return REPRODUCTION_EXIT
 
+    started = time.time()
+    sweep_learn = SweepLearnPeaks(mz, encoder_weights, standard_deviation, args.latent_dim,
+                                  mean_spectrum)
+    print("Beta-independent steps done in {:.1f} s".format(time.time() - started))
+    # The fast path must equal LearnPeaks itself at the grid ends, 0 and (GBM/CAC) the
+    # saved Beta; any difference writes the check record and exits 5.
+    check_betas = [GRID[1], 0.0, GRID[0]]
+    if args.saved_beta is not None:
+        check_betas.insert(1, args.saved_beta)
+    fast_path_check = []
+    for beta in check_betas:
+        legacy, fast = learn(beta), sweep_learn(beta)
+        fast_path_check.append({"beta": beta, "legacy_count": int(legacy.size),
+                                "fast_count": int(fast.size),
+                                "identical": bool(legacy.shape == fast.shape
+                                                  and np.array_equal(legacy, fast))})
+        print("fast-path check at Beta {}: {} ({:.1f} s)".format(
+            beta, fast_path_check[-1]["identical"], time.time() - started))
+    if not all(item["identical"] for item in fast_path_check):
+        save_json(os.path.join(args.output, "fast_path_check.json"), fast_path_check)
+        print("fast path differs from LearnPeaks: stop and post", file=sys.stderr)
+        return REPRODUCTION_EXIT
+
     records, candidates = [], {}
-    for beta in beta_grid(GRID[0], GRID[1], GRID[2]):
-        peaks = learn(beta)
+    for position, beta in enumerate(beta_grid(GRID[0], GRID[1], GRID[2]), 1):
+        peaks = sweep_learn(beta)
         records.append({"beta": float(beta), "selected_peaks": int(peaks.size)})
         candidates[float(beta)] = peaks
+        if position % 50 == 0:
+            print("{} Beta values done ({:.1f} s)".format(position, time.time() - started))
     with open(os.path.join(args.output, "sweep.csv"), "w") as stream:
         writer = csv.DictWriter(stream, fieldnames=("beta", "selected_peaks"))
         writer.writeheader()
@@ -195,6 +262,7 @@ def main():
                            "tolerance 50; target above the grid maximum -> maximum count, "
                            "msipl_cap"),
         "m1_reproduction": reproduction,
+        "fast_path_check": fast_path_check,
         "selections": selections,
     }
     save_json(os.path.join(args.output, "summary.json"), summary)
