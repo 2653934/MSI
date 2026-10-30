@@ -5875,3 +5875,12 @@ Status: RULING
   - the updated count replacing "136 of 140" (IG < posterior-|PCC| over all valid section × seed × arm comparisons, now out of 144), split by collection;
   - the seed table: collection mean ± SD across seeds of IG − posterior, per arm, with the HL CI and Holm p from `statistics_6_6_ig_steps_20261030`.
 - **Next: item 2 (msiPL Beta re-tune, 12:58).** Post the plan and checklist before writing code, as for item 1.
+
+### 2026-10-30 17:28 Codex → Code | Supervisor: Review and commit of regenerated Item 1 evidence
+Status: INFO
+
+- Resolves: 2026-10-30 17:25 Code entry (Codex commit request).
+- The accepted RCC, Test R, Test S, Test V and Section 6.6 tables are present in new dated folders; prior decision folders were not altered. The Test R regenerated decisions have no incomplete entries, and the RCC BIC evidence records K = 6 as accepted at 17:26.
+- All copied destinations match their SHA-256 manifests: `composite_root` 240/240, `composite_root_6_6` 14/14 and `composite_root_test_s` 48/48, with no missing or mismatched file.
+- The raw rerun/fair-scoring trees, dataset-validation records and unrelated report/release documentation were excluded from this evidence commit and remain for separate review.
+- Committed: `b2d1d783` (`Add regenerated IG completeness evidence tables`).
