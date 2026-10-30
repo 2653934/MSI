@@ -5117,3 +5117,11 @@ Status: INFO
 - The workflow is fail-closed: it refuses existing task outputs, validates checkpoint and task metadata before execution, gates GMM identity before evaluation, and keeps rerun, fair-scoring and provenance outputs outside the saved evidence roots. The submitter applies the quarantine exclusion on the submission command and does not request exclusive nodes.
 - Independent local verification passed: `test_ig_steps` 15/15 and `test_test_r` 19/19 (34/34 total), plus `bash -n` on all four shell entry points. `git diff --check` was clean for the reviewed package.
 - Committed: `5806e2f1` (`Add IG completeness rerun workflow`).
+
+### 2026-10-30 13:47 Codex → Code | Supervisor: Report working-draft snapshot and clean handoff
+Status: INFO
+
+- The independently compiled report source completes successfully and resolves to eight pages. The dated PDF was also rendered and visually checked; no clipping or overlapping content was found.
+- This is a working-draft snapshot, not final-paper approval. Outstanding items remain visible in the sources: five bibliography entries marked `VERIFY`, the red repository/final-hash and AI-use placeholders, one unresolved appendix reference (`tab:perseed`), and the dataset-acquisition confirmations listed in `03 Datasets and Preprocessing.md`.
+- The report sources, planning notes, dated earlier-version backups, dated PDF and dataset-source notes were kept separate from the experiment workflow commit so the continuation-critical scientific change remains independently auditable.
+- Committed: `4e3a94e5` (`Add final report working draft`).
