@@ -6,8 +6,10 @@ and the 13:30 ruling).
 Local, after the download sync; reads saved files only. Writes:
 - residuals.csv: median and 95th-percentile normalised completeness residuals of
   each arm at the saved 64 steps and at every rerun step count;
-- gmm_gate.csv: the GMM gate of every rerun (identity permutation, same model
-  state, identical hard assignment) and the descriptive latent/parameter differences;
+- gmm_gate.csv: the GMM gate of every rerun. The decision is gate v2
+  (gmm_gate_v2.json: identical pixel samples and IG targets per component; P18
+  Section 6.3 gate correction, D33); the v1 record (identity permutation, model
+  state, hard assignment, latent/parameter differences) is listed beside it;
 - controls.csv: for each step-count control, fair-scoring bin-level IG mSCF1 at
   K_bin and the Jaccard of the first K_bin IG bins, 128 steps against the saved
   64-step run and against the rerun 64-step run, and the rerun 64 against the saved
@@ -143,7 +145,9 @@ def decision_steps(rows):
         row = by_steps.get(steps)
         if row is None:
             return "pending"
-        if not row.get("gmm_gate_passed"):
+        if row.get("gmm_gate_passed") is None:
+            return f"gate v2 pending at {steps} steps"
+        if not row["gmm_gate_passed"]:
             return f"GMM gate failed at {steps} steps (stop and post)"
         if row["status"] == "valid":
             return steps
@@ -168,15 +172,22 @@ def summarise(project):
             missing.append(f"{section} s{seed} {arm} {steps} ({kind})")
             continue
         gate = load_json(root / "gmm_gate.json")
+        gate_v2 = (load_json(root / "gmm_gate_v2.json")
+                   if (root / "gmm_gate_v2.json").exists() else None)
         row = completeness_row(load_json(root / "attribution" / "summary.json"))
         if row["steps"] != steps:
             raise ValueError(f"step count mismatch in {root}")
         row.update(section=section, seed=seed, arm=arm, kind=kind, source="rerun",
-                   gmm_gate_passed=bool(gate["passed"]))
+                   gmm_gate_passed=None if gate_v2 is None else bool(gate_v2["passed"]))
         residuals.append(row)
         arms[(section, seed, arm, kind)].append(row)
         gates.append({"section": section, "seed": seed, "arm": arm, "steps": steps, "kind": kind,
-                      "passed": gate["passed"], "identity_permutation": gate["identity_permutation"],
+                      "gate_v2_passed": None if gate_v2 is None else gate_v2["passed"],
+                      "gate_v2_ig_targets_equal": None if gate_v2 is None else gate_v2["ig_targets_equal"],
+                      "gate_v2_pixels_equal": None if gate_v2 is None else all(
+                          entry["attribution_pixels_equal"] and entry["faithfulness_pixels_equal"]
+                          for entry in gate_v2["per_component"].values()),
+                      "v1_passed": gate["passed"], "identity_permutation": gate["identity_permutation"],
                       "model_state_equal": gate["model_state_equal"],
                       "hard_assignment_equal": gate["hard_assignment_equal"],
                       "alignment_max_posterior_diff": gate["alignment_max_posterior_diff"],

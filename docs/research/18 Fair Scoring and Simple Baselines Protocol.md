@@ -456,6 +456,19 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
 - **Roots (new; seed folders and checkpoints are only read):** `results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/` (failed arms), `results/experiments/ig_steps_control_20261030/<section>_seed1/<arm>/steps<N>/` (controls), each holding `attribution/` and the matched evaluation (`peak_evaluation_released_target/` for RCC without legacy at the released target, `peak_evaluation/` for GBM/CAC at the production K_bin with the legacy list); fair scoring under `results/diagnostics/fair_scoring_baselines/ig_steps_20261030/<scope>/<section>_seed<S>/<arm>/steps<N>/` (RCC bin level only, without legacy; GBM/CAC bin level and P1 with legacy).
 - **Downstream (13:30, answer 3):** Test S RCC UH0505_12 `uniform_mean` and BIC RCC UH0505_12 `uniform_mean` rerun with their unchanged evaluators into new roots. The local summarisers (RCC seed-1 decision, Test R Decisions 1–2, Test S, Test V seed means, Section 6.6 statistics, evidence tables) run unchanged on a new dated composite root, assembled by copying (never moving) the unchanged arms plus the reruns, with a manifest of source path and SHA-256 per file. If a provenance check refuses the composite, stop and post; no patching.
 - **Cluster:** GPU on `bigbatch` with the quarantine `--exclude` and without `--exclusive` (no timing from these runs enters the report; 13:30); CPU fair scoring on `batch`. Each `sbatch` needs Zayd's OK on its checklist.
+- **Partition note, 30 October 14:08 (decision log D52):** `bigbatch` was overloaded, so all 12 first-round tasks were moved to `batch` (RTX 3060) at submit time. The saved 64-step runs were on `bigbatch` (RTX 3090).
+
+**Gate correction after 78483 tasks 1/4/8 (30 October, supervisor rulings 14:46 and 14:54; Zayd's OK; written at about 15:00 SAST): the identity-permutation condition replaced by the direct sample/target check it stood for; the decision was made before any of these tasks was scored.**
+- **What happened:** tasks 1, 4 and 8 (RCC_UH0505_12 `central_only`, s2 at 128 steps and the s1 controls at 64 and 128) exited 5 at the gate. Only `identity_permutation` was false. The model state was equal, the hard assignment was equal, and the built-in alignment (1e-4) passed. On the RTX 3060, sklearn listed the components in a different order, and the alignment renumbered them.
+- **Why the condition was wrong:** it was added in the 13:23 plan as a proxy for "same seeded pixel sample". But the alignment runs before `choose_disjoint_samples` and reorders the GMM parameters, so the renumbering leaves the sample and the IG targets unchanged. The gate is about provenance, not scores. So this is a correction of a gate that tested the wrong thing, not tuning to an outcome.
+- **Evidence before the correction** (local, read only, 14:53; chat table): for 12/12 tasks of 78483, these are identical to the saved 64-step run per component: hard assignment, attribution pixel indices, faithfulness pixel indices (rebuilt from the saved labels with the script's sampling function; the rebuild was validated against the saved attribution indices) and IG target per pixel. The aligned component means and covariances differ by ≤ 1e-6 (max 9.5e-7). No task had been scored.
+- **Corrected gate (v2):** `model_state_equal` **and** `hard_assignment_equal` **and** the alignment check (exactly one permutation, posterior within 1e-4) **and**, per component, attribution and faithfulness pixel indices identical, the IG target identical, and the aligned component mean and covariance within 1e-6.
+  - It is written as `gmm_gate_v2.json` next to each output; `gmm_gate.json` (v1) is never overwritten.
+  - Fair scoring and the summariser read v2. Committed check: `scripts/check_ig_steps_gate.py`.
+- **Consequences:**
+  - tasks 4 and 8 get their missing matched evaluation as a CPU step on `batch`, with the unchanged Test R evaluator call; there is no GPU rerun of tasks 1, 4 or 8;
+  - task 1 stays "needs more steps" at 128;
+  - task 13 (256 steps) is submitted only after the v2 gate is committed, and its GPU job applies v2.
 
 ### 6.4 Test V: VAE segmentation vs a PCA segmentation (supervisor chat 17 October 12:42, Zayd-approved; predeclared before any output exists)
 
@@ -1302,6 +1315,35 @@ A test rebuilds the IG matched groups from these files.
               - **Decision** (`results/diagnostics/s3pl_cac_shuffle_control/decisions_20261017_local/`): **"mixed"**. Real − retrained shuffled-nonlocal: seed 1 mean +0.039, at least 0.02 in 4/8; seed 2 mean +0.040, 3/8. Descriptive values in chat 19:17.
           - **Gap noted, not improvised:** 21:42 point 1 also asked for a per-run `validate_spatial_window_cache.py` check before training. It is not in the committed script, and the validator only accepts the window and attention variants (not `central_only` or 3×3 `uniform_mean`), so adding it needs a code change. It was reported in the chat. Cache equivalence rests on investigation 10.
       - **Consequence:** the two evaluators' code hashes change. Existing GBM/CAC results stay valid as saved, but rerunning one of them now reports STALE (exit 3) by design. All A–G scoring is complete, so no rerun is planned.
+
+- **30 October, IG completeness reruns (Section 6.3 amendment "30 October: IG completeness reruns"):**
+  - **About 13:35 SAST:** amendment and Section 6.1 cross-reference written before any rerun job existed. Code and tests reviewed and committed by Codex as `5806e2f1` (chat 13:46). HEAD at upload was `dcae5f77`; it adds only chat and report commits on top, with no change under `code/msi`.
+  - **13:52 SAST (11:52 UTC), upload** (local → cluster, documented source upload from `code/msi`, `-n` first, clean committed HEAD `dcae5f77`): 9 files. These were the 6 new files (`scripts/summarise_ig_steps.py`, `slurm_jobs/{ig_steps_sections,run_ig_steps_rerun,run_ig_steps_fair_scoring,submit_ig_steps}.sh`, `src/spatial_msipl/tests/test_ig_steps.py`), the changed `slurm_jobs/run_fair_scoring_tests.sh`, `scripts/plot_s3pl_seed_distributions.py` (committed in `e9893505`, not previously uploaded) and the untracked editor file `baselines/s3pl/.pym2aia_prefs.xml` (timestamp only). `sha256sum` on the cluster matches the HEAD blobs for 14/14 files: the 8 tracked uploaded files plus the 6 dependencies the jobs call (`test_r_sections.sh`, `run_spatial_msipl_gmm_integrated_gradients.py`, `evaluate_spatial_msipl_attributed_peaks.py`, `evaluate_fair_scoring_baselines.py`, `gate_d_helpers.py`, `attribution.py`).
+  - **13:54 SAST (11:54 UTC), cluster test job 78479** (5a; Zayd's OK in the session): `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh` on `batch` (2 CPUs, 8G, 30 min). Gate: `test_ig_steps` runs 15/15 (none skipped) and every module passes.
+  - **78479 COMPLETED 0:0** in 5:01 on mscluster129 (one `sacct` check, 14:01 SAST). `s3pl_env` Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0. Main suite: 274 tests OK, 3 skipped, the same local-artifact skips as before (`test_runtime_v2` ×2, `test_s3pl_shuffle_control` ×1). `test_ig_steps`: 15/15 ran and passed. S3PL suites: 25 and 4 tests OK. Empty `.err`. **Gate passed.** Records: `results/validation/fair_scoring_env_tests/78479_*`.
+  - **14:03 SAST (12:03 UTC), GPU array 78481** (Zayd's OK in the session; checklist in chat 14:03): `bash slurm_jobs/submit_ig_steps.sh ig 0-11` was run on `bigbatch` with `%4`, not exclusive, and `--exclude` set to the 16-node quarantine. Tasks 0–3 are the failed arms at 128 steps, 4–7 the controls at 64 steps and 8–11 the controls at 128 steps. All 12 tasks were pending (Resources) at submission. The job ID is logged in `results/experiments/ig_steps_rerun_20261030/provenance/slurm_job_ids.txt`.
+  - **14:09 SAST (12:09 UTC), moved to `batch`** (supervisor ruling 14:08, decision log D52; Zayd's OK in the session). `bigbatch` was overloaded, with all 12 tasks of 78481 pending (Priority).
+    - `squeue`/`sacct` first confirmed that all 12 were still pending and none had started. Then `scancel 78481`, which `sacct` shows as CANCELLED.
+    - No task root existed afterwards.
+    - Resubmitted as **78483** with `SBATCH_PARTITION=batch bash slurm_jobs/submit_ig_steps.sh ig 0-11`. The script was not edited. Settings: `%4`, the same 16-node quarantine `--exclude`, and the CUDA warm-up in every task.
+    - `--mem=24G` is unchanged, because every `batch` node has 30,000 MB.
+    - All 12 tasks of every 64-vs-128 control pair now run on `batch` (RTX 3060). The saved 64-step runs were on `bigbatch` (RTX 3090, i9-10940X), so the saved-vs-rerun comparisons cross hardware, as ruled. If the GMM gate fails because of the CPU model, stop and post; no task is moved back.
+  - **78483 outcome** (one `sacct` check, 14:40 SAST): 9/12 COMPLETED 0:0. The completed tasks are 0, 2, 3, 5, 6, 7, 9, 10 and 11, with elapsed times from 0:13 to 14:35. **Tasks 1, 4 and 8 FAILED with exit 5 (GMM gate).** All three are RCC_UH0505_12 `central_only` (s2 at 128 steps; s1 controls at 64 and 128), on mscluster134 (RTX 3060). Tasks 7 and 10 on the same node passed.
+    - Per the Slurm `.out` gate line: `model_state_equal` true, `hard_assignment_equal` true, alignment succeeded (the IG script did not exit 5), **`identity_permutation` false**.
+    - Matched evaluation did not run for these three; outputs are kept as written.
+    - **Item stopped and posted** (chat 14:41). No retry and no gate change without a ruling.
+  - **14:52 SAST, pull** (cluster → local, documented artifact pull, `-n` first; supervisor ruling 14:46 Q4; Zayd's OK). Before the pull, there were no uncommitted edits under `results/`. **229 new files:**
+    - 150 under `results/experiments/ig_steps_control_20261030/`;
+    - 76 under `results/experiments/ig_steps_rerun_20261030/`, including `provenance/`;
+    - 3 under `results/validation/fair_scoring_env_tests/78479_*`.
+    - No existing or tracked file changed. `build_current_evidence_tables.py` was not rerun, because none of its inputs changed.
+  - **About 14:53 SAST, direct gate check (local, read only; ruling 14:46 step 1):** all 12 tasks of 78483 were compared with their saved 64-step runs, component by component. For **12/12**:
+    - the hard assignment is equal;
+    - the attribution pixel indices are equal;
+    - the faithfulness pixel indices are equal (rebuilt from the saved labels, with the rebuild validated against the saved attribution indices);
+    - the IG target per pixel is equal;
+    - the component means and covariances after alignment are within 1e-6 (max 9.5e-7).
+    - Tasks 1, 4 and 8 included. Table in chat 14:53. Script: scratchpad only (`direct_gate_check.py`), not committed.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).

@@ -161,6 +161,7 @@ Times: the cluster logs in UTC; Zayd is on SAST (UTC+2). Quote both. **Take date
 
 ## Supervisor and the supervisor chat
 
+- **Decision log (30 Oct):** `docs/supervision/decision_log.md` is the single list of standing decisions (D01 onward). Check it before proposing anything that touches a listed decision; change a decision only through a new superseding row.
 - **Append-only (17 Oct, after Codex review):** never edit a posted entry, including its Status line. Close an item by posting a new entry whose first bullet is `Resolves: <date time> <author> entry`. Open items are OPEN entries without a later `Resolves:` entry. Entries before 17 Oct 09:28 may show edited status lines from the old practice; leave them as they are.
 
 A separate Claude session (Cowork) acts as Zayd's **research supervisor**. It reviews the plans, code, results and wording. You communicate with it through **`docs/supervision/supervisor_chat.md`**, which is tracked in git. Read that file's "How this works" section, then follow it.

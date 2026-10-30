@@ -6,6 +6,7 @@
 # at the seed-1 released-target budget (as run_test_r_fair_scoring.sh); GBM/CAC
 # bin level and the approved partitions, with the legacy list.
 #   bash slurm_jobs/submit_ig_steps.sh fair INDICES   (each submission needs Zayd's OK)
+# The GMM gate read is v2 (gmm_gate_v2.json; P18 Section 6.3 gate correction, D33).
 # A task whose IG is not valid or whose matched evaluation is missing is skipped
 # ("not done at this step count"). Exit 3: output already exists (never overwritten).
 # CPU only. Scores go to files; the Slurm .out holds status lines only.
@@ -53,7 +54,7 @@ export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 MPLBACKEND=Agg
 PYTHON="$HOME/miniconda3/envs/s3pl_env/bin/python"
 echo "=== $DATASET $ARM seed $SEED, $STEPS steps ($TASK_KIND) fair scoring on ${SLURMD_NODENAME:-unknown} (job ${SLURM_ARRAY_JOB_ID}_${TASK_ID}) ==="
 
-if ! grep -q '"passed": true' "$ROOT/gmm_gate.json" 2>/dev/null \
+if ! grep -q '"passed": true' "$ROOT/gmm_gate_v2.json" 2>/dev/null \
         || ! grep -q '"status": "valid"' "$ROOT/attribution/summary.json" 2>/dev/null \
         || ! grep -q '"status": "complete"' "$SAVED/summary.json" 2>/dev/null; then
     echo "not done (GMM gate, IG validity or matched evaluation missing); not scored"

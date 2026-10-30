@@ -9,12 +9,20 @@ completeness reruns"; supervisor chat 2026-10-30 12:58 item 1 and 13:30 ruling).
    array jobs refuse an existing output (exit 3) before doing anything.
 2. The saved 64-step summaries: the four rerun arms fail completeness, the four
    controls pass, and every saved checkpoint path equals the task table's.
-3. summarise_ig_steps.py on a synthetic tree: the decision step count, the GMM
-   gate, the control comparisons (delta mSCF1, Jaccard, reproduction flag) and
-   the refusal of an existing output.
+3. summarise_ig_steps.py on a synthetic tree: the decision step count (decided
+   by gate v2), the control comparisons (delta mSCF1, Jaccard, reproduction flag)
+   and the refusal of an existing output.
+4. Gate v2 (P18 Section 6.3 gate correction after 78483 tasks 1/4/8; D33):
+   check_ig_steps_gate.py passes a renumbered-but-identical sample, fails on a
+   changed pixel, target, assignment, parameter or missing alignment, refuses an
+   existing output, and its sampling function is the IG script's verbatim; the
+   GPU job decides on v2 (v1 is a record only), the CPU gate job runs the Test R
+   evaluation call and refuses an existing v2, and fair scoring reads v2. On the
+   pulled 78483 outputs (when present) v2 passes 12/12.
 Dependency-free apart from bash and NumPy.
 """
 
+import ast
 import json
 import os
 import re
@@ -33,6 +41,7 @@ SCRIPTS = ROOT / "scripts"
 BASH = shutil.which("bash")
 sys.path.insert(0, str(SCRIPTS))
 import summarise_ig_steps as summary_module  # noqa: E402
+import check_ig_steps_gate as gate_module  # noqa: E402
 
 
 def bash_path(path):
@@ -152,6 +161,7 @@ class JobScriptTests(unittest.TestCase):
         self.assertNotIn("#SBATCH --exclusive", rerun)
         self.assertIn("#SBATCH --partition=bigbatch", rerun)
         self.assertIn("#SBATCH --partition=batch", (JOBS / "run_ig_steps_fair_scoring.sh").read_text())
+        self.assertIn("#SBATCH --partition=batch", (JOBS / "run_ig_steps_gate_v2.sh").read_text())
         submitter = (JOBS / "submit_ig_steps.sh").read_text()
         self.assertIn('sbatch_options+=(--exclude="$exclude")', submitter)
         self.assertIn("gpu_cuda_quarantine.txt", submitter)
@@ -173,6 +183,39 @@ class JobScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 3, result.stderr)
         self.assertIn("never overwritten", result.stderr)
         self.assertEqual(sorted(p.name for p in root.iterdir()), ["attribution"])
+
+    def test_gpu_job_decides_on_gate_v2_and_keeps_v1_as_a_record(self):
+        rerun = (JOBS / "run_ig_steps_rerun.sh").read_text()
+        self.assertNotIn('sys.exit(0 if record["passed"] else 5)', rerun)
+        self.assertIn('[ -e "$ROOT/gmm_gate_v2.json" ]', rerun)
+        call = block(rerun, "scripts/check_ig_steps_gate.py", "exit 5; }")
+        self.assertIn('--output "$ROOT/gmm_gate_v2.json"', call)
+        self.assertLess(rerun.index("scripts/check_ig_steps_gate.py"),
+                        rerun.index("scripts/evaluate_spatial_msipl_attributed_peaks.py"))
+        fair = (JOBS / "run_ig_steps_fair_scoring.sh").read_text()
+        self.assertIn('"$ROOT/gmm_gate_v2.json"', fair)
+        self.assertNotIn('"$ROOT/gmm_gate.json"', fair)
+
+    def test_gate_job_runs_the_test_r_evaluation_call_after_v2(self):
+        test_r = block((JOBS / "run_test_r_campaign.sh").read_text(),
+                       "scripts/evaluate_spatial_msipl_attributed_peaks.py", "--chunk-size 1024")
+        text = (JOBS / "run_ig_steps_gate_v2.sh").read_text()
+        evaluation = block(text, "scripts/evaluate_spatial_msipl_attributed_peaks.py", "--chunk-size 1024")
+        self.assertEqual(evaluation, test_r.replace('"$RESULT_ROOT/attribution"', '"$ROOT/attribution"'))
+        self.assertLess(text.index("scripts/check_ig_steps_gate.py"),
+                        text.index("scripts/evaluate_spatial_msipl_attributed_peaks.py"))
+        self.assertNotIn("run_spatial_msipl_gmm_integrated_gradients", text)
+        submitter = (JOBS / "submit_ig_steps.sh").read_text()
+        self.assertIn("runner=slurm_jobs/run_ig_steps_gate_v2.sh", submitter)
+
+    def test_gate_job_refuses_an_existing_v2(self):
+        section, seed, arm, steps, kind = summary_module.TASKS[4]
+        root = summary_module.result_root(self.home / "msi", section, seed, arm, steps, kind)
+        root.mkdir(parents=True)
+        (root / "gmm_gate_v2.json").write_text("{}")
+        result = self.run_job("run_ig_steps_gate_v2.sh", 4)
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual((root / "gmm_gate_v2.json").read_text(), "{}")
 
     def test_fair_job_refuses_an_existing_output(self):
         section, seed, arm, steps, kind = summary_module.TASKS[7]
@@ -251,10 +294,15 @@ class SummariserTests(unittest.TestCase):
                     fair_output(summary_module.saved_fair_bin_level(self.project, section, seed, arm),
                                 4, 0.40, [0, 1, 2, 3, 9])
 
-    def add_rerun(self, index, passed=True, gate_passed=True, fair=None):
+    def add_rerun(self, index, passed=True, gate_passed=True, fair=None, identity=True, v2=True):
         section, seed, arm, steps, kind = summary_module.TASKS[index]
         root = summary_module.result_root(self.project, section, seed, arm, steps, kind)
-        write_json(root / "gmm_gate.json", gate(gate_passed))
+        write_json(root / "gmm_gate.json", gate(gate_passed and identity))
+        if v2:
+            write_json(root / "gmm_gate_v2.json", {
+                "passed": gate_passed, "ig_targets_equal": gate_passed,
+                "per_component": {"0": {"attribution_pixels_equal": True,
+                                        "faithfulness_pixels_equal": True}}})
         write_json(root / "attribution" / "summary.json", attribution_summary(steps, passed, 0.1))
         if fair is not None:
             fair_output(summary_module.rerun_fair_bin_level(self.project, section, seed, arm, steps),
@@ -272,6 +320,13 @@ class SummariserTests(unittest.TestCase):
         self.assertEqual(decisions["RCC_UH0505_12 s2 central_only"], 256)
         self.assertEqual(decisions["RCC_UH9912_01 s3 uniform_mean"], "not done")
         self.assertTrue(decisions["GBM39_2 s3 uniform_mean"].startswith("GMM gate failed"))
+
+    def test_v2_decides_over_a_failed_v1_identity_condition(self):
+        self.add_rerun(0, passed=True, identity=False)      # v1 failed on identity only
+        self.add_rerun(1, passed=True, v2=False)            # v2 not yet written
+        decisions = summary_module.summarise(self.project)["decision_steps"]
+        self.assertEqual(decisions["RCC_UH0505_12 s1 uniform_mean"], 128)
+        self.assertEqual(decisions["RCC_UH0505_12 s2 central_only"], "gate v2 pending at 128 steps")
 
     def test_pending_when_a_step_count_has_no_output(self):
         self.add_rerun(1, passed=False)
@@ -314,6 +369,111 @@ class SummariserTests(unittest.TestCase):
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 3, result.stderr)
 
+
+def make_run(folder, labels, pixels, means, covariances, sha="m", steps=64, alignment=None,
+             n_faith=2, seed=701):
+    """A synthetic attribution folder; `pixels` maps component -> attribution pixels."""
+    folder.mkdir(parents=True, exist_ok=True)
+    diagnostics = [{"component": int(c), "pixel_index": int(i)}
+                   for c, indices in pixels.items() for i in indices]
+    summary = {"status": "valid", "model_state_sha256": sha,
+               "integrated_gradients": {
+                   "steps": steps, "per_pixel_diagnostics": diagnostics,
+                   "attribution_pixels_per_component": len(next(iter(pixels.values()))),
+                   "selection_seed": seed},
+               "faithfulness": {"pixels_per_component": n_faith}}
+    if alignment is not None:
+        summary["gmm_label_alignment"] = alignment
+    write_json(folder / "summary.json", summary)
+    np.savez(folder / "coordinates_and_gmm.npz", component=np.asarray(labels))
+    np.savez(folder / "gmm_parameters.npz",
+             component_means=np.asarray(means, dtype=np.float64),
+             covariances=np.asarray(covariances, dtype=np.float64),
+             mixture_weights=np.array([0.5, 0.5]), scaler_mean=np.zeros(2), scaler_scale=np.ones(2))
+
+
+class GateV2Tests(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.labels = np.array([0] * 6 + [1] * 6)
+        selected = gate_module.choose_disjoint_samples(self.labels, 2, 2, 701)
+        self.pixels = {c: s["attribution"].tolist() for c, s in selected.items()}
+        self.means = np.array([[0.0, 1.0], [1.0, 0.0]])
+        self.covariances = np.stack([np.eye(2), 2 * np.eye(2)])
+        make_run(self.root / "saved", self.labels, self.pixels, self.means, self.covariances)
+
+    def new(self, **changes):
+        arguments = dict(labels=self.labels, pixels=self.pixels, means=self.means,
+                         covariances=self.covariances, steps=128,
+                         alignment={"enabled": True, "identity": False, "max_posterior_diff": 1e-6})
+        arguments.update(changes)
+        shutil.rmtree(self.root / "new", ignore_errors=True)
+        make_run(self.root / "new", **arguments)
+        return gate_module.gate(self.root / "new", self.root / "saved", 128)
+
+    def test_identical_sample_passes_although_the_components_were_renumbered(self):
+        record = self.new()
+        self.assertTrue(record["passed"], record)
+        self.assertFalse(record["identity_permutation_recorded_only"])
+
+    def test_changed_attribution_pixel_fails(self):
+        pixels = {c: list(v) for c, v in self.pixels.items()}
+        pixels[0][0] = next(i for i in range(6) if i not in pixels[0])
+        self.assertFalse(self.new(pixels=pixels)["passed"])
+
+    def test_changed_target_assignment_or_parameters_fail(self):
+        swapped = {1 - c: v for c, v in self.pixels.items()}
+        self.assertFalse(self.new(pixels=swapped)["passed"])
+        labels = self.labels.copy()
+        labels[[0, 11]] = labels[[11, 0]]
+        self.assertFalse(self.new(labels=labels)["passed"])
+        self.assertFalse(self.new(means=self.means + 2e-6)["passed"])
+        self.assertTrue(self.new(means=self.means + 5e-7)["passed"])
+        self.assertFalse(self.new(covariances=self.covariances + 2e-6)["passed"])
+
+    def test_missing_or_loose_alignment_model_change_or_wrong_steps_fail(self):
+        self.assertFalse(self.new(alignment=None)["passed"])
+        self.assertFalse(self.new(alignment={"enabled": True, "identity": True,
+                                             "max_posterior_diff": 2e-4})["passed"])
+        self.assertFalse(self.new(sha="other")["passed"])
+        self.assertFalse(self.new(steps=256)["passed"])
+
+    def test_failure_exits_5_and_an_existing_output_is_refused(self):
+        self.new(sha="other")
+        output = self.root / "gmm_gate_v2.json"
+        command = [sys.executable, str(SCRIPTS / "check_ig_steps_gate.py"),
+                   "--new-attribution", str(self.root / "new"),
+                   "--saved-attribution", str(self.root / "saved"),
+                   "--steps", "128", "--output", str(output)]
+        self.assertEqual(subprocess.run(command, capture_output=True).returncode, 5)
+        written = output.read_text()
+        self.assertEqual(subprocess.run(command, capture_output=True).returncode, 3)
+        self.assertEqual(output.read_text(), written)
+
+    def test_sampling_function_is_the_ig_scripts_verbatim(self):
+        def function_node(path):
+            tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+            node = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                        and n.name == "choose_disjoint_samples")
+            return ast.dump(node)
+        self.assertEqual(function_node(SCRIPTS / "check_ig_steps_gate.py"),
+                         function_node(SCRIPTS / "run_spatial_msipl_gmm_integrated_gradients.py"))
+
+    def test_pulled_78483_outputs_pass_gate_v2(self):
+        """Read-only check of the pulled outputs (explicit paths; skipped if not synced)."""
+        checked = 0
+        for section, seed, arm, steps, kind in summary_module.TASKS[:12]:
+            new = summary_module.result_root(ROOT, section, seed, arm, steps, kind) / "attribution"
+            saved = summary_module.saved_attribution(ROOT, section, seed, arm)
+            if not (new / "summary.json").exists() or not (saved / "summary.json").exists():
+                continue
+            record = gate_module.gate(new, saved, steps)
+            self.assertTrue(record["passed"], (section, seed, arm, steps))
+            checked += 1
+        if checked == 0:
+            self.skipTest("78483 outputs not synced")
+        self.assertEqual(checked, 12)
 
 if __name__ == "__main__":
     unittest.main()

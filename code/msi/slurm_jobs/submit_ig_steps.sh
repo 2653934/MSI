@@ -6,13 +6,16 @@
 #       GPU (bigbatch, quarantine excluded, no --exclusive): IG + matched evaluation.
 #       0-11 first (128-step reruns, 64- and 128-step controls); 12-15 (256 steps)
 #       only for arms that fail at 128.
+#   bash slurm_jobs/submit_ig_steps.sh gate INDICES [--concurrency N]
+#       CPU (batch): GMM gate v2 for rows whose GPU task already ran, plus the missing
+#       matched evaluation where v2 passes (P18 Section 6.3 gate correction; D33).
 #   bash slurm_jobs/submit_ig_steps.sh fair INDICES [--concurrency N] [--after JOBID]
-#       CPU (batch): fair scoring of the same rows.
+#       CPU (batch): fair scoring of the same rows (reads gmm_gate_v2.json).
 # INDICES is a list such as "0-11" or "12,14". Refuses any row whose output exists.
 set -euo pipefail
 cd "$HOME/msi"
-stage="${1:?Usage: $0 ig|fair INDICES [options]}"
-indices="${2:?Usage: $0 ig|fair INDICES [options]}"
+stage="${1:?Usage: $0 ig|gate|fair INDICES [options]}"
+indices="${2:?Usage: $0 ig|gate|fair INDICES [options]}"
 shift 2
 source slurm_jobs/ig_steps_sections.sh
 concurrency=""
@@ -36,6 +39,10 @@ case "$stage" in
                    slurm_jobs/gpu_cuda_quarantine.txt | sort -u | paste -sd, -)"
         [ -n "$exclude" ] || { echo "CUDA quarantine list is empty; inspect first." >&2; exit 1; }
         sbatch_options+=(--exclude="$exclude") ;;
+    gate)
+        [ -z "$after" ] || { echo "gate takes no dependency" >&2; exit 2; }
+        runner=slurm_jobs/run_ig_steps_gate_v2.sh
+        concurrency="${concurrency:-4}" ;;
     fair)
         runner=slurm_jobs/run_ig_steps_fair_scoring.sh
         concurrency="${concurrency:-4}"
@@ -52,6 +59,9 @@ for index in $expanded; do
     if [ "$stage" = ig ]; then
         [ ! -e "$root/attribution" ] || { echo "Task $index output exists: $root" >&2; exit 3; }
         mkdir -p "$(dirname "$root")"
+    elif [ "$stage" = gate ]; then
+        [ -f "$root/attribution/summary.json" ] || { echo "Task $index has no IG output: $root" >&2; exit 1; }
+        [ ! -e "$root/gmm_gate_v2.json" ] || { echo "Task $index gate v2 exists: $root" >&2; exit 3; }
     else
         for scope in bin_level_only with_approved_partitions; do
             output="$(ig_steps_fair_output "$scope" "$TASK_SECTION" "$TASK_SEED" "$TASK_ARM" "$TASK_STEPS")"

@@ -14,6 +14,9 @@
 # list (as run_test_r_campaign.sh).
 # Exit codes: 3 output already exists (never overwritten); 4 IG completeness fails
 # at this step count (no evaluation); 5 GMM gate failed (stop and post).
+# Gate correction (P18 Section 6.3, after 78483 tasks 1/4/8; D33): gmm_gate.json (v1)
+# is kept as a record, but the gate is gmm_gate_v2.json from check_ig_steps_gate.py
+# (identical pixel samples and IG targets per component; component order recorded only).
 # No --exclusive: no timing from these runs enters the report (13:30 ruling).
 #SBATCH --job-name=ig-steps
 #SBATCH --partition=bigbatch
@@ -41,7 +44,7 @@ ROOT="$(ig_steps_result_root "$DATASET" "$SEED" "$ARM" "$STEPS" "$TASK_KIND")"
 SAVED="$(ig_steps_saved_attribution "$DATASET" "$SEED" "$ARM")"
 CHECKPOINT="$(ig_steps_checkpoint "$DATASET" "$SEED" "$ARM")"
 # Never overwrite: any earlier output of this task stops it before anything runs.
-if [ -e "$ROOT/attribution" ] || [ -e "$ROOT/gmm_gate.json" ]; then
+if [ -e "$ROOT/attribution" ] || [ -e "$ROOT/gmm_gate.json" ] || [ -e "$ROOT/gmm_gate_v2.json" ]; then
     echo "Output already exists: $ROOT (move it aside; never overwritten)" >&2; exit 3
 fi
 for required in "$INPUT" "$CHECKPOINT" "$SAVED/summary.json" "$SAVED/coordinates_and_gmm.npz" \
@@ -139,8 +142,9 @@ elif [ "$status" -ne 0 ]; then
     echo "IG stopped with exit $status (see attribution_stdout.log)" >&2; exit 1
 fi
 
-# GMM gate, part 2: identity permutation, same model state and step count; the
-# latent and GMM parameter differences are descriptive.
+# GMM gate v1 record (identity permutation, same model state and step count; the
+# latent and GMM parameter differences are descriptive). Record only since the gate
+# correction; the decision is the v2 check below.
 "$PYTHON" - "$ROOT/attribution" "$SAVED" "$STEPS" "$ROOT/gmm_gate.json" <<'PY'
 import json, sys
 from pathlib import Path
@@ -177,8 +181,10 @@ record["passed"] = bool(record["identity_permutation"] and record["model_state_e
 Path(output).write_text(json.dumps(record, indent=2), encoding="utf-8")
 print(json.dumps({key: record[key] for key in ("passed", "identity_permutation",
                   "model_state_equal", "hard_assignment_equal", "new_status")}), flush=True)
-sys.exit(0 if record["passed"] else 5)
 PY
+"$PYTHON" -u scripts/check_ig_steps_gate.py --new-attribution "$ROOT/attribution" \
+    --saved-attribution "$SAVED" --steps "$STEPS" --output "$ROOT/gmm_gate_v2.json" \
+    || { echo "GMM gate v2 failed (stop and post)" >&2; exit 5; }
 grep -q '"status": "valid"' "$ROOT/attribution/summary.json" \
     || { echo "IG completeness fails at $STEPS steps: not done at this step count; no evaluation" >&2; exit 4; }
 
