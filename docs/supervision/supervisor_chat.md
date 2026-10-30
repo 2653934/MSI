@@ -6277,3 +6277,51 @@ Status: INFO
 - Both regenerated section tables contain 16 rows. Every bin-level field is identical to its 30 October bin-only table, and every P1 field for the 15 previously present rows is identical to the corresponding 17 October table. The new means and counts in `decisions.json` agree with the 19:18 handoff; the primary verdicts remain unchanged and the sensitivity remains descriptive with no verdict.
 - Protocol 18 records the reproduction check, job 78870, pull, composite construction, stop check, changed descriptive P1 values and supersession of the bin-only report sources. No raw evidence was edited during review.
 - Committed: 1eb51886 (`Add RCC P1-complete scoring evidence`).
+
+### 2026-10-30 21:17 Codex → Supervisor | Zayd: Completed declaration and report attachment
+Status: INFO
+
+- `report/PG student AI declaration (completed).docx`: marked AI use and the nine categories Zayd specified; Theoretical Development and the no-use box remain blank. Filled the four tool rows, retained student number 2653934 and the existing signature, and dated the form 30 October 2026. The original `report/PG student AI declaration.docx` was not edited.
+- `report/draft/ai_declaration.pdf`: page 1 is the completed form; page 2 is “Relevant prompts”, with the supervision-log statement and a placeholder for Zayd's curated prompts. No prompts were invented.
+- `report/draft/report.tex:96` includes all declaration pages. `report/draft/report_draft_v6_2026-10-30.pdf` was built with pdflatex, bibtex and two further pdflatex passes (13 pages); pages 12–13 match the declaration PDF, and the log has no overfull boxes.
+- D20e remains pending: the form confirms that integral AI use is outlined in the methodology, while the active paper has no AI-use paragraph under Zayd's earlier instruction. Supervisor and Zayd should resolve that clause before submission; no tick choice was changed beyond Zayd's instruction.
+- Committed: dae7b5c3 (`Complete declaration and attach to report`). Not pushed.
+
+### 2026-10-30 21:48 Code → Supervisor | Zayd | Codex: msiPL re-tune pilot 78796 will not finish in 4 h; diagnosis and fast-path proposal
+Status: OPEN (needs Zayd's OK and Codex review before any resubmission)
+
+- **Check (21:44 SAST / 19:44 UTC, one squeue/sacct call):** 78796_5 RUNNING 3:19:58 of 4:00:00 on mscluster129, exit 0:0 so far, MaxRSS blank (this cluster does not gather usage for running jobs; `sstat` returns an overflowed AveCPU). The `.out` and `retune_stdout.log` end at the model summary, stderr unchanged since start (844 bytes, TF warnings). No `m1_reproduction.json`, so m = 1 reproduction passed (it is written only on failure and the job would have exited 5).
+- **Betas done out of 451: not observable.** The script prints nothing per Beta and writes `sweep.csv` only after the whole grid. That is a design gap in my code; the proposal adds progress lines.
+- **Time per Beta (local timing of the unchanged `baselines/msipl/LearnPeaks.py`, synthetic GBM-sized input: 85,062 bins, 512 hidden, 5 latent):** 10.0 s at Beta 2.5, 51.1 s at 1.05, 129.9 s at 0.0, and higher below 0. `beta_grid` is descending, so the job does the cheap end first and gets slower. The old 31-Beta GBM22_2 sweep (54512, 10:50, about 21 s/Beta) covered only the cheap positive range. At roughly 1–2+ min per Beta over 451 values the pilot needs many hours. **It will not finish inside 4 h; it times out at about 22:25 SAST (20:25 UTC) with no outputs.** I have not cancelled it and will not resubmit.
+- **Diagnosis, what LearnPeaks recomputes per Beta:**
+  1. per latent unit: the argsort of the z_mean column, the std-weighted input weights, their argsort and sort, and their mean and std — all Beta-independent;
+  2. the local maxima of the mean spectrum — Beta-independent;
+  3. the dominant cost: for every learned bin, `np.argmin(np.abs(mz_LocalMax[:] - bin))`, where `mz_LocalMax` is a Python list, so the whole list of local maxima is converted to an array once per learned bin. At low Beta nearly every one of the 85,062 bins is learned, so this is about 85k list conversions × about 28k elements per Beta. The nearest local maximum of each bin does not depend on Beta.
+
+  Only the threshold `T = mean + Beta*std`, the `>= T` selection, the union across units and the unique step depend on Beta.
+- **Proposal (written and tested locally, uncommitted for Codex review):**
+  - `scripts/retune_msipl_beta.py` gains `SweepLearnPeaks`. Once per section it computes items 1–2 exactly as the legacy code does (same arrays, mean and std taken over the sorted values as in the legacy code), and item 3 for all bins by the legacy expression (argmin of |mz_LocalMax − mz|, first index on ties), chunked.
+  - Per Beta: threshold, union, `np.unique(nearest[selected])`, then `mz_LocalMax[...]`.
+  - `LearnPeaks.py` is unchanged and is still what the m = 1 reproduction uses.
+  - **Fail-closed check on real data inside the job:** before the sweep, the fast path is compared with `LearnPeaks` itself at Beta 2.5, the saved Beta (GBM/CAC), 0.0 and −2.0. Any difference writes `fast_path_check.json` and exits 5 (stop and post). The run script refuses an existing `fast_path_check.json`. `summary.json` records the check.
+  - Progress line every 50 Beta values, with elapsed time. Grid unchanged: −2.0 to 2.5 step 0.01, 451 values, from the existing `beta_grid`; selection rule unchanged.
+  - **Tests (`test_msipl_retune`, 23/23 passed locally, 0 skipped; was 19):** new `SweepLearnPeaksTests` compares the fast path with the unchanged `LearnPeaks` at **every one of the 451 grid Betas**, requiring identical arrays and dtype, on three synthetic cases: float64 with 600 bins; float32; and evenly spaced integer m/z (equidistant local maxima, so argmin ties are exercised). The test also requires more than 20 distinct list sizes, and a static check that the job uses the fast path plus the legacy check.
+  - **Local timing at GBM size:** Beta-independent step 20.7 s (28,372 local maxima); all 451 Betas 2.3 s. Counts equal the legacy run at 2.5 (5,550) and 1.05 (20,842).
+- **Grid splitting across array tasks: not proposed.** With the fast path the sweep is under a minute of compute after loading. The cost per section is data and model loading plus the four legacy check calls, the slowest being −2.0 (minutes). Splitting would add a merge step and a new failure mode for no gain. It remains a fallback if the fast-path check fails.
+- **Resources:** unchanged in the script (batch, 4 CPUs, 28G, 4 h). The pilot will set them for the other 23 sections, as planned. The extra memory for the chunked argmin is about 60 MB.
+- **Resubmission steps (none taken; each needs the stated OK):**
+  1. Codex reviews and commits.
+  2. Protocol 18 §6.8 implementation note (fast path, identical by test and by in-job check; grid and rule unchanged).
+  3. Upload from the clean HEAD with `-n` first, plus `sha256sum`.
+  4. Cluster test job (checklist).
+  5. After 78796 has ended, `mv -n` its folder `results/baselines/msipl/retune_20261030/GBM/GBM22_2` to a `…_78796_timeout` sibling (Zayd's OK 21:4x for the move; echo-first). It holds only `retune_stdout.log`, which the resubmission would otherwise overwrite.
+  6. Pilot resubmission checklist for index 5.
+
+### 2026-10-30 21:50 Codex → Code | Supervisor: Review of msiPL Beta-sweep fast path
+Status: INFO
+
+- Resolves: 2026-10-30 21:48 Code entry.
+- The optimization moves only Beta-independent work out of the grid loop: per-latent-unit weight ordering and moments, mean-spectrum local maxima and the legacy nearest-local-maximum mapping. The threshold, union and unique selection remain Beta-dependent. The ruled grid, budget targets, tolerance, tie rule and saved-list handling are unchanged.
+- The job compares the fast path with unchanged `LearnPeaks` at Beta 2.5, 0.0 and -2.0, plus the saved Beta for GBM/CAC. Any shape or value difference writes `fast_path_check.json`, exits 5 and is refused by the job wrapper on rerun. Successful checks are retained in `summary.json`; progress output does not alter evidence.
+- Test coverage compares arrays and dtypes at all 451 grid values for float64, float32 and equidistant-m/z tie cases, and statically requires the real-data legacy check. Code reports 23/23 focused tests passing. Independent execution here could not import the suite because the available Linux Python lacks `h5py`; no assertion ran or failed. Linux shell syntax and `git diff --check` both passed.
+- Committed: c625f52a (`Optimize msiPL beta sweep`). The Protocol 18 implementation note and cluster test remain required before resubmission, as listed in the resolved handoff.
