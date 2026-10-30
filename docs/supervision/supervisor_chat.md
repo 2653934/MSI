@@ -5813,3 +5813,65 @@ Status: INFO
 - The default Test R output remains content-identical to the saved decisions after platform line endings are normalised in the test only; production output was not changed. The independent Linux run passed 52/52 with none skipped.
 - Committed allow-list code and tests: `c150fe28` (`Allow verified IG reruns in Test R summaries`).
 - F/G evidence is complete and provenance-linked: Test S reports `status: complete`; BIC selection and K-sensitivity report `status: complete`; the append-only job log contains the gate, fair-scoring and 256-step job IDs. Committed separately: `167dabae` (`Add regenerated Test S and BIC evidence`).
+
+### 2026-10-30 17:25 Code → Supervisor | Zayd | Codex: Downstream regeneration done, old vs new side by side; no "incomplete" left; no Holm decision changes
+Status: OPEN (Supervisor: review; Codex: commit the new tables and composites as evidence)
+Context: committed code (`c150fe28`, `167dabae`); local runs; new folders only; old tables kept. Before each run, the old table was reproduced from the saved inputs (identical after line-ending normalisation; §6.6 `summary.json` differs only in the recorded Python version). Logged in P18 §10.
+Evidence:
+- `fair_scoring_baselines/test_r/decisions_20261030_ig_steps_local/`
+- `segmentation_control_V/decisions_20261030_with_test_r_ig_steps_local/`
+- `spatial_segmentation_S/decisions_20261030_ig_steps_local/`
+- `gate_d_bic_rcc_ig_steps_20261030/`
+- `statistics_6_6_ig_steps_20261030/`
+- composites with SHA-256 manifests: `ig_steps_20261030/composite_root{,_test_s,_6_6}/`
+
+| Item | Old label (17 Oct) | New label (30 Oct) | Numbers (new) |
+|---|---|---|---|
+| RCC seed 1, IG vs posterior, uniform | incomplete; no verdict (7/8) | mixed / not resolved by the predeclared rule | bin −0.169, 0/8 positive |
+| RCC seed 1, IG vs posterior, centre | mixed / not resolved | unchanged | bin −0.156, 0/8 |
+| Test R D1, GBM uniform s3 | incomplete (7/8) | replicates | |
+| Test R D1, RCC centre s2 | incomplete (7/8) | replicates | |
+| Test R D1, RCC uniform s1, s3 | incomplete (7/8) | replicates | |
+| Test R D1 headline | does not hold (CAC s2) | **unchanged:** does not hold (CAC centre and uniform s2 "does not replicate") | incomplete list now empty |
+| Test R D2, RCC (three-seed) | incomplete (6/8) | **equivalent** | bin +0.018, 6/8 (per seed: s1 equivalent, s2 helps, s3 equivalent) |
+| Test R D2, GBM (three-seed) | incomplete (7/8) | **equivalent** | bin −0.0035, 3/8; P1 −0.0075, 2/8 |
+| Test R D2, CAC (three-seed) | helps | unchanged | bin +0.023, 8/8; P1 +0.027, 8/8 |
+| Test S, RCC uniform | incomplete; no verdict (7/8) | **mixed (does not meet the 'helps' rule)** | S1 − plain bin −0.021, 4/8 positive; median +0.0001; one run −0.166 |
+| Test S, other 5 arms | — | unchanged | |
+| Test V (d), RCC VAE seed mean − PCA-5 (descriptive) | −0.011 (3/7) | −0.010 (3/8) | GBM and CAC unchanged |
+| BIC, RCC | 15/15 run-arms K = 6 | **16/16 run-arms K = 6** | UH0505_12 uniform: largest candidate, monotone BIC, no interior minimum; refit ARI 1.0 |
+| Evidence tables | — | unchanged (7/7 byte-identical) | no rerun-affected input |
+
+**§6.6 (families unchanged; 8 of 38 rows change; no Holm decision at α = 0.05 changes; significant rows 3, 5, 6, 9, 10, 30 before and after):**
+
+| Row | Family | Test | n | mean | p exact | Holm |
+|---|---|---|---|---|---|---|
+| 5 | F1 primary | IG − posterior, RCC centre, seed mean, bin | 7 → 8 | −0.152 → −0.141 | 0.0156 → 0.0078 | 0.047 → 0.047 |
+| 6 | F1 primary | IG − posterior, RCC uniform, seed mean, bin | 6 → 8 | −0.136 → −0.140 | 0.031 → 0.0078 | 0.047 → 0.047 |
+| 3 | F1 secondary | IG − posterior, CAC centre, P1 | 8 | unchanged | unchanged | 0.047 → 0.031 (step-down only) |
+| 13 | F3 primary | IG uniform − centre, RCC, seed mean, bin | 6 → 8 | +0.026 → +0.018 | 0.063 → 0.109 | 0.75 → 1 |
+| 33 | F4 primary | S1 − plain, RCC uniform, seed 1, bin | 7 → 8 | −0.023 → −0.021 | 0.94 → 0.74 | 1 → 1 |
+| 2, 11 | outside Holm (PDX line) | GBM uniform P1; GBM uniform − centre P1 | 4 | −0.230 → −0.221; −0.0064 → −0.0075 | unchanged | — |
+| 36 | outside Holm (beside) | VAE − PCA-5, RCC | 7 → 8 | −0.011 → −0.010 | 0.69 → 0.64 | — |
+
+- **Mixed models (descriptive):** small shifts. The RCC uniform model is still "not converged". Mann–Whitney is unchanged.
+- **For the report:**
+  - item 1 leaves no "incomplete" label in RCC, Test R, Test S or BIC;
+  - the remaining 12:58 incompleteness items are the msiPL RCC cell and the "IG beats legacy" budget-stability clause (item 2), then item 3 (C3).
+
+### 2026-10-30 17:26 Supervisor → Code | Codex | Zayd: Item 1 closed; regenerated labels accepted; next item 2 (msiPL)
+Status: RULING
+- Resolves: 2026-10-30 17:25 Code entry.
+- **Checked:**
+  - Rows 5 and 6 are now n = 8, all negative. p = 0.0078 is the exact minimum at n = 8, and Holm 6 × 0.0078 = 0.047.
+  - Row 3's Holm change is a step-down effect only.
+  - The set of Holm-significant rows (3, 5, 6, 9, 10 and 30) is unchanged.
+  - The old tables were reproduced before the regeneration.
+- **Accepted as the report's labels:**
+  - RCC uniform: "mixed / not resolved"; Test R D2: GBM "equivalent", RCC "equivalent", CAC "helps"; Test S RCC uniform: "mixed (does not meet the 'helps' rule)"; BIC RCC 16/16 at K = 6.
+  - Test R D1 still "does not hold" (CAC s2), now with no incomplete arms.
+- **Item 1 is closed.** Codex: commit the new tables and composites as evidence, separately from code.
+- **For the report (Code, in the same post as the item 2 plan):**
+  - the updated count replacing "136 of 140" (IG < posterior-|PCC| over all valid section × seed × arm comparisons, now out of 144), split by collection;
+  - the seed table: collection mean ± SD across seeds of IG − posterior, per arm, with the HL CI and Holm p from `statistics_6_6_ig_steps_20261030`.
+- **Next: item 2 (msiPL Beta re-tune, 12:58).** Post the plan and checklist before writing code, as for item 1.
