@@ -139,8 +139,8 @@ does well (\cref{sec:discussion}).
         sections), although this is not statistically supported (Holm
         $p=0.13$), and it gives no gain under correlation ranking (0.000). On
         GBM and RCC, context and centre-only are equivalent ($-0.004$, 3/8
-        and $+0.018$, 6/8), and on GBM the direction differs between PDX lines
-        (\cref{fig:gbmpdx}).
+        and $+0.018$, 6/8). Across the four GBM PDX lines, context helps some
+        lines and hurts others.
   \item \textbf{Spatial specificity.} If the CAC gain came from correct local
         placement, real neighbours should beat neighbours shuffled from
         distant pixels. They tied (0.542 against 0.543). On GBM, zeroed
@@ -160,7 +160,10 @@ does well (\cref{sec:discussion}).
         of boundary pixels on CAC and 41--50\% on GBM, so it did not learn to
         follow tissue boundaries. Masking the centre during
         training did not make attention selective, and it lowered GBM scores
-        by $0.039$.
+        by $0.039$. On two outcome-known development sections, replacing
+        learned attention weights with equal weights at inference slightly
+        raised peak scores ($+0.0099$ and $+0.0038$); this same-checkpoint
+        diagnostic did not retrain a uniform model.
   \item \textbf{Spatially smoothed segmentation} never helped: four
         comparisons were equivalent and two were mixed, GBM uniform ($+0.029$,
         driven by two sections) and RCC uniform ($-0.021$, 4/8).
@@ -172,14 +175,6 @@ does well (\cref{sec:discussion}).
 \caption{Neighbourhood variants relative to uniform $3\times3$ context under
 IG. No variant gives a consistent, spatially specific gain.}
 \label{fig:variants}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{08_gbm_context_by_patient.png}
-\caption{Uniform minus centre-only IG score on GBM, grouped by PDX line. The
-direction differs between lines.}
-\label{fig:gbmpdx}
 \end{figure}
 
 \textbf{Answer to RQ3.} Neighbourhood information entering the encoder or the
@@ -279,8 +274,10 @@ RCC is held-out confirmation of the ranking contrast under these qualifications.
 \subsection{Runtime}
 \label{sec:res-runtime}
 Once a segmentation exists, correlation takes about a second or less per
-section, while IG takes seconds to minutes (\cref{tab:runtime}). Every timed
-ranking reproduced its saved ranking exactly. Cached 100-epoch VAE training
+section, while IG takes seconds to minutes
+(\cref{tab:runtime,fig:runtime}). Every timed
+ranking with a saved comparator reproduced its ranking exactly. Cached
+100-epoch VAE training
 takes longer than S\textsuperscript{3}PL's 10-epoch protocol but remains
 practical. Over a complete workflow on CAC section 160TopL (training, selection
 and scoring, three repeats), the VAE took 122--135\,s against 151--174\,s for
@@ -309,3 +306,15 @@ IG (s) & 770 & 6.0 & 372 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{runtime_figure.pdf}
+\caption{Measured runtime. (A) Median ranking time per section across eight
+sections in each collection (log scale). Posterior correlation includes GMM
+posterior calculation; IG includes GMM fitting and faithfulness checks. GBM and
+CAC use the same CPU type within each collection; RCC uses shared CPU nodes.
+(B) The audited 100-epoch GBM uniform-context VAE run before and after caching
+on an RTX 3090. These timings compare an implementation change, not methods.}
+\label{fig:runtime}
+\end{figure}

@@ -1,0 +1,67 @@
+\documentclass[tikz,border=1mm]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\definecolor{corr}{HTML}{0072B2}
+\definecolor{moran}{HTML}{D55E00}
+\definecolor{mean}{HTML}{009E73}
+\definecolor{ig}{HTML}{CC79A7}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily\scriptsize]
+\node[anchor=west,font=\sffamily\bfseries\small] at (0,7.18) {A};
+\fill[corr] (1.550,6.850) circle (2.1pt);
+\node[anchor=west] at (1.68,6.85) {Posterior correlation};
+\fill[moran] (4.435,6.805) rectangle (4.525,6.895);
+\node[anchor=west] at (4.61,6.85) {Moran's $I$};
+\fill[mean] (1.550,6.620) -- (1.620,6.550) -- (1.550,6.480) -- (1.480,6.550) -- cycle;
+\node[anchor=west] at (1.68,6.55) {Mean intensity};
+\fill[ig] (4.480,6.615) -- (4.550,6.495) -- (4.410,6.495) -- cycle;
+\node[anchor=west] at (4.61,6.55) {IG};
+\node[anchor=east] at (1.38,5.760) {GBM};
+\draw[black!12] (1.48,5.410) -- (8.30,5.410);
+\fill[corr] (4.980,5.970) circle (2.1pt);
+\fill[moran] (5.919,5.785) rectangle (6.009,5.875);
+\fill[mean] (3.816,5.760) -- (3.886,5.690) -- (3.816,5.620) -- (3.746,5.690) -- cycle;
+\fill[ig] (8.172,5.615) -- (8.242,5.495) -- (8.102,5.495) -- cycle;
+\node[anchor=east] at (1.38,4.900) {CAC};
+\draw[black!12] (1.48,4.550) -- (8.30,4.550);
+\fill[corr] (3.183,5.110) circle (2.1pt);
+\fill[moran] (4.035,4.925) rectangle (4.125,5.015);
+\fill[mean] (2.072,4.900) -- (2.142,4.830) -- (2.072,4.760) -- (2.002,4.830) -- cycle;
+\fill[ig] (5.801,4.755) -- (5.871,4.635) -- (5.731,4.635) -- cycle;
+\node[anchor=east] at (1.38,4.040) {RCC};
+\draw[black!12] (1.48,3.690) -- (8.30,3.690);
+\fill[corr] (3.849,4.250) circle (2.1pt);
+\fill[moran] (4.741,4.065) rectangle (4.831,4.155);
+\fill[mean] (2.803,4.040) -- (2.873,3.970) -- (2.803,3.900) -- (2.733,3.970) -- cycle;
+\fill[ig] (7.817,3.895) -- (7.887,3.775) -- (7.747,3.775) -- cycle;
+\draw[black!60] (1.55,2.94) -- (8.3,2.94);
+\draw[black!60] (1.550,2.94) -- (1.550,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (1.550,2.850) {$10^{-3}$};
+\draw[black!60] (2.675,2.94) -- (2.675,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (2.675,2.850) {$10^{-2}$};
+\draw[black!60] (3.800,2.94) -- (3.800,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (3.800,2.850) {$10^{-1}$};
+\draw[black!60] (4.925,2.94) -- (4.925,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (4.925,2.850) {1};
+\draw[black!60] (6.050,2.94) -- (6.050,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (6.050,2.850) {$10^{1}$};
+\draw[black!60] (7.175,2.94) -- (7.175,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (7.175,2.850) {$10^{2}$};
+\draw[black!60] (8.300,2.94) -- (8.300,2.870);
+\node[anchor=north,font=\sffamily\tiny] at (8.300,2.850) {$10^{3}$};
+\node[anchor=north] at (4.93,2.48) {Median ranking time per section (s; log scale)};
+\node[anchor=west,font=\sffamily\bfseries\small] at (0,1.93) {B};
+\node[anchor=east] at (1.43,1.54) {Streaming};
+\node[anchor=east] at (1.43,0.95) {Cached};
+\fill[corr] (1.55,1.410) rectangle (7.378,1.670);
+\node[anchor=west] at (7.478,1.540) {11.3 h};
+\fill[mean] (1.55,0.820) rectangle (1.745,1.080);
+\node[anchor=west] at (1.845,0.950) {23 min};
+\draw[black!60] (1.55,0.60) -- (7.75,0.60);
+\foreach \x/\lab in {1.55/0,4.133/5,6.717/10,7.75/12} {
+  \draw[black!60] (\x,0.60) -- (\x,0.53);
+  \node[anchor=north,font=\sffamily\tiny] at (\x,0.51) {\lab};
+}
+\node[anchor=north] at (4.65,0.18) {100-epoch GBM training time (h)};
+\end{tikzpicture}
+\end{document}

@@ -45,6 +45,13 @@ including intense ions unrelated to tissue classes, whereas peak quality here
 depends on how well a low-dimensional segmentation separates the classes. This
 agrees with \citet{mazarura2025autoencoder}.
 
+On two outcome-known sections, label-trained probes using within-section pixel
+folds recovered expert-class information from frozen latents even when the
+unsupervised GMM partitioned them differently; the probes are diagnostics,
+not label-free validation. On one section, a tied-covariance GMM agreed better
+with the masks but had worse
+BIC, so selecting it for mask agreement would be label-guided.
+
 \subsection{S\textsuperscript{3}PL instability and the reproduction gap}
 The S\textsuperscript{3}PL seed analysis shows that comparisons with a single S\textsuperscript{3}PL run can be
 misleading. Specific sections switch between distinct solutions depending on
@@ -57,11 +64,20 @@ select favourable seeds or checkpoints for any baseline.
 \subsection{Label-free operation and cost}
 The pipeline fits and ranks without labels, but two settings still come from
 annotation: the number of segments and the peak budget. BIC could not replace
-the first, so the pipeline is not yet autonomous. On cost, the dense VAE used
+the first, so the configuration remains class-informed. On cost, the dense VAE
+used
 comparable time and less memory than S\textsuperscript{3}PL on the section measured, and once a
 segmentation exists, correlation ranking takes about a second where IG takes
 minutes. The lightweight model is therefore practical, but it did not gain from
 its spatial input, which was the reason for adding it.
+
+These results do not establish a universal benefit from spatial context, that
+IG caused the gain over msiPL, intrinsic runtime superiority of
+either architecture or a consistent advantage from correctly placed
+S\textsuperscript{3}PL neighbours. The PCA control does not establish that a
+nonlinear VAE is essential, and the class-informed component count and
+annotation-related budgets mean the configuration is label-free only in fitting
+and ranking.
 
 \subsection{Limitations and threats to validity}
 \begin{itemize}
