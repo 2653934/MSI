@@ -6325,3 +6325,200 @@ Status: INFO
 - The job compares the fast path with unchanged `LearnPeaks` at Beta 2.5, 0.0 and -2.0, plus the saved Beta for GBM/CAC. Any shape or value difference writes `fast_path_check.json`, exits 5 and is refused by the job wrapper on rerun. Successful checks are retained in `summary.json`; progress output does not alter evidence.
 - Test coverage compares arrays and dtypes at all 451 grid values for float64, float32 and equidistant-m/z tie cases, and statically requires the real-data legacy check. Code reports 23/23 focused tests passing. Independent execution here could not import the suite because the available Linux Python lacks `h5py`; no assertion ran or failed. Linux shell syntax and `git diff --check` both passed.
 - Committed: c625f52a (`Optimize msiPL beta sweep`). The Protocol 18 implementation note and cluster test remain required before resubmission, as listed in the resolved handoff.
+
+### 2026-10-30 21:51 Supervisor → Code | Codex | Zayd: Fast path accepted; independent Linux run 23/23; resubmission steps approved in order
+Status: RULING (Zayd: OK for the move in step 5 and for each checklist)
+- Resolves: 2026-10-30 21:48 Code entry and 21:50 Codex entry.
+- **Independent run (Linux VM, with h5py), the committed tree after `c625f52a`:** `PYTHONPATH=src:scripts python3 -m unittest spatial_msipl.tests.test_msipl_retune`: **Ran 23 tests in 31.2 s, OK**, none skipped. This closes the gap in Codex's review, which could not import the suite.
+- **The fast path is accepted:** only Beta-independent work moves out of the loop; the grid, rule and tolerance are unchanged; the result is identical to `LearnPeaks` at all 451 grid values in tests, and fail-closed against `LearnPeaks` on real data inside the job. This is an implementation change, not an analysis change.
+- **Steps 2–6 approved in order.** For the move in step 5 (`mv -n` to the `…_78796_timeout` sibling, echo first), Zayd gives the OK in the session.
+- **The pilot then sets resources for the other 23 sections, as planned.**
+
+### 2026-10-30 21:52 Code → Supervisor | Zayd | Codex: correction to the 21:48 timing line
+Status: INFO
+
+- The local legacy timing finished. Results: −1.0 took 126.0 s and −2.0 took 127.4 s, both with 28,372 peaks, which is every local maximum. Below 0 the cost levels off at about 2 min per Beta; it does not keep rising as the 21:48 entry said. On the synthetic case the grid totals roughly 8–12 h locally, so the conclusion stands: the pilot will not finish in 4 h. In the job, the legacy check call at −2.0 should cost about 2 min.
+
+### 2026-10-30 21:56 Code → Zayd | Supervisor: Fast path uploaded (`f7bdc54a`); P18 §6.8 note written; cluster test checklist: waiting for Zayd's OK
+Status: OPEN (Zayd: OK to submit the cluster test job)
+- Resolves: 2026-10-30 21:51 Supervisor entry (steps 2–3).
+- **Step 2:** P18 §6.8 now carries "Implementation note, 30 October about 21:55 SAST: sweep fast path". It covers why, what changed, the two identity checks (tests and in job), what is unchanged, and the move of the 78796 folder. §10 logs the diagnosis and the upload.
+- **Step 3, upload at 21:54 SAST (19:54 UTC),** from the clean HEAD `f7bdc54a`, `-n` first, with the narrowing `--exclude='/tmp/'`: 3 files (`retune_msipl_beta.py`, `run_msipl_retune_sweep.sh`, `test_msipl_retune.py`) plus the timestamp of the untracked `.pym2aia_prefs.xml`.
+  - Git Bash path-converted the `/`-anchored excludes in the first preview. The preview was rerun with `MSYS_NO_PATHCONV=1` before anything transferred; noted in §10.
+- **sha256sum vs HEAD:** all 3 uploaded files, `run_fair_scoring_tests.sh` and `tune_msipl_massnet_beta.py` match. `LearnPeaks.py` differs only in line endings (as at 17:52); CR-stripped it equals the HEAD blob `40aa43df…`.
+
+**Cluster test checklist:** `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh`
+1. **Hashes:** as above.
+2. **Outputs:** `results/validation/fair_scoring_env_tests/<jobid>_*`, named by job ID. The new tests write nothing; they compare arrays in memory.
+3. **Roots:** a single job; nothing to pre-create.
+4. **Time and memory:** `batch`, 2 CPUs, 8G, 30 min. 78779 took 5:54. The new `SweepLearnPeaksTests` ran in about 24 s locally and 31 s on the supervisor's VM.
+5. **Partition:** `batch` up (60 idle at 21:55). My only job is 78796_5, still running until its limit at about 22:25.
+- **Gate:** `test_msipl_retune` 23/23 run (none skipped), and every other module passes.
+- **Step 5 (move), after 78796 has ended:** I echo `mv -n …/GBM/GBM22_2 …/GBM/GBM22_2_78796_timeout` first, then run it with Zayd's OK (given 21:5x), checking first that the folder holds only `retune_stdout.log`.
+- **Step 6 after that:** the pilot resubmission checklist for index 5.
+
+### 2026-10-30 21:58 Code → Supervisor | Zayd: Cluster test job 78981 submitted (fast path)
+Status: INFO
+- Resolves: 2026-10-30 21:56 Code entry (Zayd's OK given in the session; also OK for the move once 78796 has ended).
+- 78981 was submitted at 21:57 SAST (19:57 UTC) on `batch`; hashes were rechecked in the same call. Logged in P18 §10.
+
+### 2026-10-30 21:59 Code → Supervisor | Zayd: Combined checklist: cancel 78796, move its folder, test 78981, pilot with afterok (Zayd's OK in the session; executing)
+Status: INFO
+1. **Cancel:** `scancel 78796` (Zayd's OK). The job cannot finish in 4 h (21:48). After the cancel, confirm with `sacct` that it has ended (CANCELLED).
+2. **Move (echo first):** `mv -n results/baselines/msipl/retune_20261030/GBM/GBM22_2 results/baselines/msipl/retune_20261030/GBM/GBM22_2_78796_timeout`.
+   - First check that the folder holds only `retune_stdout.log` and that the target does not exist.
+   - Nothing is deleted; `/datasets` is not touched.
+3. **Test job:** already submitted as **78981** (21:57, Zayd's OK; checklist 21:56). It is not resubmitted.
+4. **Pilot:** `SBATCH_DEPENDENCY=afterok:78981 bash slurm_jobs/submit_msipl_retune.sh sweep 5`.
+   - The submitter is unchanged; its sweep stage refuses `--after`, so the dependency goes through sbatch's own `SBATCH_DEPENDENCY` input variable. The submitter's provenance line will say `after=none`; I check the real dependency with `squeue -o %E` and log it in §10.
+   - **Hashes:** `run_msipl_retune_sweep.sh`, `retune_msipl_beta.py` and `submit_msipl_retune.sh` match HEAD `f7bdc54a` (rechecked in the submit call).
+   - **Output:** `results/baselines/msipl/retune_20261030/GBM/GBM22_2/`, new after the move. The submitter refuses an existing `summary.json`/`sweep.csv`; the job also refuses `m1_reproduction.json`/`fast_path_check.json`.
+   - **Roots:** the parent `retune_20261030/GBM/` exists and the submitter pre-creates it.
+   - **Time and memory:** unchanged at `batch`, 4 CPUs, 28G, 4 h. Expected well under 1 h: the data and model load; one legacy `LearnPeaks` call for the m = 1 reproduction and four for the check (about 6 min locally); the about 21 s precompute; and about 2 s for the sweep. 28G is kept because 78796 gave no MaxRSS (the cluster records none for running jobs). The pilot's `sacct` sets both for the other 23 sections.
+   - **If 78981 fails,** the pilot never starts (DependencyNeverSatisfied). I then post the failure and cancel the pending pilot only with Zayd's OK.
+
+### 2026-10-30 21:59 Code → Zayd | Supervisor: Cancel, move and pilot done; DEVIATION: the afterok dependency did not attach, so pilot 78983 runs alongside test 78981
+Status: OPEN (Zayd: keep the pilot running or cancel it?)
+- Resolves: 2026-10-30 21:58 Code entry (steps 1, 2 and 4).
+- **Cancel:** 78796 CANCELLED at 3:34:11, with no outputs.
+- **Move:** echoed first, then done: `GBM/GBM22_2 → GBM/GBM22_2_78796_timeout` (only `retune_stdout.log`). The new `GBM22_2/` was created by the pilot.
+- **Pilot 78983** (hashes matched HEAD `f7bdc54a`): **started immediately at 21:59:21 SAST (19:59:21 UTC) without the dependency.**
+  - Cause: this cluster's `sbatch` ignored `SBATCH_DEPENDENCY` (`squeue %E` = `(null)`), just as it ignores `SBATCH_EXCLUDE`.
+  - My `scontrol update JobId=78983 Dependency=afterok:78981` came about 10 s later and was refused ("Job is no longer pending").
+  - My error: I should have passed `--dependency` on the command line, or checked `%E` before releasing.
+- **Effect:** the code being tested is the same commit the supervisor's VM already passed 23/23. The pilot is fail-closed (exit 5 on any fast-path or m = 1 mismatch) and writes only to its new folder. 78981 should finish within a few minutes, before the pilot.
+- **Proposal:** keep the pilot running. Count its outputs only if 78981 passes. If 78981 fails, the pilot's folder is moved aside unread (`mv -n` to `GBM22_2_78983_untested`, with Zayd's OK) and nothing from it is used.
+
+### 2026-10-30 22:00 Supervisor → Code | Zayd: Keep pilot 78983 running; count it only if 78981 passes
+Status: RULING
+- Resolves: the 21:59 deviation entry.
+- The proposal is accepted: the pilot runs the same commit that passed 23/23 independently, it is fail-closed and it writes only to its own folder. Its outputs are read only after 78981 passes; if 78981 fails, the folder is moved aside unread, as proposed.
+- **Lesson (add to CLAUDE.md):** on this cluster, `sbatch` ignores `SBATCH_DEPENDENCY` as well as `SBATCH_EXCLUDE`. Pass both on the command line and check `squeue -o %E` before relying on a dependency.
+
+### 2026-10-30 22:03 Codex → Supervisor | Zayd: Curated declaration prompts
+Status: INFO
+
+- `report/draft/planning/ai_prompts_selection.md:5,32-53` supplied the context line and 12 ticked selections. `report/PG student AI declaration (completed).docx` now places them on the page after the signed form, grouped under Review, Graphs and figures, Commit messages and cluster commands, and Notion and documentation. Unticked items and the empty ChatGPT section were not added; no prompt was invented.
+- The form's marked categories, student number, signature and date remain intact. Its logo is on the form page. The original `report/PG student AI declaration.docx` was not edited.
+- `report/draft/ai_declaration.pdf` is two pages. `report/draft/report.tex:96` includes both pages; `report/draft/report_draft_v7_2026-10-30.pdf` is 13 pages, with the form and curated prompts as its final two pages. Built with pdflatex, bibtex and two further pdflatex passes, then refreshed after the header-placement correction. The final log has no overfull boxes or undefined references.
+- Committed: 210f47ab (`Curate declaration prompts`). Not pushed.
+
+### 2026-10-30 22:14 Code → Zayd | Supervisor: Test 78981 passed; pilot 78983 valid (fast path identical on real data, m = 1 reproduced, 3:52); checklist for the other 23 sections: waiting for Zayd's OK
+Status: OPEN (Zayd: OK to submit sweep 0-4,6-23)
+- Resolves: 2026-10-30 22:00 Code entry (the pilot counts, since the test passed).
+- **78981 COMPLETED 0:0** (8:40): 315 OK, 4 skipped, all local-artifact-only (Test R decisions, runtime-v2 ×2, S3PL shuffle control; none in `test_msipl_retune`). S3PL 25/25 and 4/4. **Gate met:** `test_msipl_retune` 23/23, none skipped.
+- **78983 COMPLETED 0:0 in 3:52** (78796: more than 3.5 h and unfinished). Read locally after the pull (about 22:13 SAST, 19 new files, no tracked file changed):
+  - `fast_path_check` identical to `LearnPeaks` on real GBM22_2 data at Beta 2.5, 1.05, 0.0 and −2.0 (464, 1028, 27,242 and 27,386 peaks);
+  - `m1_reproduction` identical (1028, max |Δm/z| 0);
+  - `status: complete`; 451 grid rows.
+  - Timing: precompute 4.4 s; the four legacy check calls about 137 s, with about 67–70 s each at 0 and −2 on real data; sweep 0.4 s.
+  - Selections are not discussed here (descriptive, for the summary step). All five are within tolerance and none is `msipl_cap`.
+
+**Sweep checklist:** `bash slurm_jobs/submit_msipl_retune.sh sweep 0-4,6-23` (default concurrency %6)
+1. **Hashes:** `run_msipl_retune_sweep.sh`, `retune_msipl_beta.py` and `submit_msipl_retune.sh` match HEAD `f7bdc54a` (checked at 21:59; rechecked in the submit call).
+2. **Outputs:** `results/baselines/msipl/retune_20261030/<collection>/<section>/`, all new: only `GBM/GBM22_2` and its timeout record exist now. The submitter refuses any existing output.
+3. **Roots:** the submitter pre-creates every `<collection>/` parent before the array starts. Inputs were checked at about 22:15: all 24 weight files are present; the saved `learned_peaks.csv` and `beta_selection.json` exist for all 16 GBM/CAC rows; the RCC released-target budget is `complete` for all 8 RCC rows.
+4. **Time and memory:** unchanged at `batch`, 4 CPUs, 28G, 4 h.
+   - **Time:** GBM22_2 is the largest section (85,062 bins) and took 3:52, so 4 h is far more than needed. I am not changing the script just to shorten it.
+   - **Memory:** MaxRSS is not recorded on this cluster. The 28G request stays below `batch`'s 30,000 MB. GBM22_2 (4,524 × 85,062) ran fine under it, and the other sections are the same size or smaller.
+   - Expected wall time: about 4 rounds of 6 tasks at ≤ 4 min, so about 20 min.
+5. **Partition:** `batch` up (62 idle at 22:15). I have 0 jobs queued. 23 tasks at %6 stay within the QOS (13 running).
+- **Then:** `sacct`, a check of every task's `status` (exit 5 on any task = stop and post), the pull, and the scoring checklist (`submit_msipl_retune.sh score 0-23`).
+
+### 2026-10-30 22:17 Code → Supervisor | Zayd: Sweep 78990 submitted (23 sections)
+Status: INFO
+- Resolves: 2026-10-30 22:15 Code entry (Zayd's OK given in the session).
+- 78990 was submitted at 22:16 SAST (20:16 UTC) on `batch`, array 0-4,6-23 at %6; hashes matched HEAD in the same call. Logged in P18 §10.
+
+### 2026-10-30 22:17 Supervisor → Codex | Zayd: Declaration prompts page done; abstract acronym fix; discussion take-home restored
+Status: INFO (Codex: commit with the next report commit)
+- New file `report/draft/sections/ai_prompts.tex`: 18 representative prompts (ChatGPT, Claude, Codex) selected with Zayd, quoted as written. `report.tex` now includes only page 1 of `ai_declaration.pdf` (the form), followed by this page; the placeholder page is no longer used.
+- Abstract: GBM, RCC and CAC were undefined acronyms (a template rule), so the line now reads "on two of the three datasets and within 0.01 of the best on the third".
+- Discussion and conclusion: the take-home line is restored (spatially aware ranking rather than encoding, bounded to the tested models and datasets), and the stray "spatial penalty" sentence is removed.
+- Built: `report_draft_v8_2026-10-30.pdf` (13 pages, no overfull boxes).
+
+### 2026-10-30 22:41 Code → Zayd | Supervisor: GBM22_2 pilot 78983 counts per budget (addendum to 22:15); GBM12_1 task stalled on data load
+Status: OPEN (Zayd: OK to cancel and retry index 2 if still stalled at about 22:48?)
+- **Pilot 78983** (pulled 22:13; 78981 passed): 3:52, MaxRSS not recorded (the cluster gathers none). Raw learned-peak count against target, K_bin = 1028:
+  - m 0.5: Beta 2.31, 513 against 514 (−1);
+  - m 0.75: 1.54, 769 against 771 (−2);
+  - m 1.0: 1.05, 1028 = saved list (reproduced);
+  - m 1.5: 0.53, 1536 against 1542 (−6);
+  - m 2.0: 0.40, 2030 against 2056 (−26).
+  - All are `within_tolerance`: **no flagged points** (no `msipl_cap`, no `closest_outside_tolerance`). Grid count range 464–27,386.
+- **Sweep 78990** (submitted 22:16): 22/23 COMPLETED 0:0 with `summary.json`, and none wrote `m1_reproduction.json` or `fast_path_check.json`. Times: GBM 2:51–7:27; CAC and RCC 4–6 s each.
+  - **Task 2 (GBM12_1, mscluster144) stalled:** at 22:37 it had been running 20:53, and its log has stopped at "HDF5 keys" since 22:20 SAST. This is the read of `Data` from `/datasets`; the other GBM rows passed it in under a minute. No errors.
+  - **Proposal, if still stalled at about 22:48:**
+    1. `scancel 78990_2`.
+    2. `mv -n` the partial folder (only a 151-byte `retune_stdout.log`) to `GBM12_1_78990_stalled`, echo first.
+    3. Resubmit index 2 alone with `--exclude=mscluster144` on the `sbatch` command line.
+    4. Record the node in `cluster_node_issues.txt`.
+  - The pull waits until the array has finished.
+
+### 2026-10-30 22:49 Code → Supervisor | Zayd: GBM12_1 retried as 79022 (mscluster144 excluded)
+Status: INFO
+- Resolves: 2026-10-30 22:39 Code entry (Zayd's OK given in the session).
+- At 22:48, 78990_2 was still stuck at "HDF5 keys" (31:42), so it was cancelled.
+- The partial folder was echoed first, then moved to `GBM12_1_78990_stalled`.
+- Index 2 was resubmitted alone as **79022**, with `--exclude=mscluster144` on the `sbatch` command line (`ExcNodeList` confirmed). It is running on mscluster129.
+- mscluster144 is recorded in `cluster_node_issues.txt`. Logged in P18 §10. The scoring checklist follows once all 24 sweeps are done.
+
+### 2026-10-30 22:59 Code → Zayd | Supervisor: All 24 sweeps valid and pulled; flagged points; scoring checklist: waiting for Zayd's OK
+Status: OPEN (Zayd: OK to submit score 0-23)
+- Resolves: 2026-10-30 22:50 Code entry.
+- **79022 (GBM12_1 retry) COMPLETED 0:0** in 3:19 on mscluster129. **Pull** at about 22:57 SAST (`-n` first): 300 new files, all under `retune_20261030/`. No tracked file changed.
+- **Local check, all 24 `summary.json` files:**
+  - `complete`, 451 grid rows;
+  - fast path identical to `LearnPeaks` on real data in 24/24;
+  - m = 1 saved list reproduced in 16/16 GBM/CAC.
+- **Flagged points** (predeclared: included in clause 3 and flagged; scoring is count-matched at each list's own n_m):
+  - **`closest_outside_tolerance`, 7 points, all on GBM, all at low budgets.** The target lies below the grid's minimum count, because Beta 2.5 is the top of the ruled grid and still keeps 453–686 peaks. The points: GBM108_positive m 0.5 and 0.75; GBM12_1 m 0.5; GBM22_1 m 0.5; GBM39_1 m 0.5 and 0.75; GBM39_2 m 0.5.
+  - **`msipl_cap`, 25 points.**
+    - CAC: 40TopL m 2.0 (540 against 630).
+    - RCC: 24 points. In 6 of the 8 runs the grid's maximum (1,054–1,308 peaks) is **below K_bin**, so m = 1 is already capped there. Only UH9610_15 has no capped point, and UH0710_33 is capped only at m 1.5 and 2.0.
+    - This is the RCC count-matched table's main caveat (descriptive, outside Holm): at most budgets, RCC msiPL cannot produce a list as long as K_bin.
+- Every other point is within tolerance (≤ 50).
+
+**Scoring checklist:** `bash slurm_jobs/submit_msipl_retune.sh score 0-23` (default %6; no `--after`, the sweeps are finished)
+1. **Hashes:** `run_msipl_retune_scoring.sh`, `score_msipl_retune.py`, `evaluate_fair_scoring_baselines.py` (imported, unchanged), `submit_msipl_retune.sh` and `msipl_retune_sections.sh` all match HEAD on the cluster (checked at 22:58). The code is unchanged since `f7bdc54a`; HEAD is now `210f47ab`, with later commits that touch only report and docs files.
+2. **Outputs:** `results/diagnostics/fair_scoring_baselines/msipl_retune_20261030/<section>_seed1/<arm>/`, 48 section-arms. The root does not exist yet, and the submitter and job refuse any existing `summary.json`.
+3. **Roots:** the submitter pre-creates every `<section>_seed1/` parent before the array starts.
+4. **Time and memory:** unchanged from the item-2 code: `batch`, 2 CPUs, 8G, 2 h.
+   - **Memory:** the fair evaluator peaked at 0.91 GB on GBM22_2, and the scorer rebuilds rankings the same way.
+   - **Time:** I have no measured time for this scorer. The gates (posterior, lists, mSCF1, prefixes, legacy m = 1) and count-matched scoring use the evaluator's functions, which ran in minutes per section before.
+   - The pilot-style check: I read `sacct` on the first finished tasks, and if any task nears 1 h I post before the limit.
+5. **Partition:** `batch` up (61 idle at 22:58). I have 0 jobs queued.
+- **Stop conditions:** any non-zero exit or any gate failure (prefix, posterior, mSCF1 or legacy check) stops the stage, and I post. **Then:** pull, then `summarise_msipl_retune.py` locally (clause 3, plus the RCC count-matched table with the flags above).
+
+### 2026-10-30 23:01 Code → Supervisor | Zayd: Scoring 79025 submitted (24 sections × 2 arms)
+Status: INFO
+- Resolves: 2026-10-30 22:59 Code entry (Zayd's OK given in the session, together with the pull and the local summary).
+- 79025 was submitted at 23:01 SAST (21:01 UTC) on `batch`, array 0-23 at %6; hashes matched HEAD in the same call. Logged in P18 §10.
+
+### 2026-10-30 23:13 Code → Supervisor | Zayd | Codex: Scoring 79025 stopped at the prefix gate; two causes; fix and rerun proposal
+Status: OPEN (needs Codex review of the scorer fix and Zayd's OK for the cancel, the moves and each resubmission)
+- **79025 at 23:09 SAST:** 4/24 COMPLETED (RCC UH0505_12, UH9610_15, UH9812_03, UH9905_18, both arms). 19 FAILED with exit 1, all in Gate 2 (the `rankings_prefix.npz` check), so nothing was scored. Task 1 (GBM108_negative) is still running at 10:12 on **mscluster144** (the node that stalled the GBM12_1 sweep); it will hit the same gate failure.
+- **Cause 1, GBM/CAC (16 tasks): my scorer bug.** "saved prefix legacy_msipl has no rebuilt ranking".
+  - For GBM/CAC the fair evaluator stores the snapped legacy msiPL list as `legacy_msipl` inside `rankings_prefix.npz` (`evaluate_fair_scoring_baselines.py:514-515`), beside the rankings. My gate required every stored entry to be a rebuilt ranking. My tests did not cover a prefix file that also carries the legacy list.
+  - **Fix (local, uncommitted, for Codex):** in `score_msipl_retune.py`, `check_prefixes(..., legacy_indices=...)` requires the stored `legacy_msipl` to equal the snapped m = 1 re-tune list (`nearest_unique_indices` of `m1.0/learned_peaks.csv`) **exactly**. If no m = 1 list is given (RCC), a stored legacy entry is refused. The m = 1 indices are now computed before Gate 2 and reused in Gate 3 (`check_legacy`), which is unchanged.
+  - This makes the gate stricter, not looser. The m = 1 list is already proven identical to the saved legacy list (sweep), and this check also proves its snapped bins match what the evaluator scored.
+  - **Test:** a new `test_stored_legacy_list_must_equal_the_m1_list` covers an exact match, a shorter list, a different list, and none (RCC). `test_msipl_retune` 24/24 locally.
+- **Cause 2, RCC (4 tasks: MH0204_33, UH0710_33, UH9911_05, UH9912_01): the known CPU-model dependence, not a code fault.** "oracle: rebuilt ranking differs from the saved prefix".
+  - The saved RCC fair-scoring rankings come from **69565 on `bigbatch`**. Exact reproduction is CPU-specific (CLAUDE.md hardware lessons; P18 §10, 17 Oct, 70034). All 4 failures were saved on mscluster71 or mscluster76.
+  - The 4 that passed on `batch` were saved on mscluster74, 77 and 55, and the UH0505_12 uniform arm is the 128-step rerun scored on `batch`. The posterior, IG and L2 lists and the mSCF1 gates passed before the oracle check in all 4.
+  - **Proposal, as the 17 Oct option (a) precedent:** rerun these 4 on `bigbatch` with `--nodelist` set to the 69565 node, from `ranking_stage_runtime_rcc_bigbatch/provenance/task_node_map.txt`: MH0204_33 and UH9911_05 on mscluster71; UH0710_33 and UH9912_01 on mscluster76. mscluster76 is on the GPU quarantine list, but the job is CPU-only (supervisor ruling 17 Oct 21:53). The gate stays exact.
+- **Proposed order (each step needs the stated OK):**
+  1. `scancel 79025_1` (Zayd).
+  2. Codex reviews and commits the fix → P18 §6.8 note → upload (`-n`, sha256) → cluster test job (checklist).
+  3. Move aside, echo first: the 20 failed `<section>_seed1/central_only/` folders hold only `scorer_stdout.log`, which a rerun would overwrite. Each goes with `mv -n` to `central_only_79025_failed`; GBM108_negative is moved after the cancel (Zayd).
+  4. Resubmit the 16 GBM/CAC indices 0-15 on `batch` with `--exclude=mscluster144` on the command line, plus 4 single RCC submissions on `bigbatch` with `--nodelist` (checklist, Zayd).
+  5. Pull, then the summary.
+
+### 2026-10-30 23:16 Codex → Code | Supervisor: Review of msiPL retune legacy prefix gate
+Status: INFO
+
+- Resolves: 2026-10-30 23:13 Code entry, cause 1 and scorer-fix review request only. The CPU-model-dependent RCC rerun plan remains governed by the Supervisor and Zayd.
+- `rankings_prefix.npz` legitimately stores `legacy_msipl` beside rebuilt rankings on GBM/CAC. The fix preserves exact-prefix checks for every ranking and treats that one entry as a list: it must equal the snapped m = 1 retune indices exactly. A stored legacy entry is refused when no m = 1 list is supplied (RCC).
+- The m = 1 indices are computed once before Gate 2 and reused by unchanged Gate 3 `check_legacy`; no reproduction or scoring gate is weakened. The test covers exact equality, a shorter list, a different same-length list and no legacy list. `git diff --check` passed.
+- Verification: Code reports 24/24 focused tests passing locally, and Zayd reports the Supervisor's independent Linux run passed 24/24.
+- Committed: 199cb276 (`Fix msiPL retune legacy prefix gate`). Protocol 18, upload verification and the cluster test remain required before resubmission.
