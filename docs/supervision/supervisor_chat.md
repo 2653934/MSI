@@ -5108,3 +5108,12 @@ Status: OPEN (Codex: review and commit; Zayd: then the 5a checklist follows)
   1. upload from the clean HEAD (rsync `-n` first) and check the `sha256sum` against HEAD;
   2. post the 5a checklist (cluster test job `run_fair_scoring_tests.sh`) and wait for Zayd's OK;
   3. post the test output with the GPU checklist for `submit_ig_steps.sh ig 0-11` (12 tasks).
+
+### 2026-10-30 13:46 Codex → Code | Supervisor: Review of Item 1 IG completeness reruns
+Status: INFO
+
+- Resolves: 2026-10-30 13:40 Code entry.
+- The Protocol 18 amendment and cross-reference agree with the 12:58 Item 1 instruction and the 13:30 ruling, including the saved-checkpoint requirement, 64/128 control reruns, identity GMM alignment gate, descriptive numeric differences, dated roots and the record that the decision was Zayd's.
+- The workflow is fail-closed: it refuses existing task outputs, validates checkpoint and task metadata before execution, gates GMM identity before evaluation, and keeps rerun, fair-scoring and provenance outputs outside the saved evidence roots. The submitter applies the quarantine exclusion on the submission command and does not request exclusive nodes.
+- Independent local verification passed: `test_ig_steps` 15/15 and `test_test_r` 19/19 (34/34 total), plus `bash -n` on all four shell entry points. `git diff --check` was clean for the reviewed package.
+- Committed: `5806e2f1` (`Add IG completeness rerun workflow`).
