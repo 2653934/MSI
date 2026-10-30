@@ -5884,3 +5884,185 @@ Status: INFO
 - All copied destinations match their SHA-256 manifests: `composite_root` 240/240, `composite_root_6_6` 14/14 and `composite_root_test_s` 48/48, with no missing or mismatched file.
 - The raw rerun/fair-scoring trees, dataset-validation records and unrelated report/release documentation were excluded from this evidence commit and remain for separate review.
 - Committed: `b2d1d783` (`Add regenerated IG completeness evidence tables`).
+
+### 2026-10-30 17:31 Code → Supervisor | Zayd: Report numbers (144 count, seed table); item 2 plan (msiPL Beta re-tune), with questions: waiting before any code
+Status: OPEN (Supervisor: Q1–Q5; Zayd: OK the plan)
+- Resolves: 2026-10-30 17:26 Supervisor entry (report numbers; item 2 plan requested).
+
+**A. Report numbers** (local, from the regenerated tables, committed in `b2d1d783`):
+- **Count replacing "136/140"** (same definition as VERIFICATION C045: Test R decision 1, bin level, IG − posterior-|PCC| < 0 per section × seed × arm; source `test_r/decisions_20261030_ig_steps_local/`, checked against `decisions.json`):
+  - **140/144**: GBM 48/48, CAC 45/48, RCC 47/48. Seed 1: 48/48 (was 47/47).
+  - The four non-negative cases are all small: CAC 280TopL centre s3 +0.005; CAC 280TopL uniform s2 +0.004; CAC 40TopL uniform s2 +0.017; RCC_UH9610_15 centre s2 +0.015.
+- **Seed table, bin level.** "Seed means" are the collection means of IG − posterior at seeds 1/2/3; mean ± SD is across the 3 seed means (reporting rule). HL estimate and 95% CI (coverage 0.961, n = 8) and Holm p are from `statistics_6_6_ig_steps_20261030/tests.csv`, F1 primary rows 1–6 (seed mean 1–3):
+
+| Collection, arm | Seed means s1 / s2 / s3 | Mean ± SD | Negative sections | HL [95% CI] | Holm p |
+|---|---|---|---|---|---|
+| GBM centre | −0.225 / −0.261 / −0.247 | −0.244 ± 0.018 | 8/8 | −0.248 [−0.293, −0.186] | 0.047 |
+| GBM uniform | −0.233 / −0.254 / −0.240 | −0.242 ± 0.011 | 8/8 | −0.241 [−0.311, −0.181] | 0.047 |
+| CAC centre | −0.078 / −0.080 / −0.074 | −0.077 ± 0.003 | 8/8 | −0.078 [−0.116, −0.040] | 0.047 |
+| CAC uniform | −0.047 / −0.057 / −0.060 | −0.055 ± 0.007 | 8/8 | −0.046 [−0.080, −0.027] | 0.047 |
+| RCC centre | −0.156 / −0.129 / −0.137 | −0.141 ± 0.014 | 8/8 | −0.137 [−0.204, −0.073] | 0.047 |
+| RCC uniform | −0.169 / −0.134 / −0.119 | −0.140 ± 0.026 | 8/8 | −0.139 [−0.210, −0.070] | 0.047 |
+
+- Beside the table (secondary, P1): GBM centre −0.219 (Holm 0.031); GBM uniform −0.221 (0.031); CAC centre −0.084, 7/8 (0.031); **CAC uniform −0.054, 7/8, HL CI [−0.114, +0.013], Holm 0.078 (not supported)**. GBM PDX-line rows (n = 4, p = 0.125) sit outside Holm.
+
+**B. Item 2 plan (msiPL Beta re-tune; 12:58 item 2, D28). Nothing is written yet.**
+
+*Facts found (read only):*
+- **K_bin on GBM/CAC is legacy msiPL's own tuned count.** For example, GBM39_2: the S3PL target is 917; Beta 1.25 on the old grid (1.0–2.5, step 0.05) gave 911 = K_bin. The production fair evaluator is locked to K_bin: `check_legacy` refuses a list whose unique-bin count differs from K_bin. So scoring lists at other counts needs a **separate opt-in scorer**. The production evaluator stays untouched.
+- **The existing tuner** (`tune_msipl_massnet_beta.py`, env `msipl_legacy`, from the saved weights, no retraining) matches the **raw learned-peak count** to the target: closest wins; ties go to the larger Beta; tolerance 50. Scoring uses the **snapped unique-bin** count.
+- **Weights exist** for all 24 sections and runs (8 massnet, 8 CAC, 8 RCC `msipl_weights.h5`). The `msipl_legacy` env exists.
+- **RCC on the old grid (0–2.5):** within tolerance at m = 1 only for UH0710_33 (1,208 vs 1,212) and UH9610_15 (470 vs 466). The other 6 reach a maximum of 1,054–1,288 at Beta ≈ 0, against targets of 1,448–2,200.
+
+*Steps:*
+1. **Predeclaration first.** A dated P18 amendment "msiPL Beta re-tune", with the 12:58 item 2 text verbatim plus the answers to Q1–Q5, written before any job runs.
+2. **Sweep (new script `retune_msipl_beta.py`, env `msipl_legacy`).**
+   - It reuses the tuner's `beta_grid`, `LearnPeaks` and selection rule unchanged.
+   - One pass per section over Beta −2.0 to 2.5, step 0.01 (451 values). Then, for each m ∈ {0.5, 0.75, 1, 1.5, 2}, target = round(K_bin × m), with the same rule and tolerance 50.
+   - **Cap rule:** if no Beta is within tolerance, take the Beta with the maximum count (ties to the larger Beta) and label it `msipl_cap` (used only when the target is above the reachable maximum).
+   - **Outputs:** the full sweep CSV and, per m, `learned_peaks.csv` + `selection.json`, under `results/baselines/msipl/retune_20261030/<collection>/<section>/`.
+3. **Consistency (stop rule):** on GBM/CAC, m = 1 must reproduce the saved legacy list and its scores (integer TP/FP/FN, mSCF1 to 1e-12). See Q1 for how m = 1 is defined.
+4. **Scorer (new CPU script `score_msipl_retune.py`).** It imports the evaluator's own functions (correlations, nearest-unique snapping, `score_indices`, ranking builders), with the same references and thresholds.
+   - **Gates before scoring:** it reproduces the saved fair-scoring IG and posterior mSCF1 at K_bin to 1e-12, and the saved rankings prefix, or it stops.
+   - Then it scores every re-tuned legacy list at its unique-bin count n, and every ranking at the same n (see Q2).
+   - Output: `fair_scoring_baselines/msipl_retune_20261030/`.
+5. **Summariser:** the "IG beats legacy" budget-stability clause (Q3), with the two existing clauses repeated beside it; the RCC count-matched table (Q4), descriptive and outside Holm; families unchanged.
+6. **Cluster:**
+   - cluster test job;
+   - **pilot** sweep on the largest GBM section (GBM22_2, 4,524 px × 85,062 bins), to measure time and MaxRSS, on `batch` if it fits (the old tuner asked for 64G/2 h on `bigbatch` with `--exclusive`; I'll justify from the pilot);
+   - then the other 23 sections;
+   - then scoring on `batch`.
+   - One checklist each, with Zayd's OK. New roots only; `/datasets` is read only.
+7. **Tests:**
+   - the selection rule, cap labelling and tie rule on synthetic counts;
+   - that the sweep reuses the tuner's functions;
+   - that the scorer reproduces saved fair-scoring values on a synthetic case;
+   - refusal of existing outputs;
+   - for the job scripts: no `--exclusive`, and roots outside the saved folders.
+
+*Questions (need a ruling before code):*
+1. **m = 1 on GBM/CAC.** A finer grid (step 0.01) can find a different Beta for the same target. A neighbouring Beta can tie at K_bin with a different peak set; or, with the original S3PL target (for example 917), a closer count can be found. Then "m = 1 must reproduce the saved list" would stop on a grid artefact. **Proposal:** the m = 1 list **is** the saved list. The consistency check recomputes LearnPeaks at the saved Beta from the restored weights and must reproduce the saved list and its scores exactly. Only m ≠ 1 is re-selected on the new grid. On RCC, 6/8 runs have no within-tolerance saved list, so RCC m = 1 is re-selected like the other multipliers.
+2. **Comparator for the budget-stability clause:**
+   - (a) **count-matched** (recommended): IG and every ranking scored at exactly the legacy list's unique-bin count n_m. This needs rankings beyond the saved prefix of 2 × K_bin when n_m > 2 × K_bin (m = 2 plus up to 50). They are recomputed with the evaluator's functions, and their first 2 × K_bin entries must equal the saved prefix.
+   - (b) IG at the predeclared budget round(K_bin × m), against legacy at n_m: counts differ by up to about 50.
+3. **Stability rule as written ("ordering stable across the budget multipliers").** Proposed operationalisation: clause 3 is met for a collection × arm if IG > legacy in **≥ 7/8 sections at every m ∈ {0.5, 0.75, 1, 1.5, 2}**, the same threshold as clause 1. Capped (`msipl_cap`) points are reported and flagged. If you'd rather exclude capped m from the clause, say so now.
+4. **RCC main-table cell.** "Score every ranking at msiPL's own per-run count": use, per run, the m = 1 list (capped where the target is unreachable) and its unique-bin count n. That gives a count-matched row: legacy msiPL vs IG, posterior, mean intensity, variance, Moran's I and the oracle at n, at bin level. Descriptive, outside Holm, with the count shown per run.
+5. **Seeds and arms:** legacy is compared with IG **seed 1, both arms** (as in clauses 1–2), not with the three-seed means. OK?
+
+*Provisional checklist items:*
+- env `msipl_legacy`;
+- CPU only;
+- outputs `results/baselines/msipl/retune_20261030/` and `fair_scoring_baselines/msipl_retune_20261030/` (both new);
+- time and memory from the GBM22_2 pilot;
+- `batch` unless the pilot shows more than 30 GB.
+
+### 2026-10-30 17:33 Supervisor → Code | Zayd: Report numbers accepted; item 2 plan approved with Q1–Q5 answers
+Status: RULING (Zayd: OK for Code to write the amendment, code and tests; each sbatch still separate)
+- Resolves: 2026-10-30 17:31 Code entry.
+
+**A. Report numbers: accepted.**
+- 140/144, by collection: GBM 48/48, CAC 45/48, RCC 47/48. All four exceptions are ≤ +0.017.
+- The seed table as posted.
+- **Report wording:** "supported in all six dataset–arm comparisons" is true at the **primary bin level**. At the secondary P1 scale, CAC uniform is not supported (Holm 0.078), and the report says so in one clause.
+
+**B. Item 2 plan: approved.**
+1. **Q1: yes.**
+   - On GBM/CAC, m = 1 **is** the saved list, because it defines K_bin. The check recomputes LearnPeaks at the saved Beta and must reproduce the list and its scores exactly.
+   - m ≠ 1 is re-selected on the new grid.
+   - RCC m = 1 is re-selected like the other multipliers.
+2. **Q2: (a), count-matched.** Every ranking is scored at the legacy list's own unique-bin count n_m. Rankings beyond the saved 2 × K_bin prefix are recomputed, and their prefix must equal the saved one.
+3. **Q3: yes.**
+   - Clause 3 = IG > legacy in ≥ 7/8 sections at **every** m ∈ {0.5, 0.75, 1, 1.5, 2}, per collection × arm, on GBM and CAC (the scope of clauses 1–2).
+   - Capped points are included, because they are count-matched anyway, and flagged.
+   - Record in the amendment that this operationalises the 7.1 wording **before** any re-tuned list is scored.
+   - RCC stays descriptive.
+4. **Q4: yes.**
+   - Use the RCC count-matched row at n, outside Holm.
+   - In the main table, the RCC msiPL cell shows legacy at n, with a footnote giving the median n against K_bin and the count-matched IG and correlation values.
+5. **Q5: yes.** Seed 1, both arms, as for clauses 1–2.
+
+**Order:** amendment → code and tests → Codex → cluster test → GBM22_2 pilot → the other 23 sections → scoring. One checklist each.
+- `batch` unless the pilot shows more than 30 GB.
+- No `--exclusive`.
+
+### 2026-10-30 17:43 Code → Codex | Supervisor | Zayd: Item 2 amendment (P18 §6.8), code and tests written; ready for review and commit
+Status: OPEN (Codex: review and commit; Supervisor: independent Linux run if Git Bash still fails for Codex)
+- Resolves: 2026-10-30 17:33 Supervisor entry (amendment, code and tests; Zayd's OK given in the session).
+- **P18 §6.8 "msiPL Beta re-tune":** written at about 17:40 SAST, before any re-tune code or list existed.
+  - It contains the 12:58 item 2 text verbatim; the five 17:33 answers, with clause 3 operationalised before any list is scored; and implementation notes.
+  - **Implementation note to check:** if no count is within tolerance and the target lies *inside* the grid's count range (a gap) or *below* its minimum, the closest count is used with status `closest_outside_tolerance`, flagged. Only targets above the grid maximum get `msipl_cap`, as ruled.
+- **New files (uncommitted, LF):**
+  - `scripts/retune_msipl_beta.py` (msipl_legacy, Python 3.6; `ast.parse` with `feature_version=(3, 6)` passes):
+    - it imports `LearnPeaks`, `VAE_BN`, `load_dataset` and `tic_normalise` from `run_msipl_legacy_gbm.py` and `beta_grid` from the existing tuner;
+    - one sweep, −2.0..2.5 step 0.01 (451 values); targets `int(round(K_bin × m))`;
+    - the tuner's selection rule, plus `msipl_cap`;
+    - GBM/CAC m = 1 is recomputed at the saved Beta and must equal the saved `learned_peaks.csv` exactly (otherwise only `m1_reproduction.json` is written, and it exits 5);
+    - it refuses existing output (exit 3).
+  - `scripts/score_msipl_retune.py` (s3pl_env): imports the fair evaluator's functions; **the production evaluator is unchanged**.
+    - **Gates:** the saved posterior; the IG/L2 lists at K_bin (exact ties only); IG/L2 mSCF1 at K_bin (1e-12); every saved `rankings_prefix.npz` prefix; IG fair-scoring mSCF1 at K_bin; on GBM/CAC, `check_legacy` on the m = 1 list against the saved `peak_metrics.json`.
+    - Then legacy and every ranking at each list's unique-bin count n_m. `require_slurm`; exit 3 if the output exists.
+  - `scripts/summarise_msipl_retune.py` (local):
+    - clauses 1–2 from `with_approved_partitions/summary_66238/decisions.json`;
+    - clause 3 (≥ 7/8 at every m, capped points included and flagged);
+    - the overall rule only if all three are met;
+    - the RCC count-matched table (m = 1 list at n; median n vs K_bin; capped runs), labelled "descriptive, outside Holm";
+    - it refuses mixed scorer code, missing sections and an existing output.
+  - `slurm_jobs/msipl_retune_sections.sh`: 24 sections; pilot index 5 = GBM22_2. Seed-1 IG folders per arm, with RCC_UH0505_12 `uniform_mean` taken from the 128-step rerun.
+  - `slurm_jobs/run_msipl_retune_sweep.sh` (`batch`, msipl_legacy, 4 CPUs, 28G and 4 h provisional until the pilot; no `--exclusive`).
+  - `slurm_jobs/run_msipl_retune_scoring.sh` (`batch`, s3pl_env, 8G, 2 h).
+  - `slurm_jobs/submit_msipl_retune.sh` (`sweep` and `score` stages; pre-creates the parent folders; `--parsable`; job log under `retune_20261030/provenance/`).
+  - `src/spatial_msipl/tests/test_msipl_retune.py` (19 tests):
+    - the selection rule (tolerance, ties, cap, gap or below-range);
+    - targets equal `simple_baselines.budgets`;
+    - the grid comes from the tuner's own `beta_grid` (AST-extracted; 451 values);
+    - the legacy imports, the 3.6 grammar, and argument pairing;
+    - refusal of existing outputs (sweep, scorer, both jobs);
+    - the prefix gate and count-matched scoring;
+    - the summariser's clauses, flags, RCC table and refusals;
+    - job resources and env;
+    - the paths, including the RCC rerun arm;
+    - K_bin equals the saved legacy unique count for 16/16 GBM/CAC sections (local data check).
+- **Changed:** `slurm_jobs/run_fair_scoring_tests.sh` gains one module line.
+- **Local:** `test_msipl_retune` 19/19 + `test_ig_steps` 26/26 + `test_test_r` 26/26 = 71/71, none skipped. `bash -n` is clean on the 4 new job scripts.
+- **Not testable locally:** the TensorFlow sweep and the full scorer on real HDF5. The GBM22_2 pilot exercises the m = 1 reproduction gate, and the scoring job exercises every scorer gate (fail-closed).
+- **After the commit:** upload and `sha256sum`; cluster test job; GBM22_2 pilot checklist. One checklist each.
+
+### 2026-10-30 17:45 Supervisor → Code | Codex | Zayd: Report rewrite v2 (no appendix, no proposal framing); one more RCC gap; figure list for item 4
+Status: ACTION (Code: items below after item 2; Codex: docs commit when convenient)
+- **Rewrite:**
+  - `report/draft/sections/*.tex` and `report.tex` are rewritten per D06–D08, D15 and D20a: the new abstract, RQs at the end of the introduction, no appendix, no proposal section and no internal test names.
+  - The merged seed table (tab:seeds) uses the 17:31 numbers (140/144). The RCC uniform main-table row is from `rcc/decisions_20261030_ig_steps_local/section_table.csv` (IG 0.410, correlation 0.578, Moran 0.631, mean 0.498, variance 0.508, random 0.171, oracle 0.756).
+  - There is an AI-use paragraph in Methods (Zayd to confirm) and a final-page placeholder for the declaration. The PDF goes in as `ai_declaration.pdf` via pdfpages.
+  - **PDF:** `report/draft/report_draft_v2_2026-10-30.pdf`, 12 pages: the body ends on p10, the references run p10–11 and p12 is the declaration placeholder. One minor overfull warning (4 pt).
+  - The 8-page version is backed up in `previous_version/draft_8page_2026-10-30/`.
+- **Open gaps (red `[CHECK]`; all must be gone before the draft goes to Hairong):**
+  - item 2: the msiPL budget sentence, the RCC msiPL cells and footnote, and the budget-stability clause;
+  - item 3: the training-length sentence;
+  - item 4: the dataset figure;
+  - the release tag and commit;
+  - the AI-use wording;
+  - **NEW: the RCC cancer/normal-only sensitivity for UH0505_12 `uniform_mean`.** The text still says "6/7 runs". It needs the class-subset fair scoring (`--class-subset`) on the 128-step rerun attribution (CPU, `batch`, one row), then the regenerated count. Code: add it to the next CPU checklist.
+- **Item 4 figure list (report style: no titles, colour-blind-safe, column width unless stated; PDF into `report/draft/images/`):**
+  1. `dataset_overview.pdf` (full width): TIC and mask for GBM22_2, 160TopL and RCC_MH0204_33.
+  2. `baseline_reproductions.pdf` (replaces `20_*`).
+  3. `ig_minus_correlation_by_section.pdf` (replaces `05_*`): **regenerate from the IG-steps composite**, so RCC uniform shows 8 runs.
+  4. `neighbourhood_variants.pdf` (replaces `17_*`).
+  5. `gbm_context_by_pdx_line.pdf` (replaces `08_*`).
+  6. `vae_vs_pca.pdf` from the regenerated table, with RCC at 8/8.
+  7. The S3PL seed figure is already in report style.
+  - Code: post the list of input files per figure before building.
+
+### 2026-10-30 17:47 Supervisor → Codex | Code | Zayd: Item 2 package: independent Linux run 71/71 OK; implementation note accepted
+Status: RULING
+- Resolves: 2026-10-30 17:43 Code entry.
+- **Independent run (Linux VM, same working tree):** `PYTHONPATH=src:scripts python3 -m unittest spatial_msipl.tests.test_msipl_retune spatial_msipl.tests.test_ig_steps spatial_msipl.tests.test_test_r`: **Ran 71 tests in 70.2 s, OK**, none skipped.
+- **Implementation note accepted:** `closest_outside_tolerance` (flagged) for a target in a count gap or below the grid minimum, and `msipl_cap` only above the maximum. Both are count-matched at n anyway, so neither biases the comparison. The report will give the number of flagged points.
+- **Codex:** review and commit. Then upload, the cluster test job and the GBM22_2 pilot, each with its checklist and Zayd's OK. Fold the RCC_UH0505_12 `uniform_mean` class-subset row (17:45) into one of the CPU checklists.
+
+### 2026-10-30 17:49 Codex → Code | Supervisor: Review of Item 2 msiPL retune package
+Status: INFO
+- Resolves: 2026-10-30 17:43 Code entry.
+- The Section 6.8 amendment and implementation agree on the declared grid, tolerance and tie rule, the accepted `closest_outside_tolerance`/`msipl_cap` distinction, the GBM/CAC saved-list reproduction gate, RCC re-selection, exact count-matched scoring, clause 3, the descriptive RCC table outside Holm, and seed-1 inputs for both arms.
+- The scorer preserves the production evaluator and fails closed on the posterior, saved IG/L2 lists and scores, ranking prefixes, saved fair-scoring IG, legacy reproduction, mixed code, missing sections and existing outputs. The jobs cover 24 sections, use the declared environments and saved weights, run in `batch` without exclusivity, and designate GBM22_2 as the pilot.
+- Verification: the Supervisor's independent Linux run passed all 71/71 tests with none skipped; shell syntax was also reported clean. Review found no contradiction with Protocol 18 and `git diff --cached --check` was clean apart from the repository's line-ending warning.
+- Committed: a36ce869 (`Add msiPL budget retuning workflow`).
