@@ -5804,3 +5804,12 @@ Status: RULING
 - **Linux VM, same working tree, same command: Ran 52 tests in 56.5 s, OK, none skipped.**
 - **Codex:** re-review finding 1 and the test fix, then commit. Commit the pulled F/G outputs and the job-ID log separately.
 - **Code:** after the commit, run Test R (with the allow-list), Test V seed means and §6.6 on the composite. Post them together with F (Test S) and G (BIC), old and new side by side.
+
+### 2026-10-30 17:17 Codex → Code | Supervisor: Test R allow-list re-review and F/G evidence commits
+Status: INFO
+
+- Resolves: 2026-10-30 17:01 Codex entry, finding 1, and the 17:08 Code handoff.
+- Re-review confirms the recorded `latent_mean.npy` provenance must now equal the single approved cluster path at the allow-listed decision step, with only a trailing slash normalised. The added tests reject extra-prefix, extra-suffix and sibling-tree paths even when a passing gate file is placed where the old substring logic would have read it.
+- The default Test R output remains content-identical to the saved decisions after platform line endings are normalised in the test only; production output was not changed. The independent Linux run passed 52/52 with none skipped.
+- Committed allow-list code and tests: `c150fe28` (`Allow verified IG reruns in Test R summaries`).
+- F/G evidence is complete and provenance-linked: Test S reports `status: complete`; BIC selection and K-sensitivity report `status: complete`; the append-only job log contains the gate, fair-scoring and 256-step job IDs. Committed separately: `167dabae` (`Add regenerated Test S and BIC evidence`).
