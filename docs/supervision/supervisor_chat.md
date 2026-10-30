@@ -4896,3 +4896,215 @@ Status: INFO
 - The figure script passes Python compilation and its saved-input checks. A fresh run reproduces the committed PNG byte for byte. The one-page PDF renders cleanly with no clipping or overlap; the section order and caption match the 19:12 ruling.
 - `CURATION_PROPOSAL.md` and `report_plan_2026-10-21.md` were not included because they were outside the Supervisor's stated commit scope.
 - Committed: `e9893505` (`Verify report evidence and add seed distribution figure`).
+
+### 2026-10-30 12:01 Supervisor → Zayd | Code | Codex: Full report draft written (12 pages, compiles)
+Status: INFO (Zayd: review; Code: figure clean-up later, on request)
+
+- **Rewritten:** `report/draft/sections/*.tex` and `report.tex` (the new title, abstract, section order and an appendix). There is a new `sections/appendix.tex`, and 14 bibliography entries were added (those marked `VERIFY` need checking).
+- **Backups:** the old sections are in `previous_version/sections_2026-10-09/`.
+- **PDF:** `report/draft/report_draft_2026-10-30.pdf`.
+- **Sources:** every number comes from the verified dump (C001–C238, corrected), `statistics_6_6`, or the fair-scoring and Investigation 21 summaries.
+- **Open items** are marked in red `[CHECK: …]` in the PDF: the CAC acquisition citation, the repository URL and commit, the AI-use statement, and the appendix figure choices.
+- **Figures:** the update-pack figures are used directly. They carry presentation titles, so Code should rebuild clean report versions once Zayd has reviewed the draft.
+
+### 2026-10-30 12:30 Supervisor → Zayd: Draft aligned with the proposal
+Status: INFO
+- **Read `proposal/proposal.tex` directly** (the draft had used only the dump's proposal items).
+- **Added:**
+  - the model name Spatial-msiPL and the proposal's title and aim;
+  - the peak picking vs peak learning distinction;
+  - the exact wording of P1–P3;
+  - the dataset accessions (GBM PR001292, CAC MTBLS415);
+  - proposal details in the proposal-to-outcome table (L2 weights, the λ range for Bayesian optimisation, DeepION-style Poisson noise);
+  - the memory and runtime comparison against S3PL that the proposal promised;
+  - an "Autonomy and the proposal's aim" discussion paragraph.
+- Recompiled: `report_draft_2026-10-30.pdf`.
+
+### 2026-10-30 12:58 Supervisor → Code | Zayd | Codex: Close every incomplete experiment before the report is rewritten (submission now 11 Nov)
+Status: ACTION (Code: plan and pre-submission checklists; **every sbatch needs Zayd's explicit OK**)
+
+**Context (Zayd, 30 Oct):** submission is **11 November** (Hairong). The paper is 8 pages, **with no appendix**, and must not contain anything that is or looks incomplete. Whatever is missing gets run before the report is rewritten. The report waits for these results.
+
+**Items that currently read as incomplete:**
+- 4 IG "not done" seed-arms;
+- RCC `uniform_mean` 7/8;
+- GBM and RCC Test R Decision 2 "incomplete";
+- Test S RCC uniform "incomplete";
+- BIC RCC 15/16;
+- the empty msiPL cell for RCC in the main table;
+- the budget-stability clause of "IG beats legacy", which is "not assessable".
+
+Mann–Whitney stays as is: the comparisons are paired, so the paper simply uses paired tests. That is not an incompleteness. The S3PL GBM matched-K rerank (C229) was conditional and stays unrun, because S3PL is not in the fair-scored table.
+
+**Item 1: IG completeness reruns** (amendment to protocol 18 Section 6.3; write it into the protocol before any job runs).
+- **Rule:** an arm that fails the completeness check at 64 steps is rerun **from its saved checkpoint** (no retraining) with the same GMM seed and sampling seed, at **128** steps. If it still fails, it is rerun at **256** steps. All other arms stay at 64. Record the median and 95th-percentile residuals at each step count.
+- **Arms:**
+  - RCC_UH0505_12 `uniform_mean`, seed 1;
+  - RCC_UH0505_12 `central_only`, seed 2;
+  - RCC_UH9912_01 `uniform_mean`, seed 3;
+  - GBM39_2 `uniform_mean`, seed 3.
+- **GMM check:** the rerun GMM must match the saved GMM wherever one is saved. If it does not, stop and post.
+- **Step-count control (descriptive, so the methods can state that the step count does not change results):**
+  - Rerun 4 **valid** arms at 128 steps into a **new** folder: RCC_UH0505_12 `central_only` s1, RCC_UH9912_01 `uniform_mean` s1, GBM39_2 `uniform_mean` s1, and CAC 40TopL `uniform_mean` s1.
+  - Report, against 64 steps, the change in mSCF1 at K_bin and the Jaccard of the K_bin bin set.
+- **Downstream regeneration, all into new output folders:**
+  - matched evaluation and fair scoring for those arms;
+  - RCC seed-1 decision;
+  - Test R Decisions 1 and 2;
+  - Test S RCC uniform;
+  - BIC RCC UH0505_12 `uniform_mean`;
+  - Test V seed means;
+  - Section 6.6 statistics, with families unchanged;
+  - the evidence tables.
+- **Post the old and new labels side by side.** Labels may change (for example GBM Decision 2 was "equivalent" at seed 1), and that is fine: we report whatever the rule says.
+
+**Item 2: msiPL Beta re-tune** (CPU only, from the existing legacy msiPL checkpoints, no retraining).
+- **Why RCC is empty:** the RCC count is not reachable on the current grid. At Beta 0.0, 6/8 runs fall short (for example MH0204_33 gives 1,154 against 2,200).
+  - The sweep flattens near 0 (1,151 → 1,154), because `LearnPeaks` keeps only local maxima of the mean spectrum.
+  - A wider grid (Beta from −2.0 to 2.5, step 0.01) should find msiPL's **maximum attainable count**. This is a property of msiPL, not an incompleteness.
+- **Targets:** round(K_bin × m) for m ∈ {0.5, 0.75, 1, 1.5, 2}, on GBM, CAC and RCC, with the existing tolerance of 50.
+  - If a target cannot be reached, use msiPL's maximum count and label it `msipl_cap`.
+- **Consistency check:** m = 1 on GBM/CAC must reproduce the saved legacy lists and scores exactly (to 1e-12). If it doesn't, stop.
+- **Scoring:**
+  - Score every legacy list with the fair-scoring evaluator. Then assess the budget-stability clause of "IG beats legacy" with the existing Section 7.1 rule, as written.
+  - On RCC, also score **every ranking** at msiPL's own per-run count, so the main table has a count-matched RCC msiPL comparison wherever the target is capped.
+  - RCC msiPL rows are **descriptive, outside Holm**. The predeclared families stay as they are.
+
+**Item 3 (optional; Zayd decides): C3 training length.**
+- Development sections GBM108_positive and 40TopL, both arms, seed 1.
+- Score at epochs 10, 25, 50 and 100 (GMM + IG + posterior-|PCC| at K_bin). Epoch 100 must reproduce production.
+- It justifies the 100-epoch choice with the same evidence we have for S3PL.
+- Cached training makes it cheap. If any intermediate checkpoints already exist, say so first.
+
+**Item 4: figures (local where possible).**
+- **New dataset figure.** One representative section per collection (GBM22_2, 160TopL, RCC_MH0204_33):
+  - a TIC image plus the annotation mask, with unmeasured pixels shown as blank and RCC unannotated pixels shown as grey;
+  - report style (no titles, a colour-blind-safe palette), full width, about 5 cm tall.
+  - RCC may need rendering on the cluster; that needs an OK.
+- **Report-style rebuilds** of `05_ig_minus_correlation_by_section` and the S3PL seed figure.
+
+**Item 5: dataset provenance, read-only on the cluster.** Fill the "Still to confirm" line in `docs/research/03 Datasets and Preprocessing.md` (new Sources section, written today):
+- the origin, date, archive name and SHA-256 for the GBM MassNet HDF5 and the CAC imzML;
+- the RCC citation in CardinalWorkflows `man/rcc-data.Rd`.
+
+**Process:**
+- Order: 1 → 2 → 4 → 5 (3 only if Zayd says yes).
+- One pre-submission checklist per job: script hashes match HEAD, outputs are new folders, the mkdir-race roots are pre-created, the time and memory are justified.
+- Poll every 2–5 minutes at most.
+- Post results with paths. Code does not commit.
+
+### 2026-10-30 13:20 Supervisor → Code: Zayd approved item 3 (C3 training length)
+Status: INFO
+- Resolves: 2026-10-30 12:58 Supervisor entry, item 3. Zayd says yes. Order is 1 → 2 → 3 → 4 → 5. Each sbatch still needs his explicit OK.
+
+### 2026-10-30 13:23 Code → Supervisor | Zayd: Item 1 plan (IG completeness reruns): needs Zayd's OK before anything is written or run
+Status: OPEN (Zayd: OK or changes; Supervisor: questions 1–4)
+Context: Read the 12:58 and 13:20 entries and protocol 18 §§2, 6.3, 7 and 7.1. Nothing is edited, written, submitted or committed yet. The facts below come from local saved artifacts.
+Evidence: the four `attribution/summary.json` files under `results/experiments/rcc_spatial_msipl/RCC_UH0505_12_seed1/uniform_mean/` and `results/experiments/test_r_training_seeds/{RCC_UH0505_12_seed2/central_only, RCC_UH9912_01_seed3/uniform_mean, GBM39_2_seed3/uniform_mean}/`.
+- **What failed:** all four arms fail only the 95th-percentile criterion (≤ 0.15). Their p95 normalised residuals are 0.175, 0.338, 0.156 and 0.189 (in the order above). The medians are 0.0002–0.0007, against a limit of 0.05.
+- **Saved GMMs:** all four saved `gmm_parameters.npz`, `coordinates_and_gmm.npz` and `latent_mean.npy`, so the GMM check applies to every arm (GMM seed 1, sampling seed 1).
+- **No IG code change is needed:**
+  - `run_spatial_msipl_gmm_integrated_gradients.py` already takes `--ig-steps`.
+  - It also has the tested, fail-closed `--align-gmm-labels-to-production`, which exits before writing anything unless the refit hard assignment equals the saved one and the posterior is within 1e-4.
+- **The existing job scripts can't be reused.** `run_test_r_campaign.sh` reruns IG into the *same* `attribution/` folder when the status is not valid, which would overwrite it. New job scripts are needed.
+- **Control-arm caveat:** the saved GBM39_2 `uniform_mean` s1 attribution is `attribution_version` 1 (`valid_pilot`, before `9f7408f`). The other three control arms are version 2.
+
+**Plan:**
+1. **Protocol first.** Add a dated amendment at the end of §6.3, "30 October: IG completeness reruns", with the 12:58 item 1 text verbatim plus the implementation notes below. Add a cross-reference line in §6.1, because the RCC seed-1 arm is an RCC-campaign arm. This is written before any job runs.
+2. **GMM check:**
+   - Each rerun passes `--align-gmm-labels-to-production <saved 64-step attribution folder>`, so a mismatch exits before any output is written.
+   - The job also requires the recorded permutation to be the identity. A permuted numbering would change the seeded pixel sample, so it counts as a fail.
+   - After the pull, a local check reports the maximum absolute differences of `latent_mean.npy` and `gmm_parameters.npz` against the saved files (descriptive).
+   - Any failure: stop and post.
+3. **New code (uncommitted, for Codex):**
+   - `slurm_jobs/ig_steps_rerun_sections.sh`: a fixed task table of arm × steps, with checkpoint paths taken from the saved summaries.
+   - `run_ig_steps_rerun.sh` (GPU):
+     - it verifies the checkpoint (100 epochs, arm, seed), as Test R does, and does the real CUDA warm-up;
+     - it runs the campaign's IG call unchanged except for `--ig-steps N` and the alignment flag;
+     - it then runs the matched evaluation: RCC at the released target without legacy, GBM/CAC at the production K_bin with legacy;
+     - it refuses to start if its output folder already holds a summary.
+   - `run_ig_steps_fair_scoring.sh` (CPU, `batch`): the unchanged evaluator with the original arguments (RCC bin level only; GBM bin level and P1).
+   - `submit_ig_steps.sh`: `--exclude` from the quarantine on the sbatch line, `--parsable`, and pre-creation of the output roots.
+   - `scripts/summarise_ig_steps.py` (local): median and p95 residuals at each step count; for the controls, Δ mSCF1 at K_bin and the Jaccard of the K_bin bin sets, against 64 steps.
+   - **Tests:** the task table; command text identical to the campaign except for the two flags; refusal on existing outputs; roots never inside an existing seed folder.
+4. **New roots:**
+   - `results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/` (the four failed arms);
+   - `results/experiments/ig_steps_control_20261030/…/steps128/` (the four controls);
+   - `results/diagnostics/fair_scoring_baselines/ig_steps_rerun_20261030/<scope>/…`.
+   - Seed folders and checkpoints are only read.
+5. **Submissions (each with a checklist and Zayd's OK):**
+   - a. cluster test job;
+   - b. GPU 128-step array: 8 tasks (4 failed + 4 controls), `bigbatch` like the RCC/Test R campaigns. The 64-step runs took 4–12 min per arm (CAC 40TopL 8 s), so I expect roughly 2× for the IG part. I'll justify `--time`/`--mem` in the checklist, and also whether `--exclusive` stays, given the CLAUDE.md note about busy `bigbatch`;
+   - c. a 256-step array only for the arms that fail at 128;
+   - d. CPU fair scoring.
+6. **Downstream:**
+   - The first passing step count (128 or 256) enters the decisions. The controls are descriptive only.
+   - Test S RCC UH0505_12 `uniform_mean` and BIC RCC UH0505_12 `uniform_mean` are CPU jobs. The existing evaluators already take explicit paths; they will run into new roots.
+   - The local summarisers (RCC seed-1 decision, Test R D1/D2, Test S, Test V seed means, 6.6 statistics, evidence tables) each read one root. I'll assemble a **new composite local root** by copying (never moving) the unchanged arms and adding the reruns, with a manifest of source path and SHA-256 per file. Then I'll run the unchanged summarisers into new output folders. If a summariser's provenance checks refuse the composite, I stop and post rather than patch.
+   - Old and new labels will be posted side by side.
+- **Item 3 note:** I'll check for intermediate checkpoints (training keeps only `checkpoint_latest.pt` at interval 5, so probably none) and report before planning item 3.
+
+Questions / requests:
+1. GMM check: is the alignment flag + identity permutation + descriptive latent/parameter differences an acceptable reading of "the rerun GMM must match the saved GMM"?
+2. Should I add a **64-step rerun of each control arm** (4 extra GPU tasks, about 5–15 min each)? Then the control compares 64 vs 128 under the same code and node class. That matters for GBM39_2 s1, whose saved IG is version 1. I recommend yes, and reporting both the comparison against the saved 64-step run and the comparison against the rerun.
+3. Is the composite-root approach for the summarisers OK?
+4. Amendment placement: a dated note at the end of §6.3 with a cross-reference in §6.1?
+
+### 2026-10-30 13:30 Supervisor → Code | Zayd: Item 1 plan approved with four answers; Zayd's OK covers writing code and the amendment, not sbatch
+Status: RULING
+- Resolves: 2026-10-30 13:23 Code entry.
+- **The plan is sound.** Not reusing `run_test_r_campaign.sh`, because it would overwrite the attribution folder, is the right catch.
+
+**Answers:**
+1. **GMM check: yes.**
+   - The gate is `--align-gmm-labels-to-production` (identical hard assignment, posterior within 1e-4) plus an identity permutation.
+   - Report the latent and parameter max-abs differences descriptively.
+   - Any gate failure: stop and post.
+2. **64-step control reruns: yes** (4 extra GPU tasks). Report each control against **both** the saved 64-step run and the rerun 64-step run.
+   - **GBM39_2 `uniform_mean` s1 (saved IG version 1, before `9f7408f`):** this is also the production seed-1 value in the main table.
+   - So report separately whether the rerun at 64 steps reproduces the saved version-1 K_bin set and its mSCF1.
+   - If it does not (Jaccard < 1 beyond near-tie swaps, or |Δ mSCF1| > 0.005), **post it with the numbers; do not stop the item.** I'll rule on whether the table value changes.
+3. **Composite root: yes.**
+   - Copy, never move, into a new dated root, with a manifest of source path and SHA-256 per file.
+   - Run the unchanged summarisers into new folders.
+   - If a provenance check refuses the composite, stop and post; do not patch.
+4. **Amendment placement: yes.** Use a dated note at the end of §6.3 and a cross-reference in §6.1. Add one line saying the decision was Zayd's, 30 October: a complete-results requirement before the report.
+
+**Also:**
+- **`--exclusive` is not needed.** No timing from these runs enters the paper, so use the normal `bigbatch` request with the quarantine `--exclude`. Say so in the checklist.
+- **Before the GPU array,** run the cluster test job (5a) and post the test output with the checklist.
+
+**Zayd:** if you agree, reply "OK" to Code. That lets it write the protocol amendment, the scripts and the tests. Submission 5a still needs a separate OK on its checklist.
+
+### 2026-10-30 13:40 Code → Codex | Supervisor | Zayd: Item 1 amendment written; job scripts and tests ready for review and commit
+Status: OPEN (Codex: review and commit; Zayd: then the 5a checklist follows)
+- Resolves: 2026-10-30 13:30 Supervisor entry (writing the code and the amendment).
+- **Protocol 18:** a new §6.3 amendment, "30 October: IG completeness reruns" (12:58 item 1 verbatim, then the implementation notes and the 13:30 answers, including that the decision was Zayd's), plus a cross-reference line at the end of §6.1. It was written before any rerun job existed.
+- **New files (uncommitted, LF):**
+  - `slurm_jobs/ig_steps_sections.sh`: fixed task table (0–3: failed arms at 128; 4–7: controls at 64; 8–11: controls at 128; 12–15: failed arms at 256, only if needed) and the path helpers. It reuses `test_r_sections.sh`.
+  - `slurm_jobs/run_ig_steps_rerun.sh`: GPU, `bigbatch`, no `--exclusive`, 24G, 3 h. It runs these steps in order:
+    - it refuses an existing output (exit 3) before anything runs;
+    - it checks that the checkpoint path equals the saved summary's, and checks the epochs, arm, window and seed;
+    - it does the CUDA warm-up;
+    - it runs the RCC campaign's IG call with only `--ig-steps "$STEPS"` and `--align-gmm-labels-to-production "$SAVED"` added;
+    - it writes `gmm_gate.json`: identity permutation, equal `model_state_sha256`, identical hard assignment, plus the descriptive latent/GMM-parameter/posterior differences. A gate failure exits 5;
+    - not valid at this step count exits 4, with no evaluation;
+    - otherwise it runs the matched evaluation exactly as in Test R.
+  - `slurm_jobs/run_ig_steps_fair_scoring.sh`: CPU on `batch`, 8G. It uses Test R's evaluator call (RCC bin level only, without legacy; GBM/CAC bin level and P1 with legacy), refuses an existing output, and skips a task whose gate, IG validity or evaluation is missing.
+  - `slurm_jobs/submit_ig_steps.sh`: the `ig` and `fair` stages. It puts the quarantine `--exclude` on the sbatch line, uses `--parsable`, pre-creates the parent folders (never the task folders) and logs the job IDs in `results/experiments/ig_steps_rerun_20261030/provenance/`.
+  - `scripts/summarise_ig_steps.py`: local only. It writes the residuals (median and p95 at each step count), the GMM gate, the decision step per failed arm, and the controls: Δ bin-level IG mSCF1 at K_bin and the Jaccard of the K_bin IG bins, for 128 vs saved 64, 128 vs rerun 64 and rerun 64 vs saved 64, with the 13:30 reproduction flag (Jaccard = 1 and |Δ| ≤ 0.005). The ranks of differing bins are listed so near-tie swaps can be judged.
+  - `src/spatial_msipl/tests/test_ig_steps.py`: 15 tests. They cover:
+    - the task table equal in bash and Python, and matching the amendment;
+    - dated roots, never inside a saved seed folder;
+    - the IG call equal to `run_rcc_campaign.sh` except the two flags;
+    - the evaluation and fair-scoring calls equal to Test R's;
+    - no training call, no `#SBATCH --exclusive`, and the quarantine on the command line;
+    - both array jobs refusing an existing output (exit 3);
+    - the saved 64-step summaries: the 4 reruns fail, the 4 controls pass, and the checkpoint paths match;
+    - the summariser's logic on a synthetic tree.
+- **Changed:** `slurm_jobs/run_fair_scoring_tests.sh` gains one line (`spatial_msipl.tests.test_ig_steps`) in the cluster test-job module list. No existing scientific script is changed.
+- **Local tests:** `test_ig_steps` 15/15 and `test_test_r` 19/19 passed (34/34, none skipped). `bash -n` is clean on all four shell scripts.
+- **Next, after Codex commits:**
+  1. upload from the clean HEAD (rsync `-n` first) and check the `sha256sum` against HEAD;
+  2. post the 5a checklist (cluster test job `run_fair_scoring_tests.sh`) and wait for Zayd's OK;
+  3. post the test output with the GPU checklist for `submit_ig_steps.sh ig 0-11` (12 tasks).

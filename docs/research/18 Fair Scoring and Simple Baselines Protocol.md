@@ -335,6 +335,7 @@ The rules below are copied from the chat entries, which fixed them before any ou
 - **Out of scope on RCC (condition 6):** attention, larger windows, centre masking and S3PL. Legacy msiPL is not run (condition 4).
 - **Decision table:** `scripts/summarise_rcc_fair_scoring.py`. It refuses mixed provenance, reports per-run and per-patient values and the two disclosures, and gives no verdict for the sensitivity analysis.
 - **Order (condition 7):** this specification → code and tests → Zayd sees the diff → cluster test job → preparation (8 CPU tasks), then the partition approval → 2-run pilot (UH9610_15, the largest at 3,564 px, and UH0710_33, the smallest at 972 px; both arms, 4 tasks) → the other 12 tasks → fair scoring → summary. Each `sbatch` needs Zayd's OK.
+- **Cross-reference, 30 October:** RCC_UH0505_12 `uniform_mean` (seed 1, IG `needs_more_ig_steps` at 64 steps) is rerun at 128/256 IG steps from its saved checkpoint under the Section 6.3 amendment "30 October: IG completeness reruns" (Zayd's decision: complete results before the report). The RCC seed-1 decision is regenerated into a new folder; the 17 October tables stay as the record.
 
 ### 6.2 Test S: spatially regularised segmentation (supervisor chat 17 October 08:04, Zayd-approved; predeclared before any output exists)
 
@@ -428,6 +429,33 @@ The predeclaration below is copied verbatim from the supervisor chat entry "2026
 - **Disclosed differences from seed 1, which no setting can remove:**
   - the seed-1 GBM/CAC models were trained with the streaming loader (September); seeds 2 and 3 use the cached loader, validated equivalent in investigation 10 (identical loss histories and final tensors);
   - the seed-1 GBM `uniform_mean` attributions are IG `attribution_version` 1 (before the 20 September refactor `9f7408f`, which added the centre-only path and relabelled `valid_pilot` as `valid`); all other seed-1 attributions and all seed-2/3 attributions use version 2.
+
+#### Amendment, 30 October: IG completeness reruns (supervisor chat 2026-10-30 12:58 item 1 and the 13:30 ruling; written into this protocol at about 13:35 SAST, before any rerun job was written, submitted or run)
+
+**Decision:** Zayd's, 30 October: a complete-results requirement before the report (submission 11 November; an 8-page paper with no appendix must contain nothing that is or looks incomplete). This amendment changes the Test R carry-over rule "an IG completeness failure makes that seed-arm 'not done', with no setting change" and the matching RCC rule (Section 6.1) for the arms named below only. It is a separately labelled addition; no threshold, rule label, family or other setting changes.
+
+**Item 1 as posted (verbatim, 12:58):**
+- **Rule:** an arm that fails the completeness check at 64 steps is rerun **from its saved checkpoint** (no retraining) with the same GMM seed and sampling seed, at **128** steps. If it still fails, it is rerun at **256** steps. All other arms stay at 64. Record the median and 95th-percentile residuals at each step count.
+- **Arms:**
+  - RCC_UH0505_12 `uniform_mean`, seed 1;
+  - RCC_UH0505_12 `central_only`, seed 2;
+  - RCC_UH9912_01 `uniform_mean`, seed 3;
+  - GBM39_2 `uniform_mean`, seed 3.
+- **GMM check:** the rerun GMM must match the saved GMM wherever one is saved. If it does not, stop and post.
+- **Step-count control (descriptive, so the methods can state that the step count does not change results):**
+  - Rerun 4 **valid** arms at 128 steps into a **new** folder: RCC_UH0505_12 `central_only` s1, RCC_UH9912_01 `uniform_mean` s1, GBM39_2 `uniform_mean` s1, and CAC 40TopL `uniform_mean` s1.
+  - Report, against 64 steps, the change in mSCF1 at K_bin and the Jaccard of the K_bin bin set.
+- **Downstream regeneration, all into new output folders:** matched evaluation and fair scoring for those arms; RCC seed-1 decision; Test R Decisions 1 and 2; Test S RCC uniform; BIC RCC UH0505_12 `uniform_mean`; Test V seed means; Section 6.6 statistics, with families unchanged; the evidence tables.
+- **Post the old and new labels side by side.** Labels may change, and that is fine: we report whatever the rule says.
+
+**Implementation notes (13:23 plan, 13:30 ruling; fixed before any output exists):**
+- **Why the four arms failed (saved summaries):** each fails only the 95th-percentile criterion (normalised residual ≤ 0.15): 0.175 (UH0505_12 uniform s1), 0.338 (UH0505_12 centre s2), 0.156 (UH9912_01 uniform s3), 0.189 (GBM39_2 uniform s3). Medians 0.0002–0.0007 (limit 0.05). The completeness criterion itself is unchanged.
+- **IG call:** the campaign call unchanged (GMM K production, `n_init` 20, `--seed 1 --sampling-seed 1`, 12 px/component, 32 faithfulness px, internal batch 8) except `--ig-steps N` and `--align-gmm-labels-to-production <saved 64-step attribution folder>`. The step count that enters the decisions is the first that passes (128, else 256). If 256 also fails, the arm stays "not done".
+- **GMM gate (13:30, answer 1):** `--align-gmm-labels-to-production` (refit hard assignment identical to the saved one under exactly one permutation, posterior within 1e-4; otherwise exit 5 before any output is written) **and** the recorded permutation must be the identity (a renumbering would change the seeded pixel sample). The job also requires the rerun `model_state_sha256` to equal the saved one. The maximum absolute differences of `latent_mean.npy` and `gmm_parameters.npz` against the saved files are reported descriptively. Any gate failure: stop and post.
+- **Step-count controls (13:30, answer 2):** each control arm is rerun at **64 and 128** steps. Each 128-step control is reported against both the saved 64-step run and the rerun 64-step run (Δ fair-scoring bin-level IG mSCF1 at K_bin, and the Jaccard of the first K_bin bins of the IG ranking). Controls are descriptive and never enter a decision. **GBM39_2 `uniform_mean` s1** (saved IG version 1, the production seed-1 table value): report separately whether the 64-step rerun reproduces the saved K_bin set and mSCF1; if not (Jaccard < 1 beyond near-tie swaps, or |Δ mSCF1| > 0.005), post with the numbers and continue the item; the supervisor rules on the table value.
+- **Roots (new; seed folders and checkpoints are only read):** `results/experiments/ig_steps_rerun_20261030/<section>_seed<S>/<arm>/steps<N>/` (failed arms), `results/experiments/ig_steps_control_20261030/<section>_seed1/<arm>/steps<N>/` (controls), each holding `attribution/` and the matched evaluation (`peak_evaluation_released_target/` for RCC without legacy at the released target, `peak_evaluation/` for GBM/CAC at the production K_bin with the legacy list); fair scoring under `results/diagnostics/fair_scoring_baselines/ig_steps_20261030/<scope>/<section>_seed<S>/<arm>/steps<N>/` (RCC bin level only, without legacy; GBM/CAC bin level and P1 with legacy).
+- **Downstream (13:30, answer 3):** Test S RCC UH0505_12 `uniform_mean` and BIC RCC UH0505_12 `uniform_mean` rerun with their unchanged evaluators into new roots. The local summarisers (RCC seed-1 decision, Test R Decisions 1–2, Test S, Test V seed means, Section 6.6 statistics, evidence tables) run unchanged on a new dated composite root, assembled by copying (never moving) the unchanged arms plus the reruns, with a manifest of source path and SHA-256 per file. If a provenance check refuses the composite, stop and post; no patching.
+- **Cluster:** GPU on `bigbatch` with the quarantine `--exclude` and without `--exclusive` (no timing from these runs enters the report; 13:30); CPU fair scoring on `batch`. Each `sbatch` needs Zayd's OK on its checklist.
 
 ### 6.4 Test V: VAE segmentation vs a PCA segmentation (supervisor chat 17 October 12:42, Zayd-approved; predeclared before any output exists)
 
