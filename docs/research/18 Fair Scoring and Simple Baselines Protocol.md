@@ -1477,6 +1477,34 @@ A test rebuilds the IG matched groups from these files.
       - The rows outside Holm (2, 11, 36) change only descriptively.
       - Mann–Whitney is unchanged. The RCC uniform mixed model is still "not converged".
     - **Evidence tables:** unchanged (7/7 byte-identical; see above).
+- **30 October, msiPL Beta re-tune (Section 6.8):**
+  - Amendment written at about 17:40 SAST. Code and tests committed by Codex as `a36ce869` (independent Linux run 71/71, chat 17:47).
+  - **17:52 SAST (15:52 UTC), upload** (documented source upload from `code/msi`, `-n` first, clean committed HEAD `1866f3c8`, with the narrowing `--exclude='/tmp/'` for the two empty scratch folders): 12 files. These are the 8 item-2 files, `run_fair_scoring_tests.sh`, the committed Test R allow-list files (`summarise_test_r.py`, `test_test_r.py`; not uploaded before) and the untracked `.pym2aia_prefs.xml`.
+  - **`sha256sum` vs HEAD:** 17/20 checked files match byte for byte. That covers the 11 tracked uploads plus the tuner, evaluators and `simple_baselines.py`.
+  - The other 3 legacy msiPL dependencies (`baselines/msipl/LearnPeaks.py`, `Computational_Model_legacy.py`, `scripts/run_msipl_legacy_gbm.py`) differ **only in line endings**. The Windows working tree has CRLF or mixed endings, git stores LF, and git reports the files clean. The cluster copies equal the working tree, and after stripping CR they equal the HEAD blobs exactly (cluster and local). They are the same files that produced the saved legacy lists. Not changed.
+  - **18:15 SAST (16:15 UTC), cluster test job 78779** (Zayd's OK; checklist in chat 17:53): `run_fair_scoring_tests.sh` on `batch`. Gate: `test_msipl_retune` 19/19, `test_ig_steps` 26/26 and `test_test_r` 26/26 run, none skipped.
+    - **78779 COMPLETED 0:0** (5:54, mscluster129): main suite 311 tests OK, 4 skipped. `test_msipl_retune` 19/19 and `test_ig_steps` 26/26 ran and passed. `test_test_r` ran 25 and skipped 1: the byte-identity test, whose reference `test_r/decisions_20261017_local/` exists only locally (built locally, never uploaded). It passed locally and in the supervisor Linux run (52/52 and 71/71). The other 3 skips are the known local-artifact ones. S3PL suites 25 and 4 OK; empty `.err`.
+  - **18:24 SAST (16:24 UTC), two CPU submissions on `batch`** (Zayd's OK; checklists in chat 18:23):
+    - **78796:** GBM22_2 pilot sweep (`submit_msipl_retune.sh sweep 5`; 28G, 4 h).
+    - **78797:** RCC_UH0505_12 `uniform_mean` cancer/normal sensitivity, `sbatch --wrap` (the unchanged evaluator with `--class-subset 0 1` on the 128-step rerun) → `fair_scoring_baselines/ig_steps_20261030/cancer_normal_bin_level_only/RCC_UH0505_12_seed1/uniform_mean/steps128`.
+    - **78797 COMPLETED 0:0** (0:21), `complete`. Pulled at about 18:43 SAST: 6 new files (78797 output, `78779_*` test records); the running pilot's folder was excluded from the pull.
+    - **RCC cancer/normal sensitivity regenerated** (composite `ig_steps_20261030/composite_root_rcc_cancer_normal/`: 15 saved arm summaries from `rcc_cancer_normal_sensitivity/bin_level_only` plus the 78797 arm; SHA-256 manifest) → `rcc_cancer_normal_sensitivity/decisions_20261030_ig_steps_local/` (unchanged `summarise_rcc_fair_scoring.py --sensitivity`, exit 0).
+      - `uniform_mean` IG − posterior bin: −0.077 (n = 7; 1 positive, 6 negative) → **−0.054 (n = 8; 2 positive, 6 negative)**.
+      - `central_only` is unchanged (−0.045; 3 positive, 5 negative). Descriptive, no verdict.
+    - **Reproduction finding (Code's omission):** the 17 October RCC tables, primary and sensitivity, were built from the `with_approved_partitions` root. From that root they reproduce exactly (3/3 files each).
+      - The 30 October regenerations (the primary at 16:16, without a prior reproduction check, and this sensitivity) used `bin_level_only` composites, because the IG rerun was fair-scored at bin level only.
+      - Their bin-level columns are identical to 17 October for all 15 previously present run-arms; the verdicts (bin level only) are unaffected.
+      - They lack the descriptive P1 "budget sensitivity" columns, which never enter a verdict. Posted to chat (18:45) with a proposed fix.
+    - **Ruling 19:02:** the fix (like for like, D10), and **D38**: a reproduction check before every regeneration. "6/8" accepted.
+    - **19:08 SAST (17:08 UTC), 78870** (Zayd's OK; `sbatch --wrap`, `batch`, 4G). The unchanged evaluator (hash matched HEAD in the same call) on the RCC_UH0505_12 `uniform_mean` 128-step rerun, under `with_approved_partitions` (`--partition-dir peak_partition_audit_rcc/RCC_UH0505_12 --partition-approval peak_partition_audit_rcc/partition_approval.json`), run twice:
+      - primary → `ig_steps_20261030/with_approved_partitions/…/steps128`;
+      - `--class-subset 0 1` → `ig_steps_20261030/cancer_normal_with_approved_partitions/…/steps128`.
+      - The D38 reproduction check from that root was already done at about 18:43 (both 17 October tables identical, 3/3 files).
+    - **78870 COMPLETED 0:0** (0:35): both `complete`, empty `.err`. **About 19:15 SAST pull:** 8 new files; the running pilot's folder was excluded; no tracked file changed.
+    - **About 19:16 SAST, P1-complete regeneration (like for like):** composites `ig_steps_20261030/composite_root_rcc_p1/` and `composite_root_rcc_cancer_normal_p1/` (16 files each: 15 saved `with_approved_partitions` arm summaries plus the 78870 arm; SHA-256 manifests) → `rcc/decisions_20261030_ig_steps_p1_local/` and `rcc_cancer_normal_sensitivity/decisions_20261030_ig_steps_p1_local/` (unchanged summariser, exit 0).
+      - **Stop check passed:** the bin-level columns are identical to the bin-only regenerations for all 16 rows in both tables, and the P1 columns are identical to 17 October for all 15 previously present rows. The verdicts are unchanged (centre and uniform "mixed / not resolved by the predeclared rule"; the sensitivity has no verdict).
+      - **Changed P1 budget-sensitivity values** (descriptive, never in a verdict), IG − posterior, `uniform_mean`: primary −0.212 (n = 7, 0 positive) → −0.199 (n = 8, 0 positive); cancer/normal −0.084 (n = 7, 1 positive) → −0.062 (n = 8, 2 positive). `central_only` is unchanged (−0.179; −0.054). The new UH0505_12 uniform row at P1: IG 0.453, posterior 0.563, Moran's I 0.661, mean intensity 0.572 (primary).
+      - **These `…_p1_local` tables supersede** the bin-only `…_20261030_ig_steps_local` RCC tables as the report source; the bin-only ones are kept as the record.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
