@@ -186,6 +186,20 @@ class ScorerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.scorer.check_prefixes(rankings, np.load(tmp / "extra.npz"))
 
+    def test_stored_legacy_list_must_equal_the_m1_list(self):
+        # The fair evaluator stores the snapped legacy list beside the rankings (GBM/CAC).
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        rankings = {"a": np.array([4, 1, 3, 0, 2])}
+        np.savez(tmp / "with_legacy.npz", a=np.array([4, 1]), legacy_msipl=np.array([0, 2, 3]))
+        saved = np.load(tmp / "with_legacy.npz")
+        self.assertEqual(self.scorer.check_prefixes(rankings, saved,
+                                                    legacy_indices=np.array([0, 2, 3])),
+                         {"a": 2, "legacy_msipl": 3})
+        for other in (np.array([0, 2]), np.array([0, 2, 4]), None):   # differs, or RCC/none
+            with self.assertRaises(ValueError):
+                self.scorer.check_prefixes(rankings, saved, legacy_indices=other)
+
     def test_count_matched_scores_every_ranking_at_the_legacy_count(self):
         n_bins = 10
         correlations = {0: np.linspace(-1, 1, n_bins), 1: np.linspace(1, -1, n_bins)}

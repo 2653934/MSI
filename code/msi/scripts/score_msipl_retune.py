@@ -6,7 +6,8 @@ For one section and one frozen IG arm (seed 1), this script:
 1. rebuilds every ranking with the fair evaluator's own functions, over all bins,
    and stops unless it reproduces the saved GMM posterior, the saved IG and L2
    lists at K_bin (exact ties only), their mSCF1 at K_bin (1e-12), and the first
-   2 x K_bin entries of every ranking in the saved fair-scoring rankings_prefix.npz;
+   2 x K_bin entries of every ranking in the saved fair-scoring rankings_prefix.npz
+   (and, on GBM/CAC, its stored legacy list equals the snapped m = 1 list);
 2. on GBM/CAC (--legacy-metrics given), requires the m = 1 re-tune list to be the
    reproduced saved list and rescores it with the evaluator's strict check_legacy
    (integer TP/FP/FN, mSCF1 to 1e-12);
@@ -74,11 +75,21 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def check_prefixes(rankings, saved_prefix):
-    """Every saved prefix must be the start of the rebuilt ranking."""
+def check_prefixes(rankings, saved_prefix, legacy_indices=None):
+    """Every saved prefix must be the start of the rebuilt ranking.
+
+    The evaluator also stores the snapped legacy list as "legacy_msipl" (GBM/CAC). It
+    is not a ranking: it must equal legacy_indices, the snapped m = 1 list, exactly.
+    """
     checked = {}
     for name in saved_prefix.files:
         prefix = np.asarray(saved_prefix[name], dtype=np.int64)
+        if name == "legacy_msipl":
+            if legacy_indices is None or not np.array_equal(
+                    np.asarray(legacy_indices, dtype=np.int64), prefix):
+                raise ValueError("legacy_msipl: saved list differs from the m = 1 list")
+            checked[name] = int(len(prefix))
+            continue
         if name not in rankings:
             raise ValueError(f"saved prefix {name} has no rebuilt ranking")
         if not np.array_equal(np.asarray(rankings[name][:len(prefix)], dtype=np.int64), prefix):
@@ -175,7 +186,10 @@ def main():
     rankings["oracle"] = supervised_oracle_ranking(correlations)
 
     # --- Gate 2: the saved fair-scoring prefixes and its IG score at K_bin. ---
-    prefix_lengths = check_prefixes(rankings, np.load(args.saved_fair_dir / "rankings_prefix.npz"))
+    m1_indices = (nearest_unique_indices(
+        mz, read_peaks(args.retune_dir / "m1.0" / "learned_peaks.csv")) if gbm_cac else None)
+    prefix_lengths = check_prefixes(rankings, np.load(args.saved_fair_dir / "rankings_prefix.npz"),
+                                    legacy_indices=m1_indices)
     fair_ig = float(fair["bin_level"][IG]["1.0"]["mSCF1"])
     ig_at_k_bin = score_indices(rankings[IG][:k_bin], correlations, n_bins)["mSCF1"]
     if abs(ig_at_k_bin - fair_ig) > SCORE_TOLERANCE:
@@ -185,8 +199,6 @@ def main():
     legacy_check = None
     if gbm_cac:
         legacy_metrics = json.loads(args.legacy_metrics.read_text(encoding="utf-8"))
-        m1_indices = nearest_unique_indices(
-            mz, read_peaks(args.retune_dir / "m1.0" / "learned_peaks.csv"))
         _, difference = check_legacy(m1_indices, legacy_metrics, correlations, n_bins, k_bin)
         legacy_check = {"legacy_rescore_minus_saved": difference,
                         "unique_bins": int(len(m1_indices))}
