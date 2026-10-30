@@ -14,6 +14,7 @@
 \usepackage{microtype}
 \usepackage{dblfloatfix}
 \usepackage{url}
+\usepackage{pdfpages}
 \usepackage[bookmarks=true,bookmarksopen=true]{hyperref}
 \usepackage{cleveref}
 \graphicspath{{images/}{../../docs/meetings/2026-10-19_update/figures/}}
@@ -54,41 +55,30 @@
 \maketitle
 
 \begin{abstract}
-Mass spectrometry imaging (MSI) measures thousands of mass-to-charge ($m/z$)
-channels at every location of a tissue section, so analyses usually begin by
-selecting a small set of informative peaks. Learned peak-selection methods such
-as msiPL and S3PL rank $m/z$ bins from unsupervised models, and S3PL adds
-spatial neighbourhood information through 3D convolution. This report asks
-whether cheap local spatial context can give a lightweight variational
-autoencoder (VAE) the same benefit, and which part of a learned pipeline
-actually determines peak quality. We fitted VAE variants with and without
-neighbourhood input, segmented their latent spaces with a Gaussian mixture
-model (GMM), and ranked peaks either by Integrated Gradients (IG) through the
-model or by direct correlation of each ion image with the GMM posterior maps.
-All methods were compared at matched peak budgets on 24 sections from three
-public collections (glioblastoma, colorectal adenocarcinoma and renal cell
-carcinoma) under predeclared decision rules, against reproduced msiPL and S3PL
-baselines and model-free rankings. Holding the segmentation fixed, posterior
-correlation outperformed IG in 136 of 140 paired comparisons across three
-training seeds, and this was statistically supported in all six
-dataset--model comparisons (Holm-adjusted $p \le 0.047$). Neighbourhood input to
-the encoder gave no consistent, spatially specific gain, whereas spatially
-aware ranking statistics, namely segmentation correlation and Moran's~$I$,
-were the strongest label-free rankings. A linear PCA segmentation performed
-comparably to the VAE. Finally, S3PL's published glioblastoma score lay outside
-the range of ten reproduced seeds; seeds altered S3PL mainly through weight
-initialisation, which switched individual sections between distinct solutions.
-The contribution is a controlled, statistically reported evaluation that bounds
-where spatial information helps learned MSI peak ranking.
+Mass spectrometry imaging (MSI) records thousands of mass-to-charge ($m/z$)
+channels at every pixel of a tissue section, so analysis usually begins by
+selecting a few informative peaks. Learned methods such as msiPL rank peaks
+from an unsupervised model, and S\textsuperscript{3}PL adds spatial information through 3D
+convolution. We ask whether local neighbourhood context improves learned peak
+ranking and where in the pipeline it matters. Variational autoencoders with and
+without neighbourhood input were segmented with a Gaussian mixture model.
+Peaks were ranked either by Integrated Gradients (IG) through the model or by
+correlating each ion image with the segment posterior maps. On 24 sections
+from three public datasets, at matched peak budgets and under predeclared
+decision rules, correlation outperformed IG in 140 of 144 paired comparisons
+across three seeds, a difference that was statistically supported for every
+dataset and model. In these tests, neighbourhood input to the encoder gave no
+consistent, spatially specific gain, while spatially aware ranking statistics
+were the strongest label-free rankings on GBM and RCC and within 0.01 of the
+best on CAC.
 \end{abstract}
 
 \begin{IEEEkeywords}
-mass spectrometry imaging, peak selection, variational autoencoder, spatial context, Integrated Gradients, Moran's I, reproducibility
+mass spectrometry imaging, peak selection, variational autoencoder, spatial context, Integrated Gradients, reproducibility
 \end{IEEEkeywords}
 
 \input{sections/introduction}
 \input{sections/related_work}
-\input{sections/proposal_outcomes}
 \input{sections/methodology}
 \input{sections/results}
 \input{sections/discussion}
@@ -99,10 +89,13 @@ The author thanks Hairong Bau and Richard Klein for their supervision and
 guidance, and the University of the Witwatersrand for access to the MSCluster
 computing facility.
 
-\balance
 \bibliography{references}
 
-\appendices
-\input{sections/appendix}
+\clearpage
+\onecolumn
+\IfFileExists{ai_declaration.pdf}{\includepdf[pages=-]{ai_declaration.pdf}}{%
+\section*{AI declaration}
+\checkme{Completed Wits postgraduate AI declaration form (final page), with
+the tools used and the relevant prompts on additional pages.}}
 \end{document}
 

@@ -1,63 +1,91 @@
 \section{Discussion}
 \label{sec:discussion}
 
-\textbf{Why correlation outperforms IG.} Three explanations fit.
-\begin{itemize}
-  \item IG asks which bins would change a few sampled pixels' component
-        probabilities. Correlation asks which ion images follow a component
-        across the whole section, which is closer to what mSCF1 rewards.
-  \item Sampling explains little: four- to sixteen-fold more IG pixels gained at
-        most 0.024 against a gap of 0.05--0.25.
-  \item mSCF1 favours mask-like segmentations.
-\end{itemize}
-Correlation is therefore an ablation finding about this pipeline: the
-label-free segmentation carries the signal, and gradient attribution through a
-dense VAE adds nothing to it. We do not claim that IG is generally worse, or
-that segment-then-correlate, which is established
-practice~\citep{alexandrov2011efficient}, is new.
+\subsection{Why correlation outperforms IG here}
+Three explanations fit the ranking result.
+\begin{enumerate}
+  \item \textbf{Different questions.} IG asks which bins would change a few
+        sampled pixels' component probabilities. Correlation asks which ion
+        images follow a component across the whole section, which is closer to
+        what mSCF1 rewards.
+  \item \textbf{Sampling.} IG averages over 12 sampled pixels per component,
+        while correlation uses every pixel. More pixels improved IG only
+        slightly ($\le +0.024$) on the two sections tested, so sampling
+        explains little of a gap of 0.05--0.25, but other IG settings
+        (baselines, path counts, signed attributions) remain untested.
+  \item \textbf{Metric alignment.} A segmentation that resembles the masks
+        produces posterior maps that a mask-based metric naturally rewards.
+\end{enumerate}
+Correlation is therefore best read as an ablation finding about this pipeline:
+the label-free segmentation carries the useful signal, and gradient attribution
+through a dense VAE does not add to it. We do not claim that IG is generally
+inferior, nor that segment-then-correlate, which is established
+practice~\citep{alexandrov2011efficient}, is a new method.
 
-\textbf{What remains of the spatial hypothesis.} In a dense VAE, no
-neighbourhood intervention beat shuffled, nonlocal context, and smoothing the
-segmentation did not help either. At $3\times3$ scale, neighbours are
-near-copies of the centre, so there is little for the model to use. Spatial
-information helped as a ranking statistic and in S3PL, which needs neighbour
-input. Even in S3PL, correct placement added only an inconsistent $+0.04$.
-Spatially aware \emph{ranking}, not spatially aware \emph{encoding}, is what
-the evidence supports, hence the title.
+\subsection{What remains of the spatial hypothesis}
+The original hypothesis was that neighbourhood input would improve a VAE's
+representation and therefore its peaks. In a dense VAE that averages or attends
+over neighbours, no intervention gave a consistent gain beyond what nonlocal
+(shuffled) context also provides, and smoothing the segmentation did not help
+either. The attention experiments explain why. At $3\times3$ scale, adjacent
+spectra are near-copies of the centre, so there is little to select between.
+Spatially aware ranking statistics were strongest on GBM and RCC and within
+0.01 of the best on CAC. S\textsuperscript{3}PL collapses without neighbour input
+under its patch objective, although correctly placed neighbours added only an
+inconsistent $+0.04$ over shuffled ones. These observations support a bounded
+conclusion about the tested ranking statistics and encoder inputs.
 
-\textbf{Reconstruction is not ranking quality.} PCA-5 reconstructed GBM better
-than the VAE yet ranked peaks about equally well. Earlier pilots showed the
-same pattern: context models and the spatial penalty changed the latents
-without improving reconstruction. Reconstruction rewards fitting all intensity
-variance, while peak quality here depends on how well a low-dimensional
-segmentation separates the classes, in line with
-\citet{mazarura2025autoencoder}.
+\subsection{Reconstruction is not ranking quality}
+PCA-5 reconstructed GBM better than the VAE yet ranked peaks about equally
+well, while the VAE segmented slightly better. Earlier development runs showed
+the same pattern: context models reconstructed slightly worse but changed which
+peaks were chosen, and a spatial penalty smoothed the latents while worsening
+reconstruction. Reconstruction error rewards fitting all intensity variation,
+including intense ions unrelated to tissue classes, whereas peak quality here
+depends on how well a low-dimensional segmentation separates the classes. This
+agrees with \citet{mazarura2025autoencoder}.
 
-\textbf{The proposal's aim.} The aim was autonomous, bias-free peak detection
-with a lightweight model. It is met only in part.
-\begin{itemize}
-  \item Fitting and ranking are label-free, but the number of segments and the
-        peak budget come from annotations, and BIC could not replace the first.
-  \item The 1D model was cheaper than S3PL in time and memory on the section
-        measured, but it did not benefit from its spatial input.
-\end{itemize}
-S3PL's instability means single-run comparisons against it can mislead. We
-report its GBM gap as unresolved and select no favourable seeds or
-checkpoints.
+\subsection{S\textsuperscript{3}PL instability and the reproduction gap}
+The S\textsuperscript{3}PL seed analysis shows that comparisons with a single S\textsuperscript{3}PL run can be
+misleading. Specific sections switch between distinct solutions depending on
+the initial weights. The released preprocessing appears to create this
+instability, since TIC normalisation removes it while also removing the
+highest-scoring outcomes. Neither seeds nor normalisation explain the
+published GBM score. We therefore report the gap as unresolved, and we do not
+select favourable seeds or checkpoints for any baseline.
 
-\textbf{Limitations.}
+\subsection{Label-free operation and cost}
+The pipeline fits and ranks without labels, but two settings still come from
+annotation: the number of segments and the peak budget. BIC could not replace
+the first, so the pipeline is not yet autonomous. On cost, the dense VAE used
+comparable time and less memory than S\textsuperscript{3}PL on the section measured, and once a
+segmentation exists, correlation ranking takes about a second where IG takes
+minutes. The lightweight model is therefore practical, but it did not gain from
+its spatial input, which was the reason for adding it.
+
+\subsection{Limitations and threats to validity}
 \begin{itemize}
   \item \textbf{Statistical units.} GBM has four PDX lines, CAC one biopsy and
-        RCC eight subjects. The $p$-values describe these sections, not a
-        population.
-  \item \textbf{Class-informed settings.} $K$ and the peak budgets are
-        class-informed.
-  \item \textbf{The metric.} mSCF1 measures mask agreement, not molecular
-        identity.
-  \item \textbf{RCC} depends partly on its unannotated region.
-  \item \textbf{Post hoc tests.} Tests S, V, N and R and the S3PL investigation
-        were chosen after earlier results. Each was predeclared before its own
-        outputs, and all outcomes are reported.
-  \item \textbf{Untested.} Graph-based and ion-image spatial models,
-        cross-section transfer and other IG settings were not tested.
+        RCC eight subjects. P-values describe these sections, not a population.
+        With $n=8$, only small families can reach Holm significance, so many
+        comparisons rest on practical labels and effect sizes.
+  \item \textbf{Class-informed configuration.} The number of GMM components
+        equals the number of annotated classes and was not supported by BIC.
+        Peak budgets come from published, annotation-related counts. The
+        pipeline is label-free in fitting and ranking only.
+  \item \textbf{The metric.} mSCF1 measures agreement with expert masks, not
+        molecular identity. Methods that produce mask-like maps are favoured.
+  \item \textbf{RCC.} The class-informed $K=3$ analysis partly reflects
+        separating annotated tissue from an unannotated region that covers
+        45--78\% of pixels. The Cardinal workflow treats this region as
+        background, but that interpretation was not independently verified;
+        two runs also have documented heterogeneous tumour.
+  \item \textbf{Post hoc elements.} The PCA control, the smoothed
+        segmentation, the seed replication and the S\textsuperscript{3}PL seed analysis were
+        chosen after earlier results were known. Each was predeclared before its
+        own outputs, and all are reported, including null and negative
+        outcomes. Recommending correlation is a post hoc conclusion.
+  \item \textbf{Scope.} The VAE uses fixed-window, dense neighbourhood input.
+        Graph-based and ion-image-level spatial models, cross-section transfer,
+        and other attribution settings were not tested.
 \end{itemize}

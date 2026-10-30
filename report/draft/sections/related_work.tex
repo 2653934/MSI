@@ -1,47 +1,87 @@
 \section{Background and Related Work}
 \label{sec:background}
 
-\textbf{MSI data.} An MSI data cube has two spatial dimensions and one $m/z$
-dimension~\citep{buchberger2018mass}. Spectra are usually normalised by total
-ion current (TIC)~\citep{deininger2011normalization}. Neighbouring bins of one
-molecular peak are strongly correlated, so a bin-level evaluation can reward
-several bins of the same peak. This motivates the peak-level scoring used here.
+\subsection{MSI data and preprocessing}
+An MSI experiment rasters a tissue section and records a spectrum at each
+location, giving a data cube with two spatial dimensions and one $m/z$
+dimension~\citep{caprioli1997maldi,buchberger2018mass}. Spectra vary in total
+intensity between pixels for technical reasons, so they are usually
+normalised, most often by total ion current (TIC), before
+comparison~\citep{deininger2011normalization}. Spectra may be kept as fine
+$m/z$ bins or reduced to centroided peaks. Because neighbouring bins of one
+molecular peak are strongly correlated, any evaluation that counts bins can
+reward several bins of the same peak. This motivates the peak-level scoring
+used in this report (\cref{sec:evaluation}). Tools such as
+Cardinal~\citep{bemis2015cardinal} and M\textsuperscript{2}aia~\citep{cordes2021m2aia}
+provide standard data handling.
+For our work, the key consequence is that every method must receive the same
+input and be scored at the same resolution, or differences in preprocessing
+masquerade as differences in method.
 
-\textbf{Learned peak selection.} msiPL trains a fully connected
-VAE~\citep{kingma2014autoencoding} on single spectra and reads peaks from the
-first-layer weights~\citep{abdelmoula2021peak}. massNet provides the GBM data
-used here~\citep{abdelmoula2022massnet}. S3PL convolves over a spectral patch,
-applies attention to the centre spectrum, reconstructs the whole patch, and
-selects the bins with the most attention~\citep{weigand2026spatial}. It also
-introduced the mask-based spatial-correlation F1 score (mSCF1), and reported
-0.496, 0.601 and 0.470 on GBM, CAC and RCC, against 0.403, 0.431 and 0.159 for
-msiPL. Other neural MSI work includes deep models of 3D
-data~\citep{inglese2017deep} and ion-image
-embeddings~\citep{guo2024deepion,weigand2026ionmorphnet}. Because S3PL changes
-the architecture, objective, normalisation and selector together, it is
-unclear which of them produces its gain, and whether much less spatial context
-would suffice.
+\subsection{Peak selection}
+Classical pipelines such as MALDIquant detect local maxima above a noise
+threshold in each spectrum~\citep{gibb2012maldiquant}. Machine-learning peak
+pickers learn what a peak looks like from annotated
+spectra~\citep{li2022machinelearningpeakpicking}. Both operate spectrum by
+spectrum and do not use the spatial arrangement of the tissue. Learned
+representation methods instead rank $m/z$ bins by how a model trained on the
+whole section uses them. This report compares such learned rankings with each
+other and with simple model-free rankings, under one shared evaluation.
 
-\textbf{Representation versus use.} Reconstruction quality need not predict
-usefulness. \citet{mazarura2025autoencoder} found that reconstruction error,
-cluster quality and downstream classification ranked autoencoders, PCA and NMF
-differently on MSI data. We test the same distinction for peak ranking.
+\subsection{Learned peak selection: msiPL and S\textsuperscript{3}PL}
+msiPL trains a fully connected VAE~\citep{kingma2014autoencoding} on
+individual spectra, clusters the low-dimensional latent space and reads peaks
+from the network weights~\citep{abdelmoula2021peak}. Its companion work,
+massNet, provides the glioblastoma (GBM) dataset used
+here~\citep{abdelmoula2022massnet}. S\textsuperscript{3}PL learns a 3D convolution over a
+spectral patch around each pixel, applies an attention step to the centre
+spectrum, reconstructs the full normalised patch and selects the bins that
+receive the most attention across pixels~\citep{weigand2026spatial}. S\textsuperscript{3}PL also
+introduced the mask-based spatial-correlation F1 score (mSCF1) used to judge
+peak lists against expert annotations, and released the peak budgets and
+protocols for GBM, colorectal adenocarcinoma (CAC) and renal cell carcinoma
+(RCC). It reported 0.496, 0.601 and 0.470 mSCF1 on these collections, against
+0.403, 0.431 and 0.159 for msiPL. Related representation-learning work in MSI
+includes deep models of 3D data~\citep{inglese2017deep}, low-dimensional
+ion-image embeddings~\citep{guo2024deepion} and IonMorphNet~\citep{weigand2026ionmorphnet}.
+S\textsuperscript{3}PL's result motivates our spatial question. Its convolution, objective,
+normalisation and selector all differ from msiPL, so it is not clear which
+ingredient produces the gain, or whether a much smaller amount of spatial
+context would suffice. A related caution concerns how representations are judged:
+\citet{mazarura2025autoencoder} found that reconstruction error, cluster
+quality and downstream classification ranked autoencoders, PCA and NMF
+differently on MSI data, so a better reconstruction need not mean better peaks.
 
-\textbf{Attribution and segment-then-correlate.} IG attributes a model output
-to its inputs by integrating gradients from a baseline to the
-input~\citep{sundararajan2017axiomatic}. Applied to a GMM posterior on a VAE
-latent space, it ranks bins through the full nonlinear encoder. The older route
-segments the tissue and correlates each ion image with the
-segments~\citep{alexandrov2010spatial,alexandrov2011efficient}. Our pipeline
-contains both on the same segmentation.
+\subsection{Attribution and segment-then-correlate}
+Integrated Gradients attributes a model output to input features by
+integrating gradients along a path from a baseline input to the actual
+input~\citep{sundararajan2017axiomatic}. Applied to a GMM posterior computed
+from a VAE latent space, it ranks $m/z$ bins by how strongly they move a pixel
+towards a tissue segment, through the full nonlinear encoder. An older and
+simpler route is to segment the tissue first and then correlate each ion image
+with the segments~\citep{alexandrov2010spatial,alexandrov2011efficient}. Our
+pipeline contains both routes on the same segmentation, which allows a direct
+comparison.
 
-\textbf{Spatial statistics.} Moran's~$I$ measures spatial
-autocorrelation~\citep{moran1950notes}. Spatial-structure measures have been
-used to judge MSI ion images~\citep{alexandrov2013testing,cassese2016spatial},
-and spatially aware segmentation smooths features with neighbourhood weights
-before clustering~\citep{alexandrov2011efficient}.
+\subsection{Spatial statistics and spatially aware methods}
+Ion images of biologically meaningful molecules tend to be spatially
+structured rather than noisy. Moran's~$I$ measures spatial
+autocorrelation~\citep{moran1950notes}, and spatial autocorrelation and
+spatial-chaos measures have been used to judge the informativeness of MSI ion
+images~\citep{alexandrov2013testing,cassese2016spatial}. Spatially aware
+segmentation smooths features using neighbourhood weights before
+clustering~\citep{alexandrov2011efficient}. Graph-based models of spatial
+omics and MSI propagate information between neighbouring locations. These are
+discussed as future work in \cref{sec:conclusion}. Our study places spatial
+information at three points (the encoder input, the segmentation and the
+ranking statistic) and tests each one under the same evaluation.
 
-\textbf{Gap.} Learned peak selectors are usually evaluated with unmatched peak
-counts, single training runs and no model-free references. It has not been
-tested under a common budget whether their advantage comes from spatial input,
-the representation or the ranking step, nor how stable it is across seeds.
+\subsection{Gap addressed}
+S\textsuperscript{3}PL shows that a spatial model can select better peaks than
+msiPL, but not \emph{why}: spatial input, a different representation and a
+different ranking step all change at once. It is therefore unknown where in a
+learned pipeline spatial information pays off, and whether cheap neighbourhood
+context is enough. This report isolates those stages one at a time. Doing so
+requires every method to be scored on equal terms, so matched peak budgets,
+model-free references and repeated training runs are the means of the study
+rather than its subject.
