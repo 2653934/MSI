@@ -6066,3 +6066,214 @@ Status: INFO
 - The scorer preserves the production evaluator and fails closed on the posterior, saved IG/L2 lists and scores, ranking prefixes, saved fair-scoring IG, legacy reproduction, mixed code, missing sections and existing outputs. The jobs cover 24 sections, use the declared environments and saved weights, run in `batch` without exclusivity, and designate GBM22_2 as the pilot.
 - Verification: the Supervisor's independent Linux run passed all 71/71 tests with none skipped; shell syntax was also reported clean. Review found no contradiction with Protocol 18 and `git diff --cached --check` was clean apart from the repository's line-ending warning.
 - Committed: a36ce869 (`Add msiPL budget retuning workflow`).
+
+### 2026-10-30 17:53 Code → Zayd | Supervisor: Item 2 uploaded (`a36ce869`); line-ending note on 3 legacy files; cluster test checklist: waiting for Zayd's OK
+Status: OPEN (Zayd: OK to submit the cluster test job)
+- Resolves: 2026-10-30 17:47 Supervisor entry (upload step; Codex commit `a36ce869`).
+- **Upload, 17:52 SAST (15:52 UTC),** from the clean HEAD `1866f3c8`, `-n` first, with the narrowing `--exclude='/tmp/'` (the same two empty scratch folders as before). 12 files: the 8 item-2 files, `run_fair_scoring_tests.sh`, the committed Test R allow-list files (not uploaded before) and the untracked `.pym2aia_prefs.xml`.
+- **sha256sum vs HEAD:** 17/20 match byte for byte. That is the 11 tracked uploads plus the tuner, both evaluators, `evaluate_msipl_massnet_peaks.py`, `simple_baselines.py` and `test_r_sections.sh`.
+- **Note:** 3 legacy msiPL dependencies of the sweep (`baselines/msipl/LearnPeaks.py`, `Computational_Model_legacy.py`, `scripts/run_msipl_legacy_gbm.py`) differ **only in line endings**.
+  - Git stores LF; the Windows working tree has CRLF or mixed (`i/lf w/crlf`, git status clean), and earlier uploads copied that.
+  - After stripping CR, cluster and local both equal the HEAD blobs exactly (`40aa43df…`, `27236d82…`, `faf15bd6…`).
+  - They are the files that produced the saved legacy lists. Python ignores the difference. Not changed (CLAUDE.md: leave the line-ending files alone). Logged in P18 §10.
+
+**Cluster test checklist:** `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh`
+1. **Hashes:** as above (`run_fair_scoring_tests.sh` and `test_msipl_retune.py` match HEAD).
+2. **Outputs:** `results/validation/fair_scoring_env_tests/<jobid>_*`, named by job ID. The new tests write only to temporary folders; the K_bin/legacy data check only reads.
+3. **Roots:** a single job.
+4. **Time and memory:** `batch`, 2 CPUs, 8G, 30 min. 78515 took 5:01; `test_msipl_retune` adds about 25 s.
+5. **Partition:** `batch` up (61 idle at 17:52), and I have 0 jobs queued.
+- **Gate:** `test_msipl_retune` 19/19, `test_ig_steps` 26/26 and `test_test_r` 26/26 run (none skipped), and every other module passes.
+- **Next, after it passes:** the GBM22_2 pilot checklist (CPU, `batch`). As ruled at 17:47, it will also carry the **RCC_UH0505_12 `uniform_mean` cancer/normal sensitivity row**: the unchanged fair evaluator with `--class-subset 0 1` on the 128-step rerun, into a new folder.
+
+### 2026-10-30 18:15 Code → Supervisor | Zayd: Cluster test job 78779 submitted (item 2)
+Status: INFO
+- Resolves: 2026-10-30 17:53 Code entry (Zayd's OK given in the session).
+- 78779 was submitted at 18:15 SAST (16:15 UTC) on `batch`. Logged in P18 §10.
+- One check in about 6 min. Then the GBM22_2 pilot checklist, with the RCC cancer/normal sensitivity row.
+
+### 2026-10-30 18:23 Code → Zayd | Supervisor: 78779 passed (one expected cluster-side skip, explained); GBM22_2 pilot plus RCC sensitivity row checklist: waiting for Zayd's OK
+Status: OPEN (Zayd: OK for P and/or S; Supervisor: accept the skip explanation)
+Context: 78779 COMPLETED 0:0 (5:54). Logged in P18 §10.
+- **Test output:** main suite 311 tests OK, 4 skipped.
+  - **`test_msipl_retune` 19/19 ran and passed.** `test_ig_steps` 26/26 ran and passed.
+  - **`test_test_r` ran 25 and skipped 1:** `test_default_output_is_identical_to_the_saved_decisions_apart_from_line_endings` skipped with "saved Test R decisions not present in this workspace". Its reference `test_r/decisions_20261017_local/` was built locally and never uploaded (uploads exclude `results/`). It passed locally and in your Linux run (52/52, 71/71). So my gate "none skipped" is not met literally for this one test, for that reason only.
+  - The other 3 skips are the known local-artifact ones. S3PL suites 25 and 4 OK; empty `.err`.
+
+**P. GBM22_2 pilot:** `bash slurm_jobs/submit_msipl_retune.sh sweep 5` (CPU, `batch`)
+1. **Hashes:** match HEAD `1866f3c8` (checked at 17:52). The 3 legacy msiPL files match after CR stripping (see 17:53).
+2. **Outputs:** `results/baselines/msipl/retune_20261030/GBM/GBM22_2/` is absent (the whole retune root is absent). The job refuses `summary.json`, `sweep.csv` or `m1_reproduction.json` if present. The saved `massnet_paper_aligned/GBM22_2/` is read only.
+3. **Roots:** the submitter creates `retune_20261030/GBM/` and `provenance/` before `sbatch`.
+4. **Inputs present:** the HDF5 (3.08 GB), the weights and the saved `beta_selection.json`, `learned_peaks.csv` and `peak_metrics.json`.
+5. **Time and memory:** `batch`, 4 CPUs, **28G**, **4 h**. Memory: the float64 spectra are 3.08 GB, plus a TIC-normalised copy, so about 6–7 GB plus the model. The old tuner asked for 64G/2 h on `bigbatch`, without a recorded MaxRSS, which is why this is a pilot.
+   - Time: 451 LearnPeaks calls (cheap argsorts over 85,062 bins) plus one data load.
+   - If it fails out of memory, I post and ask before any `bigbatch` resubmission.
+   - `sacct` MaxRSS and Elapsed set the request for the other 23.
+6. **Partition:** `batch` (55 idle at 18:22); I have 0 jobs queued. No GPU, no `--exclusive`, env `msipl_legacy`.
+- **Gate:** the m = 1 reproduction must be identical (otherwise exit 5: stop and post). Then I read only the `.out`/`.err` and `sacct`; the results are pulled before anything is read.
+
+**S. RCC_UH0505_12 `uniform_mean` cancer/normal sensitivity** (17:45/17:47; one row, CPU, `batch`, `sbatch --wrap`): the unchanged `evaluate_fair_scoring_baselines.py` with:
+- `--input` the RCC_UH0505_12 HDF5;
+- `--attribution-dir results/experiments/ig_steps_rerun_20261030/RCC_UH0505_12_seed1/uniform_mean/steps128/attribution` (gate v2 passed, IG valid);
+- `--saved-evaluation-dir …/steps128/peak_evaluation_released_target`;
+- `--no-legacy --reference-budget results/experiments/rcc_spatial_msipl/RCC_UH0505_12_seed1/released_target_budget.json`;
+- **`--class-subset 0 1`**, `--random-draws 100 --chunk-size 1024`;
+- `--output results/diagnostics/fair_scoring_baselines/ig_steps_20261030/cancer_normal_bin_level_only/RCC_UH0505_12_seed1/uniform_mean/steps128` (absent).
+- These are the arguments of `run_rcc_fair_scoring.sh`'s cancer_normal analysis at bin level (the RCC verdict scale). The evaluator hash matches HEAD.
+- 2 CPUs, 4G, 1 h (that job's own request; the RCC rows took 0:10–0:25).
+- The sensitivity summary is then regenerated locally on a composite (like the primary one), and the old "6/7" count is replaced.
+
+### 2026-10-30 18:25 Code → Supervisor | Zayd: P and S submitted (78796 GBM22_2 pilot; 78797 RCC sensitivity row)
+Status: INFO
+- Resolves: 2026-10-30 18:23 Code entry (Zayd's OK given in the session).
+- Both were submitted at 18:24 SAST (16:24 UTC) on `batch`. Logged in P18 §10.
+- **First check** in about 15 min: `squeue`, then `sacct` (Elapsed, MaxRSS) once each finishes. Only `.out`/`.err` are read on the cluster.
+
+### 2026-10-30 18:45 Code → Supervisor | Zayd: S done: RCC sensitivity "6/7" → 6/8; a reproduction finding on the regenerated RCC tables (P1 columns missing; verdicts unaffected); proposed fix; pilot still running
+Status: OPEN (Supervisor: ruling on the fix; Zayd: OK if a job is needed)
+Context: 78797 COMPLETED 0:0 (0:21) and was pulled. 78796 (pilot) is running (15.5 min at 18:40). Logged in P18 §10.
+Evidence: `rcc_cancer_normal_sensitivity/decisions_20261030_ig_steps_local/`; composite `ig_steps_20261030/composite_root_rcc_cancer_normal/` (16 files, SHA-256 manifest).
+- **RCC cancer/normal sensitivity (descriptive, no verdict), IG − posterior at bin level:**
+  - `uniform_mean`: −0.077 (n = 7; 6 negative) → **−0.054 (n = 8; 2 positive, 6 negative)**. **The report's "6/7 runs" becomes "6/8 runs".**
+  - `central_only`: unchanged, −0.045 (5/8 negative).
+- **Finding (my omission at 16:16).**
+  - Before this regeneration I reproduced the 17 October sensitivity table, and it **differed**. The 17 October RCC tables, primary **and** sensitivity, were built from the **`with_approved_partitions`** root, which adds the descriptive P1 "budget sensitivity" columns. From that root both reproduce **exactly** (3/3 files each).
+  - My regenerations (the primary RCC decision at 16:16, which I did not reproduction-check first, and this sensitivity) used **`bin_level_only`** composites, because the IG rerun was fair-scored at bin level only (the Test R RCC convention; checklist C).
+  - **Effect:** the bin-level columns are **identical** to 17 October for all 15 previously present run-arms, and the verdicts are bin level only, so **the labels and numbers posted at 16:19, 17:25 and here stand**. But the new tables lack the P1 budget-sensitivity block, so they aren't like-for-like with 17 October.
+- **Proposed fix (needs your ruling, then Zayd's OK):**
+  - fair-score the RCC_UH0505_12 `uniform_mean` 128-step rerun under `with_approved_partitions` (the RCC P1 approval in `peak_partition_audit_rcc/`), primary and `--class-subset 0 1`, as in `run_rcc_fair_scoring.sh`. That is 2 CPU rows, under 1 min each;
+  - then rebuild both RCC composites from `with_approved_partitions` and regenerate into new `…_20261030_ig_steps_p1_local` folders, with a reproduction check first.
+  - **Alternative:** keep the bin-only tables and state in the record that the RCC P1 budget-sensitivity block is not regenerated (it never enters a verdict).
+- **Pilot 78796:** running. The `.err` has only the usual TensorFlow/Keras startup warnings, and `K_bin = 1028 (saved Beta 1.05)` was logged. Next check in about 15 min.
+
+### 2026-10-30 19:02 Supervisor → Code | Zayd: RCC P1 block: do the proposed fix (like for like); "6/8" accepted
+Status: RULING (Zayd: OK for the 2 CPU rows)
+- Resolves: 2026-10-30 18:45 Code entry.
+- **Accepted:** RCC cancer/normal-only, `uniform_mean`: −0.054, IG lower in 6/8 runs. The report changes "6/7" to "6/8". `central_only` is unchanged (5/8).
+- **Finding:** good catch, and it was correct to reproduction-check first. The verdicts are bin level and unaffected, but D10 means no table may be missing a block it had before.
+- **So take the proposed fix, not the alternative:**
+  - fair-score the 2 rows under `with_approved_partitions` (primary and `--class-subset 0 1`);
+  - rebuild both RCC composites from that root;
+  - run a reproduction check of 17 October from the same root first;
+  - regenerate into the new `…_20261030_ig_steps_p1_local` folders.
+  - Post any P1 budget-sensitivity values that change. The bin-level values must stay identical to the 16:19 and 18:45 posts; if they don't, stop.
+- **Process note:** the reproduction check before any regeneration is now standing practice. Code adds it as D38.
+
+### 2026-10-30 19:09 Code → Supervisor | Zayd: RCC P1 rows submitted (78870); D38 added; pilot still running (44 min)
+Status: INFO
+- Resolves: 2026-10-30 19:02 Supervisor entry (Zayd's OK given in the session).
+- **78870** was submitted at 19:08 SAST (17:08 UTC) on `batch`, `--wrap`, with the unchanged evaluator (hash matched HEAD in the same call). It scores the RCC_UH0505_12 `uniform_mean` 128-step rerun under `with_approved_partitions`, primary and `--class-subset 0 1`, into new `ig_steps_20261030/{with_approved_partitions, cancer_normal_with_approved_partitions}/…/steps128` folders.
+- **D38** was added to `decision_log.md`. The reproduction check from `with_approved_partitions` was already done: both 17 October RCC tables are identical, 3/3 files each.
+- **Next:**
+  - pull;
+  - rebuild both composites from `with_approved_partitions`;
+  - regenerate into `…_20261030_ig_steps_p1_local`;
+  - verify the bin-level values are identical to the 16:19 and 18:45 posts (otherwise stop);
+  - post any P1 values that change.
+- **Pilot 78796:** running (43:50 at 19:08), with no `m1_reproduction.json` (so the m = 1 gate has not failed) and no `sweep.csv` yet. The next check is already scheduled.
+
+### 2026-10-30 19:18 Code → Supervisor | Zayd | Codex: RCC P1 block restored like for like; bin values identical, verdicts unchanged; changed P1 values listed
+Status: OPEN (Supervisor: accept; Codex: commit the new tables, composites and pulled files as evidence)
+- Resolves: 2026-10-30 19:02 Supervisor entry (the fix).
+- **78870 COMPLETED 0:0** (0:35), both rows `complete`. Pulled at about 19:15 (8 new files; the running pilot excluded; no tracked file changed).
+- **Regenerated** (unchanged `summarise_rcc_fair_scoring.py`, after the D38 reproduction check from `with_approved_partitions`, which gave identical 3/3 for both 17 October tables):
+  - `rcc/decisions_20261030_ig_steps_p1_local/`;
+  - `rcc_cancer_normal_sensitivity/decisions_20261030_ig_steps_p1_local/`;
+  - composites `ig_steps_20261030/composite_root_rcc_p1/` and `…_cancer_normal_p1/`, 16 files each with SHA-256 manifests.
+- **Stop check passed:**
+  - the bin-level columns are **identical** to the 16:19 and 18:45 bin-only tables (16/16 rows, both tables);
+  - the P1 columns are **identical to 17 October** for the 15 previously present rows;
+  - the verdicts are unchanged.
+- **Changed P1 budget-sensitivity values** (descriptive; never in a verdict; IG − posterior):
+
+| Table, arm | Old (17 Oct) | New (30 Oct) |
+|---|---|---|
+| RCC primary, uniform | −0.212 (n = 7, 0 positive) | **−0.199 (n = 8, 0 positive)** |
+| RCC cancer/normal, uniform | −0.084 (n = 7, 1 positive) | **−0.062 (n = 8, 2 positive)** |
+| RCC primary / cancer/normal, centre | −0.179 / −0.054 | unchanged |
+
+  - The new UH0505_12 uniform row at P1 (primary): IG 0.453, posterior 0.563, Moran's I 0.661, mean intensity 0.572.
+- **Report source:** the `…_p1_local` RCC tables supersede the bin-only `…_20261030_ig_steps_local` ones, which are kept as the record. Logged in P18 §10.
+
+### 2026-10-30 20:16 Supervisor → Code | Codex | Zayd: Zayd's draft review: four requests for Code (local, no cluster unless stated)
+Status: ACTION (Code: after the current item 2 steps; post inputs and outputs before building)
+- **Context:** Zayd reviewed draft v2. Hairong does not want "seed 1 / seed 2 / seed 3" in the paper, so results are reported over the three training seeds (mean ± SD) wherever the seed matters. I'm rewriting the text; Code provides the numbers and figures.
+
+1. **Three-seed main table (local, from committed results only):**
+   - For GBM, CAC and RCC × {centre, uniform}, give the collection mean ± SD across the 3 seeds of the seed-level collection means, at bin level, at K_bin, for IG and posterior-|PCC| (balanced). Use the Test R fair-scoring summaries plus the IG-steps composite, so all arms are complete.
+   - Give the seed-independent rankings (mean intensity, variance, Moran's I, oracle, random mean) and legacy msiPL once, and confirm they don't vary by seed.
+   - **F2 addendum (descriptive, recorded as a presentation change; the predeclared seed-1 F2 rows stay in the record):** IG − legacy msiPL on seed-averaged sections, GBM and CAC × 2 arms: mean, HL [95% CI], r, exact p and Holm within those 4 rows.
+   - Output: a new dated folder plus a CSV.
+2. **Pipeline figure** (`report/draft/images/pipeline.pdf`, full width, about 5 cm tall, no title). Rebuild from `previous_version/images/spatial_msipl_pipeline.svg` with these changes:
+   - GMM K = number of annotated classes (not "2 components");
+   - **two ranking branches** from the same GMM: IG through the encoder, and posterior correlation with each ion image; plus a side box of model-free rankings (mean, variance, Moran's I);
+   - remove "fixed seed" (the core arms use three seeds) and "first-layer L2";
+   - keep the dashed mask arrow: "labels used only for scoring".
+3. **Runtime fairness:** for each row of the runtime table, give the CPU and GPU model actually used for every number, especially VAE vs S3PL training.
+   - If VAE and S3PL training times come from different GPU models, say which. If an equal-hardware comparison is possible from existing timings (for example the RTX 3090 node records), give it. **No new jobs** without a checklist.
+4. **C3 (item 3):** also record the **training loss per epoch** for each arm and section, so the report can show where the loss plateaus (a label-free criterion), beside mSCF1 at epochs 10/25/50/100.
+- **Figure list update (17:45 item 4):** drop `baseline_reproductions.pdf` (the numbers go in the text). Keep the S3PL seed figure. Add `pipeline.pdf`.
+
+### 2026-10-30 20:20 Supervisor → Code: Two figure details for the review requests
+Status: INFO
+- `ig_minus_correlation_by_section.pdf` and `vae_vs_pca.pdf` must show **seed-averaged** per-section values (the three seeds averaged within section) where three seeds exist. The draft v3 captions say this.
+- Decisions D20c–D20g were added to `decision_log.md`: no seed numbers in the paper, the Mazarura citation, no AI paragraph, the figure changes, and no epoch tuning on mSCF1.
+- Draft: `report/draft/report_draft_v3_2026-10-30.pdf`.
+
+### 2026-10-30 20:32 Supervisor → Code | Zayd: Small read request: the m/z axis per dataset (Da); pipeline figure done
+Status: ACTION (Code: with the next cluster check, as a tiny CPU job if it needs HDF5 reads)
+- For each collection, from the HDF5 m/z axis: the min and max m/z, and the bin spacing in Da (min, median, max). Is the spacing uniform or ppm-like (GBM FT-ICR)? One line per collection, checked on one section; also confirm all sections share the axis.
+- The draft has CAC 198–1061, mean 0.58 Da and RCC 150–1000, 0.083 Da from the recorded ranges. **GBM is missing.**
+- **Pipeline figure:** done by the supervisor from the existing TikZ panels (`report/draft/figures/pipeline.tex` → `images/pipeline.pdf`). Drop request 2 of the review entry.
+### 2026-10-30 20:41 Codex → Code | Supervisor: Review of report draft v3
+Status: OPEN
+
+- Finding 1 (Supervisor): eport/draft/report.tex:71-73 and sections/introduction.tex:65-68 say spatially aware rankings were the strongest and that spatial information helps at ranking rather than encoder input. CAC mean intensity is the strongest predeclared ranking (C051), and the tested context interventions did not establish a general causal stage contrast. State the dataset-specific rankings and the bounded no-consistent-context result.
+- Finding 2 (Supervisor): eport/draft/sections/results.tex:219-222 says the released S3PL ten-epoch protocol does not handicap it, but the saved training-length analysis found epoch 10 best in 15/16 with no label-free rule to choose that checkpoint. Keep the supervisor's early-stopping qualification. At lines 236-238, data order also flips GBM108_negative; qualify the initialisation claim to the 2/3-section rule. The CAC reproduction paragraph at lines 11-16 should carry the predeclared outside our seed distribution and 
+ot explained by seed selection alone labels with the rounding caveat.
+- Finding 3 (Supervisor): eport/draft/sections/results.tex:257-265 and the RCC rows of the main table omit the required adjacent disclosure: unannotated class 45-78% of pixels; the Cardinal workflow treats it as background but this was not independently verified; GMM K=3 is class-informed. The documented heterogeneous tumour limitation also belongs beside RCC results. These apply to the refreshed 8/8 RCC results too.
+- Finding 4 (Supervisor): eport/draft/sections/introduction.tex:53-58 says every method was scored the same way, although S3PL reproduction uses its in-job evaluator and native protocol. sections/methodology.tex:242-249 reduces all predeclared rules to three outcomes, although Section 7.1 has a fall-through and some arms are incomplete. Scope both statements to the comparisons where they hold.
+- Finding 5 (Code | Supervisor): v3 visibly retains the dataset-figure placeholder, red checks in the main/runtime tables and methods, VERIFY notes printed in the bibliography (for example eferences.bib:339,349,377,386,393), and the empty AI declaration page. The planned three-seed table and figures, msiPL re-tune, bibliography verification and declaration should be completed before submission.
+- Committed: not committed; draft review only.
+
+### 2026-10-30 20:43 Supervisor → Codex | Code | Zayd: Codex v3 findings 1–4 accepted; Codex may edit the report text (Zayd's instruction)
+Status: RULING
+- Resolves: 2026-10-30 20:41 Codex entry.
+- **Findings 1–4 are accepted.** Codex applies them directly in `report/draft/sections/*.tex` and `report.tex`, under the rules in Zayd's prompt.
+- **Finding 1, exact wording to use** (the abstract and introduction):
+  - "spatially aware ranking statistics were the strongest label-free rankings on GBM and RCC and within 0.01 of the best on CAC";
+  - "neighbourhood input to the encoder gave no consistent, spatially specific gain".
+- **Finding 5:** it stays open and is handled by the pending work (item 2, the three-seed table, figures, the bibliography and the declaration). Codex may also resolve the VERIFY bibliography entries from primary sources (publisher pages).
+
+### 2026-10-30 20:53 Codex → Code | Supervisor | Zayd: Report draft v4 text and bibliography
+Status: INFO
+
+- Resolves: 2026-10-30 20:41 Codex entry, findings 1–4, under the 20:43 Supervisor ruling. Correction: shell quoting mangled some path markup in that earlier entry; this entry does not edit it.
+- Finding 1: `report/draft/report.tex:70-73` and `report/draft/sections/introduction.tex:63-69` now use the exact bounded spatial-ranking and encoder-context wording from the 20:43 ruling. `report/draft/sections/discussion.tex:31-38` and `report/draft/sections/conclusion.tex:12-15` carry the dataset-specific conclusion.
+- Finding 2: `report/draft/sections/results.tex:11-19,225-250,257-261` distinguishes S3PL's native in-job mSCF1, states the CAC seed-distribution and rounding qualification, describes the ten-epoch result as an effective early-stopping choice without a label-free selection rule, and limits initialisation dominance to two of three selected sections while noting the data-order exception. The GBM reproduction gap remains unresolved.
+- Finding 3: `report/draft/sections/results.tex:41-50,265-277`, `report/draft/sections/methodology.tex:47-56` and `report/draft/sections/discussion.tex:78-83` put the class-informed RCC K=3, unannotated 45–78%, Cardinal background interpretation (not independently verified) and documented heterogeneous tumour qualifications beside RCC results. The cancer/normal-only sensitivity remains reported.
+- Finding 4: `report/draft/sections/introduction.tex:53-59` separates native baseline reproduction from common fair scoring; `report/draft/sections/methodology.tex:239-249` scopes the outcome rules, fall-through and incomplete arms.
+- Bibliography: `report/draft/references.bib:331-393` has no VERIFY notes. Publisher records confirm Kyle D. Bemis (Oxford DOI 10.1093/bioinformatics/btv146), Alexandrov et al. (ACS DOI 10.1021/pr100734z), Cassese et al. and pages 5871–5878 (ACS DOI 10.1021/acs.analchem.6b00672), and Dill et al. volume 398, pages 2969–2978 (Springer DOI 10.1007/s00216-010-4259-6). CardinalWorkflows cites Dill as the RCC source but gives volume 298 in its manual; the publisher's 398 governs. Mazarura's citation follows the 24 October Supervisor ruling.
+- Built with pdflatex, bibtex, pdflatex, pdflatex. `report/draft/report_draft_v4_2026-10-30.pdf` is 12 pages including references and the separate declaration placeholder; the final log has no overfull boxes, undefined citations or undefined references. Report-only commit: 98c9dbdb (no push).
+- Still red in the active report: `sections/methodology.tex:27-28` GBM m/z axis; `:62` dataset overview figure; `:228` msiPL budget re-tune; `:285` release tag/commit; `sections/results.tex:26-28` three-seed IG versus msiPL and budget stability; `:50-64` three-seed main table and RCC msiPL; `:204` training-length scores/loss; `:295` GPU models; `report.tex:98` Zayd's completed AI declaration form. The pipeline fallback at `methodology.tex:88` is not visible because `images/pipeline.pdf` exists. No new number was inserted for pending Code outputs.
+
+### 2026-10-30 21:07 Codex → Code | Supervisor | Zayd: Report runtime figure and bounded discussion
+Status: INFO
+
+- `report/draft/sections/results.tex:137-143,178-184` replaces the GBM PDX-line figure with the sentence that context helps some of the four PDX lines and hurts others; the `fig:gbmpdx` reference and figure are removed.
+- `report/draft/sections/results.tex:151-167` adds C237 as a descriptive same-checkpoint, inference-only attention-weight intervention on two outcome-known development sections. The +0.0099 and +0.0038 values were checked against committed `code/msi/results/diagnostics/spatial_attention_uniform_weight_ablation/{160TopL,GBM22_2}/summary.json` and `report/draft/dump/VERIFICATION.md:81`.
+- `report/draft/sections/discussion.tex:48-54` adds C223/C224: within-section label-trained probes find class information in frozen latents despite different GMM partitions, and selecting a tied-covariance GMM because of mask agreement would be label-guided. Checked against committed `code/msi/results/diagnostics/spatial_latent_separability/{GBM22_2,160TopL}.json`, `code/msi/results/diagnostics/spatial_unsupervised_clusterers/GBM22_2.json` and `report/draft/dump/VERIFICATION.md:93-94`. `discussion.tex:74-81` merges the C095–C100 non-claims with the existing limitations.
+- `report/draft/sections/methodology.tex:299-306` adds C216/C220 provenance and fail-closed output handling under Reproducibility checks, with the hardware/path qualification.
+- Runtime figure: `report/draft/sections/results.tex:274-319` references `report/draft/images/runtime_figure.pdf`; the reproducible script and generated TeX are `report/draft/figures/runtime_figure.py` and `runtime_figure.tex`. Panel A reads only committed `code/msi/results/diagnostics/ranking_stage_runtime/*/uniform_mean/summary.json` (eight GBM and eight CAC sections) and `code/msi/results/diagnostics/ranking_stage_runtime_rcc_bigbatch_shared/RCC_*/uniform_mean/summary.json` (eight RCC runs). Panel B reads the audited GBM108_positive uniform-context streaming/cached rows in committed `code/msi/results/publication/current_evidence/runtime_all_sections_v2.csv`: 40,608.9 s and 1,355.4 s, displayed as 11.3 h and 23 min. No VAE-versus-S3PL training comparison is plotted. The script checks the inputs are tracked and confirms the panel-A medians against C035.
+- `report/draft/planning/email_hairong_draft.md:1-18` is an unsent draft naming `report_draft_v5_2026-10-30.pdf` as the attachment and listing the four pending items. No message was sent.
+- Built with pdflatex, bibtex, pdflatex and pdflatex. `report/draft/report_draft_v5_2026-10-30.pdf` is 12 pages including references and the separate declaration placeholder; the body runs to roughly 10 pages. The final log has no overfull boxes, undefined references or undefined citations. Report-only commit: 873f559e; not pushed.
+- Still red in the active report: GBM m/z axis, dataset overview figure, msiPL budget re-tune and comparison, the three-seed main table and RCC msiPL cells, training-length scores/loss, GPU models, release tag/commit and Zayd's declaration form. No pending value was invented.
+
+### 2026-10-30 21:10 Codex → Code | Supervisor: Review of RCC P1-complete evidence
+Status: INFO
+
+- Resolves: 2026-10-30 19:18 Code entry.
+- Both composite manifests contain 16 summaries and match every destination copy and recorded source byte for byte by SHA-256 (0 mismatches across 32 entries). The two new 78870 summaries are the manifest-selected UH0505_12 `uniform_mean` rows under the approved P1 partition, for the primary and cancer/normal-only analyses.
+- Both regenerated section tables contain 16 rows. Every bin-level field is identical to its 30 October bin-only table, and every P1 field for the 15 previously present rows is identical to the corresponding 17 October table. The new means and counts in `decisions.json` agree with the 19:18 handoff; the primary verdicts remain unchanged and the sensitivity remains descriptive with no verdict.
+- Protocol 18 records the reproduction check, job 78870, pull, composite construction, stop check, changed descriptive P1 values and supersession of the bin-only report sources. No raw evidence was edited during review.
+- Committed: 1eb51886 (`Add RCC P1-complete scoring evidence`).
