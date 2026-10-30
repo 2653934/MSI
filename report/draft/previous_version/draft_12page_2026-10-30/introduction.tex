@@ -1,0 +1,96 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Mass spectrometry imaging (MSI) records a full mass spectrum at each sampled
+location of a tissue section, so the spatial distribution of many molecules can
+be studied at once without choosing targets in
+advance~\citep{caprioli1997maldi,schwamborn2010molecular,buchberger2018mass}.
+The data are large and high-dimensional. The collections used in this report
+contain between about a thousand and several thousand measured locations per
+section, and between 1{,}481 and 85{,}062 mass-to-charge ($m/z$) bins per
+spectrum. Most analyses therefore begin by selecting a small set of informative
+peaks. Classical peak picking applies smoothing, normalisation and
+signal-to-noise thresholds to each spectrum~\citep{gibb2012maldiquant,deininger2011normalization},
+so it ignores \emph{where} in the tissue a signal occurs.
+
+This report follows the distinction drawn in the proposal between
+\emph{peak picking}, which applies rule-based thresholds to each spectrum, and
+\emph{peak learning}, which treats peak selection as an unsupervised
+representation-learning problem~\citep{li2022machinelearningpeakpicking,abdelmoula2021peak}.
+Peak picking depends on manually set thresholds and can discard weak but
+informative ions~\citep{lieb2020sparse}. Peak learning instead fits a model to
+the spectra and ranks $m/z$ bins by what the model uses. msiPL trains a variational autoencoder (VAE)
+on individual spectra and reads peaks from the learned
+weights~\citep{abdelmoula2021peak}. S3PL adds spatial information by convolving
+over small tissue patches and reconstructing the whole
+neighbourhood~\citep{weigand2026spatial}. That raises two questions. First, can
+cheaper local spatial context, such as the mean spectrum of a $3\times3$
+neighbourhood, give a lightweight VAE a similar benefit? This was the original
+aim of this project. The proposal, titled \emph{Representation Learning for
+Autonomous Peak Detection in Mass Spectrometry Imaging}, set out to build
+\emph{Spatial-msiPL}: an msiPL-style VAE with neighbourhood input and a
+spatial-coherence penalty, intended as a computationally efficient,
+spatially aware alternative to 3D convolutional networks. Second, once a model has been fitted, which part of the
+pipeline actually determines peak quality: the representation, the
+segmentation built on it, or the attribution method used to rank peaks?
+
+This report addresses both questions experimentally. We built Spatial-msiPL
+and its variants: VAEs
+that encode either a single spectrum or the spectrum together with its
+neighbourhood (uniform averaging, learned attention, larger windows, masked
+centres). We segmented each VAE's latent space with a Gaussian mixture model
+(GMM) and ranked peaks with Integrated Gradients (IG)~\citep{sundararajan2017axiomatic}
+of the GMM posteriors. The evaluation was designed to be fair rather than
+favourable:
+\begin{itemize}
+  \item every method selected the same number of bins per section;
+  \item decision rules were written down before the corresponding results existed;
+  \item reproduced msiPL and S3PL baselines and simple model-free rankings
+        (mean intensity, variance, Moran's~$I$) were scored the same way.
+\end{itemize}
+The design turned out to matter. Holding the segmentation fixed made it
+possible to separate the value of the learned segmentation from the value of
+the attribution method.
+
+The main findings are as follows.
+\begin{itemize}
+  \item \textbf{Ranking.} Correlating each ion image directly with the GMM
+        posterior maps outperformed IG in 136 of 140 paired comparisons across
+        three training seeds. This difference was statistically supported in all
+        six dataset--model comparisons.
+  \item \textbf{Spatial information.} Neighbourhood input to the encoder gave
+        no consistent, spatially specific gain. Spatially aware ranking
+        statistics did: correlation with the segmentation maps was strongest on
+        glioblastoma, and Moran's~$I$ was strongest on renal cell carcinoma.
+        This is the sense in which peak ranking benefits from being spatially
+        aware.
+  \item \textbf{Encoder.} A linear five-component PCA segmentation performed
+        comparably to the VAE, so the nonlinear encoder was not shown to be
+        necessary.
+  \item \textbf{Reproducibility.} The published S3PL glioblastoma score lay
+        outside the distribution of ten reproduced seeds. Seeds changed S3PL
+        mainly through weight initialisation, which switched individual sections
+        between distinct solutions.
+\end{itemize}
+All conclusions are bounded to this pipeline, these datasets and the
+mask-agreement metric used by the field (\cref{sec:discussion}).
+
+The contributions of this report are:
+\begin{enumerate}
+  \item a predeclared, matched-budget evaluation protocol for learned MSI peak
+        ranking, applied to three datasets with reproduced baselines and
+        model-free references;
+  \item a ranking ablation showing that segment-then-correlate outperforms
+        gradient attribution in this pipeline, reported with paired statistics;
+  \item controlled tests of spatial context at the encoder and segmentation
+        stages that bound where spatial information helps;
+  \item a statistical account of the S3PL reproduction gap and its seed
+        sensitivity.
+\end{enumerate}
+
+\Cref{sec:background} reviews MSI peak selection and the methods compared.
+\Cref{sec:questions} states the research questions and how they changed from
+the proposal. \Cref{sec:methodology} describes the data, models, evaluation,
+statistics and computation. \Cref{sec:results} presents the results.
+\Cref{sec:discussion} interprets them and discusses limitations, and
+\cref{sec:conclusion} concludes.

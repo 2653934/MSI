@@ -1,13 +1,28 @@
 \section{Conclusion}
 \label{sec:conclusion}
+Under matched budgets and predeclared rules on three public collections, the
+results were as follows.
+\begin{itemize}
+  \item Ranking peaks by correlation with a label-free GMM segmentation
+        outperformed gradient attribution through a VAE. This was statistically
+        supported and stable across seeds.
+  \item Neighbourhood input to the encoder gave no consistent, spatially
+        specific gain. Spatial information helped as a ranking statistic.
+  \item A linear segmentation matched the VAE, and reconstruction did not track
+        peak quality.
+  \item msiPL reproduced. S3PL's GBM score did not, and its seeds switch
+        sections between distinct solutions.
+\end{itemize}
+The contribution is a controlled evaluation rather than a new peak picker. It
+bounds where spatial information helps learned MSI peak ranking, and it shows
+how much conclusions depend on fair budgets, model-free references and seed
+replication.
 
-\emph{Drafting note: finalise this section only after the patient-grouped table,
-targeted literature pass and complete results figures are incorporated.}
-
-The current evidence supports a bounded conclusion: the evaluated
-VAE/GMM/Integrated-Gradients pipeline improves matched-budget spatial peak
-scores over reproduced legacy msiPL on CAC and GBM, but a consistent advantage
-specifically attributable to the tested local-neighbourhood structure is not
-established across both collections. Spatial controls, baseline instability and
-native workflow measurements qualify rather than invalidate this result.
-
+Future work should:
+\begin{itemize}
+  \item validate a label-free number of segments;
+  \item test a predeclared combination of segmentation correlation and
+        Moran's~$I$ on new data;
+  \item evaluate graph- and ion-image-based spatial models;
+  \item test transfer of fitted models between sections.
+\end{itemize}

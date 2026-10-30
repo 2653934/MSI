@@ -1,0 +1,63 @@
+\section{Per-seed results}
+\label{app:seeds}
+\Cref{tab:perseed} gives the per-seed IG minus posterior-correlation
+differences behind \cref{tab:seeds}, at bin level. Each entry is the mean
+difference, with the number of sections in which IG was lower over the number
+of valid sections.
+
+\begin{table}[h]
+\caption{IG $-$ posterior correlation by training seed (bin level).}
+\label{tab:perseed}
+\centering\scriptsize
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Coll. & Arm & Seed 1 & Seed 2 & Seed 3 \\
+\midrule
+GBM & centre & $-0.225$ (8/8) & $-0.261$ (8/8) & $-0.247$ (8/8) \\
+GBM & uniform & $-0.233$ (8/8) & $-0.254$ (8/8) & $-0.248$ (7/7) \\
+CAC & centre & $-0.078$ (8/8) & $-0.080$ (8/8) & $-0.074$ (7/8) \\
+CAC & uniform & $-0.047$ (8/8) & $-0.057$ (6/8) & $-0.060$ (8/8) \\
+RCC & centre & $-0.156$ (8/8) & $-0.138$ (6/7) & $-0.137$ (8/8) \\
+RCC & uniform & $-0.185$ (7/7) & $-0.134$ (8/8) & $-0.104$ (7/7) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Further controls}
+\label{app:extra}
+The following supporting analyses are reported in full in the project
+repository and summarised here:
+\begin{itemize}
+  \item the IG attribution-pixel test (12, 48 and 192 pixels per component);
+  \item the frozen-model neighbour swaps and the out-of-distribution audit of
+        shuffled inputs;
+  \item the attention entropy and boundary analyses;
+  \item the BIC curves and the BIC-$K$ sensitivity;
+  \item the CAC S3PL-versus-IG threshold and peak-overlap diagnostics;
+  \item the Test~S per-collection table;
+  \item the PDX-line statistics for GBM ($n=4$; all IG $-$ correlation
+        differences negative, with the smallest attainable $p=0.125$);
+  \item the full 38-comparison statistics table, including P1 rows;
+  \item the non-predeclared max-aggregated correlation variant (CAC
+        0.626--0.629).
+\end{itemize}
+\checkme{choose which of these to show as figures or tables here}
+
+\section{Evidence, code availability and use of AI tools}
+\label{app:evidence}
+\textbf{Evidence and protocol.} Every number in this report is traced to a
+committed result file. Each test's decision rule, deviations and execution log
+were written in an append-only protocol before the corresponding outputs
+existed. Same-seed reruns were checked for bit-identical results before saved
+runs were reused.
+
+\textbf{Code availability.} The code, protocol, result files and figure
+scripts are available at \checkme{repository URL and final commit hash}. The
+reproduced baselines use the public msiPL and S3PL repositories (S3PL
+v1.0.0, commit 660e3d9).
+
+\textbf{Use of AI tools.} \checkme{Zayd to complete according to the Wits AI
+declaration form: e.g.\ AI assistants were used to plan and review experiments,
+write and test analysis code under human review, check numbers against result
+files, and assist with drafting and editing text; all scientific decisions,
+approvals and final wording were the author's.}

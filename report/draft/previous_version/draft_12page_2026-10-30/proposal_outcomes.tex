@@ -1,0 +1,74 @@
+\section{Research Questions}
+\label{sec:questions}
+
+\subsection{Original aim and questions}
+The proposal's aim was to adapt and evaluate a spatially aware VAE
+(Spatial-msiPL) capable of autonomously identifying spatially coherent
+molecular peaks in untargeted MSI data, as a computationally efficient
+alternative to 3D convolutional networks. It asked three questions:
+\begin{enumerate}[label=P\arabic*.]
+  \item How can localised spatial covariance be integrated into the
+        probabilistic encoding process of a standard 1D VAE without the
+        computational and memory overhead associated with 3D convolutional
+        networks?
+  \item To what extent does an explicit spatial-coherence penalty, combined
+        with physical noise augmentation, isolate true biomolecular signals
+        from stochastic matrix noise, compared with spatially blind baselines?
+  \item To what extent does this spatially regularised framework improve the
+        identification of biologically relevant, spatially structured peaks
+        compared with spatially blind models such as msiPL?
+\end{enumerate}
+
+\subsection{Questions answered in this report}
+Development work showed that the penalty and augmentation did not pass their
+gates (\cref{tab:proposal}). Fair scoring then showed that the answer to P3
+depended more on the ranking step than on spatial input. The report therefore
+answers four questions that separate the ingredients. Each is answered with
+paired comparisons across sections under a rule fixed before the results
+(\cref{sec:design}).
+\begin{enumerate}[label=RQ\arabic*.]
+  \item \textbf{Baseline.} Does the label-free VAE--GMM pipeline select peaks
+        that agree better with expert annotation than reproduced msiPL at the
+        same budget?
+        \emph{Justification:} the proposal's comparison (P3), made fair.
+  \item \textbf{Ranking and representation.} Which component carries the
+        result: the attribution method (IG versus direct correlation with the
+        segmentation), or the nonlinear encoder (VAE versus PCA)?
+        \emph{Justification:} without this ablation a gain cannot be credited
+        to any component (\cref{sec:background}).
+  \item \textbf{Spatial context.} Does neighbourhood information give a
+        consistent, spatially specific gain when it enters the encoder, the
+        segmentation or the ranking statistic?
+        \emph{Justification:} P1 and P3, tested against shuffled-neighbour
+        controls.
+  \item \textbf{Reproducibility.} Do the msiPL and S3PL baselines reproduce
+        their published scores, and how much do training seeds change the
+        results?
+        \emph{Justification:} baselines that do not reproduce cannot anchor a
+        comparison.
+\end{enumerate}
+
+\subsection{Changes from the proposal}
+\Cref{tab:proposal} lists each commitment in the proposal, what was
+delivered, and why anything changed.
+
+\begin{table*}[t]
+\caption{Proposal commitments and outcomes.}
+\label{tab:proposal}
+\centering\small
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}X X@{}}
+\toprule
+Proposal commitment & Outcome & Reason for any change \\
+\midrule
+Neighbourhood input to a 1D VAE (P1) & Built: uniform $3\times3$ mean, learned attention, $5\times5$--$9\times9$ windows, centre masking & Delivered; extended with shuffled and zeroed controls to test spatial specificity \\
+Spatial-coherence penalty on neighbouring latent means (P2) & Tested at $\lambda\in\{0,0.01,0.1,1\}$; $\lambda=0$ retained & Smoother latents but no gain in reconstruction, probe accuracy or Moran's~$I$ \\
+Poisson noise augmentation, after DeepION (P2) & Tested; switched off & Did not pass its development gate \\
+Bayesian optimisation of $\lambda$ in $[0.01, 1]$ & Omitted; a fixed grid was used & No penalty value passed the gate, so there was nothing to tune \\
+Peak extraction from the L2 norm of first-layer weights & Kept as a comparator; replaced by GMM-targeted IG & First-layer weights ignore the nonlinear encoder; IG was later compared with direct correlation (RQ2) \\
+Baselines: msiPL, S3PL, MALDIquant & msiPL and S3PL reproduced and audited; MALDIquant omitted; model-free rankings, random and supervised oracle added & Model-free rankings are a stronger and fairer reference than a spectrum-wise peak picker \\
+Data: raw profile-mode imzML for GBM (PR001292) and CAC (MTBLS415) & Audited HDF5 conversions where needed; RCC added as a third, held-out dataset & Practical loading and a held-out confirmation set \\
+mSCF1, PCC distributions, GPU memory and runtime & mSCF1 delivered with matched budgets, peak-level scoring and predeclared rules; memory and runtime measured; PCC distributions used in diagnostics & Bin-level scoring rewards duplicate bins of one peak \\
+(Not in proposal) & Tests of the encoder (PCA), training seeds and S3PL neighbour topology & Added after reviews exposed missing controls \\
+\bottomrule
+\end{tabularx}
+\end{table*}

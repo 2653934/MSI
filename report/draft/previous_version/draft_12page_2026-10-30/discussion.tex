@@ -1,0 +1,92 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why correlation outperforms IG here}
+Three explanations fit the ranking result.
+\begin{enumerate}
+  \item \textbf{Different questions.} IG asks which bins would change a few
+        sampled pixels' component probabilities. Correlation asks which ion
+        images follow a component across the whole section, which is closer to
+        what mSCF1 rewards.
+  \item \textbf{Sampling.} IG averages over 12 sampled pixels per component,
+        while correlation uses every pixel. More pixels improved IG only
+        slightly ($\le +0.024$) on the two sections tested, so sampling
+        explains little of a gap of 0.05--0.25, but other IG settings
+        (baselines, path counts, signed attributions) remain untested.
+  \item \textbf{Metric alignment.} A segmentation that resembles the masks
+        produces posterior maps that a mask-based metric naturally rewards.
+\end{enumerate}
+Correlation is therefore best read as an ablation finding about this pipeline:
+the label-free segmentation carries the useful signal, and gradient attribution
+through a dense VAE does not add to it. We do not claim that IG is generally
+inferior, nor that segment-then-correlate, which is established
+practice~\citep{alexandrov2011efficient}, is a new method.
+
+\subsection{What remains of the spatial hypothesis}
+The original hypothesis was that neighbourhood input would improve a VAE's
+representation and therefore its peaks. In a dense VAE that averages or attends
+over neighbours, no intervention gave a consistent gain beyond what nonlocal
+(shuffled) context also provides, and smoothing the segmentation did not help
+either. The attention experiments explain why. At $3\times3$ scale, adjacent
+spectra are near-copies of the centre, so there is little to select between.
+Spatial information did help in two other places: as a ranking statistic
+(Moran's~$I$, and correlation with spatially coherent segments), and in S3PL,
+which collapses without neighbour input. Even there, though, correctly placed
+neighbours added only an inconsistent $+0.04$ over shuffled ones. Spatially
+aware \emph{ranking}, rather than spatially aware \emph{encoding}, is what the
+evidence supports, and it gives this report its title.
+
+\subsection{Reconstruction is not ranking quality}
+PCA-5 reconstructed GBM better than the VAE yet ranked peaks about equally
+well, while the VAE segmented slightly better. Earlier development runs showed
+the same pattern: context models reconstructed slightly worse but changed which
+peaks were chosen, and a spatial penalty smoothed the latents while worsening
+reconstruction. Reconstruction error rewards fitting all intensity variation,
+including intense ions unrelated to tissue classes, whereas peak quality here
+depends on how well a low-dimensional segmentation separates the classes. This
+agrees with \citet{mazarura2025autoencoder}.
+
+\subsection{S3PL instability and the reproduction gap}
+The S3PL seed analysis shows that comparisons with a single S3PL run can be
+misleading. Specific sections switch between distinct solutions depending on
+the initial weights. The released preprocessing appears to create this
+instability, since TIC normalisation removes it while also removing the
+highest-scoring outcomes. Neither seeds nor normalisation explain the
+published GBM score. We therefore report the gap as unresolved, and we do not
+select favourable seeds or checkpoints for any baseline.
+
+\subsection{Autonomy and the proposal's aim}
+The proposal aimed for autonomous peak detection that removes human bias from
+preprocessing, with a lightweight model as an efficient alternative to 3D
+convolution. That aim is met only in part.
+\begin{itemize}
+  \item The pipeline fits and ranks without labels.
+  \item Two settings still come from annotation: the number of segments and the
+        peak budget. BIC could not replace the first.
+  \item On cost, the 1D model used comparable time and less memory than S3PL
+        on the section measured. It did not, however, gain from its spatial
+        input, which was the reason for building it.
+\end{itemize}
+
+\subsection{Limitations and threats to validity}
+\begin{itemize}
+  \item \textbf{Statistical units.} GBM has four PDX lines, CAC one biopsy and
+        RCC eight subjects. P-values describe these sections, not a population.
+        With $n=8$, only small families can reach Holm significance, so many
+        comparisons rest on practical labels and effect sizes.
+  \item \textbf{Class-informed configuration.} The number of GMM components
+        equals the number of annotated classes and was not supported by BIC.
+        Peak budgets come from published, annotation-related counts. The
+        pipeline is label-free in fitting and ranking only.
+  \item \textbf{The metric.} mSCF1 measures agreement with expert masks, not
+        molecular identity. Methods that produce mask-like maps are favoured.
+  \item \textbf{RCC.} The three-class result partly reflects separating
+        annotated tissue from a large unannotated region.
+  \item \textbf{Post hoc elements.} Tests~S, V, N, R and Investigation~21 were
+        chosen after earlier results were known. Each was predeclared before its
+        own outputs, and all are reported, including null and negative
+        outcomes. Recommending correlation is a post hoc conclusion.
+  \item \textbf{Scope.} The VAE uses fixed-window, dense neighbourhood input.
+        Graph-based and ion-image-level spatial models, cross-section transfer,
+        and other attribution settings were not tested.
+\end{itemize}

@@ -1,0 +1,86 @@
+\section{Proposal commitments and outcomes}
+\label{app:proposal}
+\begin{table*}[h]
+\caption{Proposal commitments and outcomes.}
+\label{tab:proposal}
+\centering\small
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}X X@{}}
+\toprule
+Proposal commitment & Outcome & Reason for any change \\
+\midrule
+Neighbourhood input to a 1D VAE (P1) & Built: uniform $3\times3$ mean, learned attention, $5\times5$--$9\times9$ windows, centre masking & Delivered; extended with shuffled and zeroed controls to test spatial specificity \\
+Spatial-coherence penalty on neighbouring latent means (P2) & Tested at $\lambda\in\{0,0.01,0.1,1\}$; $\lambda=0$ retained & Smoother latents but no gain in reconstruction, probe accuracy or Moran's~$I$ \\
+Poisson noise augmentation, after DeepION (P2) & Tested; switched off & Did not pass its development gate \\
+Bayesian optimisation of $\lambda$ in $[0.01, 1]$ & Omitted; a fixed grid was used & No penalty value passed the gate, so there was nothing to tune \\
+Peak extraction from the L2 norm of first-layer weights & Kept as a comparator; replaced by GMM-targeted IG & First-layer weights ignore the nonlinear encoder; IG was later compared with direct correlation (RQ2) \\
+Baselines: msiPL, S3PL, MALDIquant & msiPL and S3PL reproduced and audited; MALDIquant omitted; model-free rankings, random and supervised oracle added & Model-free rankings are a stronger and fairer reference than a spectrum-wise peak picker \\
+Data: raw profile-mode imzML for GBM (PR001292) and CAC (MTBLS415) & Audited HDF5 conversions where needed; RCC added as a third, held-out dataset & Practical loading and a held-out confirmation set \\
+mSCF1, PCC distributions, GPU memory and runtime & mSCF1 delivered with matched budgets, peak-level scoring and predeclared rules; memory and runtime measured; PCC distributions used in diagnostics & Bin-level scoring rewards duplicate bins of one peak \\
+(Not in proposal) & Tests of the encoder (PCA), training seeds and S3PL neighbour topology & Added after reviews exposed missing controls \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Per-seed results}
+\label{app:seeds}
+\Cref{tab:perseed} gives the per-seed IG minus posterior-correlation
+differences behind \cref{tab:seeds}, at bin level. Each entry is the mean
+difference, with the number of sections in which IG was lower over the number
+of valid sections.
+
+\begin{table}[h]
+\caption{IG $-$ posterior correlation by training seed (bin level).}
+\label{tab:perseed}
+\centering\scriptsize
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Coll. & Arm & Seed 1 & Seed 2 & Seed 3 \\
+\midrule
+GBM & centre & $-0.225$ (8/8) & $-0.261$ (8/8) & $-0.247$ (8/8) \\
+GBM & uniform & $-0.233$ (8/8) & $-0.254$ (8/8) & $-0.248$ (7/7) \\
+CAC & centre & $-0.078$ (8/8) & $-0.080$ (8/8) & $-0.074$ (7/8) \\
+CAC & uniform & $-0.047$ (8/8) & $-0.057$ (6/8) & $-0.060$ (8/8) \\
+RCC & centre & $-0.156$ (8/8) & $-0.138$ (6/7) & $-0.137$ (8/8) \\
+RCC & uniform & $-0.185$ (7/7) & $-0.134$ (8/8) & $-0.104$ (7/7) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Further controls}
+\label{app:extra}
+The following supporting analyses are reported in full in the project
+repository and summarised here:
+\begin{itemize}
+  \item the IG attribution-pixel test (12, 48 and 192 pixels per component);
+  \item the frozen-model neighbour swaps and the out-of-distribution audit of
+        shuffled inputs;
+  \item the attention entropy and boundary analyses;
+  \item the BIC curves and the BIC-$K$ sensitivity;
+  \item the CAC S3PL-versus-IG threshold and peak-overlap diagnostics;
+  \item the Test~S per-collection table;
+  \item the PDX-line statistics for GBM ($n=4$; all IG $-$ correlation
+        differences negative, with the smallest attainable $p=0.125$);
+  \item the full 38-comparison statistics table, including P1 rows;
+  \item the non-predeclared max-aggregated correlation variant (CAC
+        0.626--0.629).
+\end{itemize}
+\checkme{choose which of these to show as figures or tables here}
+
+\section{Evidence, code availability and use of AI tools}
+\label{app:evidence}
+\textbf{Evidence and protocol.} Every number in this report is traced to a
+committed result file. Each test's decision rule, deviations and execution log
+were written in an append-only protocol before the corresponding outputs
+existed. Same-seed reruns were checked for bit-identical results before saved
+runs were reused.
+
+\textbf{Code availability.} The code, protocol, result files and figure
+scripts are available at \checkme{repository URL and final commit hash}. The
+reproduced baselines use the public msiPL and S3PL repositories (S3PL
+v1.0.0, commit 660e3d9).
+
+\textbf{Use of AI tools.} \checkme{Zayd to complete according to the Wits AI
+declaration form: e.g.\ AI assistants were used to plan and review experiments,
+write and test analysis code under human review, check numbers against result
+files, and assist with drafting and editing text; all scientific decisions,
+approvals and final wording were the author's.}

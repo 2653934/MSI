@@ -1,60 +1,54 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Mass spectrometry imaging (MSI) records a mass spectrum at each sampled tissue
-coordinate, allowing molecular intensity patterns to be examined without
-preselecting a single target molecule~\citep{caprioli1997maldi,schwamborn2010molecular}.
-The resulting data are both spatial and high-dimensional: each tissue section
-contains many measured locations, and each location contains intensities for
-hundreds to tens of thousands of mass-to-charge ($m/z$) bins. A downstream
-analysis therefore requires a defensible way to reduce the spectral dimension
-without discarding weak but informative signals.
+Mass spectrometry imaging (MSI) records a full mass spectrum at each location
+of a tissue section, mapping many molecules at once without choosing targets in
+advance~\citep{caprioli1997maldi,schwamborn2010molecular}. The data are large:
+the sections used here have 972--4{,}761 measured pixels and 1{,}481--85{,}062
+mass-to-charge ($m/z$) bins. Most analyses therefore begin by selecting a small
+set of informative peaks. \emph{Peak picking} applies rule-based thresholds to
+each spectrum and can discard weak but informative
+ions~\citep{gibb2012maldiquant,lieb2020sparse}. \emph{Peak learning} instead
+fits an unsupervised model and ranks $m/z$ bins by what the model uses.
+Examples are msiPL, a variational autoencoder (VAE) on single
+spectra~\citep{abdelmoula2021peak}, and S3PL, which adds spatial context through
+3D convolution over tissue patches~\citep{weigand2026spatial}.
 
-Classical peak-picking methods identify local spectral maxima using processing
-choices such as smoothing, signal-to-noise rules and thresholds. Learning-based
-alternatives instead optimise a representation of the spectra and use the
-trained model to rank input bins. The msiPL method applies a variational
-autoencoder (VAE) to individual spectra and derives a peak ranking from network
-weights~\citep{abdelmoula2021peak}. S3PL supplies a spatial-spectral patch to a
-three-dimensional convolutional model~\citep{weigand2026spatial}. These methods
-motivate two related but distinct questions: whether local neighbourhood
-context improves unsupervised peak selection, and whether a nonlinear
-explanation of a learned spectral representation yields a more useful ranking
-than a first-layer weight shortcut.
+The proposal for this project, \emph{Representation Learning for Autonomous
+Peak Detection in MSI}, set out to build \emph{Spatial-msiPL}: an msiPL-style
+VAE given cheap local spatial context (the mean of a $3\times3$ neighbourhood),
+as a lightweight alternative to 3D convolution. Testing it fairly raised a
+second question: once a model is fitted, which part of the pipeline determines
+peak quality? The candidates are the representation, the segmentation built on
+it, and the attribution method used to rank bins.
 
-This study investigates those questions with centre-only and contextual VAE
-models on glioblastoma (GBM) and colorectal adenocarcinoma (CAC) MSI sections.
-The contextual model reconstructs each central spectrum after receiving both
-the centre and a summary of neighbouring spectra. Fixed means, larger windows,
-zero and shuffled controls, and learned attention are used to test what the
-neighbourhood contributes. Separately, a two-component Gaussian mixture model
-(GMM) is fitted to frozen latent means without expert labels. Integrated
-Gradients (IG) then attributes the GMM posterior through the complete encoder
-to the original spectral bins~\citep{sundararajan2017axiomatic}. Expert masks
-are introduced only during final evaluation.
+We built Spatial-msiPL and its variants (uniform and attention-weighted
+neighbourhoods, larger windows, masked centres) and segmented each latent space
+with a Gaussian mixture model (GMM). Peaks were ranked by Integrated Gradients
+(IG)~\citep{sundararajan2017axiomatic} of the GMM posteriors, or by directly
+correlating each ion image with the posterior maps. All methods were scored at
+matched peak budgets under rules fixed before the results, on 24 sections from
+three public collections. The comparison included reproduced msiPL and S3PL
+baselines and model-free rankings.
 
-The central research question is whether neighbourhood context provides a
-repeatable benefit for unsupervised MSI peak selection. Two supporting
-questions ask whether nonlinear GMM-targeted attribution improves the evaluated
-pipeline over reproduced weight-based peak learning, and how spatial controls,
-training instability and measured workflow cost qualify the comparison.
+Holding the segmentation fixed, correlation outperformed IG in 136 of 140
+paired comparisons across three training seeds, and this was statistically
+supported in all six dataset--model comparisons. Neighbourhood input to the
+encoder gave no consistent, spatially specific gain. Spatially aware
+\emph{ranking} statistics, namely segmentation correlation and Moran's~$I$,
+were the strongest label-free rankings. A linear PCA segmentation matched the
+VAE. S3PL's published glioblastoma score lay outside ten reproduced seeds, and
+weight initialisation switched individual S3PL sections between distinct
+solutions.
 
-The report makes four bounded contributions. First, it provides matched
-centre-only and contextual VAE comparisons across eight CAC and eight GBM
-sections. Second, it evaluates a label-free GMM/IG ranking pipeline against
-legacy msiPL and a first-layer L2 comparator at matched peak budgets. Third, it
-uses window, zero-context, shuffled-context, learned-attention and S3PL controls
-to separate model sensitivity from evidence of a beneficial local topology.
-Fourth, it records baseline stability and native workflow resource measurements
-so that peak-quality claims are not separated from their computational and
-reproducibility limits.
-
-The evaluated VAE/GMM/IG package improves matched-budget spatial peak scores
-over reproduced legacy msiPL on both collections. However, the benefit that can
-be attributed specifically to local neighbourhood structure is not consistent
-across CAC and GBM. This mixed result is treated as the main scientific finding,
-not as a failed attempt to obtain a positive result. The remainder of the report
-reviews the relevant methods, defines the controlled experiments and proposal
-changes, presents section- and patient-aware evidence, and states the limits of
-the biological and computational conclusions.
-
+The contributions are:
+(i) a predeclared, matched-budget evaluation of learned MSI peak ranking on
+three datasets;
+(ii) a ranking ablation, with paired statistics, showing that
+segment-then-correlate outperforms gradient attribution in this pipeline;
+(iii) controlled tests that bound where spatial information helps;
+(iv) a statistical account of S3PL's reproduction gap and seed sensitivity.
+\Cref{sec:background} reviews related work, \cref{sec:questions} states the
+research questions, \cref{sec:methodology} gives the methods,
+\cref{sec:results} the results, \cref{sec:discussion} the discussion, and
+\cref{sec:conclusion} concludes.

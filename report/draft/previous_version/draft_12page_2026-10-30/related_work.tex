@@ -1,0 +1,91 @@
+\section{Background and Related Work}
+\label{sec:background}
+
+\subsection{MSI data and preprocessing}
+An MSI experiment rasters a tissue section and records a spectrum at each
+location, giving a data cube with two spatial dimensions and one $m/z$
+dimension~\citep{caprioli1997maldi,buchberger2018mass}. Spectra vary in total
+intensity between pixels for technical reasons, so they are usually
+normalised, most often by total ion current (TIC), before
+comparison~\citep{deininger2011normalization}. Spectra may be kept as fine
+$m/z$ bins or reduced to centroided peaks. Because neighbouring bins of one
+molecular peak are strongly correlated, any evaluation that counts bins can
+reward several bins of the same peak. This motivates the peak-level scoring
+used in this report (\cref{sec:evaluation}). Tools such as
+Cardinal~\citep{bemis2015cardinal} and M\textsuperscript{2}aia~\citep{cordes2021m2aia}
+provide standard data handling.
+For our work, the key consequence is that every method must receive the same
+input and be scored at the same resolution, or differences in preprocessing
+masquerade as differences in method.
+
+\subsection{Peak selection}
+Classical pipelines such as MALDIquant detect local maxima above a noise
+threshold in each spectrum~\citep{gibb2012maldiquant}. Machine-learning peak
+pickers learn what a peak looks like from annotated
+spectra~\citep{li2022machinelearningpeakpicking}. Both operate spectrum by
+spectrum and do not use the spatial arrangement of the tissue. Learned
+representation methods instead rank $m/z$ bins by how a model trained on the
+whole section uses them. This report compares such learned rankings with each
+other and with simple model-free rankings, under one shared evaluation.
+
+\subsection{Learned peak selection: msiPL and S3PL}
+msiPL trains a fully connected VAE~\citep{kingma2014autoencoding} on
+individual spectra, clusters the low-dimensional latent space, and reads peaks
+from the network weights~\citep{abdelmoula2021peak}. Its companion work,
+massNet, provides the glioblastoma (GBM) dataset used
+here~\citep{abdelmoula2022massnet}. S3PL learns a 3D convolution over a
+spectral patch around each pixel, applies an attention step to the centre
+spectrum, reconstructs the full normalised patch, and selects the bins that
+receive the most attention across pixels~\citep{weigand2026spatial}. S3PL also
+introduced the mask-based spatial-correlation F1 score (mSCF1) used to judge
+peak lists against expert annotations, and released the peak budgets and
+protocols for GBM, colorectal adenocarcinoma (CAC) and renal cell carcinoma
+(RCC). It reported 0.496, 0.601 and 0.470 mSCF1 on these collections, against
+0.403, 0.431 and 0.159 for msiPL. Related representation-learning work in MSI
+includes deep models of 3D data~\citep{inglese2017deep}, low-dimensional
+ion-image embeddings~\citep{guo2024deepion} and IonMorphNet~\citep{weigand2026ionmorphnet}.
+S3PL's result motivates our spatial question. Its convolution, objective,
+normalisation and selector all differ from msiPL, so it is not clear which
+ingredient produces the gain, or whether a much smaller amount of spatial
+context would suffice.
+
+\subsection{Representation quality versus downstream use}
+A representation that reconstructs the data well is not necessarily the one
+that serves a later task best. Mazarura, Jarvis and Bau compared autoencoders,
+PCA and NMF on MSI data and found that reconstruction error, cluster quality
+and downstream classification ranked the models
+differently~\citep{mazarura2025autoencoder}. We test the same distinction for
+peak ranking (\cref{sec:res-encoder}).
+
+\subsection{Attribution and segment-then-correlate}
+Integrated Gradients attributes a model output to input features by
+integrating gradients along a path from a baseline input to the actual
+input~\citep{sundararajan2017axiomatic}. Applied to a GMM posterior computed
+from a VAE latent space, it ranks $m/z$ bins by how strongly they move a pixel
+towards a tissue segment, through the full nonlinear encoder. An older and
+simpler route is to segment the tissue first and then correlate each ion image
+with the segments~\citep{alexandrov2010spatial,alexandrov2011efficient}. Our
+pipeline contains both routes on the same segmentation, which allows a direct
+comparison.
+
+\subsection{Spatial statistics and spatially aware methods}
+Ion images of biologically meaningful molecules tend to be spatially
+structured rather than noisy. Moran's~$I$ measures spatial
+autocorrelation~\citep{moran1950notes}, and spatial autocorrelation and
+spatial-chaos measures have been used to judge the informativeness of MSI ion
+images~\citep{alexandrov2013testing,cassese2016spatial}. Spatially aware
+segmentation smooths features using neighbourhood weights before
+clustering~\citep{alexandrov2011efficient}. Graph-based models of spatial
+omics and MSI propagate information between neighbouring locations. These are
+discussed as future work in \cref{sec:conclusion}. Our study places spatial
+information at three points (the encoder input, the segmentation and the
+ranking statistic) and tests each one under the same evaluation.
+
+\subsection{Gap addressed}
+Published learned peak-selection methods are usually evaluated against one or
+two baselines, often with different peak counts, single training runs and no
+model-free references. It has not been tested under a common budget whether
+their advantages come from spatial input, from the learned representation, or
+from the ranking step, nor how stable those advantages are across training
+seeds. This report addresses that gap for a VAE-based pipeline, with
+reproduced msiPL and S3PL baselines.

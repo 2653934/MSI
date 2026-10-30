@@ -1,0 +1,25 @@
+\section{Related Work}
+\label{sec:related_work}
+
+\emph{Drafting scope.} This section will connect the observed results to five
+specific bodies of work: classical MSI peak picking, msiPL, S3PL, spatial scale
+and tissue-boundary mixing, and the limits of attribution as biological
+evidence. It will be completed through a targeted literature pass rather than
+by reusing the proposal's broad survey unchanged.
+
+msiPL established that a VAE can learn an unsupervised spectral representation
+and support model-derived peak selection~\citep{abdelmoula2021peak}. S3PL
+subsequently incorporated spatial-spectral patches into a convolutional
+architecture~\citep{weigand2026spatial}. The present study does not treat these
+as architecture-matched baselines: their objectives, normalisation, training
+protocols and selectors differ. Instead, it reproduces their executable
+pipelines where possible and uses matched final peak counts to prevent a method
+from improving a spatial score merely by returning more bins.
+
+Integrated Gradients attributes the change in a differentiable target relative
+to a specified baseline while satisfying a completeness property under its
+standard assumptions~\citep{sundararajan2017axiomatic}. Here, the target is a
+GMM posterior fitted to frozen latent means. This explains the evaluated model's
+latent separation; it does not identify molecular compounds or establish that a
+ranked bin is a validated biomarker.
+

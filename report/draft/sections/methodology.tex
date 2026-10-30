@@ -1,41 +1,162 @@
 \section{Methodology}
 \label{sec:methodology}
 
-\emph{Drafting status.} The final methodology will be reconstructed from the
-audited data, model, attribution and scoring implementations. Equations will be
-checked directly against code before promotion.
+\subsection{Data}
+\label{sec:data}
+We used the three collections on which S3PL was published (\cref{tab:data}),
+so that both baselines could be reproduced. GBM is the massNet patient-derived
+xenograft (PDX) glioblastoma dataset (PR001292)~\citep{abdelmoula2022massnet}.
+CAC is the MetaboLights colorectal adenocarcinoma dataset
+(MTBLS415)\checkme{acquisition paper}. RCC comes from
+\citet{dill2010rcc} via Cardinal~\citep{bemis2015cardinal}. The expert masks
+come from the S3PL release~\citep{weigand2026spatial}.
+\begin{itemize}
+  \item \textbf{GBM:} sections from the same PDX line are not independent, so
+        GBM is also summarised per line.
+  \item \textbf{CAC:} all sections come from one biopsy, so its comparisons
+        are within one specimen.
+  \item \textbf{RCC:} cancer, normal and an unannotated region (45--78\% of
+        pixels) are kept as three classes, with a cancer/normal-only
+        sensitivity analysis.
+\end{itemize}
+Four sections (GBM108\_positive, GBM22\_2, 160TopL, 40TopL) were used for
+development. RCC was held out until the method was frozen.
 
-The study uses eight CAC and eight GBM tissue sections. The eight GBM sections
-belong to four patient groups; sections are therefore paired experimental units
-for section-level descriptions but are not eight independent patients. Training
-is label-free. Expert masks are used only to evaluate the spatial agreement of
-selected-bin ion images.
+\begin{table}[t]
+\caption{Datasets.}
+\label{tab:data}
+\centering\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & GBM & CAC & RCC \\
+\midrule
+Sections & 8 & 8 & 8 \\
+Independent units & 4 PDX lines & 1 biopsy & 8 subjects \\
+$m/z$ bins & 85{,}062 & 1{,}481 & 10{,}200 \\
+Pixels per section & 2{,}071--4{,}524 & 3{,}243--4{,}761 & 972--3{,}564 \\
+Classes (GMM $K$) & 2 & 3 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Each VAE encodes either the central spectrum alone or a contextual input formed
-from the central spectrum and neighbouring spectra. The decoder reconstructs
-only the centre. Controlled variants include a fixed $3\times3$ neighbour mean,
-a $5\times5$ mean, zero context, nonlocal shuffled context and a learned
-attention aggregator. These variants answer different questions and are not
-treated as interchangeable evidence of spatial causality.
+\subsection{Pipeline}
+\label{sec:pipeline}
+Each section is modelled on its own spectra without labels, and its selected
+peaks are scored against its own masks. The design is unsupervised and
+transductive. Masks never enter fitting or ranking, but they set two
+configuration values, which are disclosed below.
 
-After training, a two-component GMM is fitted to frozen latent means. IG is
-computed with the implementation's trapezoidal path integration, not the
-right-endpoint approximation used in the previous report draft. Attribution is
-aggregated into a ranking of raw spectral bins. Consolidated molecular-peak
-views are used for interpretation only; matched-budget mSCF1 evaluates the raw
-ranked bins.
+\textbf{Spatial-msiPL.} Following msiPL, spectra are TIC-normalised and a fully
+connected VAE (one hidden layer of 512 units, 5 latent dimensions) is trained
+for 100 epochs with Adam (learning rate $10^{-3}$, batch size 128), using
+msiPL's categorical cross-entropy reconstruction loss plus KL
+divergence~\citep{abdelmoula2021peak}.
+\begin{itemize}
+  \item The \emph{centre-only} arm encodes one spectrum.
+  \item The \emph{uniform} arm concatenates it with the mean of its up to eight
+        measured $3\times3$ neighbours.
+  \item Both reconstruct the centre only.
+  \item The variants are learned attention over neighbours (about 0.5\% more
+        parameters)~\citep{vaswani2017attention}, $5\times5$ to $9\times9$
+        windows, zeroed and shuffled neighbours, and centre masking.
+\end{itemize}
 
-For every selected bin, its ion image is compared with an expert mask using
-Pearson correlation coefficient (PCC). F1 is evaluated at PCC thresholds 0.3,
-0.4, 0.5 and 0.6, and mSCF1 is their unweighted mean. The reproduced S3PL code
-uses the nearest position in its ranked correlation list as a threshold-derived
-rank cutoff; it is not described as an exactly equivalent literal
-$r\geq t$ filter. Independent audits recompute the saved peak scores from raw
-spectra and masks.
+\textbf{Segmentation.} A full-covariance GMM is fitted to the standardised
+latent means. Its number of components $K$ equals the number of annotated
+classes, a class-informed choice that BIC did not support
+(\cref{sec:res-encoder}).
 
-Computational comparisons report measured native workflow cost under the
-specified protocols. Timer boundaries, hardware, repetitions, CPU time, RSS and
-sampled GPU memory are stated separately. Because S3PL uses 10 epochs and the
-VAE uses 100, these measurements are not interpreted as equal-work evidence of
-intrinsic architectural efficiency.
+\textbf{Rankings.} Each ranking orders the $m/z$ bins, and the top
+$K_{\text{bin}}$ are scored.
+\begin{itemize}
+  \item \emph{IG}~\citep{sundararajan2017axiomatic} integrates the gradient of
+        the assigned GMM posterior from the section-mean spectrum to 12 sampled
+        pixels per component (64 trapezoidal steps), and ranks bins by mean
+        absolute attribution, balanced across components.
+  \item \emph{Posterior correlation} ranks bins by the absolute Pearson
+        correlation of their ion images with each posterior map, balanced the
+        same way, using the same GMM.
+  \item \emph{Model-free references} are mean intensity, variance, Moran's~$I$
+        over Moore-neighbour edges~\citep{moran1950notes}, and random.
+  \item \emph{Ceiling:} a supervised oracle that correlates with the masks.
+\end{itemize}
+Test~V replaces the VAE with 5-component PCA, keeping the GMM and correlation
+ranking. Test~S smooths the latent means with structure-adaptive weights before
+the GMM~\citep{alexandrov2011efficient}.
 
+\textbf{Baselines.} msiPL was reproduced and tuned to its published peak-count
+procedure. S3PL was run from its public repository with the released settings:
+10 epochs, Adam ($10^{-2}$), batch size 16, and patch size $p$ and peaks per
+patch $z$ of 3/256 (GBM), 9/256 (CAC) and 5/1024 (RCC). The released code
+normalises each patch by its spatial maximum, while the paper describes TIC
+normalisation, so both were tested.
+
+\subsection{Evaluation and design}
+\label{sec:evaluation}
+\textbf{mSCF1.} For each class mask and threshold
+$t\in\{0.3,0.4,0.5,0.6\}$, a reference set of mask-correlated bins is formed
+using the S3PL evaluator's rank cutoff. The F1 score between the selected bins
+and the union of the reference sets is averaged over the four
+thresholds~\citep{weigand2026spatial}. mSCF1 measures agreement with the
+masks, not chemical identity.
+
+\textbf{Budgets.} All compared methods select the same number of bins,
+$K_{\text{bin}}$: the tuned msiPL count for GBM and CAC, and the released S3PL
+target for RCC. A peak-level scale (P1) collapses neighbouring bins of one
+mean-spectrum peak, so duplicates are not credited. On CAC and RCC, P1 is
+nearly singleton and acts as a second budget check.
+
+\textbf{Predeclared rules.} Every comparison's rule was written before its
+outputs, in an append-only protocol.
+\begin{itemize}
+  \item A difference ``helps'' if its mean is at least $+0.02$ mSCF1 and it is
+        positive in at least 6/8 sections.
+  \item Two methods are ``equivalent'' if the mean difference is within
+        $\pm0.02$.
+  \item Otherwise the label is ``mixed'', or ``incomplete'' if sections are
+        missing.
+\end{itemize}
+All arms use training seed~1. The two core arms were retrained with seeds 2
+and~3 on all sections (Test~R). Seed results are given as mean~$\pm$~SD across
+seeds of the seed-level collection means.
+
+\subsection{Statistics}
+\label{sec:stats}
+The labels are accompanied by paired, per-section statistics:
+\begin{itemize}
+  \item the exact two-sided Wilcoxon signed-rank
+        test~\citep{wilcoxon1945individual};
+  \item the Hodges--Lehmann (HL) median difference with an exact 95\%
+        CI~\citep{hodges1963estimates};
+  \item the matched-pairs rank-biserial correlation $r$.
+\end{itemize}
+Seeds are averaged within section first. A Mann--Whitney test was not used,
+because the comparisons are paired.
+
+The 38 comparisons form five families by question: ranking (6), against
+legacy msiPL (4), encoder variants (17), segmentation (9) and S3PL (2). Holm
+correction~\citep{holm1979simple} is applied within each family. With $n=8$
+the smallest possible $p$ is 0.0078, so only families of at most six tests can
+reach Holm significance. Effect sizes therefore carry the main weight.
+
+A result is ``statistically supported'' only if its Holm-adjusted $p<0.05$
+\emph{and} its practical label agrees. GBM is also summarised per PDX line
+($n=4$, smallest $p=0.125$). Mixed models with random section and seed effects
+are descriptive.
+
+\subsection{Computation}
+\label{sec:compute}
+Training ran on the University's Slurm cluster (RTX 3060 and 3090 GPUs), and
+ranking ran on CPU nodes.
+\begin{itemize}
+  \item \textbf{Caching.} The original loader re-read every batch from HDF5 on
+        shared storage. Data preparation took 24.6\,s per batch against about
+        0.02\,s of computation, so a 100-epoch GBM run took 11.3\,h. Reading
+        each section into memory once cut it to 23\,min ($30\times$), with
+        identical losses and weights. The likely cause is repeated small network
+        reads, but this was not separately measured.
+  \item \textbf{Reuse of saved runs.} Same-seed reruns were checked to be
+        bit-identical before any saved run was reused.
+  \item \textbf{Timing.} Exact ranking equality depends on the CPU model, so
+        timing runs used the processor type that produced each saved ranking.
+\end{itemize}

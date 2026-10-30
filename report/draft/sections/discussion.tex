@@ -1,34 +1,63 @@
 \section{Discussion}
 \label{sec:discussion}
 
-The most reliable improvement belongs to the evaluated VAE/GMM/IG package, not
-to neighbourhood context alone. The centre-only result shows that much of the
-gain over legacy msiPL remains when neighbours are removed. Context contributes
-positively in the frozen CAC comparison, but the GBM, shuffled and attention
-controls show that this effect cannot yet be generalised as a benefit caused by
-correct local topology.
+\textbf{Why correlation outperforms IG.} Three explanations fit.
+\begin{itemize}
+  \item IG asks which bins would change a few sampled pixels' component
+        probabilities. Correlation asks which ion images follow a component
+        across the whole section, which is closer to what mSCF1 rewards.
+  \item Sampling explains little: four- to sixteen-fold more IG pixels gained at
+        most 0.024 against a gap of 0.05--0.25.
+  \item mSCF1 favours mask-like segmentations.
+\end{itemize}
+Correlation is therefore an ablation finding about this pipeline: the
+label-free segmentation carries the signal, and gradient attribution through a
+dense VAE adds nothing to it. We do not claim that IG is generally worse, or
+that segment-then-correlate, which is established
+practice~\citep{alexandrov2011efficient}, is new.
 
-This distinction explains why a negative or mixed spatial result remains
-useful. Uniform averaging compresses neighbouring spectra into one vector and
-can mix tissue across boundaries. Learned attention can reweight neighbours but
-was close to uniform in typical evaluated pixels and did not yield a stable
-peak-quality advantage on the outcome-known pilot sections. These findings
-bound the evaluated mechanisms; they do not imply that spatial modelling is
-unhelpful in MSI or that convolutional, graph-based or multiscale approaches
-would behave similarly.
+\textbf{What remains of the spatial hypothesis.} In a dense VAE, no
+neighbourhood intervention beat shuffled, nonlocal context, and smoothing the
+segmentation did not help either. At $3\times3$ scale, neighbours are
+near-copies of the centre, so there is little for the model to use. Spatial
+information helped as a ranking statistic and in S3PL, which needs neighbour
+input. Even in S3PL, correct placement added only an inconsistent $+0.04$.
+Spatially aware \emph{ranking}, not spatially aware \emph{encoding}, is what
+the evidence supports, hence the title.
 
-The evaluation is spatial rather than molecular. A high PCC or mSCF1 indicates
-that an ion image agrees with an expert mask under the chosen thresholds. It
-does not identify the molecule, validate a biomarker or prove that a poorly
-correlated ion is noise. Likewise, the GBM collection contains eight sections
-from four patients. Patient-grouped descriptive summaries can show whether an
-effect is driven by one patient, but the study does not support broad
-population-level inference.
+\textbf{Reconstruction is not ranking quality.} PCA-5 reconstructed GBM better
+than the VAE yet ranked peaks about equally well. Earlier pilots showed the
+same pattern: context models and the spatial penalty changed the latents
+without improving reconstruction. Reconstruction rewards fitting all intensity
+variance, while peak quality here depends on how well a low-dimensional
+segmentation separates the classes, in line with
+\citet{mazarura2025autoencoder}.
 
-S3PL supplies two further cautions. Its CAC result demonstrates that its native
-pipeline can exploit context effectively under the evaluated conditions, while
-centre-tiled and topology controls answer narrower and partly confounded
-questions. Its short GBM protocol is also sensitive to initialization. These
-results make a single favourable score an inadequate baseline and show why
-reconstruction loss alone cannot stand in for downstream peak quality.
+\textbf{The proposal's aim.} The aim was autonomous, bias-free peak detection
+with a lightweight model. It is met only in part.
+\begin{itemize}
+  \item Fitting and ranking are label-free, but the number of segments and the
+        peak budget come from annotations, and BIC could not replace the first.
+  \item The 1D model was cheaper than S3PL in time and memory on the section
+        measured, but it did not benefit from its spatial input.
+\end{itemize}
+S3PL's instability means single-run comparisons against it can mislead. We
+report its GBM gap as unresolved and select no favourable seeds or
+checkpoints.
 
+\textbf{Limitations.}
+\begin{itemize}
+  \item \textbf{Statistical units.} GBM has four PDX lines, CAC one biopsy and
+        RCC eight subjects. The $p$-values describe these sections, not a
+        population.
+  \item \textbf{Class-informed settings.} $K$ and the peak budgets are
+        class-informed.
+  \item \textbf{The metric.} mSCF1 measures mask agreement, not molecular
+        identity.
+  \item \textbf{RCC} depends partly on its unannotated region.
+  \item \textbf{Post hoc tests.} Tests S, V, N and R and the S3PL investigation
+        were chosen after earlier results. Each was predeclared before its own
+        outputs, and all outcomes are reported.
+  \item \textbf{Untested.} Graph-based and ion-image spatial models,
+        cross-section transfer and other IG settings were not tested.
+\end{itemize}
