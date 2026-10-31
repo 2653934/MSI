@@ -151,4 +151,20 @@ This follows Weigand et al. (S3PL, arXiv:2603.10487v1, Section 3.1 and Table 2),
 | Classes (GMM K) | normal, tumour (2) | 3 numeric classes (names from dataset documentation) (3) | cancer, normal, unannotated (3) |
 | Statistical unit | Section (sections of the same PDX line are not independent; PDX-line rows reported) | Section of **one** biopsy (n = 8 is sections, not patients) | Run = subject |
 
-**Still to confirm (Code, on the cluster):** the exact download origin of the GBM MassNet HDF5 files and of the CAC imzML (date, URL, archive name and SHA-256 under `/datasets/zsuliman/msi_data/zips/`), and the RCC citation in `man/rcc-data.Rd`.
+**Provenance check (item 5, 30 October 2026, read only).** The archives in `/datasets/zsuliman/msi_data/zips/`, with their dates on disk:
+
+| Archive | Size | On disk since | Contents | Origin | SHA-256 |
+|---|---|---|---|---|---|
+| `ST002045_massNet.7z` | 549,067,059 B | 2026-08-21 | GBM MassNet HDF5 (`extract_massnet_gbm.sh` → `gbm_massnet/`) | NIH Metabolomics Workbench study **ST002045**, project PR001292, DOI 10.21228/M8Q70T, released 2022-01-04; raw files listed as `.h5` | `7b1f296b4a0d6b8a8057b02d254db32f72cb56f73ee0a5b56ed12432dcaaafe1` (job 78516) |
+| `gbm_data.zip` | 363,240,584 B | 2026-09-12 | GBM imzML + masks (`gbm_data/`), used to validate the HDF5 | **not recorded at download**; packaging matches `cac_data.zip` (S3PL-style `<collection>_data.zip`) | `a69a42464932c5c2af95b7fb2259cf7fd9590ff86ff0e5f170398e9519aa097f` (checked fail-closed in `extract_s3pl_gbm_imzml.sh`) |
+| `cac_data.zip` | 27,948,126 B | 2026-08-05 | `cac/<section>.imzML/.ibd`, 26 files, internal dates 2024-06/09 | **not recorded at download**; probably the CAC example-data share linked in the S3PL README (`https://clousi.hs-mannheim.de/index.php/s/ETC4i3j9QpweAJx`); the primary source is MetaboLights MTBLS415 | `30274f25c9d276f0e091154090d359aa302fe3f14d46eef699145a879d0f298e` (job 78516) |
+| `CardinalWorkflows_1.44.0.tar.gz` | 56,120,889 B | 2026-09-28 | Bioconductor source tarball (`rcc.rda`, `man/rcc-data.Rd`) | Bioconductor CardinalWorkflows 1.44.0 | `301a38159adc03243459095b5d7836f5900687e48e332b5e704b98e28a18c485` (checked fail-closed in `audit_rcc_dataset.sh`) |
+| `ST001857_msiPLData.zip` | 461,202,187 B | 2026-08-05 | msiPL example data (prostate etc.), **not used in the report** | Metabolomics Workbench study ST001857 (msiPL) | `9aeae99a248ceda1975c094ac04d5e74047ef52ce2db217e67584c205c63e7f0` (job 78516) |
+
+- **RCC citation, as given in `CardinalWorkflows/man/rcc-data.Rd`:** "Dill, A. L., Eberlin, L. S., Zheng, C., Costa, A. B., Ifa, D. R., Cheng, L., et al. (2010). Multivariate statistical differentiation of renal cell carcinomas based on lipidomic analysis by amvient ionization imaging mas spectrometry. Analytical and Bioanalystical Chemistry, 298(7-8), 2969-2978." The upstream text has typos ("amvient", "mas", "Bioanalystical"). It also lists a second Dill et al. (2010) paper on bladder carcinomas (*Chemistry – A European Journal* 17(10)). **To verify against the publisher record before citing:** the corrected title, the journal (*Anal. Bioanal. Chem.*) and the volume (the `.Rd` says 298; it should be checked).
+- **Still open:**
+  - the three pending SHA-256 values: done. Job 78516 (30 October, 15:19 SAST) hashed all five archives into `results/validation/dataset_archive_hashes/78516.sha256` and reproduced both recorded hashes (`gbm_data.zip`, CardinalWorkflows);
+  - the actual download URLs and dates of `gbm_data.zip` and `cac_data.zip`, which Zayd may remember (the on-disk dates are when the files were placed, not necessarily when they were downloaded);
+  - the RCC reference check above.
+
+- **CAC archive origin (Zayd, 30 Oct; checked by the supervisor against the S3PL README):** `cac_data.zip` is the S3PL authors' example-data share of the selected CAC sections, "available here": https://clousi.hs-mannheim.de/index.php/s/ETC4i3j9QpweAJx (linked from https://github.com/CeMOS-IS/S3PL). The underlying data are MetaboLights MTBLS415. The download date was not recorded.

@@ -6877,6 +6877,15 @@ Status: INFO
 - The final `dataset_overview.py`/PDF and report drafts are excluded from this package because the 08:13 Code entry says they still await Zayd's GBM section pick.
 - Committed: pending (dataset contact/base-peak evidence and planning contact sheet only).
 
+### 2026-10-31 08:19 Codex → Code | Supervisor: Dataset evidence commit and remaining documentation review
+Status: INFO
+
+- Resolves: 2026-10-31 08:19 Codex dataset-contact-evidence entry. Committed as `379aa11d` (`Add dataset contact and base-peak evidence`).
+- Reviewed the dataset archive hash record from job 78516 against the provenance table in `docs/research/03`; all five SHA-256 values agree. The document correctly distinguishes confirmed origins/hashes from download dates or URLs that remain unknown, and preserves the upstream RCC-reference typos as quoted source text with a verification warning.
+- The environment records for cluster gates 78515, 78779 and 78981 agree byte-for-byte on the declared Python/scientific-library versions and have matching passed-job entries in Protocol 18 and the chat.
+- The new decision-log rows accurately capture the report, release, seed-reporting, epoch-selection and rerun decisions already recorded in the chat; no new decision is introduced by the log.
+- Committed: pending (dataset provenance/hash evidence, cluster environment records and decision log only).
+
 ### 2026-10-31 08:18 Code → Zayd | Supervisor | Codex: Dataset figure rebuilt with Zayd's picks; fig:data caption updated
 Status: INFO
 - Resolves: 2026-10-31 08:1x Code entry (GBM pick: GBM22_2).
