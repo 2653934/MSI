@@ -1,0 +1,83 @@
+\section*{AI declaration: representative prompts}
+\small
+AI tools were used under a fixed division of roles. An AI supervisor (ChatGPT,
+later Claude) helped plan experiments, proposed decision rules and reviewed
+results; Claude Code wrote, tested and ran code and cluster jobs; and OpenAI
+Codex reviewed and committed changes. Every experiment, cluster job and commit
+required my explicit approval, and the full supervision log is kept in the
+project repository. The prompts below are representative, quoted as written
+(obvious typos corrected; [\ldots] marks omitted text).
+
+\subsection*{Research and planning}
+\begin{itemize}
+  \item \emph{ChatGPT, 21 Aug:} ``[\ldots] for a proper replication of the
+        Weigand 2026 model and the results they got I need a proper dataset with
+        the masks for the proper evaluation metrics I promised in my proposal
+        but cannot seem to find them for GBM. [\ldots] can you help me with
+        refinement according to the email Richard sent me and finding of the
+        datasets I can use for this research according to my proposal [\ldots]''
+  \item \emph{ChatGPT, 28 Sep:} ``We should try different window sizes for the
+        neighbours and also find out exactly why S3PL outperforms us [\ldots]
+        and double check our model is flawless in its implementation [\ldots]
+        can we write up a plan for the next 2 weeks so that we can do everything
+        in our power to properly evaluate the problems we are facing [\ldots]''
+\end{itemize}
+
+\subsection*{Experiment design, reruns and debugging}
+\begin{itemize}
+  \item \emph{ChatGPT, 15 Aug:} ``[\ldots] for comparison reasons should we not
+        try and get the baseline for the S3PL model and then get those results
+        on the CAC dataset as well?''
+  \item \emph{ChatGPT, 21 Sep:} ``didn't we only use 1 seed [\ldots] do we need
+        to run the experiments more times to verify?''
+  \item \emph{ChatGPT, 12 Sep:} ``Some of the runs had errors whilst some didn't,
+        can you look at those and have me just rerun those.''
+  \item \emph{ChatGPT, 21 Aug:} ``sbatch: error: Invalid generic resource (gres)
+        specification [\ldots] look at the other sh files to see the properties
+        they used''
+  \item \emph{Claude, 19 Oct:} ``[\ldots] seeds [\ldots] mean and std deviation
+        [\ldots] reproduction fault [\ldots] statistically what's causing it''
+  \item \emph{Claude, 30 Oct:} ``I do not want any incomplete stuff
+        experiment-wise [\ldots] so if we need to run anything more have us do
+        that before writing the report please.''
+\end{itemize}
+
+\subsection*{Review and fact-checking}
+\begin{itemize}
+  \item \emph{ChatGPT, 9 Oct:} ``Can you review the new supervisor review that
+        Claude has done for us. [\ldots] Let me know what you think and whether
+        or not you agree with all the stuff.''
+  \item \emph{Claude, recurring:} ``check chat'' (read the newest entries in the
+        supervision log, verify the claims against the saved results and rule
+        on them).
+  \item \emph{Claude, 30 Oct:} ``Also check the S3PL paper for the links to the
+        datasets and how we got them previously and add that to the dataset md
+        with all the dataset information.''
+  \item \emph{Codex, 30 Oct:} ``Check chat; review and commit gate v2 per the
+        latest Supervisor ruling.''
+\end{itemize}
+
+\subsection*{Figures, cluster and commits}
+\begin{itemize}
+  \item \emph{ChatGPT, 23 Sep:} ``Can you make me a diagram with how our model
+        looks vs msiPL vs our proposed one vs S3PL''
+  \item \emph{Claude, 30 Oct:} ``[\ldots] I would like the runtime graph, that is
+        cool.''
+  \item \emph{Claude, 30 Oct:} ``bigbatch seems to be overloaded again so can we
+        use batch or do we need bigbatch for these?''
+  \item \emph{Claude, 30 Oct:} ``[\ldots] give me the commands and a very
+        concise message [\ldots] I just don't want to have included in a commit
+        message [\ldots] the AI names or dates.''
+\end{itemize}
+
+\subsection*{Documentation and writing}
+\begin{itemize}
+  \item \emph{ChatGPT, 22 Sep:} ``[\ldots] reframe and rephrase it so that I can
+        show that document to Hairong with all the findings and questions
+        [\ldots] I do also kind of want the actual maths and code references so
+        that I can visualise how we are implementing it and not just accepting
+        that that is what it does.''
+  \item \emph{Claude, 30 Oct:} ``Ok make a draft for me please and then I will
+        review it and kind of go through and see what I like and don't like and
+        make corrections and then we can go from there.''
+\end{itemize}

@@ -1,0 +1,26 @@
+\section{Research Questions}
+\label{sec:questions}
+
+The proposal asked:
+(P1) how local spatial covariance can be integrated into a 1D VAE without the
+overhead of 3D convolution;
+(P2) whether a spatial-coherence penalty with physical noise augmentation
+isolates true signal relative to spatially blind baselines; and
+(P3) whether this framework improves spatially structured peak identification
+over msiPL.
+The penalty, augmentation and Bayesian tuning did not pass their development
+gates. Fair scoring then showed that P3 depended more on the ranking step than
+on spatial input. The report therefore answers four questions:
+\begin{enumerate}[label=RQ\arabic*.]
+  \item \textbf{Baseline.} Does the label-free VAE--GMM pipeline select better
+        peaks than reproduced msiPL at the same budget? (P3, made fair.)
+  \item \textbf{Ranking and representation.} Does the gain come from the
+        attribution method (IG against correlation with the segmentation) or
+        from the nonlinear encoder (VAE against PCA)?
+  \item \textbf{Spatial context.} Does neighbourhood information give a
+        consistent, spatially specific gain in the encoder, the segmentation or
+        the ranking? (P1, P3.)
+  \item \textbf{Reproducibility.} Do msiPL and S3PL reproduce, and how much do
+        seeds change the results?
+\end{enumerate}
+The full proposal-to-outcome table is in \cref{app:proposal}.
