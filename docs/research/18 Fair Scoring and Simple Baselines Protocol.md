@@ -775,6 +775,22 @@ This records the supervisor's confirmation of Code's reading posted at 21:06 (Co
   - Saved msiPL folders and `/datasets` are read only.
 - **Cluster:** cluster test job → GBM22_2 pilot (time and MaxRSS) → the other 23 sections → scoring. CPU on `batch` unless the pilot shows more than 30 GB. No `--exclusive`. Each `sbatch` needs Zayd's OK on its checklist.
 
+**Implementation note, 30 October about 21:55 SAST: sweep fast path (supervisor ruling 21:51; Codex commit `c625f52a`). This is an implementation change, not an analysis change.**
+- **Why:** the first GBM22_2 pilot (78796) could not finish in its 4 h limit. Legacy `LearnPeaks` recomputes per Beta its Beta-independent steps. The costliest is the nearest local maximum of each learned bin, found against a Python list. Measured locally at GBM size: about 10 s per Beta at 2.5, rising to about 127 s per Beta at 0 and below.
+- **Change:** `SweepLearnPeaks` in `retune_msipl_beta.py`.
+  - Once per section, by the legacy expressions: the per-unit weight order, sorted values, and their mean and std; the local maxima; and every bin's nearest local maximum (argmin, first index on ties).
+  - Per Beta: only the threshold `mean + Beta × std`, the union across units and the unique step.
+  - `baselines/msipl/LearnPeaks.py` is unchanged and is still used for the m = 1 reproduction.
+- **Identity:**
+  - Tests: arrays and dtypes are identical to `LearnPeaks` at all 451 grid values in three synthetic cases (float64, float32, equidistant-m/z ties). `test_msipl_retune` 23/23, run locally and independently by the supervisor.
+  - In the job, on real data: the fast path is compared with `LearnPeaks` at Beta 2.5, the saved Beta (GBM/CAC), 0.0 and −2.0. Any difference writes `fast_path_check.json` and exits 5. `summary.json` records the check.
+- **Unchanged:** grid, targets, tolerance, tie rule, `msipl_cap`, saved-list handling, roots and scorer.
+- **The timed-out 78796 folder** (only `retune_stdout.log`) is moved with `mv -n` to the sibling `GBM22_2_78796_timeout`, kept as a record, before the pilot is resubmitted.
+
+**Implementation note, 30 October about 23:20 SAST: scorer prefix gate and RCC node (Codex commit `199cb276`; Zayd's overnight approval). The gates are exact as before; no rule, threshold or grid changes.**
+- **Legacy entry:** on GBM/CAC the fair evaluator stores the snapped legacy msiPL list as `legacy_msipl` in `rankings_prefix.npz`, beside the rankings. The first scoring run (79025) stopped because the gate treated it as a ranking. The gate now requires that entry to equal the snapped m = 1 re-tune list exactly, and refuses it when no m = 1 list is supplied (RCC). Every ranking prefix is still checked exactly.
+- **RCC node:** the saved RCC fair-scoring rankings come from 69565 on `bigbatch`, and exact reproduction is CPU-specific. Any RCC run whose prefix gate fails on `batch` is rescored on its 69565 node (`--nodelist`, from `ranking_stage_runtime_rcc_bigbatch/provenance/task_node_map.txt`), as with the 17 October option (a). The gate is not relaxed. The 4 runs that passed on `batch` (UH0505_12, UH9610_15, UH9812_03, UH9905_18) stand.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.
@@ -1505,6 +1521,70 @@ A test rebuilds the IG matched groups from these files.
       - **Stop check passed:** the bin-level columns are identical to the bin-only regenerations for all 16 rows in both tables, and the P1 columns are identical to 17 October for all 15 previously present rows. The verdicts are unchanged (centre and uniform "mixed / not resolved by the predeclared rule"; the sensitivity has no verdict).
       - **Changed P1 budget-sensitivity values** (descriptive, never in a verdict), IG − posterior, `uniform_mean`: primary −0.212 (n = 7, 0 positive) → −0.199 (n = 8, 0 positive); cancer/normal −0.084 (n = 7, 1 positive) → −0.062 (n = 8, 2 positive). `central_only` is unchanged (−0.179; −0.054). The new UH0505_12 uniform row at P1: IG 0.453, posterior 0.563, Moran's I 0.661, mean intensity 0.572 (primary).
       - **These `…_p1_local` tables supersede** the bin-only `…_20261030_ig_steps_local` RCC tables as the report source; the bin-only ones are kept as the record.
+  - **Pilot 78796 cannot finish in 4 h (chat 21:48, correction 21:52).** At 21:44 SAST (19:44 UTC) it had run 3:19:58 of its 4:00:00 limit, still RUNNING with no output yet; m = 1 reproduction had passed, since there was no exit 5. Local timing of the legacy `LearnPeaks` at GBM size: about 10 s per Beta at 2.5, rising to about 127 s per Beta at 0 and below. Cause and fix are in the Section 6.8 implementation note. Codex commit `c625f52a`; supervisor ruling 21:51 (independent run 23/23); 78796 was not cancelled.
+  - **21:54 SAST (19:54 UTC), upload** (documented source upload from `code/msi`, `-n` first, clean committed HEAD `f7bdc54a`, narrowing `--exclude='/tmp/'`): 3 files (`retune_msipl_beta.py`, `run_msipl_retune_sweep.sh`, `test_msipl_retune.py`), plus the timestamp of the untracked `.pym2aia_prefs.xml`.
+    - **Git Bash note:** run under Git Bash, the excludes starting with `/` (`/tmp/`, `/data`) were path-converted and did not match in the preview. They were rerun with `MSYS_NO_PATHCONV=1`, and the second preview showed the expected list. Nothing was transferred before that.
+    - **`sha256sum` vs HEAD:** 3/3 uploaded files match, as do `run_fair_scoring_tests.sh` and `tune_msipl_massnet_beta.py`. `LearnPeaks.py` differs only in line endings, as recorded at 17:52; CR-stripped it equals the HEAD blob.
+  - **21:57 SAST (19:57 UTC), cluster test job 78981** (Zayd's OK; checklist in chat 21:56): `run_fair_scoring_tests.sh` on `batch`; hashes rechecked against HEAD in the same call. Gate: `test_msipl_retune` 23/23 run, none skipped.
+  - **About 21:59 SAST (19:59 UTC), cancel, move and pilot** (Zayd's OK in the session; combined checklist in chat 21:58):
+    - `scancel 78796`: **CANCELLED** at 3:34:11, with no outputs.
+    - Echo first, then `mv -n results/baselines/msipl/retune_20261030/GBM/GBM22_2 → GBM22_2_78796_timeout`. The folder held only `retune_stdout.log` and the target did not exist. Kept as the record.
+    - **Pilot 78983** (`submit_msipl_retune.sh sweep 5`, unchanged submitter; `batch`, 28G, 4 h; hashes matched HEAD `f7bdc54a` in the same call).
+    - **Deviation:** the intended `afterok:78981` dependency did **not** attach. `sbatch` on this cluster ignored the `SBATCH_DEPENDENCY` input variable: `squeue %E` showed `(null)`. The task started at 19:59:21 UTC on a free node, before `scontrol update … Dependency=afterok:78981` could be applied ("Job is no longer pending").
+      - The pilot therefore runs alongside the test job, not after it.
+      - Its outputs count only if 78981 passes.
+      - **Lesson:** like `SBATCH_EXCLUDE`, pass dependencies on the `sbatch` command line (`--dependency=`), then check `squeue -o %E` before relying on them.
+  - **78981 COMPLETED 0:0** (8:40, mscluster143): 315 tests OK, 4 skipped, all needing local-only artifacts (the Test R decisions, two runtime-v2 tests, the S3PL shuffle control). S3PL 25/25 and 4/4. **Gate met:** `test_msipl_retune` 23/23 run, none skipped.
+  - **78983 COMPLETED 0:0** (3:52, mscluster129; MaxRSS not recorded by this cluster).
+    - Timings from the log: Beta-independent steps 4.4 s. The legacy check calls together took about 137 s, of which about 67–70 s each at 0.0 and −2.0 on real data. The 451-value sweep took 0.4 s.
+    - `fast_path_check` was identical at 2.5, 1.05, 0.0 and −2.0 (counts 464, 1028, 27242, 27386).
+    - `m1_reproduction` was identical (1028 peaks, max |Δm/z| 0).
+    - `status: complete`.
+  - **About 22:13 SAST (20:13 UTC), pull** (`-n` first): 19 new files under `results/` (the 78983 folder, the `GBM22_2_78796_timeout` record, `provenance/slurm_job_ids.txt`, the 78981 test records). No tracked file changed.
+  - **22:16 SAST (20:16 UTC), sweep 78990** (Zayd's OK; checklist in chat 22:15): `submit_msipl_retune.sh sweep 0-4,6-23` (%6, `batch`, 28G, 4 h); hashes rechecked against HEAD `f7bdc54a` in the same call.
+  - **78990, 22/23 COMPLETED 0:0** (GBM 2:51–7:27; CAC and RCC 4–6 s). None wrote `m1_reproduction.json` or `fast_path_check.json`.
+    - **Task 2 (GBM12_1, mscluster144) stalled** on the HDF5 `Data` read from 20:20 UTC.
+    - With Zayd's OK (22:4x) it was cancelled at 31:52 (22:48 SAST / 20:48 UTC). Its partial folder (only a 151-byte `retune_stdout.log`) was moved, echo first, with `mv -n` to `GBM/GBM12_1_78990_stalled`.
+    - Index 2 was resubmitted alone as **79022**: the submitter's own `sbatch` line plus `--exclude=mscluster144` on the command line; `ExcNodeList` confirmed by `scontrol`; provenance line appended by hand; hashes matched HEAD in the same call. It started on mscluster129.
+    - Node recorded in `cluster_node_issues.txt`.
+  - **79022 COMPLETED 0:0** (3:19, mscluster129). Fast-path check identical at 2.5, 1.6, 0.0 and −2.0.
+  - **About 22:57 SAST (20:57 UTC), pull** (`-n` first): 300 new files, all under `retune_20261030/` (23 sections × 13 files plus the stalled-run log), and an updated untracked `provenance/slurm_job_ids.txt`. No tracked file changed.
+  - **Local check of all 24 `summary.json` files:**
+    - all `complete` with 451 grid rows;
+    - `fast_path_check` identical in 24/24;
+    - `m1_reproduction` identical in 16/16 GBM/CAC.
+  - **Flagged points** (predeclared: included and flagged; descriptive):
+    - **`closest_outside_tolerance`, 7 points, all on GBM.** The target is below the grid's minimum count; Beta 2.5 is the grid end. GBM108_positive m 0.5 and 0.75; GBM12_1 m 0.5; GBM22_1 m 0.5; GBM39_1 m 0.5 and 0.75; GBM39_2 m 0.5.
+    - **`msipl_cap`, 25 points.** CAC: 40TopL m 2.0. RCC: 24 points, where the grid maximum (1,054–1,308) is below K_bin in 6/8 runs. Those are MH0204_33, UH9812_03, UH9911_05 and UH9912_01 at m 0.75–2.0; UH0505_12 and UH9905_18 at m 1.0–2.0; and UH0710_33 at m 1.5–2.0. UH9610_15 has none.
+    - **Correction (about 23:40):** the RCC grid maxima below K_bin are 1,054–1,289 (6 runs), not 1,054–1,308 as written above; 1,308 is UH0710_33, whose maximum exceeds its K_bin (1,212).
+  - **23:01 SAST (21:01 UTC), scoring 79025** (Zayd's OK; checklist in chat 22:59): `submit_msipl_retune.sh score 0-23` (%6, `batch`, 8G, 2 h); hashes matched HEAD in the same call.
+  - **79025 stopped at the gates (checked 23:09 SAST):** 4 COMPLETED, 19 FAILED (exit 1, all in the prefix gate), and task 1 (GBM108_negative) still running on mscluster144.
+    - **16 GBM/CAC tasks:** "saved prefix legacy_msipl has no rebuilt ranking". The evaluator also stores the snapped legacy list in `rankings_prefix.npz`, and the scorer's gate treated it as a ranking. This is a scorer bug (Code's). The fix compares that entry with the snapped m = 1 list exactly; local tests 24/24; uncommitted for Codex.
+    - **4 RCC tasks** (MH0204_33, UH0710_33, UH9911_05, UH9912_01): "oracle: rebuilt ranking differs from the saved prefix". This is the known CPU-model dependence. Their saved rankings came from 69565 on `bigbatch` mscluster71 or 76; the 4 that passed came from mscluster74, 77 and 55, and the rerun UH0505_12 uniform arm was on `batch`. The precedent is option (a) of 17 October: rerun on the node in `ranking_stage_runtime_rcc_bigbatch/provenance/task_node_map.txt`.
+    - The failed tasks left only `scorer_stdout.log` in 20 `<section>_seed1/central_only/` folders. Nothing was read and nothing moved.
+  - **Overnight, Zayd's pre-approval (chat 23:17 checklist A):**
+    - `scancel 79025_1`: CANCELLED at 16:28 on mscluster144.
+    - **23:18 SAST (21:18 UTC), upload** (documented command, `-n` first, `MSYS_NO_PATHCONV=1`, `--exclude=/tmp/`, plus `--exclude=/cluster_node_issues.txt`, the uncommitted local log): 2 files (`score_msipl_retune.py`, `test_msipl_retune.py`) and the prefs-file timestamp, from clean code HEAD `9f6909aa` (fix `199cb276`).
+    - **`sha256sum` vs HEAD:** 5/5 match (with `run_fair_scoring_tests.sh`, `run_msipl_retune_scoring.sh` and `evaluate_fair_scoring_baselines.py`).
+    - **Cluster test job 79056** was submitted in the same call.
+    - **79056 COMPLETED 0:0** (5:42, mscluster129): 316 OK, 4 local-artifact skips; `test_msipl_retune` 24/24, none skipped; S3PL 25/25 and 4/4. `sacct` confirms the 69565 nodes.
+    - **About 23:28 SAST (21:28 UTC), checklist B (chat 23:28):**
+      - Echo first, then `mv -n` of the 20 failed `msipl_retune_20261030/<section>_seed1/central_only` folders (each only `scorer_stdout.log`) to `central_only_79025_failed`: 20 moved.
+      - **79059:** GBM/CAC indices 0-15, `batch`, %6, `--exclude=mscluster144` (confirmed by `ExcNodeList`).
+      - **RCC on their 69565 nodes** (`bigbatch`, `--nodelist`, confirmed by `ReqNodeList`): **79060** (16, MH0204_33, mscluster71), **79061** (18, UH0710_33, mscluster76), **79062** (22, UH9911_05, mscluster71), **79069** (23, UH9912_01, mscluster76).
+      - Hashes matched HEAD in the same call. Provenance lines were appended by hand, since the submitter cannot pass `--exclude` or `--nodelist`.
+    - **Checklist C (chat 23:28), two read-only CPU jobs** sent to `sbatch` on stdin with inline Python. No repository file was created on the cluster. Output folders were pre-created after a non-existence check.
+      - **79057** (m/z axis of all 24 HDF5s → `results/diagnostics/mz_axis_20261030/mz_axis.json`): COMPLETED 0:0 in under 1 s on mscluster129.
+      - **79058** (TIC, x, y and labels for GBM22_2, 160TopL and RCC_MH0204_33 → `results/diagnostics/dataset_figure_20261030/`): started on mscluster144.
+    - **79082** (dataset-figure read, resubmitted with `--exclude=mscluster144` after 79058 stalled 7:48 on mscluster144 and was cancelled; the folder was empty): COMPLETED 0:0 in 0:31 on mscluster129.
+    - **Pulls** (`-n` first; no tracked file changed): about 23:43 SAST, 111 new files (79059 tasks done by then, 79061/79069, 79057, 79082 and 79056 records; the running GBM12_2 folder excluded); about 07:15 SAST (31 October), 5 new files (GBM12_2 after 79059_3 COMPLETED in 13:20).
+    - **79059 16/16 COMPLETED 0:0**; RCC 79061 and 79069 COMPLETED on mscluster76. **79060 and 79062 PENDING at 07:12** (mscluster71 runs another user's 3-day job).
+    - **Summary stopped by its guard (chat 07:1x):** 8 RCC section-arms from 79025 carry the pre-fix `score_msipl_retune.py` (`c3050a3a`); the other 36 carry `a278ff0e`. No other hashed file differs. Clause 3 and the RCC table are not reported; a rescore of indices 17, 19, 20 and 21 needs Zayd's OK.
+    - **31 October about 07:27 SAST (05:27 UTC), checklist D (Zayd's OK; chat 07:2x):**
+      - `scancel 79060 79062` (pending, no output).
+      - Echo first, then `mv -n` of the 8 pre-fix RCC section-arms (UH0505_12, UH9610_15, UH9812_03, UH9905_18 × 2 arms) to `<arm>_79025_prefix_code`: 8 moved.
+      - **79295:** indices 17, 19, 20, 21 on `batch` (`--exclude=mscluster144`) with the fixed scorer.
+      - **79296** (16, MH0204_33) and **79300** (22, UH9911_05) on `bigbatch --nodelist=mscluster79`, recorded as an i9-10940X; Zayd: the CPU model, not the node, matters. A gate failure there stops the line.
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).

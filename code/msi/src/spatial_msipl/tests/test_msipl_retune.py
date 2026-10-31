@@ -264,12 +264,39 @@ class SummariserTests(unittest.TestCase):
                 for arm in summary_module.ARMS:
                     write_score(self.project, collection, section, arm, [0.1] * 5)
 
-    def run_summary(self):
+    def run_summary(self, *extra):
         output = self.project / "out"
         result = subprocess.run([sys.executable, str(SCRIPTS / "summarise_msipl_retune.py"),
-                                 "--project-root", str(self.project), "--output", str(output)],
-                                capture_output=True, text=True)
+                                 "--project-root", str(self.project), "--output", str(output),
+                                 *extra], capture_output=True, text=True)
         return result, output
+
+    def test_named_pending_rcc_runs_are_not_done_and_others_still_refused(self):
+        for arm in summary_module.ARMS:
+            path = (self.project / summary_module.SCORE_ROOT / "RCC_MH0204_33_seed1" / arm /
+                    "summary.json")
+            path.unlink()
+        result, _ = self.run_summary()
+        self.assertNotEqual(result.returncode, 0)          # default: refused
+        self.assertIn("missing re-tune scoring", result.stderr)
+        result, _ = self.run_summary("--rcc-pending", "GBM12_1")
+        self.assertNotEqual(result.returncode, 0)          # only RCC runs may be pending
+        result, output = self.run_summary("--rcc-pending", "RCC_MH0204_33")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        decisions = json.loads((output / "decisions.json").read_text())
+        rcc = decisions["rcc_count_matched"]
+        self.assertFalse(rcc["complete"])
+        self.assertEqual((rcc["runs_scored"], rcc["runs_pending"]), (7, ["RCC_MH0204_33"]))
+        pending = [r for r in rcc["rows"] if r["section"] == "RCC_MH0204_33"]
+        self.assertEqual({r["status"] for r in pending}, {"not done (scoring pending)"})
+        self.assertTrue(decisions["ig_beats_legacy"]["GBM/central_only"]
+                        ["clause_3_budget_stability"]["met"])
+        shutil.rmtree(output)
+        (self.project / summary_module.SCORE_ROOT / "GBM12_1_seed1" / "central_only" /
+         "summary.json").unlink()
+        result, _ = self.run_summary("--rcc-pending", "RCC_MH0204_33")
+        self.assertNotEqual(result.returncode, 0)          # GBM/CAC never pending
+
 
     def test_rule_met_when_every_multiplier_has_at_least_seven_of_eight(self):
         write_score(self.project, "GBM", "GBM39_2", "uniform_mean", [0.1, -0.1, 0.1, 0.1, 0.1])

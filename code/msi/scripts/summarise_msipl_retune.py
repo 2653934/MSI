@@ -41,12 +41,16 @@ PARTITION_DECISIONS = Path("results/diagnostics/fair_scoring_baselines/with_appr
 SCORE_ROOT = Path("results/diagnostics/fair_scoring_baselines/msipl_retune_20261030")
 
 
-def load_scores(project):
+def load_scores(project, rcc_pending=()):
+    """rcc_pending (opt-in): named RCC runs whose scoring has not run yet; they are
+    reported as not done. Any other missing result still stops the summary."""
     records, code = {}, set()
     for collection, sections in SECTIONS.items():
         for section in sections:
             for arm in ARMS:
                 path = project / SCORE_ROOT / f"{section}_seed1" / arm / "summary.json"
+                if not path.is_file() and collection == "RCC" and section in rcc_pending:
+                    continue
                 if not path.is_file():
                     raise SystemExit(f"missing re-tune scoring: {path}")
                 summary = json.loads(path.read_text(encoding="utf-8"))
@@ -102,6 +106,11 @@ def rcc_rows(records):
     rows = []
     for section in SECTIONS["RCC"]:
         for arm in ARMS:
+            if ("RCC", section, arm) not in records:
+                rows.append({"section": section, "arm": arm, "K_bin": None, "n": None,
+                             "status": "not done (scoring pending)", "beta": None,
+                             "legacy_msipl": None, **{name: None for name in RCC_METHODS}})
+                continue
             summary = records[("RCC", section, arm)]
             m1 = summary["per_multiplier"]["m1.0"]
             row = {"section": section, "arm": arm, "K_bin": summary["K_bin"],
@@ -116,11 +125,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, default=ROOT)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--rcc-pending", nargs="*", default=[],
+                        help="opt-in: RCC runs whose scoring has not run yet (not done)")
     args = parser.parse_args()
+    unknown = sorted(set(args.rcc_pending) - set(SECTIONS["RCC"]))
+    if unknown:
+        parser.error(f"not RCC runs: {unknown}")
     if args.output.exists():
         print(f"Output exists: {args.output} (never overwritten)", file=sys.stderr)
         return 3
-    records = load_scores(args.project_root)
+    records = load_scores(args.project_root, tuple(args.rcc_pending))
     decisions = json.loads((args.project_root / PARTITION_DECISIONS).read_text(encoding="utf-8"))
     rule = {}
     for collection in ("GBM", "CAC"):
@@ -131,12 +145,15 @@ def main():
                 c["met"] for c in clauses.values())
             rule[f"{collection}/{arm}"] = clauses
     rcc = rcc_rows(records)
-    counts = [row["n"] for row in rcc if row["arm"] == "central_only"]
-    k_bins = [row["K_bin"] for row in rcc if row["arm"] == "central_only"]
+    done = [row for row in rcc if row["arm"] == "central_only" and row["n"] is not None]
+    counts = [row["n"] for row in done]
+    k_bins = [row["K_bin"] for row in done]
     result = {
         "ig_beats_legacy": rule,
         "rcc_count_matched": {
             "label": "descriptive, outside Holm (Section 6.8 answer 4)",
+            "runs_scored": len(done), "runs_pending": sorted(args.rcc_pending),
+            "complete": not args.rcc_pending,
             "median_n": float(np.median(counts)), "median_K_bin": float(np.median(k_bins)),
             "runs_capped": sum(1 for row in rcc if row["arm"] == "central_only"
                                and row["status"] == "msipl_cap"),

@@ -6522,3 +6522,189 @@ Status: INFO
 - The m = 1 indices are computed once before Gate 2 and reused by unchanged Gate 3 `check_legacy`; no reproduction or scoring gate is weakened. The test covers exact equality, a shorter list, a different same-length list and no legacy list. `git diff --check` passed.
 - Verification: Code reports 24/24 focused tests passing locally, and Zayd reports the Supervisor's independent Linux run passed 24/24.
 - Committed: 199cb276 (`Fix msiPL retune legacy prefix gate`). Protocol 18, upload verification and the cluster test remain required before resubmission.
+
+### 2026-10-30 23:17 Code → Supervisor | Zayd: Overnight (Zayd's pre-approval, 23:1x): checklist A, cancel 79025_1, §6.8 note, upload, cluster test job
+Status: INFO (pre-approved by Zayd; executing without waiting)
+- **Scope (Zayd, verbatim list):**
+  - **Cluster:** cancel 79025_1; the §6.8 note; upload and the test job. If it passes: the moves, then GBM/CAC 0-15 on `batch` with `--exclude=mscluster144` and the 4 RCC runs on `bigbatch` with `--nodelist` at the 69565 nodes; then pull and summary. Per stalled task: one cancel, move and resubmit, excluding that node. Plus one tiny m/z-axis CPU job and one small RCC dataset-panel CPU job, if needed.
+  - **Local:** the three-seed main table plus seed-averaged msiPL statistics; the runtime GPU models; the figures; `\checkme{}` replacements only from my posted outputs, listed, recompiled to v10; the epochs-test code and tests (no job).
+  - **Not allowed:** any other job, push, commit or delete; writes to `/datasets`; any rule, threshold or grid change. **Stop rule:** any failed check, error or surprise → stop that line, post, and continue with the independent local items.
+- **A1, cancel:** `scancel 79025_1` (GBM108_negative on mscluster144; it would fail the same gate).
+- **A2, P18 §6.8 note:** the prefix-gate fix (`199cb276`) and the RCC same-node rerun (17 Oct option (a) precedent).
+- **A3, upload:** from clean HEAD `9f6909aa` (code; only `cluster_node_issues.txt` is modified, as a log), `-n` first, `MSYS_NO_PATHCONV=1`, `--exclude=/tmp/`, then `sha256sum` vs HEAD.
+- **A4, test job:** `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh`. `batch`, 2 CPUs, 8G, 30 min (78981 took 8:40). Outputs `results/validation/fair_scoring_env_tests/<jobid>_*`. Gate: `test_msipl_retune` 24/24, none skipped, every other module OK.
+
+### 2026-10-30 23:18 Code → Supervisor | Zayd: A done: 79025_1 cancelled, §6.8 note, upload 5/5 sha256, test 79056 submitted
+Status: INFO
+- 79025_1 CANCELLED (16:28).
+- §6.8 has a new "Implementation note, 30 October about 23:20 SAST: scorer prefix gate and RCC node".
+- Upload: 2 files plus a timestamp, from HEAD `9f6909aa`. `cluster_node_issues.txt` was excluded because it is uncommitted. All 5 checked hashes match HEAD.
+- Test job **79056** was submitted at 23:18 SAST (21:18 UTC).
+
+### 2026-10-30 23:23 Code → Supervisor | Zayd: Request 1 (three-seed main table, seed-averaged F2) and request 3 (runtime hardware): outputs
+Status: INFO (local, from committed results; descriptive presentation change)
+- **Code:** `scripts/summarise_three_seed_main_table.py` and `scripts/summarise_runtime_hardware.py` (new, uncommitted, for Codex). **Outputs:** `results/diagnostics/three_seed_main_table_20261030_local/` (`main_table.csv`, `f2_seed_averaged.csv`, `summary.json` with input SHA-256 values) and `results/diagnostics/runtime_hardware_20261030_local/runtime_hardware.csv`.
+- **Sources:**
+  - IG and posterior-|PCC| (balanced) per seed: `test_r/decisions_20261030_ig_steps_local/section_table.csv` (bin; seed 1 includes the IG-steps reruns, so all arms are complete, 8/8 everywhere).
+  - Seed-free rankings: `bin_level_only/summary_66097` (GBM/CAC) and `rcc/decisions_20261030_ig_steps_p1_local` (RCC).
+- **Seed independence confirmed:** mean intensity, variance, Moran's I, oracle, random mean and legacy msiPL in the seed-2 and seed-3 fair-scoring summaries (IG-steps composite root) equal seed 1 in **544/544 values, max |Δ| = 0**.
+- **Main table (bin, K_bin; IG and posterior: mean ± SD across the 3 seed-level collection means, ddof = 1):**
+
+| Collection | Arm | IG | Posterior corr. | Moran's I | Mean int. | Variance | Legacy msiPL | Random | Oracle |
+|---|---|---|---|---|---|---|---|---|---|
+| GBM | centre | 0.518 ± 0.006 | 0.762 ± 0.021 | 0.684 | 0.483 | 0.497 | 0.414 | 0.009 | 0.809 |
+| GBM | uniform | 0.514 ± 0.006 | 0.757 ± 0.017 | 0.684 | 0.483 | 0.497 | 0.414 | 0.009 | 0.809 |
+| CAC | centre | 0.530 ± 0.007 | 0.608 ± 0.004 | 0.605 | 0.612 | 0.593 | 0.402 | 0.108 | 0.654 |
+| CAC | uniform | 0.553 ± 0.006 | 0.608 ± 0.002 | 0.605 | 0.612 | 0.593 | 0.402 | 0.108 | 0.654 |
+| RCC | centre | 0.403 ± 0.013 | 0.543 ± 0.025 | 0.631 | 0.498 | 0.508 | (pending §6.8) | 0.171 | 0.756 |
+| RCC | uniform | 0.421 ± 0.011 | 0.561 ± 0.019 | 0.631 | 0.498 | 0.508 | (pending §6.8) | 0.171 | 0.756 |
+
+  - Best label-free ranking per row (for the bold): GBM posterior corr.; CAC mean intensity; RCC Moran's I (unchanged from the seed-1 table).
+- **F2 addendum (descriptive, Holm within these 4 rows, outside the predeclared F2 family; seed-1 F2 rows stay in the record):** per section, IG averaged over the 3 seeds minus legacy msiPL, bin level.
+
+| Collection | Arm | Mean | HL [95% CI] | r | Exact p | Holm |
+|---|---|---|---|---|---|---|
+| GBM | centre | +0.104 | +0.104 [0.074, 0.132] | 1.0 | 0.0078 | 0.031 |
+| GBM | uniform | +0.100 | +0.102 [0.071, 0.122] | 1.0 | 0.0078 | 0.031 |
+| CAC | centre | +0.128 | +0.127 [0.062, 0.190] | 1.0 | 0.0078 | 0.031 |
+| CAC | uniform | +0.151 | +0.153 [0.084, 0.208] | 1.0 | 0.0078 | 0.031 |
+
+  - 8/8 sections are positive in all 4 rows. The CI coverage is 0.961, the attainable level nearest 95% at n = 8.
+- **Request 3, runtime hardware (`runtime_hardware.csv`):**
+  - Every training number is on an **NVIDIA GeForce RTX 3090**: VAE GBM 32 runs, CAC 32, RCC 48; S3PL GBM 8, CAC 24, RCC 24. The medians reproduce the table (VAE 33.6 / 1.34 / 2.20 min; S3PL 13.7 / 0.94 / 1.62 min), so **VAE against S3PL training is an equal-GPU comparison.**
+  - Ranking rows: GBM and CAC on an **Intel Core i5-14400** (8/8 each); RCC on an **Intel Core i9-10940X** (8/8).
+
+### 2026-10-30 23:28 Code → Supervisor | Zayd: Checklist C: the two pre-approved read-only CPU jobs (m/z axis; dataset-figure data); executing
+Status: INFO (pre-approved by Zayd; executing without waiting)
+- **Why a job:** the m/z axis and the per-pixel TIC are read from HDF5 on `/datasets`. No local copy holds them: the local RCC ion-image NPZ has the mask but no TIC, and the GBM/CAC visualisations are titled PNGs only.
+- **Form:** each job script is sent to `sbatch` on stdin (as with `--wrap`), with inline Python. No repository file is created or changed on the cluster, so the clean-HEAD rule is untouched. The dataset job imports the committed, unchanged `read_h5_metadata` (`evaluate_spatial_msipl_attributed_peaks.py`, hash matches HEAD). Both are read-only on `/datasets`.
+- **C1, m/z axis:** `batch`, 1 CPU, 2G, 15 min. It reads `mzArray` from all 24 HDF5s: per collection, min/max, bins, spacing in Da and ppm (min/median/max), Da spacing at several m/z, and whether all sections share the axis. Output: `results/diagnostics/mz_axis_20261030/mz_axis.json` (new; refuses an existing file).
+- **C2, dataset-figure data:** `batch`, 1 CPU, 8G (GBM `Data` is 4,524 × 85,062, read in 2,048-row chunks), 20 min. Per-pixel TIC (sum over m/z), x, y and labels for **GBM22_2, 160TopL and RCC_MH0204_33**. Output: `results/diagnostics/dataset_figure_20261030/<section>.npz` plus `summary.json` (new; refuses existing files).
+  - **Scope note:** Zayd's line names "the RCC dataset-figure panel". This one job also exports the GBM22_2 and 160TopL arrays, because the figure needs the same data for all three and none is local. It is still a single small job; flagged here for review.
+- **Roots:** both output folders are pre-created in the submit call after a non-existence check. Nothing else is touched.
+
+### 2026-10-30 23:28 Code → Supervisor | Zayd: Test 79056 passed; checklist B: move the 20 failed folders, resubmit GBM/CAC (exclude mscluster144) and 4 RCC on their 69565 nodes; executing
+Status: INFO (pre-approved by Zayd; executing without waiting)
+- **79056 COMPLETED 0:0** (5:42): 316 OK, 4 skipped (the same local-artifact skips); `test_msipl_retune` 24/24 run, none skipped; S3PL 25/25 and 4/4. `sacct` confirms the 69565 nodes: 0 → mscluster71, 2 → 76, 6 → 71, 7 → 76.
+- **B1, moves (echo first, `mv -n`):** the 20 `results/diagnostics/fair_scoring_baselines/msipl_retune_20261030/<section>_seed1/central_only` folders (16 GBM/CAC plus RCC MH0204_33, UH0710_33, UH9911_05, UH9912_01). Each holds only `scorer_stdout.log` and goes to the sibling `central_only_79025_failed`. Each target is checked first and must not exist.
+- **B2, GBM/CAC:** `sbatch --parsable --exclude=mscluster144 --array=0-15%6 slurm_jobs/run_msipl_retune_scoring.sh`. This is the submitter's own line plus `--exclude` on the command line; the provenance line is appended by hand. `batch`, 2 CPUs, 8G, 2 h. Hashes: `run_msipl_retune_scoring.sh` and `score_msipl_retune.py` match HEAD (uploaded 23:18).
+- **B3, RCC:** 4 single-task submissions, `sbatch --parsable --partition=bigbatch --nodelist=<node> --array=<i> slurm_jobs/run_msipl_retune_scoring.sh`: 16 → mscluster71, 18 → mscluster76, 22 → mscluster71, 23 → mscluster76. 8G, 2 h, no `--exclusive`. CPU-only, so the GPU quarantine of mscluster76 does not apply (17 Oct 21:53 ruling). `ExcNodeList`/`ReqNodeList` are confirmed by `scontrol`.
+- **Outputs:** new `summary.json` files only; the 8 passing RCC section-arms are untouched.
+
+### 2026-10-30 23:36 Code → Supervisor | Zayd: Scoring progress; dataset job stalled on mscluster144 (second time) and resubmitted; RCC 16 and 22 wait for mscluster71
+Status: INFO
+- **79059 (GBM/CAC 0-15):** 14/16 COMPLETED 0:0 by 23:35; 3 and 7 are still running.
+- **RCC:** 79061 (UH0710_33, mscluster76) and 79069 (UH9912_01, mscluster76) COMPLETED 0:0, so the same-node rerun passed the gate. 79060 (MH0204_33) and 79062 (UH9911_05) are PENDING: **mscluster71 is busy with another user's job** (7 h 53 min so far). They stay pinned to their 69565 node, as instructed; no other node is substituted.
+- **79058 (dataset-figure read):** stalled on **mscluster144** for 7:48 with no output (expected about 1 min), the same symptom as 78990_2. Under Zayd's per-task stall rule it was cancelled. The output folder was empty, so nothing was moved. It was resubmitted as **79082** with `--exclude=mscluster144`. Recorded in `cluster_node_issues.txt` as the second stall tonight.
+- **79057 (m/z axis):** done. CAC sections **do not** all share one m/z axis (GBM and RCC do); details after the pull.
+
+### 2026-10-30 23:37 Code → Supervisor | Codex | Zayd: Item 3 (C3 training length): code and tests written; no job; for review
+Status: OPEN (for Codex review and a protocol section; nothing submitted, per Zayd's overnight scope)
+- **Finding:** no intermediate checkpoints exist; training keeps only `checkpoint_latest.pt` and overwrites it every 5 epochs. **The per-epoch loss already exists:** every production run's `training_history.json` holds `total_loss`, `reconstruction_loss` and `kl_loss` for epochs 1-100. So request 4's loss curve needs no retraining; only the mSCF1 at epochs 10/25/50 does.
+- **Opt-in code, default paths unchanged:**
+  - `src/spatial_msipl/training.py`: `train_vae(..., snapshot_epochs=())`. After each listed epoch below `epochs` it saves the full checkpoint payload as `snapshot_epoch<NNN>.pt`. Saving only reads state; the default `()` saves nothing.
+  - `scripts/train_spatial_msipl_production.py`: `--snapshot-epochs` (default none).
+  - `scripts/run_spatial_msipl_gmm_integrated_gradients.py`: `--expected-epochs` (default 100; the production 100-epoch check and its message are unchanged; `load_model` importers keep the default). Neither file is in the fair evaluator's hashed code set, so saved results do not go STALE.
+- **Jobs (new):** `slurm_jobs/training_length_sections.sh`, `run_training_length.sh` and `submit_training_length.sh`.
+  - Indices 0-3 = GBM108_positive and 40TopL × {central_only, uniform_mean}, seed 1.
+  - Production recipe plus `--snapshot-epochs 10 25 50`, `--cache-spectra`, real CUDA warm-up.
+  - For epochs 10/25/50/100: the production GMM + IG call (`--expected-epochs E`), the matched evaluation at the production K_bin with the legacy list, and the unchanged fair evaluator at bin level.
+  - New roots: `results/experiments/training_length_20261030`, `/datasets/.../msi_checkpoints/spatial_msipl/training_length_20261030` (written only when a job runs) and `fair_scoring_baselines/training_length_20261030/bin_level_only`.
+  - `bigbatch` (RTX 3090, as production), 48G, 8 h, no `--exclusive`; the CUDA quarantine is passed as `--exclude` on the `sbatch` command line.
+- **Summary (new):** `scripts/summarise_training_length.py`: IG and posterior-|PCC| mSCF1 at K_bin per epoch, the loss for all 100 epochs, and the **epoch-100 reproduction check** against the production seed-1 fair-scoring result (mSCF1 to 1e-12 plus identical ranking prefixes). It is descriptive only; no epoch is chosen on mSCF1 (D20g).
+- **Tests:** `test_training_length.py`, 5/7 locally. The 2 snapshot tests need torch and run in the cluster test job: snapshots saved, history and final weights identical to a run without snapshots, and bad epochs refused. They cover the defaults, the job scripts, and the summariser (reproduced, score mismatch, prefix mismatch, not done, refusal). `run_fair_scoring_tests.sh` gains the module. `test_job_scripts` (cached loader) and `test_msipl_retune` still pass: 34 run, 2 skipped.
+- **Risk to state before any run:** the GBM108_positive production seed-1 model was trained with the **streaming** loader; the rerun is cached. Investigation 10 found cached equivalent, and the runtime table has cached GBM reruns, but bit-identity at epoch 100 is not guaranteed across loaders or GPU nodes. The summariser reports it either way.
+- **Needs before a run:** a protocol 18 section (§6.9), Codex review and commit, upload, a cluster test job, and the checklist with Zayd's OK.
+
+### 2026-10-30 23:37 Code → Supervisor | Zayd: Correction to my 22:59 entry (RCC msiPL grid maximum)
+Status: INFO
+- The 22:59 entry (and P18 §10) said the RCC grid maximum "(1,054–1,308 peaks) is below K_bin" in 6/8 runs. **The correct range is 1,054–1,289.**
+- The six runs: UH9812_03 1,054; UH9912_01 1,056; MH0204_33 1,154; UH9911_05 1,162; UH9905_18 1,249; UH0505_12 1,289.
+- The 1,308 is UH0710_33, whose maximum lies **above** its K_bin of 1,212 (capped only at m 1.5 and 2.0). UH9610_15 (maximum 982 against K_bin 466) has no capped point. The counts of flagged points are unchanged.
+
+### 2026-10-31 07:18 Code → Supervisor | Zayd: STOP (msiPL summary line): mixed scorer code; RCC 16 and 22 still waiting for mscluster71
+Status: OPEN (needs Zayd's OK for a rescore; not covered by the overnight pre-approval)
+- **Scoring state (07:12 SAST):** 79059 GBM/CAC **16/16 COMPLETED 0:0** (GBM12_2 took 13:20; the rest 0:06–10:04). RCC 79061 and 79069 (mscluster76) COMPLETED. **79060 (MH0204_33) and 79062 (UH9911_05) are still PENDING**: mscluster71 runs another user's 3-day job (77969, 15.5 h so far), so they may wait up to about 2 more days. Pulled about 23:43 and 07:15: all finished outputs; no tracked file changed.
+- **Summary stopped by its own guard:** `summarise_msipl_retune.py` → "re-tune scores come from different scorer code; refusing to mix them".
+  - 36 section-arms carry `score_msipl_retune.py` `a278ff0e` (the fix, `199cb276`).
+  - 8 carry `c3050a3a` (pre-fix): the 4 RCC runs that passed in 79025 (UH0505_12, UH9610_15, UH9812_03, UH9905_18).
+  - Every other hashed file is identical. The fix only changes how a stored `legacy_msipl` entry is checked, and RCC prefixes have none, so the RCC numbers should be unaffected. The guard is not overridden: per the stop rule this line stops, and **clause 3 and the RCC table are not reported yet.**
+- **Opt-in summariser change (local, uncommitted, for Codex):** `--rcc-pending <RCC runs>` reports named RCC runs as "not done (scoring pending)", in line with the RCC incomplete-arm rule. Default behaviour is unchanged; GBM/CAC can never be pending. Test `test_named_pending_rcc_runs_are_not_done_and_others_still_refused`; `test_msipl_retune` 25/25 locally.
+- **Proposal (Zayd's OK needed):**
+  1. Move the 8 pre-fix RCC folders aside (`mv -n` to `<arm>_79025_prefix_code`, echo first).
+  2. Rescore indices 17, 19, 20 and 21 with the fixed scorer on `batch` (they passed the exact gate there).
+  3. Then summarise with `--rcc-pending RCC_MH0204_33 RCC_UH9911_05` if mscluster71 is still busy: GBM/CAC clause 3 complete, RCC table 6/8 "incomplete".
+  - **Alternative ruling:** accept the 8 pre-fix RCC summaries because the code difference cannot touch RCC. That needs a summariser exception, which I would not add without a ruling.
+
+### 2026-10-31 07:18 Code → Supervisor | Zayd: m/z axis (79057), dataset-figure data (79082) and the four report figures: outputs
+Status: INFO
+- **m/z axis** (`results/diagnostics/mz_axis_20261030/mz_axis.json`, all 24 HDF5s):
+  - **GBM:** 85,062 bins, m/z **101.92–999.99**, the same axis in all 8 sections. Spacing is not uniform: median **0.0004 Da (3.1 ppm)**, mean **0.0106 Da**, minimum 0.00005 Da, gaps up to 54.6 Da. Typical spacing grows with m/z (about 0.0015 Da at m/z 200, 0.017 at 400 and 0.035 at 600). FT-ICR-like, finer than ppm-uniform at low m/z.
+  - **CAC:** 1,481 bins, 198.03–1060.67 on 40TopL, mean 0.583 Da, median 0.564 Da. **The 8 sections do not share one axis** (max |Δ| 0.285 Da against 40TopL); each section's own axis is used throughout, as before.
+  - **RCC:** 10,200 bins, 150.08–1000.00, uniform **0.08 Da** (mean 0.0833), identical in all 8 runs.
+  - The report's existing CAC and RCC cells (198–1061, 0.58; 150–1000, 0.083) agree.
+- **Dataset-figure data** (`results/diagnostics/dataset_figure_20261030/`):
+  - GBM22_2 4,524 px (labels 1 = normal 3,415, 2 = tumour 1,109, as coded in the HDF5);
+  - 160TopL 4,761 px (classes 0/1/2: 2,325 / 1,292 / 1,144);
+  - RCC_MH0204_33 1,560 px (cancer 514, normal 297, unannotated 749).
+- **Figures (report style, no titles; scripts in `report/draft/figures/`; the file names the report already includes):**
+  - `images/dataset_overview.pdf` (`dataset_overview.py`): TIC on top, annotation below, Okabe–Ito colours, unmeasured blank, RCC unannotated grey. CAC classes stay numeric (names not documented).
+  - `images/05_ig_minus_correlation_by_section.png`: 24 sections × 2 arms, mean of 3 seeds (Test R table with the IG-steps reruns). Every bar is negative.
+  - `images/17_all_neighbourhood_variants.png`: centre-only and uniform 3×3 are 3-seed means (filled); other variants are seed 1 only (open markers, stated in the legend).
+  - `images/vae_vs_pca.png`: VAE 3-seed mean minus PCA-5 per section, checked against the Test V decisions (1e-12): GBM +0.042 (5/8), CAC −0.012 (2/8), RCC −0.010 (3/8).
+  - **Caption note:** `results.tex` `fig:vaepca` says "mixed on GBM and CAC and equivalent on RCC". Those are the predeclared seed-1 labels; the figure now shows seed means. Not edited (no text edits beyond red items).
+
+### 2026-10-31 07:19 Code → Zayd | Supervisor | Codex: Overnight summary: report_draft_v10 built; replacements list; what is still red
+Status: OPEN (Zayd: decision on the RCC rescore; Codex: review the uncommitted code)
+- **Report:** `report/draft/report_draft_v10_2026-10-31.pdf`. Built with pdflatex, bibtex and pdflatex ×2: 13 pages, 0 overfull boxes, no undefined references or citations. **The only text edits are the red replacements below**, checked by diffing against pre-edit copies.
+- **Replacements (file:line → value → source, all posted above):**
+  1. `sections/methodology.tex:27` → GBM m/z range "102--1000" → `mz_axis_20261030/mz_axis.json` (101.92–999.99; chat 07:1x).
+  2. `sections/methodology.tex:28` → GBM mean bin width "0.011" → same file (mean 0.0106 Da; **median 0.0004 Da, non-uniform**; the row is "mean", as for CAC/RCC).
+  3. `sections/methodology.tex:228-233` → the msiPL re-tune methods sentence (grid −2.0 to 2.5 step 0.01, closest list, scored at the list's own length, RCC maxima 1,054–1,289 in 6/8 runs below K_bin) → P18 §6.8 and chat 22:59 (corrected 23:4x). **Flag:** wording is mine, so please check it.
+  4. `sections/methodology.tex:61-62` (dataset figure): the `\checkme` sits in the `\IfFileExists` fallback and no longer renders, because `images/dataset_overview.pdf` now exists → `dataset_figure_20261030` (79082), `figures/dataset_overview.py`.
+  5. `sections/results.tex:26-30` → IG 3-seed means against msiPL, and the seed-averaged HL [CI], r and Holm p → `three_seed_main_table_20261030_local/f2_seed_averaged.csv` (chat 23:2x).
+  6. `sections/results.tex:53-54` (table caption) → "IG and posterior correlation: mean ± SD over three training seeds; the other rankings do not depend on the seed" → `main_table.csv` and `summary.json` (544/544 values identical across seeds).
+  7. `sections/results.tex:61-66` (table cells) → IG and posterior mean ± SD for all 6 rows → `main_table.csv`. Bold is unchanged: the best label-free ranking per row stays the same.
+  8. `sections/results.tex:296-297` (runtime caption) → RTX 3090 for all training; i5-14400 (GBM, CAC) and i9-10940X (RCC) for ranking → `runtime_hardware_20261030_local/runtime_hardware.csv`.
+  - **Figures replaced by file** (no text edit; `images/` comes first on the graphicspath): `05_ig_minus_correlation_by_section.png`, `17_all_neighbourhood_variants.png` and `vae_vs_pca.png` → `figures/seed_averaged_figures.py`.
+- **Still red:**
+  - `results.tex:31` budget-stability (clause 3);
+  - `results.tex:65-66` RCC msiPL cells;
+  - `results.tex:68` RCC msiPL footnote. All three wait on the item 2 summary (STOP 07:1x: mixed scorer code; RCC 16 and 22 pending on mscluster71).
+  - `results.tex:203` training length (item 3: code only, no job).
+  - `methodology.tex:289` release tag and commit (no commit or push allowed).
+  - `report.tex:98` Zayd's completed declaration.
+  - `appendix.tex:67, 78, 82`: not in the active build? Please check whether the appendix is included.
+- **Inconsistencies I did not edit (not red; supervisor to decide):**
+  - `results.tex:126` still quotes the seed-1 posterior correlation on GBM "0.743" beside the now 3-seed table (0.762 ± 0.021 / 0.757 ± 0.017).
+  - The `fig:vaepca` caption gives the seed-1 labels ("mixed … equivalent") for a figure that now shows 3-seed means (GBM +0.042 5/8, CAC −0.012 2/8, RCC −0.010 3/8).
+  - `methodology.tex:285-286` says training ran "on RTX 3060 and RTX 3090 GPUs"; every **timed** training run is on an RTX 3090.
+  - CAC sections do not share one m/z axis (max |Δ| 0.285 Da); the table's single CAC range is 40TopL's.
+- **Cluster state at 07:20:** nothing running. **79060 and 79062 are still pending** on mscluster71 (another user's 3-day job). If you'd rather not wait, cancelling them is your call; I have not cancelled. mscluster144 stalled twice on `/datasets` reads (78990_2, 79058); recorded in `cluster_node_issues.txt`.
+- **Uncommitted, for Codex:**
+  - `scripts/summarise_three_seed_main_table.py`, `scripts/summarise_runtime_hardware.py`, `report/draft/figures/seed_averaged_figures.py` and `dataset_overview.py`;
+  - item 3 (`training.py` snapshots, the trainer and IG flags, `training_length_sections.sh`, `run_training_length.sh`, `submit_training_length.sh`, `summarise_training_length.py`, `test_training_length.py`, `run_fair_scoring_tests.sh` module line);
+  - the `summarise_msipl_retune.py` `--rcc-pending` option and test;
+  - `cluster_node_issues.txt`; P18 §6.8 and §10 entries;
+  - new result folders (`three_seed_main_table_20261030_local`, `runtime_hardware_20261030_local`, `mz_axis_20261030`, `dataset_figure_20261030`, the `msipl_retune_20261030` scoring outputs) and the images.
+  - Local tests: `test_msipl_retune` 25/25, `test_training_length` 5/7 (2 torch skips, cluster-only), `test_job_scripts` OK.
+- Nothing was pushed, committed or deleted, and nothing was written to `/datasets`. No rule, threshold or grid was changed.
+- Addendum: the appendix is **not** in the active build; `report.tex` inputs only introduction, related work, methodology, results, discussion and conclusion. So `appendix.tex:67, 78, 82` do not show in v10.
+
+### 2026-10-31 07:27 Code → Supervisor | Zayd: Checklist D (Zayd's OK 07:2x): RCC rescore with the fixed scorer; MH0204_33 and UH9911_05 on an idle i9-10940X node; executing
+Status: INFO (Zayd's OK in the session)
+- **D1, cancel:** `scancel 79060 79062`. Both are pending, so there is no output.
+- **D2, move (echo first, `mv -n`):** the 8 pre-fix RCC folders `msipl_retune_20261030/RCC_{UH0505_12,UH9610_15,UH9812_03,UH9905_18}_seed1/{central_only,uniform_mean}` go to the sibling `<arm>_79025_prefix_code`. Each target is checked first and must not exist.
+- **D3, rescore 17, 19, 20, 21 on `batch`:** `sbatch --parsable --exclude=mscluster144 --array=17,19,20,21%4 slurm_jobs/run_msipl_retune_scoring.sh`. They passed the exact gate on `batch` in 79025.
+- **D4, MH0204_33 (16) and UH9911_05 (22):** single submissions `--partition=bigbatch --nodelist=mscluster79`. mscluster79 is idle at 07:2x and recorded as an **Intel i9-10940X** (20 Test R node records). mscluster55 and 77 are draining and 74 is busy.
+  - **Caveat:** the saved prefixes for these runs came from mscluster71, which is itself recorded as an i9-10940X, yet they failed on `batch`. Meanwhile saved prefixes from mscluster74/77/55 (also i9) passed on `batch`'s i5. So the CPU model alone may not explain it, and the gate on mscluster79 may still fail. **If it does: stop and post** (Zayd's instruction).
+- **Hashes:** `score_msipl_retune.py` `a278ff0e` and `run_msipl_retune_scoring.sh` `656f695a` match HEAD `199cb276`/`9f6909aa` on the cluster. No new code is uploaded. 8G, 2 h, no `--exclusive`.
+- **Then:** pull and run the summary. The summary runs the **committed** `summarise_msipl_retune.py` (HEAD copy), so it does not depend on my unreviewed `--rcc-pending` edit; Codex reviews the overnight code first.
+
+### 2026-10-31 07:27 Codex → Code | Supervisor: Review of overnight report-support code
+Status: INFO
+
+- The two summarisers, four report-figure outputs' generating scripts, `--rcc-pending` path and its test, `cluster_node_issues.txt`, and the P18 §6.8/§10 notes are consistent with the recorded evidence and declared rules. The pending mode is explicit and restricted to the named RCC sections; default and non-RCC missing-result behaviour remain fail-closed.
+- The three-seed summary independently validates the seed-free ranking inputs and reports per-seed collection means followed by sample mean/SD; the runtime summary preserves the recorded training and ranking hardware split. The figure scripts validate the expected section/arm/seed coverage and Test V decisions before plotting.
+- `git diff --check` passed. Local execution of `test_msipl_retune.py` is unavailable in this review environment because WSL lacks `h5py`; Code's recorded run passed 25/25. No contradictory test evidence was found.
+- Committed: pending (overnight report-support code only; item 3 excluded).
