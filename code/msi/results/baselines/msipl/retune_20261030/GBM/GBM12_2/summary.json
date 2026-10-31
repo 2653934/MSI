@@ -1,0 +1,106 @@
+{
+  "K_bin": 986,
+  "count_range_on_grid": {
+    "maximum": 27433,
+    "minimum": 478
+  },
+  "dataset": "GBM12_2",
+  "fast_path_check": [
+    {
+      "beta": 2.5,
+      "fast_count": 478,
+      "identical": true,
+      "legacy_count": 478
+    },
+    {
+      "beta": 1.05,
+      "fast_count": 986,
+      "identical": true,
+      "legacy_count": 986
+    },
+    {
+      "beta": 0.0,
+      "fast_count": 27374,
+      "identical": true,
+      "legacy_count": 27374
+    },
+    {
+      "beta": -2.0,
+      "fast_count": 27433,
+      "identical": true,
+      "legacy_count": 27433
+    }
+  ],
+  "grid": {
+    "maximum": 2.5,
+    "minimum": -2.0,
+    "step": 0.01,
+    "values": 451
+  },
+  "input": "/datasets/zsuliman/msi_data/gbm_massnet/GBM12_2.h5",
+  "m1_reproduction": {
+    "identical": true,
+    "max_abs_mz_difference": 0.0,
+    "recomputed_count": 986,
+    "saved_beta": 1.05,
+    "saved_count": 986,
+    "saved_peaks": "/home-mscluster/zsuliman/msi/results/baselines/msipl/massnet_paper_aligned/GBM12_2/learned_peaks.csv"
+  },
+  "protocol": "protocol 18 Section 6.8 (msiPL Beta re-tune)",
+  "selection_rule": "closest raw learned-peak count, ties to the larger Beta, tolerance 50; target above the grid maximum -> maximum count, msipl_cap",
+  "selections": {
+    "m0.5": {
+      "K_bin": 986,
+      "beta": 2.43,
+      "difference": -1,
+      "multiplier": 0.5,
+      "selected_peaks": 492,
+      "status": "within_tolerance",
+      "target_peaks": 493,
+      "tolerance": 50
+    },
+    "m0.75": {
+      "K_bin": 986,
+      "beta": 1.51,
+      "difference": 0,
+      "multiplier": 0.75,
+      "selected_peaks": 740,
+      "status": "within_tolerance",
+      "target_peaks": 740,
+      "tolerance": 50
+    },
+    "m1.0": {
+      "K_bin": 986,
+      "beta": 1.05,
+      "difference": 0,
+      "multiplier": 1.0,
+      "selected_peaks": 986,
+      "status": "saved_list_reproduced",
+      "target_peaks": 986,
+      "tolerance": 50
+    },
+    "m1.5": {
+      "K_bin": 986,
+      "beta": 0.5,
+      "difference": 0,
+      "multiplier": 1.5,
+      "selected_peaks": 1479,
+      "status": "within_tolerance",
+      "target_peaks": 1479,
+      "tolerance": 50
+    },
+    "m2.0": {
+      "K_bin": 986,
+      "beta": 0.31,
+      "difference": -17,
+      "multiplier": 2.0,
+      "selected_peaks": 1955,
+      "status": "within_tolerance",
+      "target_peaks": 1972,
+      "tolerance": 50
+    }
+  },
+  "status": "complete",
+  "training_reused": true,
+  "weights": "/datasets/zsuliman/msi_checkpoints/baselines/msipl/massnet/GBM12_2/msipl_weights.h5"
+}

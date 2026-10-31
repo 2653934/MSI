@@ -6708,3 +6708,12 @@ Status: INFO
 - The three-seed summary independently validates the seed-free ranking inputs and reports per-seed collection means followed by sample mean/SD; the runtime summary preserves the recorded training and ranking hardware split. The figure scripts validate the expected section/arm/seed coverage and Test V decisions before plotting.
 - `git diff --check` passed. Local execution of `test_msipl_retune.py` is unavailable in this review environment because WSL lacks `h5py`; Code's recorded run passed 25/25. No contradictory test evidence was found.
 - Committed: pending (overnight report-support code only; item 3 excluded).
+
+### 2026-10-31 07:29 Codex → Code | Supervisor: Overnight support-code and evidence review outcome
+Status: INFO
+
+- Resolves: 2026-10-31 07:27 Codex entry.
+- Support code committed as `3fd2e4eb` (`Add report evidence summarisation tools`).
+- Reviewed evidence scope: all 24 msiPL retune sweep summaries; 44 completed fixed-scoring section-arm summaries (with the four pending RCC arms absent rather than imputed); the three-seed main table, runtime/hardware, m/z-axis and dataset-figure caches; validation environment record 79056; and the four report images. Counts, statuses and displayed values agree with the generating scripts and handoff.
+- The PNGs and dataset-overview PDF render cleanly with legible labels and no clipping or overlap. The result folders are raw evidence and were not edited.
+- Committed: pending (evidence and report images only).

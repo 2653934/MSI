@@ -1,0 +1,106 @@
+{
+  "K_bin": 245,
+  "count_range_on_grid": {
+    "maximum": 538,
+    "minimum": 15
+  },
+  "dataset": "280TopL",
+  "fast_path_check": [
+    {
+      "beta": 2.5,
+      "fast_count": 15,
+      "identical": true,
+      "legacy_count": 15
+    },
+    {
+      "beta": 0.2,
+      "fast_count": 245,
+      "identical": true,
+      "legacy_count": 245
+    },
+    {
+      "beta": 0.0,
+      "fast_count": 521,
+      "identical": true,
+      "legacy_count": 521
+    },
+    {
+      "beta": -2.0,
+      "fast_count": 538,
+      "identical": true,
+      "legacy_count": 538
+    }
+  ],
+  "grid": {
+    "maximum": 2.5,
+    "minimum": -2.0,
+    "step": 0.01,
+    "values": 451
+  },
+  "input": "/datasets/zsuliman/msi_data/cac_msipl/280TopL.h5",
+  "m1_reproduction": {
+    "identical": true,
+    "max_abs_mz_difference": 0.0,
+    "recomputed_count": 245,
+    "saved_beta": 0.2,
+    "saved_count": 245,
+    "saved_peaks": "/home-mscluster/zsuliman/msi/results/baselines/msipl/cac/280TopL/learned_peaks.csv"
+  },
+  "protocol": "protocol 18 Section 6.8 (msiPL Beta re-tune)",
+  "selection_rule": "closest raw learned-peak count, ties to the larger Beta, tolerance 50; target above the grid maximum -> maximum count, msipl_cap",
+  "selections": {
+    "m0.5": {
+      "K_bin": 245,
+      "beta": 0.45,
+      "difference": 0,
+      "multiplier": 0.5,
+      "selected_peaks": 122,
+      "status": "within_tolerance",
+      "target_peaks": 122,
+      "tolerance": 50
+    },
+    "m0.75": {
+      "K_bin": 245,
+      "beta": 0.28,
+      "difference": 2,
+      "multiplier": 0.75,
+      "selected_peaks": 186,
+      "status": "within_tolerance",
+      "target_peaks": 184,
+      "tolerance": 50
+    },
+    "m1.0": {
+      "K_bin": 245,
+      "beta": 0.2,
+      "difference": 0,
+      "multiplier": 1.0,
+      "selected_peaks": 245,
+      "status": "saved_list_reproduced",
+      "target_peaks": 245,
+      "tolerance": 50
+    },
+    "m1.5": {
+      "K_bin": 245,
+      "beta": 0.09,
+      "difference": 4,
+      "multiplier": 1.5,
+      "selected_peaks": 372,
+      "status": "within_tolerance",
+      "target_peaks": 368,
+      "tolerance": 50
+    },
+    "m2.0": {
+      "K_bin": 245,
+      "beta": 0.03,
+      "difference": 7,
+      "multiplier": 2.0,
+      "selected_peaks": 497,
+      "status": "within_tolerance",
+      "target_peaks": 490,
+      "tolerance": 50
+    }
+  },
+  "status": "complete",
+  "training_reused": true,
+  "weights": "/datasets/zsuliman/msi_checkpoints/baselines/msipl/cac/280TopL/msipl_weights.h5"
+}

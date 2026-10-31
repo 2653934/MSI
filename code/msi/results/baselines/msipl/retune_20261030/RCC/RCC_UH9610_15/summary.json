@@ -1,0 +1,93 @@
+{
+  "K_bin": 466,
+  "count_range_on_grid": {
+    "maximum": 982,
+    "minimum": 114
+  },
+  "dataset": "RCC_UH9610_15",
+  "fast_path_check": [
+    {
+      "beta": 2.5,
+      "fast_count": 114,
+      "identical": true,
+      "legacy_count": 114
+    },
+    {
+      "beta": 0.0,
+      "fast_count": 982,
+      "identical": true,
+      "legacy_count": 982
+    },
+    {
+      "beta": -2.0,
+      "fast_count": 982,
+      "identical": true,
+      "legacy_count": 982
+    }
+  ],
+  "grid": {
+    "maximum": 2.5,
+    "minimum": -2.0,
+    "step": 0.01,
+    "values": 451
+  },
+  "input": "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_UH9610_15.h5",
+  "m1_reproduction": null,
+  "protocol": "protocol 18 Section 6.8 (msiPL Beta re-tune)",
+  "selection_rule": "closest raw learned-peak count, ties to the larger Beta, tolerance 50; target above the grid maximum -> maximum count, msipl_cap",
+  "selections": {
+    "m0.5": {
+      "K_bin": 466,
+      "beta": 1.99,
+      "difference": 0,
+      "multiplier": 0.5,
+      "selected_peaks": 233,
+      "status": "within_tolerance",
+      "target_peaks": 233,
+      "tolerance": 50
+    },
+    "m0.75": {
+      "K_bin": 466,
+      "beta": 1.68,
+      "difference": 0,
+      "multiplier": 0.75,
+      "selected_peaks": 350,
+      "status": "within_tolerance",
+      "target_peaks": 350,
+      "tolerance": 50
+    },
+    "m1.0": {
+      "K_bin": 466,
+      "beta": 1.51,
+      "difference": -4,
+      "multiplier": 1.0,
+      "selected_peaks": 462,
+      "status": "within_tolerance",
+      "target_peaks": 466,
+      "tolerance": 50
+    },
+    "m1.5": {
+      "K_bin": 466,
+      "beta": 1.16,
+      "difference": 2,
+      "multiplier": 1.5,
+      "selected_peaks": 701,
+      "status": "within_tolerance",
+      "target_peaks": 699,
+      "tolerance": 50
+    },
+    "m2.0": {
+      "K_bin": 466,
+      "beta": 0.56,
+      "difference": -1,
+      "multiplier": 2.0,
+      "selected_peaks": 931,
+      "status": "within_tolerance",
+      "target_peaks": 932,
+      "tolerance": 50
+    }
+  },
+  "status": "complete",
+  "training_reused": true,
+  "weights": "/datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc/RCC_UH9610_15/msipl_weights.h5"
+}

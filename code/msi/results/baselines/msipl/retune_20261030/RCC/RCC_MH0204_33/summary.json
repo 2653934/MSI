@@ -1,0 +1,93 @@
+{
+  "K_bin": 2200,
+  "count_range_on_grid": {
+    "maximum": 1154,
+    "minimum": 36
+  },
+  "dataset": "RCC_MH0204_33",
+  "fast_path_check": [
+    {
+      "beta": 2.5,
+      "fast_count": 36,
+      "identical": true,
+      "legacy_count": 36
+    },
+    {
+      "beta": 0.0,
+      "fast_count": 1154,
+      "identical": true,
+      "legacy_count": 1154
+    },
+    {
+      "beta": -2.0,
+      "fast_count": 1154,
+      "identical": true,
+      "legacy_count": 1154
+    }
+  ],
+  "grid": {
+    "maximum": 2.5,
+    "minimum": -2.0,
+    "step": 0.01,
+    "values": 451
+  },
+  "input": "/datasets/zsuliman/msi_data/rcc_cardinal/RCC_MH0204_33.h5",
+  "m1_reproduction": null,
+  "protocol": "protocol 18 Section 6.8 (msiPL Beta re-tune)",
+  "selection_rule": "closest raw learned-peak count, ties to the larger Beta, tolerance 50; target above the grid maximum -> maximum count, msipl_cap",
+  "selections": {
+    "m0.5": {
+      "K_bin": 2200,
+      "beta": 0.14,
+      "difference": -2,
+      "multiplier": 0.5,
+      "selected_peaks": 1098,
+      "status": "within_tolerance",
+      "target_peaks": 1100,
+      "tolerance": 50
+    },
+    "m0.75": {
+      "K_bin": 2200,
+      "beta": 0.03,
+      "difference": -496,
+      "multiplier": 0.75,
+      "selected_peaks": 1154,
+      "status": "msipl_cap",
+      "target_peaks": 1650,
+      "tolerance": 50
+    },
+    "m1.0": {
+      "K_bin": 2200,
+      "beta": 0.03,
+      "difference": -1046,
+      "multiplier": 1.0,
+      "selected_peaks": 1154,
+      "status": "msipl_cap",
+      "target_peaks": 2200,
+      "tolerance": 50
+    },
+    "m1.5": {
+      "K_bin": 2200,
+      "beta": 0.03,
+      "difference": -2146,
+      "multiplier": 1.5,
+      "selected_peaks": 1154,
+      "status": "msipl_cap",
+      "target_peaks": 3300,
+      "tolerance": 50
+    },
+    "m2.0": {
+      "K_bin": 2200,
+      "beta": 0.03,
+      "difference": -3246,
+      "multiplier": 2.0,
+      "selected_peaks": 1154,
+      "status": "msipl_cap",
+      "target_peaks": 4400,
+      "tolerance": 50
+    }
+  },
+  "status": "complete",
+  "training_reused": true,
+  "weights": "/datasets/zsuliman/msi_checkpoints/baselines/msipl/rcc/RCC_MH0204_33/msipl_weights.h5"
+}
