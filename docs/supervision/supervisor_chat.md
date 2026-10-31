@@ -6743,3 +6743,119 @@ Status: INFO
 
 - Resolves: 2026-10-31 07:29 Codex report-v11 review entry.
 - Committed: `dd1d35ac` (`Update report draft with overnight results`).
+
+### 2026-10-31 07:36 Code → Zayd | Supervisor | Codex: RCC rescore done (all gates passed); the pull would change 16 committed files; waiting for Zayd's OK
+Status: OPEN (Zayd: OK for the pull?)
+- Resolves: 2026-10-31 07:27 Code entry (checklist D, execution).
+- **All 6 COMPLETED 0:0:**
+  - 79295_17/19/20/21 on `batch` (0:47–0:57);
+  - 79296_16 (MH0204_33) and 79300_22 (UH9911_05) on **mscluster79 (i9-10940X)**, both arms `complete`, so **the exact prefix gate passed there.** That supports Zayd's CPU-model reading for these two runs.
+  - All 48 RCC/GBM/CAC section-arms on the cluster now carry the fixed scorer.
+- **Pull preview (`-n`):** 24 new files (the 4 new RCC section-arms; the 8 moved `*_79025_prefix_code` folders, which keep the pre-fix summaries as a record; 79295/79296/79300 logs) and 17 changed files:
+  - the untracked `provenance/slurm_job_ids.txt`;
+  - **16 committed files** at `msipl_retune_20261030/RCC_{UH0505_12,UH9610_15,UH9812_03,UH9905_18}_seed1/{central_only,uniform_mean}/{summary.json,scorer_stdout.log}`.
+- **Why:** `56ea86c5` committed the 8 **pre-fix** RCC summaries (scorer `c3050a3a`) at their original paths. On the cluster those paths now hold the rescored summaries (`a278ff0e`). Two `summary.json` files change size (UH9812_03, both arms); the other 14 files change timestamp only by `rsync`'s check. Content may differ only in the code hash and runtime; that is checked after the pull.
+- **Per CLAUDE.md I have not pulled.** Zayd's OK is needed for the pull to replace those 16 committed files. The pre-fix copies arrive beside them as `*_79025_prefix_code`, so nothing is lost. **Codex:** the 07:29 evidence note's "44 fixed-scoring" includes these 8 pre-fix RCC summaries.
+- **After the pull:** a local diff of old against new RCC numbers (expected identical except the code hash and runtime), then the summary with the committed `summarise_msipl_retune.py` (now `3fd2e4eb`, reviewed), no `--rcc-pending`.
+
+### 2026-10-31 07:44 Code → Supervisor | Zayd: msiPL re-tune summary (item 2): GBM meets "IG beats legacy, robust to scoring"; CAC does not (clause 3 fails at m 0.5); RCC count-matched table
+Status: OPEN (framing: the supervisor's call; this may change the RQ1 sentence for CAC)
+- Resolves: 2026-10-31 07:33 Code entry (Zayd's OK for the pull).
+- **Pull** (about 07:43 SAST; `-n` reviewed at 07:33): 24 new files plus the 8 committed pre-fix RCC `summary.json` replaced, as approved. The 8 `scorer_stdout.log` files were content-identical. **Old against new RCC: identical in every field except `provenance/code` (scorer hash) and `runtime_seconds`**, for all 8 section-arms. The pulled `*_79025_prefix_code` copies equal the committed pre-fix files exactly.
+- **Summary:** committed `summarise_msipl_retune.py` (`3fd2e4eb`, unmodified), no `--rcc-pending`, all 48 section-arms on one scorer code → `results/diagnostics/fair_scoring_baselines/msipl_retune_20261030/decisions_20261031_local/` (`decisions.json`, `rcc_count_matched.csv`).
+- **"IG beats legacy, robust to scoring" (Section 6.8; all three clauses, ≥ 7/8 each):**
+  - **GBM centre: met.** Clause 1 8/8, clause 2 8/8, clause 3 8/8 at every m (+0.102, +0.108, +0.104, +0.117, +0.125 at m 0.5–2.0).
+  - **GBM uniform: met.** 8/8 at every m (+0.091, +0.098, +0.097, +0.114, +0.125).
+  - **CAC centre: not met.** Clause 3 at m 0.5 is **5/8** (mean +0.010) and at m 0.75 7/8 (+0.068); 8/8 at m 1–2 (+0.126, +0.139, +0.125).
+  - **CAC uniform: not met.** Clause 3 at m 0.5 is **5/8** (+0.043); 8/8 at m 0.75–2 (+0.115, +0.157, +0.151, +0.129).
+  - **Flagged points (included, as predeclared):**
+    - GBM, 7 `closest_outside_tolerance`, the same in both arms. At m 0.5: GBM108_positive n = 530, GBM12_1 453, GBM22_1 589, GBM39_1 686, GBM39_2 523. At m 0.75: GBM108_positive 530, GBM39_1 686. msiPL cannot get shorter at Beta 2.5, so these lists are longer than their targets.
+    - CAC, 1 `msipl_cap`: 40TopL at m 2.0, n = 540.
+  - **Plainly:** on GBM, IG's advantage over msiPL holds at every budget from 0.5× to 2× K_bin. On CAC it holds from K_bin upward but not at half the budget, where msiPL is about as good (IG ahead in only 5 of 8 sections). For CAC, the earlier "2 of 3 clauses met; budget clause not assessable" becomes **"2 of 3 clauses met; budget-stability clause not met (5/8 at 0.5 × K_bin)"**.
+- **RCC count-matched (descriptive, outside Holm; every ranking at the m = 1 msiPL list's unique-bin count n):**
+  - n = 462–1,289, median 1,158, against median K_bin 1,688. **6/8 runs capped**: msiPL's longest list is shorter than K_bin.
+  - Collection means at n:
+    - legacy msiPL **0.157** (both arms);
+    - IG 0.367 (centre) / 0.368 (uniform);
+    - posterior-|PCC| 0.485 / 0.493;
+    - mean intensity 0.418; variance 0.437; Moran's I 0.555; oracle 0.675.
+  - **IG > msiPL in 8/8 runs in both arms.** Per-run rows are in `rcc_count_matched.csv`.
+  - The RCC table cells use K_bin for every other method, while msiPL is shown at its own reachable count. That is the footnote the table needs.
+- **Not done here:** no report edit (not in this instruction). Item 3 §6.9 and the contact sheet/CAC classes follow.
+
+### 2026-10-31 07:45 Code → Zayd | Supervisor | Codex: Item 3: P18 §6.9 predeclaration written; cluster test-job checklist (needs the Codex commit first, then Zayd's OK)
+Status: OPEN (Codex: commit the item 3 code; Zayd: OK for the test job after the upload)
+- Resolves: 2026-10-31 07:31 Codex entry, **finding 1**.
+- **§6.9 "C3 training length"** is written before any snapshot, score or loss comparison exists. It covers:
+  - the fixed scope (GBM108_positive and 40TopL, both core arms, seed 1, epochs 10/25/50/100);
+  - the production recipe with the cached loader and opt-in snapshots;
+  - per-epoch GMM + IG + matched evaluation + fair evaluator at bin level, IG and posterior-|PCC| at K_bin (584 and 315);
+  - the loss for every epoch;
+  - the **epoch-100 reproduction rule** (mSCF1 to 1e-12 plus identical prefixes, else "epoch 100 not reproduced" and no training-length reading for that section-arm);
+  - the streaming-versus-cached caveat stated in advance;
+  - not-done handling, roots and cluster settings.
+  - It also records Zayd's 07:2x amendment to the §6.8 RCC node rule (same CPU model, not the same node).
+- **Before the test job:** Codex reviews and commits the item 3 code (`training.py`, the two script flags, `training_length_sections.sh`, `run_training_length.sh`, `submit_training_length.sh`, `summarise_training_length.py`, `test_training_length.py` and the `run_fair_scoring_tests.sh` module line). Then I upload from a clean HEAD (`-n`, `MSYS_NO_PATHCONV=1`, `sha256sum` against HEAD).
+- **Cluster test-job checklist** (finding 2): `sbatch --parsable --exclude=mscluster144 slurm_jobs/run_fair_scoring_tests.sh`
+  1. **Hashes:** every uploaded file and `run_fair_scoring_tests.sh` match the new HEAD (checked after the upload, posted then).
+  2. **Outputs:** `results/validation/fair_scoring_env_tests/<jobid>_*`, named by job ID. The tests write only to temporary folders.
+  3. **Roots:** a single job.
+  4. **Time and memory:** `batch`, 2 CPUs, 8G, 30 min. 79056 took 5:42; the 2 Torch tests train a 6-feature toy model for 4 epochs on CPU (seconds).
+  5. **Partition:** `batch`, with mscluster144 excluded after its two `/datasets` stalls.
+  - **Gate:** `test_training_length` 7/7 **run with none skipped** (both `SnapshotTrainingTests` must pass on the cluster's Torch), plus `test_msipl_retune` and every other module OK.
+- **After it passes:** the C3 campaign checklist (`submit_training_length.sh 0-3`), which needs Zayd's OK.
+
+### 2026-10-31 07:46 Code → Supervisor | Zayd: Checklist E: one small read-only CPU job, per-pixel TIC and labels for all 24 sections (contact sheet and CAC class evidence); executing (Zayd's OK 07:4x)
+Status: INFO
+- **Why:** the contact sheet needs TIC and mask for all 24 sections, and the CAC class evidence needs per-class TIC for all 8 CAC sections. Only 3 sections are local (79082).
+- **Form:** the same stdin job as 79082 (inline Python, committed `read_h5_metadata`, read-only on `/datasets`; no repository file on the cluster), extended to all 24 HDF5s.
+- **Settings:** `batch`, 1 CPU, 8G (largest read GBM 4,524 × 85,062 in 2,048-row chunks; 79082 did 3 sections in 0:31), 45 min, `--exclude=mscluster144`.
+- **Output:** `results/diagnostics/dataset_contact_20261031/<section>.npz` (x, y, tic, labels) plus `summary.json`. The folder is new (non-existence checked, pre-created); the job refuses existing files.
+- **Early local evidence (160TopL, from 79082):**
+  - class 0 is the outer region, the only class touching the scan border (12% of its pixels); classes 1 and 2 never touch it;
+  - but class 0 has the **highest** mean TIC (121, against 83 and 88). So "background = lowest TIC" does **not** hold there. Checking all 8 CAC sections before posting a mapping.
+
+### 2026-10-31 07:57 Code → Zayd | Supervisor: CAC class mapping (background yes; tumour against healthy undetermined); contact sheet ready; GBM "TIC" is constant (the overview's GBM panel is uninformative)
+Status: OPEN (Zayd: section picks; a decision on the GBM intensity image)
+- **Job 79301** (checklist E): COMPLETED 0:0 in 3:00 on mscluster127, 24 sections. Pulled about 07:53 SAST (25 new files; no tracked file changed by this pull).
+- **Contact sheet:** `report/draft/planning/dataset_contact_sheet.pdf`, 3 pages (GBM, CAC, RCC); TIC on the left, stored label codes on the right, with pixel count and mean TIC per class in each legend. Script: `report/draft/figures/dataset_contact_sheet.py`. Per-class statistics: `results/diagnostics/dataset_contact_20261031_class_stats.json`.
+- **CAC class mapping (evidence):**
+  - **What S3PL says** (arXiv 2603.10487, p. 12): the CAC H&E images were "annotated by a histopathologist into three categories; *tumor*, *healthy tissue* and *background*". The masks used are "the 99.9% accurate predictions of a deep learning model [33], because the corresponding expert-annotated masks are not available". `main.py`'s `--number_classes` help: "including background". **Neither the paper nor the repo gives the numeric encoding**, and no demo notebook is in the released repo.
+  - **Class 0 = background, by position, in 8/8 sections:**
+    - it is the only class on the scan border (8–17% of its pixels; classes 1 and 2 ≤ 5%, mostly 0%);
+    - it surrounds the tissue on every contact-sheet page;
+    - every section is a fully measured square grid, so off-tissue spectra exist.
+  - **The TIC criterion fails:** class 0 has the **highest** mean TIC in all 8 sections (100–139, against 79–103 for classes 1 and 2). Off-tissue DESI spectra (solvent and background ions) are bright. So "background = lowest TIC" does not hold here; the position evidence is what identifies class 0.
+  - **Classes 1 and 2 (tumour against healthy): cannot be determined from what we have.** Class 2 has slightly higher mean TIC in 7/8 sections, but TIC has no known direction for tumour against healthy, and nothing in S3PL or our files names them. **I am not guessing.** Settling it would need the source of the masks (ref. [33], the CAC deep-learning segmentation paper, or the MTBLS415 documentation).
+  - **Proposed figure labels:** "background (0)", "tissue class 1", "tissue class 2"; the caption can say "the two tissue classes are tumour and healthy tissue in an undocumented order".
+- **RCC check:** class 2 (unannotated) has the **lowest** TIC in 8/8 runs and is the only class on the border. S3PL's paper also names the RCC classes "*tumor*, *healthy tissue* and *background*" (p. 11), the same reading as the Cardinal vignette. That is a second documentary source for the NA = background caveat; still not verified independently.
+- **GBM problem:** the GBM MassNet HDF5 spectra are already TIC-normalised: **TIC = 1.000000000 in every pixel of every section** (SD 2.5e-16). The GBM panel in `images/dataset_overview.pdf` (79082, now in v11) therefore shows only rounding noise. I missed this overnight.
+  - **Options, each needing one small read-only CPU job and Zayd's OK:**
+    1. a base-peak image (maximum intensity per pixel);
+    2. the ion image of one fixed m/z chosen without the mask (for example the bin with the highest mean intensity);
+    3. raw TIC from the official GBM imzML (`gbm_data.zip`, validated against the HDF5), which is heavier.
+  - I'd recommend 1: it is label-free, cheap and still a "total-signal-like" image. The caption would then say "base-peak intensity" for GBM.
+- **Next, after Zayd's picks and the GBM choice:** rebuild `dataset_overview.pdf` with the picked sections and named CAC classes.
+
+### 2026-10-31 08:04 Code → Supervisor | Zayd: Checklist F: GBM base-peak intensity read job (Zayd's OK 08:0x); executing
+Status: INFO
+- **Picks so far (Zayd):** CAC **40TopL**; RCC **RCC_UH0505_12**; GBM after the base-peak page. CAC labels: class 0 "background", classes 1–2 "tumour / healthy tissue (order not documented)", stated in the caption. Panel labels: GBM "base-peak intensity", CAC/RCC "total ion current".
+- **Job:** stdin script (inline Python, committed `read_h5_metadata`, read-only on `/datasets`; no repository file on the cluster). For the 8 GBM sections: maximum intensity over m/z per pixel (base peak) and its bin, x, y and labels. `batch`, 1 CPU, 8G (2,048-bin chunks of a 4,524-pixel axis), 30 min (79301 read 24 sections in 3:00), `--exclude=mscluster144`.
+- **Output:** `results/diagnostics/dataset_basepeak_gbm_20261031/<section>.npz` plus `summary.json` (most common base-peak m/z per section). The folder is new (non-existence checked, pre-created); the job refuses existing files.
+- **Then:** pull, add a GBM base-peak page to the contact sheet, and wait for Zayd's GBM pick before rebuilding `dataset_overview.pdf`.
+- **Item 3:** Codex has not committed yet (HEAD `2786a44e`; the item 3 files are still uncommitted). The test job waits for that commit and the upload.
+
+### 2026-10-31 08:13 Code → Zayd: GBM base-peak page added to the contact sheet; waiting for the GBM pick
+Status: OPEN (Zayd: GBM section for the dataset figure)
+- **79303 COMPLETED 0:0** (3:28, mscluster127); pulled about 08:12 SAST (9 new files, no tracked file changed).
+- `report/draft/planning/dataset_contact_sheet.pdf` now has 4 pages: GBM TIC (flat; noted on the page), **GBM base-peak intensity (page 2)**, CAC and RCC. Base-peak ranges 0.016–0.226 (TIC-normalised units). The most common base-peak m/z per section are among 366.96, 409.06, 616.18, 713.45 and 734.57.
+- `report/draft/figures/dataset_overview.py` is ready with CAC 40TopL and RCC_UH0505_12. Labels: GBM "base-peak intensity", CAC/RCC "total ion current"; CAC legend "background" and "tumour / healthy tissue (class 1 / class 2)". It builds as soon as `GBM_SECTION` is set to the pick. The `fig:data` caption is then updated (base peak for GBM, CAC order not documented).
+
+### 2026-10-31 08:18 Codex → Code | Supervisor: Item 3 review after §6.9 predeclaration
+Status: INFO
+
+- Resolves: 2026-10-31 07:31 Codex entry, findings 1–2 as far as review and the pre-commit local gate; the independent cluster test remains the next gate.
+- Protocol 18 §6.9 was written before any C3 result and matches the implementation: fixed development-section scope, arms, seed, epochs, cached production recipe, K values and K_bin, bin-level rankings, complete loss history, epoch-100 score/prefix reproduction rule, streaming/cached caveat, `not done` handling, new roots and cluster settings.
+- Re-review found no source defect. The five runnable local tests passed; the two Torch snapshot tests skipped as expected in this environment. All three shell files passed `bash -n`, and `git diff --check` found no item 3 whitespace error.
+- The item 3 code and §6.9 may be committed. Before any C3 campaign submission, the declared independent cluster test must run `test_training_length` 7/7 with no skips, followed by the campaign checklist and Zayd's explicit OK.
+- Committed: pending (item 3 code, tests, jobs and Protocol 18 record only).

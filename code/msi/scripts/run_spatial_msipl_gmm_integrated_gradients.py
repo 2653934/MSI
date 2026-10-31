@@ -86,6 +86,15 @@ def parse_arguments():
     )
     parser.add_argument("--faithfulness-per-cluster", type=int, default=32)
     parser.add_argument("--ig-steps", type=int, default=64)
+    parser.add_argument(
+        "--expected-epochs",
+        type=int,
+        default=100,
+        help=(
+            "Opt-in (item 3, training length): the completed epochs the checkpoint "
+            "must have, for an epoch snapshot. Default 100: the production check."
+        ),
+    )
     parser.add_argument("--ig-internal-batch-size", type=int, default=8)
     parser.add_argument("--deletion-budgets", type=int, nargs="+", default=[32, 128, 512])
     parser.add_argument("--random-repeats", type=int, default=10)
@@ -111,11 +120,13 @@ def state_sha256(model):
     return digest.hexdigest()
 
 
-def load_model(path, spectral_dim, variant, device, checkpoint=None):
+def load_model(path, spectral_dim, variant, device, checkpoint=None, expected_epochs=100):
     if checkpoint is None:
         checkpoint = torch.load(path, map_location="cpu")
-    if int(checkpoint.get("completed_epochs", 0)) != 100:
-        raise ValueError("attribution requires the complete 100-epoch checkpoint")
+    if int(checkpoint.get("completed_epochs", 0)) != expected_epochs:
+        if expected_epochs == 100:
+            raise ValueError("attribution requires the complete 100-epoch checkpoint")
+        raise ValueError(f"attribution expected a {expected_epochs}-epoch snapshot")
     configuration = checkpoint["model_configuration"]
     if int(configuration["spectral_dim"]) != spectral_dim:
         raise ValueError("checkpoint and dataset spectral dimensions differ")
@@ -527,7 +538,8 @@ def main():
             input_spec["context_permutation_sha256"] != dataset.context_permutation_sha256):
         raise ValueError("checkpoint and evaluation context permutations differ")
     model, checkpoint = load_model(
-        args.checkpoint, dataset.n_mz, args.variant, device, checkpoint=checkpoint
+        args.checkpoint, dataset.n_mz, args.variant, device, checkpoint=checkpoint,
+        expected_epochs=args.expected_epochs,
     )
     latent, mean_spectrum_np = encode_all(model, dataset, args.batch_size, device)
     scaler = StandardScaler().fit(latent)

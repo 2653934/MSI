@@ -93,6 +93,16 @@ def main():
     parser.add_argument("--context-seed", type=int, default=1,
                         help="Global measured-pixel permutation seed for shuffled context arms.")
     parser.add_argument("--checkpoint-interval", type=int, default=5)
+    parser.add_argument(
+        "--snapshot-epochs",
+        type=int,
+        nargs="*",
+        default=[],
+        help=(
+            "Opt-in (item 3, training length): also save snapshot_epoch<NNN>.pt after "
+            "these epochs. Default none: the historical code path."
+        ),
+    )
     parser.add_argument("--resume-checkpoint", type=Path)
     parser.add_argument(
         "--cache-spectra",
@@ -206,6 +216,7 @@ def main():
             resume_checkpoint=args.resume_checkpoint,
             centre_mask_probability=args.centre_mask_probability,
             centre_mask_seed=args.centre_mask_seed if centre_masking else None,
+            snapshot_epochs=tuple(args.snapshot_epochs),
         )
         attention_diagnostics_after = None
         if args.variant in ("attention", "attention_shuffled"):

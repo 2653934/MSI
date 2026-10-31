@@ -790,6 +790,27 @@ This records the supervisor's confirmation of Code's reading posted at 21:06 (Co
 **Implementation note, 30 October about 23:20 SAST: scorer prefix gate and RCC node (Codex commit `199cb276`; Zayd's overnight approval). The gates are exact as before; no rule, threshold or grid changes.**
 - **Legacy entry:** on GBM/CAC the fair evaluator stores the snapped legacy msiPL list as `legacy_msipl` in `rankings_prefix.npz`, beside the rankings. The first scoring run (79025) stopped because the gate treated it as a ranking. The gate now requires that entry to equal the snapped m = 1 re-tune list exactly, and refuses it when no m = 1 list is supplied (RCC). Every ranking prefix is still checked exactly.
 - **RCC node:** the saved RCC fair-scoring rankings come from 69565 on `bigbatch`, and exact reproduction is CPU-specific. Any RCC run whose prefix gate fails on `batch` is rescored on its 69565 node (`--nodelist`, from `ranking_stage_runtime_rcc_bigbatch/provenance/task_node_map.txt`), as with the 17 October option (a). The gate is not relaxed. The 4 runs that passed on `batch` (UH0505_12, UH9610_15, UH9812_03, UH9905_18) stand.
+- **Amendment, 31 October (Zayd's ruling 07:2x):** the node need not be the 69565 node itself, only one with the same CPU model (Intel i9-10940X). MH0204_33 and UH9911_05 were rescored on mscluster79 and passed the exact gate. The 4 runs above were rescored with the fixed scorer, giving identical numbers (only the code hash and runtime differ), so all 48 section-arms carry one scorer code.
+
+### 6.9 C3 training length (supervisor chat 2026-10-30 12:58 item 3, 13:20 Zayd's approval, 20:16 request 4; Codex review 2026-10-31 07:31; written 31 October about 07:50 SAST, before any snapshot model, score or loss comparison exists)
+**Question (descriptive):** how do the IG and posterior-|PCC| rankings change with VAE training length, and where does the training loss level off? This supports the 100-epoch choice with the same kind of evidence the report gives for S3PL (C2). **No epoch is chosen on mSCF1** (D20g). Whatever the result, the production 100-epoch runs and every result built on them stay as they are.
+
+**Fixed scope:**
+- **Sections:** the two development sections GBM108_positive and 40TopL only (not confirmation evidence).
+- **Arms:** `central_only` and `uniform_mean`. **Seed:** 1.
+- **Epochs scored:** 10, 25, 50 and 100.
+- **Training:** the production recipe (3×3, 100 epochs, batch 128, hidden 512, latent 5, lr 1e-3, spatial λ 0, seed 1) with the cached loader (`--cache-spectra`, mandatory for training jobs). The run is retrained once, saving opt-in `snapshot_epoch<NNN>.pt` at epochs 10, 25 and 50 (`train_vae(snapshot_epochs=...)`; saving only reads state). Epoch 100 is the run's final checkpoint.
+- **Per epoch:** the production GMM (K = 2 GBM, 3 CAC; `n_init` 20; GMM seed 1) and IG (64 steps; 12 pixels per component; sampling seed 1), with `--expected-epochs E` (default 100 unchanged). Then the matched evaluation at the production K_bin (584 for GBM108_positive, 315 for 40TopL) with the legacy list, and the unchanged fair evaluator at **bin level, all classes**. Reported per epoch: **IG and posterior-|PCC| (balanced) mSCF1 at K_bin**.
+- **Loss:** `total_loss`, `reconstruction_loss` and `kl_loss` for every epoch 1–100, from this run's `training_history.json`. The production runs' saved histories are shown beside it, descriptively.
+
+**Epoch-100 reproduction rule:** the epoch-100 rerun must give the production seed-1 fair-scoring IG and posterior-|PCC| mSCF1 to 1e-12 **and** identical ranking prefixes for both, per section and arm. If it does not, the section-arm is reported as **"epoch 100 not reproduced"**: its epoch 10/25/50 numbers are shown only with that label, and nothing about it is described as a training-length effect.
+- **Caveat stated in advance:** the GBM108_positive production model was trained with the streaming loader. The cached loader was validated as equivalent (investigation 10) but is not proven bit-identical, and the GPU node can differ. Non-reproduction is a possible outcome, not a fault.
+
+**Not done:** a GMM component under 44 px, or an IG status other than `valid`, makes that epoch "not done" for that section-arm, with no fallback and no setting change; the other epochs continue. A missing epoch is never interpolated.
+
+**Implementation** (code reviewed by Codex 07:31, no defect found): `slurm_jobs/training_length_sections.sh`, `run_training_length.sh`, `submit_training_length.sh`, `scripts/summarise_training_length.py`, and the opt-in flags in `training.py`, `train_spatial_msipl_production.py` and `run_spatial_msipl_gmm_integrated_gradients.py`. Tests: `test_training_length.py`; the 2 Torch tests must run and pass in the cluster test job before any campaign.
+- **Roots (new):** `results/experiments/training_length_20261030/`; `/datasets/zsuliman/msi_checkpoints/spatial_msipl/training_length_20261030/` (checkpoints, written only by the campaign); `results/diagnostics/fair_scoring_baselines/training_length_20261030/bin_level_only/`.
+- **Cluster:** `bigbatch` (RTX 3090, as production), 4 CPUs, 48G, 8 h, no `--exclusive`, the CUDA quarantine as `--exclude` on the command line, real CUDA warm-up. Order: Codex commit → upload → cluster test job → campaign checklist → Zayd's OK for each `sbatch`.
 
 ## 7. Decision thresholds
 
@@ -1585,6 +1606,13 @@ A test rebuilds the IG matched groups from these files.
       - Echo first, then `mv -n` of the 8 pre-fix RCC section-arms (UH0505_12, UH9610_15, UH9812_03, UH9905_18 × 2 arms) to `<arm>_79025_prefix_code`: 8 moved.
       - **79295:** indices 17, 19, 20, 21 on `batch` (`--exclude=mscluster144`) with the fixed scorer.
       - **79296** (16, MH0204_33) and **79300** (22, UH9911_05) on `bigbatch --nodelist=mscluster79`, recorded as an i9-10940X; Zayd: the CPU model, not the node, matters. A gate failure there stops the line.
+      - **All 6 COMPLETED 0:0**, gates passed: 79295 on `batch`; 79296 and 79300 on mscluster79 (i9-10940X).
+      - **About 07:43 SAST, pull** (Zayd's OK; `-n` reviewed): 24 new files; the 8 committed pre-fix RCC `summary.json` replaced. Old against new: identical except the scorer code hash and runtime. The pre-fix copies are kept as `*_79025_prefix_code`.
+      - **Summary** (committed `summarise_msipl_retune.py` `3fd2e4eb`) → `msipl_retune_20261030/decisions_20261031_local/`:
+        - GBM both arms meet "IG beats legacy, robust to scoring" (clause 3 8/8 at every m).
+        - CAC both arms do not: clause 3 is 5/8 at m 0.5 (centre +0.010, uniform +0.043); centre is also 7/8 at m 0.75.
+        - Flagged: GBM 7 `closest_outside_tolerance` per arm; CAC 1 `msipl_cap`.
+        - RCC count-matched: legacy 0.157, IG 0.367/0.368, IG > legacy 8/8; 6/8 runs capped (descriptive).
 
 0. **9 October, cluster (after v3.1):**
    - Compatibility test job 66006 passed 47/47 under `s3pl_env` (Python 3.11.5, NumPy 2.4.6, sklearn 1.9.0).
@@ -1607,6 +1635,14 @@ A test rebuilds the IG matched groups from these files.
 3. No partition audit, fair-scoring, IG or other scoring run has been executed on any real section.
 4. **9 October, cluster compatibility gate:** Slurm job 66006 ran the synthetic fair-scoring test suite under the production `s3pl_env` and passed 47/47 tests in 29.4 s. This validates environment compatibility only; it did not read or score a real section.
 
+- **31 October, dataset figure support (read-only CPU jobs on `batch`, `--exclude=mscluster144`, stdin scripts using the committed `read_h5_metadata`; Zayd's OKs 07:4x and 08:0x):**
+  - **79301:** per-pixel TIC and labels for all 24 sections → `results/diagnostics/dataset_contact_20261031/`. COMPLETED 0:0 in 3:00 on mscluster127; pulled about 07:53 SAST (25 new files).
+  - **79303:** GBM base-peak intensity (max over m/z) and labels for the 8 GBM sections → `results/diagnostics/dataset_basepeak_gbm_20261031/`. COMPLETED 0:0 in 3:28; pulled about 08:12 SAST (9 new files).
+  - **Findings:**
+    - The GBM MassNet HDF5 spectra are TIC-normalised: TIC = 1 in every pixel (SD 2.5e-16), so GBM is shown by base peak.
+    - CAC class 0 is the outer, border-touching region in 8/8 sections, with the highest mean TIC (100–139). It is background by position; "lowest TIC" does not hold.
+    - CAC classes 1 and 2 (tumour / healthy) are not identifiable from the data or from S3PL.
+    - RCC class 2 (unannotated) has the lowest TIC in 8/8 runs.
 ## 11. Files (implementation v3; nothing applied to production code or submitted)
 
 | File | Purpose |
@@ -1634,3 +1670,4 @@ A test rebuilds the IG matched groups from these files.
 **Removed:** the v2 single-allocation jobs `slurm_jobs/audit_peak_partitions.sh` and `slurm_jobs/evaluate_fair_scoring_baselines.sh` (untracked, never submitted).
 
 **Cluster note:** production jobs run `unittest discover` over the tests folder, so these tests will also run there, adding about 40 s.
+

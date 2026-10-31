@@ -206,8 +206,14 @@ def train_vae(
     resume_checkpoint=None,
     centre_mask_probability=0.0,
     centre_mask_seed=None,
+    snapshot_epochs=(),
 ):
     """Train a VAE with optional exact epoch-boundary checkpoint/resume support.
+
+    ``snapshot_epochs`` (item 3, training length) saves a full checkpoint payload
+    as ``snapshot_epoch<NNN>.pt`` in the checkpoint directory after each listed
+    epoch below ``epochs``. Saving reads state only, so training is unchanged; at
+    () (the default) nothing is saved and training is the historical code path.
 
     ``centre_mask_probability`` > 0 (item G) zeroes the centre spectrum fed to
     the model for that fraction of training samples, drawn from a separate
@@ -221,6 +227,11 @@ def train_vae(
         raise ValueError("batch_size must be at least 2 because the model uses batch normalization")
     if checkpoint_interval < 0:
         raise ValueError("checkpoint_interval cannot be negative")
+    snapshot_epochs = tuple(sorted(set(int(e) for e in snapshot_epochs)))
+    if snapshot_epochs and (snapshot_epochs[0] < 1 or snapshot_epochs[-1] >= epochs):
+        raise ValueError("snapshot_epochs must lie in [1, epochs - 1]")
+    if snapshot_epochs and not save_checkpoint:
+        raise ValueError("snapshot_epochs requires save_checkpoint=True")
     if spatial_lambda < 0:
         raise ValueError("spatial_lambda cannot be negative")
     if spatial_loss_scale <= 0:
@@ -553,6 +564,11 @@ def train_vae(
             ),
         }
         _atomic_json_write(progress_path, progress)
+        if epoch in snapshot_epochs:
+            snapshot_path = checkpoint_directory / f"snapshot_epoch{epoch:03d}.pt"
+            _atomic_torch_save(checkpoint_payload(epoch, progress), snapshot_path)
+            print(json.dumps({"saved_snapshot": str(snapshot_path),
+                              "completed_epochs": epoch}), flush=True)
         if (
             save_checkpoint
             and checkpoint_interval > 0
