@@ -46,7 +46,10 @@ line. \textbf{CAC} is a DESI collection of 52 serial sections from one human
 colorectal adenocarcinoma~\citep{inglese2017deep}, available from MetaboLights
 (MTBLS415). We used the eight sections and three-class masks released with
 S\textsuperscript{3}PL~\citep{weigand2026spatial}, so CAC comparisons are
-within one specimen. \textbf{RCC} is the DESI renal cell carcinoma collection
+within one specimen. Following S\textsuperscript{3}PL, the three classes are
+tumour, healthy tissue and background; because the expert annotations were not
+released, these masks are the predictions of a deep-learning model with a
+reported accuracy of 99.9\%, as in the S\textsuperscript{3}PL evaluation. \textbf{RCC} is the DESI renal cell carcinoma collection
 of \citet{dill2010rcc}, distributed with the Bioconductor package
 CardinalWorkflows~\citep{bemis2015cardinal}. It contains eight runs, each a
 matched pair of cancer and normal tissue from one subject. Pixels outside the
@@ -63,9 +66,12 @@ audited for alignment in every section.
   \includegraphics[width=\textwidth]{dataset_overview.pdf}}{%
   \fbox{\parbox[c][4.5cm][c]{0.95\textwidth}{\centering\checkme{dataset figure
   (TIC image and annotation mask for GBM22\_2, 160TopL and RCC\_MH0204\_33)}}}}
-\caption{One representative section per collection. Top: total ion current
-image. Bottom: expert annotation. Unmeasured locations are blank; on RCC the
-unannotated region is grey.}
+\caption{One representative section per collection (GBM22\_2, 40TopL and
+RCC\_UH0505\_12). Top: base-peak intensity for GBM, whose spectra are supplied
+TIC-normalised, and total ion current for CAC and RCC. Bottom: annotation.
+Unmeasured locations are blank; grey marks the CAC background and the RCC
+unannotated region. The two CAC tissue classes are tumour and healthy tissue,
+in an order the dataset does not document.}
 \label{fig:data}
 \end{figure*}
 
@@ -290,8 +296,9 @@ scikit-learn~\citep{pedregosa2011scikit}. Training ran on the University's
 MSCluster under Slurm, on RTX 3060 and RTX 3090 GPUs (all timed training on RTX
 3090), and ranking and scoring
 ran on CPU nodes. The code, protocol, result summaries and figure scripts are
-available at \url{https://github.com/2653934/Spatial-msiPL}\checkme{release tag
-and commit}.
+available at \url{https://github.com/2653934/Spatial-msiPL} (release
+\texttt{v1.0}, commit
+\texttt{93596d8ed9b99f7d525be0ee96094dd6f64aa97e}).
 
 \textbf{Caching.} The original data loader re-read each batch from HDF5 on
 shared storage, and a 100-epoch GBM run took 11.3\,h. Profiling showed that

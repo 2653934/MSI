@@ -27,7 +27,14 @@ every GBM and CAC section: 0.518 and 0.514 against 0.414 on GBM, and 0.530 and
 0.553 against 0.402 on CAC (\cref{tab:main}). The difference is statistically
 supported in all four comparisons (HL $+0.10$ to $+0.15$, $r=1$, Holm
 $p=0.031$).
-\checkme{budget-stability across $0.5$--$2\times K_{\text{bin}}$ (item 2)}
+Repeating the comparison with msiPL re-tuned to $0.5\times$--$2\times
+K_{\text{bin}}$, IG stayed ahead in all eight GBM sections at every budget.
+On CAC it stayed ahead from $K_{\text{bin}}$ upwards, but at half the budget msiPL
+was about as good (IG ahead in 5/8 sections), so the predeclared requirement
+that the advantage hold at every budget was met on GBM but not on CAC.
+On RCC, where msiPL cannot produce lists as long as $K_{\text{bin}}$ in six of
+eight runs, IG beat msiPL in all eight runs when both were scored at msiPL's
+own list length (0.37 against 0.16).
 This compares complete pipelines and does not show which ingredient causes the
 gain.
 
@@ -61,10 +68,10 @@ GBM & centre & 0.518 $\pm$ 0.006 & \textbf{0.762 $\pm$ 0.021} & 0.684 & 0.483 & 
 GBM & uniform & 0.514 $\pm$ 0.006 & \textbf{0.757 $\pm$ 0.017} & 0.684 & 0.483 & 0.497 & 0.414 & 0.009 & 0.809 \\
 CAC & centre & 0.530 $\pm$ 0.007 & 0.608 $\pm$ 0.004 & 0.605 & \textbf{0.612} & 0.593 & 0.402 & 0.108 & 0.654 \\
 CAC & uniform & 0.553 $\pm$ 0.006 & 0.608 $\pm$ 0.002 & 0.605 & \textbf{0.612} & 0.593 & 0.402 & 0.108 & 0.654 \\
-RCC & centre & 0.403 $\pm$ 0.013 & 0.543 $\pm$ 0.025 & \textbf{0.631} & 0.498 & 0.508 & \checkme{} & 0.171 & 0.756 \\
-RCC & uniform & 0.421 $\pm$ 0.011 & 0.561 $\pm$ 0.019 & \textbf{0.631} & 0.498 & 0.508 & \checkme{} & 0.171 & 0.756 \\
+RCC & centre & 0.403 $\pm$ 0.013 & 0.543 $\pm$ 0.025 & \textbf{0.631} & 0.498 & 0.508 & 0.157$^{a}$ & 0.171 & 0.756 \\
+RCC & uniform & 0.421 $\pm$ 0.011 & 0.561 $\pm$ 0.019 & \textbf{0.631} & 0.498 & 0.508 & 0.157$^{a}$ & 0.171 & 0.756 \\
 \bottomrule
-\multicolumn{10}{@{}l}{\footnotesize \checkme{RCC msiPL footnote: scored at its maximum reachable count (item 2)}}
+\multicolumn{10}{@{}p{0.97\textwidth}@{}}{\footnotesize $^{a}$Scored at msiPL's own list length (median 1{,}158 bins against a median $K_{\text{bin}}$ of 1{,}688), because msiPL cannot reach $K_{\text{bin}}$ in six of eight runs. At that length IG scores 0.37 and posterior correlation 0.49.}
 \end{tabular}
 \end{table*}
 
@@ -199,9 +206,25 @@ reconstruction error than the VAE on all eight GBM sections, and slightly
 higher error on 7/8 CAC sections. The number of GMM components was not
 validated without labels: BIC selected the largest candidate ($K=6$) in every
 tested case, including all 16 RCC runs, with no interior minimum, and a finer
-segmentation lowered GBM scores by about 0.30. \checkme{training length: scores
-and training loss at 10, 25, 50 and 100 epochs on the development sections
-(item 3)}
+segmentation lowered GBM scores by about 0.30.
+
+Longer VAE training reduced the total loss but did not improve mSCF1
+monotonically. At 10, 25, 50 and 100 epochs, respectively, the GBM development
+section gave IG/posterior-correlation scores of
+$0.509/0.665$, $0.518/0.688$, $0.504/0.671$ and $0.508/0.692$ with centre-only
+input, while total loss fell from 593{,}007 through 575{,}894 and 572{,}345 to
+571{,}502. With uniform neighbourhood input, its scores were
+$0.532/0.700$, $0.571/0.704$, $0.564/0.705$ and $0.533/0.705$, with losses
+591{,}713, 575{,}574, 572{,}301 and 571{,}563. On the CAC development section,
+the centre-only scores were $0.671/0.726$, $0.675/0.727$, $0.661/0.725$ and
+$0.680/0.727$, with losses 5{,}813.821, 5{,}796.127, 5{,}786.919 and
+5{,}780.477; the uniform-input scores were $0.674/0.733$, $0.665/0.721$,
+$0.681/0.717$ and $0.683/0.745$, with losses 5{,}814.905, 5{,}798.533,
+5{,}788.563 and 5{,}781.457. Epoch 100 reproduced the production IG and
+posterior-correlation scores exactly in all four section--arm combinations and
+both ranking prefixes were identical. The loss decrease was largest by epoch
+25 and continued more gradually thereafter, but the scores provide no basis
+for selecting an epoch.
 
 \begin{figure}[t]
 \centering

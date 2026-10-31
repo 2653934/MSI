@@ -3,6 +3,18 @@
 This directory is the only active report-writing location until the report is
 explicitly approved for promotion to `report/final/`.
 
+## Building the report
+
+From `report/draft/`, build the report and remove its auxiliary files with:
+
+```sh
+make && make clean
+```
+
+`make` runs `pdflatex`, `bibtex` and `pdflatex` twice. `make clean` removes
+auxiliary build files but preserves `report.pdf`. GNU Make and MiKTeX on
+Windows or TeX Live on Linux are required.
+
 ## Directory roles
 
 - `report.tex`: active compilable draft using the official 2026 Wits format.

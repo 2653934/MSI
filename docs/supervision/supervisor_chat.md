@@ -7012,3 +7012,42 @@ Status: INFO
 - **Plain reading:** loss decreases most strongly by epoch 25 and then more gradually through epoch 100. No epoch is selected on mSCF1. The saved results support filling the report's training-length placeholder only after this evidence is reviewed and committed.
 - Next: review and commit the valid C3 evidence, then fill the report placeholder from the committed files before continuing the release repository.
 - Committed: not committed; evidence review next.
+
+### 2026-10-31 14:44 Codex → Zayd | Supervisor: C3 evidence reviewed and committed
+Status: INFO
+
+- Resolves: 2026-10-31 14:27 Codex entry.
+- Reviewed the pulled raw evidence, local decision summaries and provenance. `git diff --cached --check` passed, the staged paths were limited to the C3 result roots, job-79309 validation record, P18 execution log, decision log and append-only supervision chat, and no checkpoint files were staged.
+- Committed: `2d33efb7` (`Add C3 training length evidence`). The commit has not been pushed or tagged.
+- Next: build and validate the pipeline-only release repository under D19 and D34–D36, then update the report and email in the required order.
+
+### 2026-10-31 17:48 Codex → Zayd | Supervisor: pipeline-only release committed
+Status: INFO
+
+- Resolves: the release-repository step in Zayd's 2026-10-31 handoff. Built the public copy from the backwards table/figure whitelist under D19 and D34–D36. The whitelist and public tree both contain 417 non-bytecode files with no differences, no duplicates and no checkpoints or input data.
+- Release hygiene: a binary-inclusive full-tree scan returned zero hits for `Claude`, `Codex`, `OpenAI`, `Anthropic`, `supervisor`, `chat`, `zsuliman`, `mscluster` and `/home-mscluster`. Private paths, host/node names and internal process notes in copied summaries were replaced by placeholders without changing numerical fields. S3PL material and importers are under `baselines/s3pl/` with the unchanged AGPL-3.0 licence and a changes record; msiPL is not copied and the wrapper requires commit `1e8d5cf` under the included 3D Slicer Part B terms.
+- Verification: Python compilation and `bash -n` passed; the focused path and Test R suite ran 34 tests, with 32 passing and two expected missing-private-fixture skips. Regeneration passed 5/5 table checks and 7/7 figure checks. The figure hashes required the report-recorded Matplotlib 3.11.2; the release environment and README were corrected to that version. The saved statistics provenance likewise fixed SciPy 1.18.1 and statsmodels 0.15.0.
+- Exact verification commands: `PYTHONPATH=src:scripts /usr/bin/python3 -m compileall -q src scripts report_figures tools baselines/s3pl`; `find slurm_jobs baselines/s3pl/slurm_jobs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n`; `PYTHONPATH=src:scripts /usr/bin/python3 -m unittest -v spatial_msipl.tests.test_release_paths spatial_msipl.tests.test_test_r`; and, with the declared packages in the temporary verification path, `py -3 tools/check_regeneration.py --tables-only` and `py -3 tools/check_regeneration.py --figures-only`.
+- Exact Git commands: `git -c safe.directory=C:/Users/zayds/Documents/Research/Spatial-msiPL -C C:/Users/zayds/Documents/Research/Spatial-msiPL config user.name Zayd`; the same command with `config user.email 2653934@students.wits.ac.za`; `git ... add --all`; and `git ... commit -m "Initial Spatial-msiPL release"`.
+- Committed: release root commit `93596d8ed9b99f7d525be0ee96094dd6f64aa97e` (`Initial Spatial-msiPL release`), author `Zayd <2653934@students.wits.ac.za>`. The release repository is clean, has no tags or remote refs and was not pushed.
+- Next: fill the report's VAE training-length placeholder from committed C3 evidence, complete report checks without inventing a release tag or pushed commit, then update the email draft.
+
+### 2026-10-31 17:51 Codex → Zayd | Supervisor: report complete except release confirmation
+Status: INFO
+
+- Filled the VAE training-length passage only from committed C3 evidence. It reports epochs 10, 25, 50 and 100 for both saved section-arms, records the loss trajectory and states that epoch 100 exactly reproduced both production scores and both ranking prefixes in all four arms. No epoch is selected.
+- Rebuilt `report.pdf` with `pdflatex`, `bibtex` and two further `pdflatex` passes. The final log has zero overfull boxes and zero undefined references or citations. All 13 rendered pages were inspected individually; figures, tables, text, margins and the appended AI declaration are legible and unclipped.
+- The only rendered red text is the deliberately unfilled release tag and commit marker. Per Zayd's instruction, it has not been anticipated from the local repository: it remains blocked until Zayd confirms that `v1.0` was pushed. The appendix is not included in `report.tex`; its dormant check markers therefore do not render.
+- The next versioned filename is `report_draft_v14_2026-10-31.pdf`. It has not been created yet because the required zero-red final PDF cannot exist before release confirmation. The email draft likewise remains unfinalised until it can name that actual final file; its AI-prompts question is being preserved.
+- Committed: not committed; report and email changes will be committed only after the release tag/commit is confirmed, inserted and all final gates pass.
+- Next: Zayd pushes `v1.0` and confirms the pushed tag and commit. Then insert those exact values, rebuild and recheck, save v14, update the email and commit the reviewed report package without pushing or tagging.
+
+### 2026-10-31 18:03 Codex → Zayd | Supervisor: final report package reviewed
+Status: INFO
+
+- Resolves: 2026-10-31 17:51 Codex entry. A read-only remote query verified annotated tag `v1.0`: tag object `fb17d4bb5acfeef87669834eff4e241c103630f1` peels to release commit `93596d8ed9b99f7d525be0ee96094dd6f64aa97e`. Those exact public identifiers now replace the report marker.
+- The final report was built from `report/draft/` with `pdflatex`, `bibtex`, `pdflatex` twice and one convergence pass requested by LaTeX. The retained final log has zero overfull boxes, undefined references, undefined citations or rerun warnings. Extracted text contains no rendered `[CHECK: ...]`, and the updated release passage was visually inspected in the 13-page PDF with no red text or layout regression.
+- Created `report_draft_v14_2026-10-31.pdf`; it is byte-identical to `report.pdf` with SHA-256 `f9d3e4fb4332ae57a432dd019466a3d50f2b954c24c5eabab2e4ff838883f32b`. The Hairong email draft names v14, contains no “still being finalised” list and preserves the AI-prompts question. The email was not sent.
+- Added the requested `Building the report` README section. Testing `make && make clean` exposed and fixed the Windows clean recipe's shell handling; the exact documented command now rebuilds successfully, removes all auxiliary build files and preserves `report.pdf`. The public Spatial-msiPL README was not changed.
+- Committed: not yet committed; the reviewed report package is being staged next. Existing unrelated modified and untracked work remains unstaged and preserved.
+- Next: commit the exact reviewed report package without pushing or tagging, then report the commit hash to Zayd.

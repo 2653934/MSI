@@ -1,6 +1,8 @@
 file=report
 
 ifeq ($(OS),Windows_NT)
+SHELL := cmd.exe
+.SHELLFLAGS := /D /C
 PDFLATEX ?= "$(LOCALAPPDATA)/Programs/MiKTeX/miktex/bin/x64/pdflatex.exe"
 BIBTEX ?= "$(LOCALAPPDATA)/Programs/MiKTeX/miktex/bin/x64/bibtex.exe"
 else
@@ -16,9 +18,9 @@ all:
 
 ifeq ($(OS),Windows_NT)
 clean:
-	-cmd /C del /Q $(file).aux $(file).bbl $(file).blg $(file).log $(file).out $(file).synctex.gz 2>NUL
-	-cmd /C del /Q $(file).toc $(file).lof $(file).lot 2>NUL
-	-cmd /C del /Q sections\*.aux 2>NUL
+	-del /Q $(file).aux $(file).bbl $(file).blg $(file).log $(file).out $(file).synctex.gz 2>NUL
+	-del /Q $(file).toc $(file).lof $(file).lot 2>NUL
+	-del /Q sections\*.aux 2>NUL
 else
 clean:
 	rm -f $(file).aux $(file).bbl $(file).blg $(file).log $(file).out $(file).synctex.gz

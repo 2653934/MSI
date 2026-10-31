@@ -1,15 +1,9 @@
-Subject: Honours report draft for feedback, and a question about the AI declaration prompts
-Attachment: report_draft_v11_2026-10-31.pdf (or the latest version on sending)
+Subject: Honours report for feedback, and a question about the AI declaration prompts
+Attachment: report_draft_v14_2026-10-31.pdf
 
 Dear Hairong,
 
-Please find attached the current draft of my Honours report, "Spatial Aware Peak Ranking in Mass Spectrometry Imaging". I would really appreciate your feedback on its structure and content, and on anything you think is missing or should be cut.
-
-The draft is about ten pages plus references. A few items are still being finalised and are marked in red:
-
-- the msiPL comparison at different peak budgets, including msiPL on RCC (being scored now);
-- a check of the VAE training length;
-- the public release of the code repository, which will accompany the final submission.
+Please find attached my Honours report, "Spatial Aware Peak Ranking in Mass Spectrometry Imaging". I would really appreciate your feedback on its structure and content, and on anything you think is missing or should be cut.
 
 I also have a question about the AI declaration. You asked us to include the relevant prompts. How would you like these presented? I can see two options:
 

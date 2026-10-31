@@ -70,37 +70,19 @@ segmentation exists, correlation ranking takes about a second where IG takes
 minutes. The lightweight model is therefore practical, but it did not gain from
 its spatial input, which was the reason for adding it.
 
-These results do not establish a universal benefit from spatial context, that
-IG caused the gain over msiPL, intrinsic runtime superiority of
-either architecture or a consistent advantage from correctly placed
-S\textsuperscript{3}PL neighbours. The PCA control does not establish that a
-nonlinear VAE is essential, and the class-informed component count and
-annotation-related budgets mean the configuration is label-free only in fitting
-and ranking.
+The conclusions are bounded to the tested models and datasets: we do not claim
+that spatial context never helps, that IG is generally inferior or that a
+nonlinear encoder is never needed.
 
-\subsection{Limitations and threats to validity}
-\begin{itemize}
-  \item \textbf{Statistical units.} GBM has four PDX lines, CAC one biopsy and
-        RCC eight subjects. P-values describe these sections, not a population.
-        With $n=8$, only small families can reach Holm significance, so many
-        comparisons rest on practical labels and effect sizes.
-  \item \textbf{Class-informed configuration.} The number of GMM components
-        equals the number of annotated classes and was not supported by BIC.
-        Peak budgets come from published, annotation-related counts. The
-        pipeline is label-free in fitting and ranking only.
-  \item \textbf{The metric.} mSCF1 measures agreement with expert masks, not
-        molecular identity. Methods that produce mask-like maps are favoured.
-  \item \textbf{RCC.} The class-informed $K=3$ analysis partly reflects
-        separating annotated tissue from an unannotated region that covers
-        45--78\% of pixels. The Cardinal workflow treats this region as
-        background, but that interpretation was not independently verified;
-        two runs also have documented heterogeneous tumour.
-  \item \textbf{Post hoc elements.} The PCA control, the smoothed
-        segmentation, the seed replication and the S\textsuperscript{3}PL seed analysis were
-        chosen after earlier results were known. Each was predeclared before its
-        own outputs, and all are reported, including null and negative
-        outcomes. Recommending correlation is a post hoc conclusion.
-  \item \textbf{Scope.} The VAE uses fixed-window, dense neighbourhood input.
-        Graph-based and ion-image-level spatial models, cross-section transfer,
-        and other attribution settings were not tested.
-\end{itemize}
+\subsection{Limitations}
+Each collection has eight sections, drawn from four PDX lines (GBM), one tumour
+(CAC) and eight subjects (RCC), so the statistics describe these sections
+rather than a wider population, and effect sizes carry most of the weight. Two
+settings come from the annotations, the number of segments and the peak budget,
+so the pipeline is label-free in fitting and ranking but not yet autonomous.
+mSCF1 measures agreement with tissue masks rather than molecular identity,
+which favours methods that produce mask-like maps; the RCC masks include a large
+unannotated region, and the CAC masks are model predictions. Finally, we tested
+fixed-window neighbourhoods in a dense VAE. Graph-based and image-level spatial
+models, transfer between sections and other attribution settings remain open
+(\cref{sec:conclusion}).
