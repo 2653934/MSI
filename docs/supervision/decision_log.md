@@ -89,3 +89,4 @@
 | D52 | 30 Oct | **GPU IG jobs may run on `batch` (RTX 3060) when `bigbatch` is overloaded.** All tasks of one comparison run on the **same** partition. Set the partition at submit time and log the move in P18 §10 | `bigbatch` full; IG ran on `batch` 3060s before (Chat, gate d) | Zayd/Supervisor | Chat (this entry) | ACTIVE |
 | D53 | Oct | Echo-first dry runs for any cluster file loop | Safety | Supervisor | CLAUDE.md | ACTIVE |
 | D54 | Oct | Don't inspect SSH keys | Security | Zayd | session | ACTIVE |
+| D55 | 31 Oct | **Codex is the builder, runner, reviewer and committer for the remainder of the project; this supersedes D40 only.** Zayd owns every decision and the Supervisor continues to rule on scientific and protocol questions in the chat. All other ACTIVE decisions remain binding | Project-owner handoff from Code to Codex | Zayd | Session 12:29 | ACTIVE |

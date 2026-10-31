@@ -1643,6 +1643,12 @@ A test rebuilds the IG matched groups from these files.
     - CAC class 0 is the outer, border-touching region in 8/8 sections, with the highest mean TIC (100–139). It is background by position; "lowest TIC" does not hold.
     - CAC classes 1 and 2 (tumour / healthy) are not identifiable from the data or from S3PL.
     - RCC class 2 (unannotated) has the lowest TIC in 8/8 runs.
+- **31 October, item 3 (C3, Section 6.9):** about 08:23 SAST (06:23 UTC), upload (documented command, `-n` first, `MSYS_NO_PATHCONV=1`, `--exclude=/tmp/`) from the clean code HEAD `7f97f8b9`, which contains the item 3 commit `7b0777c6`. 14 files plus the prefs timestamp; `sha256sum` 14/14 match HEAD. **Cluster test job 79309** submitted at 08:24 SAST on `batch` with `--exclude=mscluster144` (Zayd's OK). Gate: `test_training_length` 7/7 run with none skipped.
+  - **79309 COMPLETED 0:0** (9:51, mscluster127): main suite 324 OK, 4 local-artifact skips; **`test_training_length` 7/7 run, none skipped** (both Torch snapshot tests passed); S3PL 25/25 and 4/4.
+  - **Campaign 79371** submitted 12:23:56 SAST on `bigbatch`, indices 0–3 at `%2`. Original task 0 failed before scientific computation (`mkdir: Already exists`, exit 1 after 1 s on mscluster49); with Zayd's explicit approval it was retried alone as **79377** at 12:39:20 SAST. No partial task-0 file existed and no other index was duplicated.
+  - Final accounting: 79371_1 COMPLETED 0:0 in 1:01:52 on mscluster60; 79371_2 COMPLETED 0:0 in 0:05:05 on mscluster49; 79371_3 COMPLETED 0:0 in 0:04:49 on mscluster43; retry 79377_0 COMPLETED 0:0 in 0:58:08 on mscluster49. The four successful `.err` files are empty; the superseded failed attempt contains only `mkdir: Already exists`.
+  - **Pull and local summary, about 14:20–14:27 SAST:** documented artifact pull from `code/msi`, dry run first, no `--delete`; only new C3 results and job-79309 validation records, no committed local file replaced. `summarise_training_length.py` ran locally under WSL into `training_length_20261030/decisions_20261031_local/` (exit 0).
+  - **Section 6.9 gate passed in 4/4 section-arms:** epoch 100 reproduces production IG and posterior-|PCC| mSCF1 exactly (absolute difference 0.0) and both ranking prefixes are identical. All 16 scored epochs are complete; none is `not done`. Scores and selected-epoch losses are recorded in the 14:27 supervision-chat entry and the saved CSV/JSON files.
 ## 11. Files (implementation v3; nothing applied to production code or submitted)
 
 | File | Purpose |

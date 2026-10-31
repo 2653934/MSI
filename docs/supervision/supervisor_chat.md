@@ -6914,3 +6914,101 @@ Status: INFO
 - `report.pdf` rebuilt (pdflatex, bibtex, pdflatex ×2): 13 pages, 0 overfull boxes, no undefined references. No versioned copy made (Codex numbers versions; latest present is v13).
 - The `\IfFileExists` fallback text at `methodology.tex:67-68` still names the old sections, but it does not render while the figure exists.
 - **Item 3:** still waiting for the Codex commit; then the upload and test job (Zayd's OK given).
+
+### 2026-10-31 08:24 Code → Supervisor | Zayd: Item 3 uploaded (HEAD 7f97f8b9, contains 7b0777c6); test job 79309 submitted
+Status: INFO
+- Resolves: 2026-10-31 07:4x Code entry (item 3 checklist; Zayd's OK; Codex commit `7b0777c6`).
+- Upload from the clean code HEAD `7f97f8b9`, `-n` first: 14 files (item 3 plus the committed overnight support code) and the prefs timestamp. **sha256sum 14/14 match HEAD.**
+- **79309** submitted at 08:24 SAST on `batch`, `--exclude=mscluster144`. Gate: `test_training_length` 7/7 with none skipped (both Torch snapshot tests), and every other module OK. If it passes, the C3 campaign checklist follows.
+
+### 2026-10-31 08:35 Code → Zayd | Supervisor: Test 79309 passed (test_training_length 7/7, none skipped); C3 campaign checklist: waiting for Zayd's OK
+Status: OPEN (Zayd: OK to submit the C3 campaign)
+- Resolves: 2026-10-31 07:31 Codex entry, **finding 2**.
+- **79309 COMPLETED 0:0** (9:51): main suite 324 OK, 4 skipped (the usual local-artifact skips: Test R decisions, runtime-v2 ×2, S3PL shuffle control). **`test_training_length` 7/7 run, none skipped**, including `test_snapshots_saved_and_training_unchanged` and `test_snapshot_epochs_are_validated` on the cluster's Torch. S3PL 25/25 and 4/4. Empty `.err`.
+
+**C3 campaign checklist (P18 §6.9):** `bash slurm_jobs/submit_training_length.sh 0-3` (default %2)
+1. **Hashes:** `run_training_length.sh`, `submit_training_length.sh`, `training_length_sections.sh`, `train_spatial_msipl_production.py`, `run_spatial_msipl_gmm_integrated_gradients.py` and `training.py` match HEAD `7f97f8b9` on the cluster (6/6, checked just now; the fair evaluator and matched evaluator were unchanged and matched earlier).
+2. **Outputs, all new** (checked, none exists):
+   - `results/experiments/training_length_20261030/`;
+   - `results/diagnostics/fair_scoring_baselines/training_length_20261030/bin_level_only/`;
+   - checkpoints in `/datasets/zsuliman/msi_checkpoints/spatial_msipl/training_length_20261030/`. That is a **new subfolder of the checkpoint area**, as for Test R; no data file is touched.
+   - The submitter refuses an existing `summary.json`.
+3. **Roots:** the submitter pre-creates the parents (`<section>_seed1` for results and fair scoring) before the array starts.
+4. **Time and memory:** `bigbatch` (RTX 3090, as production), 4 CPUs, 48G (as Test R), 8 h, no `--exclusive`.
+   - Test R timings for the same sections (train + IG + matched evaluation): 40TopL about 2 min per arm (69724_16/17), GBM108_positive 34 min per arm (69746_34/35).
+   - C3 trains once plus 3 snapshots, then runs IG + matched evaluation + fair scoring 4 times. Estimate: GBM108_positive about 1.5–2 h per arm, 40TopL about 10–15 min. 8 h leaves a wide margin.
+5. **Partition and nodes:** `bigbatch` has 8 idle nodes; I have 0 jobs queued. The 16-node CUDA quarantine list goes on the command line as `--exclude` (submitter). 4 tasks at %2.
+- **Gates after the run:** `summarise_training_length.py` locally after the pull. The **epoch-100 reproduction rule** decides how each section-arm is reported (§6.9). "Not done" epochs are recorded, not retried with new settings.
+
+### 2026-10-31 12:23 Codex → Zayd | Supervisor: Builder handoff; C3 checklist remains open
+Status: OPEN (Zayd: explicit OK needed to submit the C3 campaign)
+
+- Zayd has instructed Codex to take over Code's remaining builder work. The last completed C3 step remains the independent cluster test: 79309 passed, with `test_training_length` 7/7 and none skipped.
+- The 08:35 C3 campaign checklist remains the governing checklist. A fresh read-only check found no jobs queued and all three new C3 output roots still absent; no submission, cancellation or cluster file move was performed.
+- On Zayd's explicit OK, the next and only cluster-changing command is `bash slurm_jobs/submit_training_length.sh 0-3` (four tasks at the submitter's default `%2`, `bigbatch`, RTX 3090, 4 CPUs, 48G, 8 h, CUDA quarantine passed as `--exclude`, no `--exclusive`).
+- After submission: wait for the expected duration, poll no more often than every 2–5 minutes, pull with `-n` first and run `summarise_training_length.py` locally under the Section 6.9 epoch-100 reproduction rule.
+
+### 2026-10-31 12:24 Codex → Zayd | Supervisor: C3 campaign submitted
+Status: INFO
+
+- Resolves: 2026-10-31 12:23 Codex entry.
+- Zayd gave explicit approval in the session. The first invocation used a nonexistent extra `code/msi` path and stopped at `cd`, before the submitter or `sbatch` ran; it changed nothing.
+- Submitted from the verified cluster workspace with `bash slurm_jobs/submit_training_length.sh 0-3`: job **79371**, indices 0–3 at the submitter's default `%2`, submitted 10:23:56 UTC / 12:23:56 SAST. The submitter reported the 16-node CUDA quarantine as `--exclude`; partition and resources remain those in the approved 08:35 checklist.
+- Next: wait for the expected first completion window before one status check; no rapid polling. After completion, inspect `sacct` once, preview the pull with `-n`, pull, verify and summarise locally under P18 §6.9.
+
+### 2026-10-31 12:29 Codex → Zayd | Supervisor: Builder, reviewer and committer handoff recorded
+Status: INFO
+
+- Zayd, as project owner, instructed Codex to take over from Code as builder, runner, reviewer and committer for the remainder of the project. New ACTIVE decision D55 records that this supersedes D40 only; the earlier D40 row and chat history are unchanged.
+- The `AGENTS.md` "Builder mode: retired" section is superseded by this direct instruction. Every other `AGENTS.md` instruction and ACTIVE decision remains binding, including D43–D54.
+- The dirty working tree was inspected at HEAD `7f97f8b964c202978a29d416c6c33287747fad53`; all existing modified and untracked work is being preserved.
+- C3 job 79371 is not being duplicated or checked before the permitted first-check window at about 14:00 SAST. Next: wait, then use one `squeue` SSH call while active or one `sacct` call if complete, with later polls no more often than every 2–5 minutes.
+- Committed: not committed; governance record appended, with campaign monitoring next.
+
+### 2026-10-31 12:36 Codex → Zayd | Supervisor: C3 task 0 failed; stopped for decision
+Status: OPEN
+
+- At Zayd's 12:35 request for an immediate read-only status check, `squeue -u zsuliman -r` showed Slurm job 79373 running on `bigbatch` node `mscluster60`. This is array task `79371_1`.
+- The required `sacct` check for campaign 79371 then showed: task 0 (`79372`, `79371_0`) **FAILED 1:0** after 00:00:01 on `mscluster49`; task 1 (`79373`, `79371_1`) **RUNNING** on `mscluster60`; task 2 (`79374`, `79371_2`) **COMPLETED 0:0** in 00:05:05 on `mscluster49`; task 3 (`79371`, `79371_3`) **COMPLETED 0:0** in 00:04:49 on `mscluster43`.
+- Per Zayd's stop rule, the local automated monitor was stopped. No task was retried or cancelled, no cluster file was moved and no result pull was attempted. Task 1 remains running pending Zayd's decision whether to let it finish or cancel it.
+- Committed: not committed; stopped for Zayd's decision before any retry, cancellation or move.
+
+### 2026-10-31 12:32 Codex → Zayd | Supervisor: C3 task 0 directory race; retry checklist
+Status: OPEN (Zayd: explicit OK needed to retry index 0)
+
+- A status check requested by Zayd found 79371_0 (GBM108_positive, central_only) FAILED 1:0 after 1 s on mscluster49. Its error log contains only `mkdir: Already exists`; stdout is empty, so it stopped at the initial `mkdir -p` before CUDA warm-up, model loading or scientific computation. This is consistent with a shared-filesystem parent-directory race while task 2 started concurrently on the same node.
+- No partial files exist under task 0's result, fair-scoring or checkpoint directories. Task 2 (40TopL, central_only) completed 0:0 in 5:05; tasks 1 (GBM108_positive, uniform_mean) and 3 (40TopL, uniform_mean) were running. They are not being disturbed.
+- **Retry checklist:** after Zayd's explicit OK, submit only index 0 with `bash slurm_jobs/submit_training_length.sh 0`. The existing empty directories are permitted because the submitter refuses only an existing `summary.json`; `mkdir -p` should now encounter already-established parents rather than a concurrent creation. The same committed code, hashes, `bigbatch` resources, CUDA quarantine `--exclude`, no `--exclusive`, roots and P18 §6.9 gates from the 08:35 checklist apply unchanged.
+- No cancellation, move, retry or code change has been performed. Next: wait for Zayd's decision; meanwhile the other campaign tasks continue.
+
+### 2026-10-31 12:37 Zayd → Codex: C3 index 0 retry approved; terminal session to execute
+Status: ANSWERED
+
+- Resolves: 2026-10-31 12:32 Codex entry.
+- Zayd explicitly approved `bash slurm_jobs/submit_training_length.sh 0` under the posted retry checklist.
+- Execution is assigned to the Codex terminal session that owns the remaining builder work. The desktop-app session will not submit it, to avoid two sessions acting on the cluster concurrently.
+
+### 2026-10-31 12:39 Codex → Zayd | Supervisor: C3 index 0 retry submitted as 79377
+Status: INFO
+
+- Resolves: 2026-10-31 12:37 Zayd entry.
+- One pre-submit SSH check found only original task `79371_1` running (00:15:15 on `mscluster60`) and no files under the exact GBM108_positive `central_only` result, fair-scoring or checkpoint roots.
+- Submitted exactly the approved command from `/home-mscluster/zsuliman/msi`: `bash slurm_jobs/submit_training_length.sh 0`. The submitter returned retry job **79377**, index 0 only, at 10:39:20 UTC / 12:39:20 SAST, with the approved 16-node CUDA exclusion list. No other index was submitted.
+- Next: one startup check after 2–5 minutes, then adaptive read-only monitoring under Zayd's 12:38 instruction. No cancellation, move or further submission is authorised.
+- Committed: not committed; retry execution evidence appended.
+
+### 2026-10-31 14:27 Codex → Zayd | Supervisor: C3 complete; epoch 100 reproduced in all four arms
+Status: INFO
+
+- Resolves: 2026-10-31 12:36 Codex entry and 2026-10-31 12:32 Codex entry.
+- **Jobs:** original 79371_1 COMPLETED 0:0 in 1:01:52 on mscluster60; 79371_2 COMPLETED 0:0 in 0:05:05 on mscluster49; 79371_3 COMPLETED 0:0 in 0:04:49 on mscluster43; approved retry 79377_0 COMPLETED 0:0 in 0:58:08 on mscluster49. The four successful `.err` files are empty. Superseded 79371_0 failed after 1 s with only `mkdir: Already exists` and did no scientific work.
+- **Pull:** previewed with `-n --itemize-changes`, then pulled with the identical documented artifact command without `--delete`. The preview contained only new C3 artifacts and job-79309 validation records; no committed local file was replaced. The pull transferred 44,138,809 bytes (1,900,080,876 bytes uncompressed).
+- **Local summary:** `summarise_training_length.py` wrote `results/diagnostics/fair_scoring_baselines/training_length_20261030/decisions_20261031_local/` (exit 0). All 16 epoch rows are `complete`; no epoch is `not done`.
+- **P18 §6.9 reproduction rule:** passed in 4/4 section-arms. At epoch 100, IG and posterior-|PCC| mSCF1 reproduce production with absolute difference 0.0 and both ranking prefixes are identical in every arm. These rows may be described as training-length results.
+- **GBM108_positive, central_only** (`IG / posterior; total / reconstruction / KL loss`): epoch 10 `0.509145 / 0.664576; 593007.138 / 592954.662 / 52.476`; epoch 25 `0.517900 / 0.688205; 575894.444 / 575836.978 / 57.466`; epoch 50 `0.504038 / 0.670622; 572345.346 / 572291.699 / 53.638`; epoch 100 `0.508113 / 0.691765; 571501.878 / 571452.511 / 49.368`.
+- **GBM108_positive, uniform_mean:** epoch 10 `0.531983 / 0.699994; 591713.419 / 591665.907 / 47.513`; epoch 25 `0.570848 / 0.703617; 575574.200 / 575519.590 / 54.609`; epoch 50 `0.563654 / 0.705347; 572301.447 / 572250.060 / 51.387`; epoch 100 `0.532519 / 0.704917; 571563.331 / 571515.839 / 47.490`.
+- **40TopL, central_only:** epoch 10 `0.670582 / 0.726193; 5813.821 / 5797.905 / 15.916`; epoch 25 `0.675108 / 0.727231; 5796.127 / 5781.681 / 14.446`; epoch 50 `0.660635 / 0.724694; 5786.919 / 5772.804 / 14.115`; epoch 100 `0.680437 / 0.727231; 5780.477 / 5766.570 / 13.907`.
+- **40TopL, uniform_mean:** epoch 10 `0.674254 / 0.732765; 5814.905 / 5799.139 / 15.766`; epoch 25 `0.664741 / 0.721071; 5798.533 / 5784.145 / 14.387`; epoch 50 `0.681004 / 0.717411; 5788.563 / 5774.452 / 14.111`; epoch 100 `0.682653 / 0.744986; 5781.457 / 5767.496 / 13.960`.
+- **Plain reading:** loss decreases most strongly by epoch 25 and then more gradually through epoch 100. No epoch is selected on mSCF1. The saved results support filling the report's training-length placeholder only after this evidence is reviewed and committed.
+- Next: review and commit the valid C3 evidence, then fill the report placeholder from the committed files before continuing the release repository.
+- Committed: not committed; evidence review next.
