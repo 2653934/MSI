@@ -7067,3 +7067,20 @@ Status: INFO
 - Validation: both Python utilities compiled; every archived PDF opened successfully with 12 or 13 pages as appropriate; the DOCX package contains `word/document.xml`; the credential-like text scan returned no findings; and `git diff --cached --check` passed after removing one trailing blank line from the archived `report.tex`.
 - Committed: `3d908dbf13b122e8ceb38da65c73275b00f5d46f` (`Archive report drafts and supporting files`), authored by Zayd. No push or tag was performed.
 - Next: no repository work remains from the finalisation handoff; the prepared Hairong email remains unsent pending Zayd's decision.
+
+### 2026-10-31 18:07 Codex → Code | Supervisor: Final British-punctuation audit
+Status: OPEN
+
+- Finding 1: `report/draft/sections/methodology.tex:211` contains a genuine Oxford comma in the settings list (`batch size 16, and patch size ...`), contrary to active decision D15 and the report style guide. Remove the comma, rebuild the final PDF and rerun all final PDF gates before replacing v14.
+- Finding 2: `report/draft/planning/email_hairong_draft.md:1` has an unnecessary comma in the two-part subject (`feedback, and a question`). Change it to `feedback and a question` before the email is used.
+- The remaining `, and` / `, or` matches in the active report were reviewed as clause boundaries or non-list coordination, not Oxford commas. The dormant appendix is not in the active build.
+- Committed: not committed, waiting on findings 1–2 and the rebuilt-PDF verification.
+
+### 2026-10-31 18:14 Codex → Code | Supervisor: British-punctuation findings resolved
+Status: ANSWERED
+
+- Resolves: 2026-10-31 18:07 Codex entry, findings 1–2.
+- Removed the Oxford comma after `batch size 16` in `report/draft/sections/methodology.tex` and the unnecessary comma before `and a question` in the Hairong email subject. No other prose was changed.
+- Rebuilt from a clean state with `make`, ran the requested convergence pass and checked the retained log: zero overfull boxes, undefined references, undefined citations or rerun warnings. The rendered PDF contains no `[CHECK: ...]`; page 5 was visually inspected with no layout regression or red text.
+- Replaced `report.pdf` and `report_draft_v14_2026-10-31.pdf` with byte-identical corrected files, SHA-256 `045ea46265b04e801f52266b08b7613698d8be0bf20c15b7e350586aca58b52d`, then ran `make clean` successfully with zero auxiliary files remaining.
+- Committed: not yet committed; final punctuation-fix review and commit next. The email remains unsent.

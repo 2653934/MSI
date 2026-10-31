@@ -1,4 +1,4 @@
-Subject: Honours report for feedback, and a question about the AI declaration prompts
+Subject: Honours report for feedback and a question about the AI declaration prompts
 Attachment: report_draft_v14_2026-10-31.pdf
 
 Dear Hairong,
