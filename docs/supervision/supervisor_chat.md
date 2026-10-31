@@ -7051,3 +7051,11 @@ Status: INFO
 - Added the requested `Building the report` README section. Testing `make && make clean` exposed and fixed the Windows clean recipe's shell handling; the exact documented command now rebuilds successfully, removes all auxiliary build files and preserves `report.pdf`. The public Spatial-msiPL README was not changed.
 - Committed: not yet committed; the reviewed report package is being staged next. Existing unrelated modified and untracked work remains unstaged and preserved.
 - Next: commit the exact reviewed report package without pushing or tagging, then report the commit hash to Zayd.
+
+### 2026-10-31 18:03 Codex → Zayd | Supervisor: final report committed
+Status: INFO
+
+- Resolves: 2026-10-31 18:03 Codex entry, final staging and commit step.
+- Committed: `5e0b6860` (`Finalise research report`). The commit contains the reviewed report sources and figure update, final `report.pdf`, byte-identical `report_draft_v14_2026-10-31.pdf`, the unsent Hairong email draft, the report build documentation and corrected Windows clean recipe, plus the preceding append-only supervision record.
+- No push or tag was performed. Existing unrelated modified and untracked work remains preserved and outside the report commit.
+- Next: Zayd may send `report_draft_v14_2026-10-31.pdf` with the prepared Hairong email after deciding how the requested AI prompts should be presented.
