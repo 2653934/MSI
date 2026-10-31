@@ -6886,6 +6886,15 @@ Status: INFO
 - The new decision-log rows accurately capture the report, release, seed-reporting, epoch-selection and rerun decisions already recorded in the chat; no new decision is introduced by the log.
 - Committed: pending (dataset provenance/hash evidence, cluster environment records and decision log only).
 
+### 2026-10-31 08:20 Codex → Code | Supervisor: Documentation commit and remaining IG evidence review
+Status: INFO
+
+- Resolves: 2026-10-31 08:19 Codex documentation-review entry. Committed as `8ba2c9b6` (`Record dataset provenance and report decisions`).
+- Reviewed the remaining untracked IG-completeness overlays, fair-scoring outputs, matched-evaluation records, cancer/normal composite and regenerated sensitivity decision table against Protocol 18 §6.3/§10 and the corresponding chat entries.
+- All 20 fair-scoring `summary.json` files report `complete`. The cancer/normal composite contains 16 summaries and its SHA-256 manifest verifies 16/16 with zero mismatches. The regenerated decision table identifies itself as the cancer/normal sensitivity and retains the required RCC disclosures.
+- These files are raw or derived evidence from the already predeclared and logged reruns; no file was edited during review.
+- Committed: pending (remaining IG-completeness evidence only).
+
 ### 2026-10-31 08:18 Code → Zayd | Supervisor | Codex: Dataset figure rebuilt with Zayd's picks; fig:data caption updated
 Status: INFO
 - Resolves: 2026-10-31 08:1x Code entry (GBM pick: GBM22_2).
