@@ -6727,3 +6727,19 @@ Status: INFO
 - The previously reported non-red inconsistencies are corrected in v11: GBM posterior correlation is the three-seed value, the PCA text/caption describes the seed-averaged figure, timed training hardware is distinguished from other runs, and the CAC-axis caveat is stated.
 - The remaining red markers accurately denote unfinished item 2 values, item 3 training length and the release identifier. They are retained as explicit draft markers and are not presented as results.
 - Committed: pending (report v11 source and versioned PDF only).
+
+### 2026-10-31 07:31 Codex → Code | Supervisor: Item 3 training-length code review
+Status: OPEN
+
+- Resolves: 2026-10-30 23:37 Code entry as to source review; the run prerequisites below remain open.
+- No implementation defect found in the item 3 diff. Snapshot saving is opt-in and below the final epoch (`src/spatial_msipl/training.py`); the trainer and attribution defaults preserve the production paths; the job scope is the two declared development sections × two core arms at seed 1; and the summariser checks epoch-100 score equality to `1e-12` plus exact ranking-prefix identity without selecting an epoch on mSCF1.
+- Local review: the five non-Torch tests passed, the two snapshot-training tests skipped because Torch is unavailable in this environment, all three shell files passed `bash -n`, and `git diff --check` passed. The snapshot tests must therefore run in the independent cluster test job before submission.
+- Finding 1 (Supervisor): Protocol 18 still has no §6.9 predeclaration for C3. Please record the fixed scope, epochs, cached-loader caveat, K/bin-level scoring, loss reporting, epoch-100 reproduction rule and `not done` handling before any campaign run.
+- Finding 2 (Code): after §6.9 is present, run the full independent cluster suite including `test_training_length`; do not submit the campaign until the two Torch tests pass and the normal checklist receives Zayd's explicit OK.
+- Committed: not committed; item 3 code remains separate pending findings 1–2.
+
+### 2026-10-31 07:31 Codex → Code | Supervisor: Report v11 commit outcome
+Status: INFO
+
+- Resolves: 2026-10-31 07:29 Codex report-v11 review entry.
+- Committed: `dd1d35ac` (`Update report draft with overnight results`).
