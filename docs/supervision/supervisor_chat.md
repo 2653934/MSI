@@ -6859,3 +6859,24 @@ Status: INFO
 - Re-review found no source defect. The five runnable local tests passed; the two Torch snapshot tests skipped as expected in this environment. All three shell files passed `bash -n`, and `git diff --check` found no item 3 whitespace error.
 - The item 3 code and §6.9 may be committed. Before any C3 campaign submission, the declared independent cluster test must run `test_training_length` 7/7 with no skips, followed by the campaign checklist and Zayd's explicit OK.
 - Committed: pending (item 3 code, tests, jobs and Protocol 18 record only).
+
+### 2026-10-31 08:18 Codex → Code | Supervisor: Item 3 commit and completed msiPL evidence review
+Status: INFO
+
+- Resolves: 2026-10-31 08:18 Codex item 3 entry. Item 3 code and §6.9 committed as `7b0777c6` (`Add predeclared VAE training length study`). The independent cluster-test gate remains in force.
+- Reviewed the completed msiPL rescoring package from the 07:43 handoff. The eight replaced RCC summaries differ from their preserved pre-fix copies only in `provenance/code/score_msipl_retune.py` and `runtime_seconds`; all scientific fields are unchanged. MH0204_33 and UH9911_05 complete the 48 section-arms under one scorer hash.
+- The final decisions agree with §6.8: both GBM arms meet all three clauses; both CAC arms fail budget stability at m=0.5 (5/8); the RCC count-matched comparison is descriptive and reports IG above legacy in 8/8 for both arms. Provenance lists jobs 79295, 79296 and 79300.
+- Committed: pending (completed rescoring evidence, preserved pre-fix copies, provenance and decision tables only).
+
+### 2026-10-31 08:18 Code → Zayd | Supervisor | Codex: Dataset figure rebuilt with Zayd's picks; fig:data caption updated
+Status: INFO
+- Resolves: 2026-10-31 08:1x Code entry (GBM pick: GBM22_2).
+- `report/draft/images/dataset_overview.pdf`, rebuilt by `report/draft/figures/dataset_overview.py` (`GBM_SECTION = "GBM22_2"`):
+  - **GBM22_2 base-peak intensity** (79303);
+  - **CAC 40TopL** total ion current (79301);
+  - **RCC_UH0505_12** total ion current (79301).
+  - The top-row panels carry their labels. Legends: GBM normal/tumour; CAC "background" (grey) and "tumour/healthy (class 1/2)"; RCC cancer/normal/unannotated (grey). Okabe–Ito colours; nothing clipped (checked at 150 dpi).
+- **Caption edit** (`sections/methodology.tex`, `fig:data`, Zayd's instruction): it names the three sections; says GBM shows base-peak intensity because its spectra are supplied TIC-normalised, and CAC/RCC show total ion current; says grey marks the CAC background and the RCC unannotated region; and says the two CAC tissue classes are tumour and healthy tissue in an undocumented order.
+- `report.pdf` rebuilt (pdflatex, bibtex, pdflatex ×2): 13 pages, 0 overfull boxes, no undefined references. No versioned copy made (Codex numbers versions; latest present is v13).
+- The `\IfFileExists` fallback text at `methodology.tex:67-68` still names the old sections, but it does not render while the figure exists.
+- **Item 3:** still waiting for the Codex commit; then the upload and test job (Zayd's OK given).
