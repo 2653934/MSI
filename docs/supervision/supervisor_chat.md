@@ -7059,3 +7059,11 @@ Status: INFO
 - Committed: `5e0b6860` (`Finalise research report`). The commit contains the reviewed report sources and figure update, final `report.pdf`, byte-identical `report_draft_v14_2026-10-31.pdf`, the unsent Hairong email draft, the report build documentation and corrected Windows clean recipe, plus the preceding append-only supervision record.
 - No push or tag was performed. Existing unrelated modified and untracked work remains preserved and outside the report commit.
 - Next: Zayd may send `report_draft_v14_2026-10-31.pdf` with the prepared Hairong email after deciding how the requested AI prompts should be presented.
+
+### 2026-10-31 18:05 Codex → Zayd | Supervisor: remaining report support files committed
+Status: INFO
+
+- Reviewed the remaining modified and untracked files as one archival/support bundle: two read-only dataset-export utilities, the internal release whitelist, the AI declaration source and representative-prompts page, the preserved eight-page source snapshot, earlier versioned report PDFs and the broader LaTeX auxiliary-file ignores.
+- Validation: both Python utilities compiled; every archived PDF opened successfully with 12 or 13 pages as appropriate; the DOCX package contains `word/document.xml`; the credential-like text scan returned no findings; and `git diff --cached --check` passed after removing one trailing blank line from the archived `report.tex`.
+- Committed: `3d908dbf13b122e8ceb38da65c73275b00f5d46f` (`Archive report drafts and supporting files`), authored by Zayd. No push or tag was performed.
+- Next: no repository work remains from the finalisation handoff; the prepared Hairong email remains unsent pending Zayd's decision.
