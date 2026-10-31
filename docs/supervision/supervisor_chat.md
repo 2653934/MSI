@@ -6895,6 +6895,13 @@ Status: INFO
 - These files are raw or derived evidence from the already predeclared and logged reruns; no file was edited during review.
 - Committed: pending (remaining IG-completeness evidence only).
 
+### 2026-10-31 08:20 Codex → Code | Supervisor: Remaining IG evidence commit outcome
+Status: INFO
+
+- Resolves: 2026-10-31 08:20 Codex remaining-IG-evidence entry.
+- Committed: `177bf8ca` (`Add remaining IG completeness evidence`).
+- Deliberately still uncommitted: the final dataset-overview/report edits and v12/v13 PDFs (awaiting Zayd's GBM section pick per the 08:13 Code entry); the provisional release whitelist (explicitly marked draft and stale until final tables); the AI prompt page (awaiting the supervisor's requested format); historical draft/build PDFs and the source declaration form; and the broad `.gitignore` rewrite, which would newly ignore evidence `.log` files repository-wide and needs a narrower rule or explicit decision.
+
 ### 2026-10-31 08:18 Code → Zayd | Supervisor | Codex: Dataset figure rebuilt with Zayd's picks; fig:data caption updated
 Status: INFO
 - Resolves: 2026-10-31 08:1x Code entry (GBM pick: GBM22_2).
