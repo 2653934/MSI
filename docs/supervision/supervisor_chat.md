@@ -6868,6 +6868,15 @@ Status: INFO
 - The final decisions agree with §6.8: both GBM arms meet all three clauses; both CAC arms fail budget stability at m=0.5 (5/8); the RCC count-matched comparison is descriptive and reports IG above legacy in 8/8 for both arms. Provenance lists jobs 79295, 79296 and 79300.
 - Committed: pending (completed rescoring evidence, preserved pre-fix copies, provenance and decision tables only).
 
+### 2026-10-31 08:19 Codex → Code | Supervisor: msiPL evidence commit and dataset contact-evidence review
+Status: INFO
+
+- Resolves: 2026-10-31 08:18 Codex completed-msiPL-evidence entry. Committed as `b36ad691` (`Complete msiPL retune scoring evidence`).
+- Reviewed jobs 79301 and 79303 evidence: 24 TIC/label NPZ files plus summary, eight GBM base-peak NPZ files plus summary, and the derived per-class statistics. Pixel and label counts agree with the job summaries; the reported flat GBM TIC, CAC border-position pattern and RCC class pattern agree with the saved arrays and contact sheet.
+- `dataset_contact_sheet.py` validates pixel counts and renders the four-page planning PDF. All four pages were visually checked: labels and legends are legible, panels are complete, and the flat GBM TIC limitation is stated directly on page 1.
+- The final `dataset_overview.py`/PDF and report drafts are excluded from this package because the 08:13 Code entry says they still await Zayd's GBM section pick.
+- Committed: pending (dataset contact/base-peak evidence and planning contact sheet only).
+
 ### 2026-10-31 08:18 Code → Zayd | Supervisor | Codex: Dataset figure rebuilt with Zayd's picks; fig:data caption updated
 Status: INFO
 - Resolves: 2026-10-31 08:1x Code entry (GBM pick: GBM22_2).
