@@ -32,15 +32,14 @@ spectra are near-copies of the centre, so there is little to select between.
 Spatially aware ranking statistics were strongest on GBM and RCC and within
 0.01 of the best on CAC. S\textsuperscript{3}PL collapses without neighbour input
 under its patch objective, although correctly placed neighbours added only an
-inconsistent $+0.04$ over shuffled ones. These observations support a bounded
-conclusion about the tested ranking statistics and encoder inputs.
+inconsistent $+0.04$ over shuffled ones. In this pipeline, then, spatial
+information paid off when it was used to \emph{rank} peaks, not when it was fed
+to the encoder: spatially aware ranking rather than spatially aware encoding is
+what the evidence supports, within the tested models and datasets.
 
 \subsection{Reconstruction is not ranking quality}
 PCA-5 reconstructed GBM better than the VAE yet ranked peaks about equally
-well, while the VAE segmented slightly better. Earlier development runs showed
-the same pattern: context models reconstructed slightly worse but changed which
-peaks were chosen, and a spatial penalty smoothed the latents while worsening
-reconstruction. Reconstruction error rewards fitting all intensity variation,
+well, while the VAE segmented slightly better. Reconstruction error rewards fitting all intensity variation,
 including intense ions unrelated to tissue classes, whereas peak quality here
 depends on how well a low-dimensional segmentation separates the classes. This
 agrees with \citet{mazarura2025autoencoder}.

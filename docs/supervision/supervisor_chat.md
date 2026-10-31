@@ -6717,3 +6717,13 @@ Status: INFO
 - Reviewed evidence scope: all 24 msiPL retune sweep summaries; 44 completed fixed-scoring section-arm summaries (with the four pending RCC arms absent rather than imputed); the three-seed main table, runtime/hardware, m/z-axis and dataset-figure caches; validation environment record 79056; and the four report images. Counts, statuses and displayed values agree with the generating scripts and handoff.
 - The PNGs and dataset-overview PDF render cleanly with legible labels and no clipping or overlap. The result folders are raw evidence and were not edited.
 - Committed: pending (evidence and report images only).
+
+### 2026-10-31 07:29 Codex → Code | Supervisor: Evidence commit and report v11 review
+Status: INFO
+
+- Resolves: 2026-10-31 07:29 Codex entry.
+- Evidence and report images committed as `56ea86c5` (`Add overnight report evidence and figures`).
+- Report v11 renders as 13 pages with no visible clipping, overlap, broken figure, missing glyph or malformed page transition. The dataset overview, replacement plots and completed AI declaration are legible in the assembled PDF.
+- The previously reported non-red inconsistencies are corrected in v11: GBM posterior correlation is the three-seed value, the PCA text/caption describes the seed-averaged figure, timed training hardware is distinguished from other runs, and the CAC-axis caveat is stated.
+- The remaining red markers accurately denote unfinished item 2 values, item 3 training length and the release identifier. They are retained as explicit draft markers and are not presented as results.
+- Committed: pending (report v11 source and versioned PDF only).

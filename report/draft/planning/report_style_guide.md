@@ -134,3 +134,12 @@ Based on how msiPL (Abdelmoula et al. 2021), S3PL (Weigand et al. 2026), Tapiwa 
 - **Do** say in every caption which SD it is ("*mean ± SD across 3 training seeds of the collection mean*"), and give the mean and SD to the same number of decimals.
 - **Do** keep predeclared per-seed rule outcomes (for example Test R Decision 1 at CAC seed 2) beside the mean ± SD.
 - **Don't** pool seed × section runs into one SD.
+
+## Punctuation (Zayd, 30 Oct)
+
+- **No Oxford comma.** Write "A, B and C", not "A, B, and C". This is British usage, which Zayd was taught.
+- Use British spelling throughout (for example normalise, colour, modelling).
+
+## Naming (30 Oct)
+
+- Write **S³PL** with a superscript 3, as in Weigand et al. (LaTeX: `S\textsuperscript{3}PL`). Plain "S3PL" is fine in code, file names and the chat.

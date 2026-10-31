@@ -23,8 +23,10 @@ reached 0.319 $\pm$ 0.042 against 0.496 (\cref{sec:res-s3pl}).
 \Cref{tab:main} scores every ranking on the same segmentation and budget.
 
 \textbf{Against legacy msiPL (RQ1).} Both VAE--IG arms beat reproduced msiPL in
-every GBM and CAC section \checkme{three-seed IG means against msiPL 0.414
-(GBM) and 0.402 (CAC), and the seed-averaged HL, $r$ and Holm $p$}.
+every GBM and CAC section: 0.518 and 0.514 against 0.414 on GBM, and 0.530 and
+0.553 against 0.402 on CAC (\cref{tab:main}). The difference is statistically
+supported in all four comparisons (HL $+0.10$ to $+0.15$, $r=1$, Holm
+$p=0.031$).
 \checkme{budget-stability across $0.5$--$2\times K_{\text{bin}}$ (item 2)}
 This compares complete pipelines and does not show which ingredient causes the
 gain.
@@ -47,19 +49,20 @@ Bold: best label-free ranking per row. The oracle uses the expert masks and is
 a ceiling. RCC uses class-informed GMM $K=3$; 45--78\% of its pixels are
 unannotated and treated as background by the Cardinal workflow, an
 interpretation not independently verified here.
-\checkme{replace with mean $\pm$ SD over three seeds (Code, request 1)}}
+IG and posterior correlation: mean $\pm$ SD over three training seeds; the
+other rankings do not depend on the seed.}
 \label{tab:main}
 \centering\small
 \begin{tabular}{@{}llcccccccc@{}}
 \toprule
 Collection & VAE arm & IG & Posterior corr. & Moran's $I$ & Mean int. & Variance & Legacy msiPL & Random & Oracle \\
 \midrule
-GBM & centre & 0.518 & \textbf{0.743} & 0.684 & 0.483 & 0.497 & 0.414 & 0.009 & 0.809 \\
-GBM & uniform & 0.511 & \textbf{0.744} & 0.684 & 0.483 & 0.497 & 0.414 & 0.009 & 0.809 \\
-CAC & centre & 0.528 & 0.606 & 0.605 & \textbf{0.612} & 0.593 & 0.402 & 0.108 & 0.654 \\
-CAC & uniform & 0.560 & 0.607 & 0.605 & \textbf{0.612} & 0.593 & 0.402 & 0.108 & 0.654 \\
-RCC & centre & 0.412 & 0.568 & \textbf{0.631} & 0.498 & 0.508 & \checkme{} & 0.171 & 0.756 \\
-RCC & uniform & 0.410 & 0.578 & \textbf{0.631} & 0.498 & 0.508 & \checkme{} & 0.171 & 0.756 \\
+GBM & centre & 0.518 $\pm$ 0.006 & \textbf{0.762 $\pm$ 0.021} & 0.684 & 0.483 & 0.497 & 0.414 & 0.009 & 0.809 \\
+GBM & uniform & 0.514 $\pm$ 0.006 & \textbf{0.757 $\pm$ 0.017} & 0.684 & 0.483 & 0.497 & 0.414 & 0.009 & 0.809 \\
+CAC & centre & 0.530 $\pm$ 0.007 & 0.608 $\pm$ 0.004 & 0.605 & \textbf{0.612} & 0.593 & 0.402 & 0.108 & 0.654 \\
+CAC & uniform & 0.553 $\pm$ 0.006 & 0.608 $\pm$ 0.002 & 0.605 & \textbf{0.612} & 0.593 & 0.402 & 0.108 & 0.654 \\
+RCC & centre & 0.403 $\pm$ 0.013 & 0.543 $\pm$ 0.025 & \textbf{0.631} & 0.498 & 0.508 & \checkme{} & 0.171 & 0.756 \\
+RCC & uniform & 0.421 $\pm$ 0.011 & 0.561 $\pm$ 0.019 & \textbf{0.631} & 0.498 & 0.508 & \checkme{} & 0.171 & 0.756 \\
 \bottomrule
 \multicolumn{10}{@{}l}{\footnotesize \checkme{RCC msiPL footnote: scored at its maximum reachable count (item 2)}}
 \end{tabular}
@@ -119,10 +122,10 @@ useful signal is in the label-free segmentation, not in the gradients.
 \subsection{Simple rankings and the metric}
 \label{sec:res-simple}
 Among the label-free rankings, the strongest differs by collection
-(\cref{tab:main}): posterior correlation on GBM (0.743, with Moran's~$I$ at
+(\cref{tab:main}): posterior correlation on GBM (0.762, with Moran's~$I$ at
 0.684), mean intensity on CAC (0.612, with correlation, Moran's~$I$ and
 variance all within 0.02) and Moran's~$I$ on RCC (0.631, above correlation at
-0.57--0.58). CAC is close to saturation at its budget: all methods, including
+0.54--0.56). CAC is close to saturation at its budget: all methods, including
 the oracle, converge near 0.41 at twice the budget, which limits how much CAC
 differences can reveal. On GBM and RCC, sections whose GMM agrees better with
 the masks have correlation scores closer to the oracle (Spearman $\rho=-0.90$
@@ -186,10 +189,10 @@ spatially structured their ion images are.
 \subsection{Is the nonlinear encoder needed? (RQ2)}
 \label{sec:res-encoder}
 Replacing the VAE latent space with a 5-component PCA, while keeping the GMM and
-correlation ranking, gave VAE $-$ PCA-5 differences of $+0.023$ on GBM (higher
-in 5/8 sections, mixed), $-0.013$ on CAC (mixed) and $-0.010$ on RCC
-(equivalent), and averaging the VAE over three seeds did not change these
-outcomes (\cref{fig:vaepca}). VAE segmentations matched the masks slightly
+correlation ranking, gave VAE $-$ PCA-5 differences, averaged over three seeds,
+of $+0.042$ on GBM (higher in 5/8 sections), $-0.012$ on CAC and $-0.010$ on
+RCC (\cref{fig:vaepca}). The predeclared outcomes were mixed on GBM and CAC
+and equivalent on RCC, and seed averaging did not change them. VAE segmentations matched the masks slightly
 better (balanced accuracy 0.868 against 0.839 on GBM) without reliably better
 peaks. Reconstruction did not separate the two either: PCA-5 had \emph{lower}
 reconstruction error than the VAE on all eight GBM sections, and slightly
@@ -203,9 +206,9 @@ and training loss at 10, 25, 50 and 100 epochs on the development sections
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{vae_vs_pca.png}
-\caption{VAE minus PCA-5 posterior-correlation score per section, using the
-same GMM and ranking. The outcomes are mixed on GBM and CAC and equivalent on
-RCC.}
+\caption{VAE minus PCA-5 posterior-correlation score per section, with the
+VAE averaged over three seeds and the same GMM and ranking. Neither
+segmentation is consistently better.}
 \label{fig:vaepca}
 \end{figure}
 
@@ -289,7 +292,8 @@ protocol, not an equal-work comparison.
 \caption{Median runtime per section. Training on GPU; ranking on CPU (two
 threads) given a trained model, with IG including the GMM fit. Within each
 collection, all rankings were timed on the same CPU type.
-\checkme{GPU models for the training rows (Code, request 3)}}
+All training times are on an NVIDIA RTX 3090; ranking ran on an Intel
+Core i5-14400 (GBM, CAC) and an Intel Core i9-10940X (RCC).}
 \label{tab:runtime}
 \centering\small
 \begin{tabular}{@{}lccc@{}}

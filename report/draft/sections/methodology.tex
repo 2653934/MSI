@@ -11,7 +11,9 @@ one.
 
 \begin{table}[t]
 \caption{Datasets. Sections are the units of analysis; the independent units
-behind them differ by collection.}
+behind them differ by collection. CAC sections have slightly different $m/z$
+axes; the range shown is for 40TopL. GBM bins are not evenly spaced (median
+0.0004\,Da).}
 \label{tab:data}
 \centering\footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -24,8 +26,8 @@ Ionisation & MALDI & DESI & DESI \\
 Sections & 8 & 8 & 8 \\
 Independent units & 4 PDX lines & 1 tumour & 8 subjects \\
 $m/z$ bins & 85{,}062 & 1{,}481 & 10{,}200 \\
-$m/z$ range & \checkme{} & 198--1061 & 150--1000 \\
-Mean bin width (Da) & \checkme{} & 0.58 & 0.083 \\
+$m/z$ range & 102--1000 & 198--1061 & 150--1000 \\
+Mean bin width (Da) & 0.011 & 0.58 & 0.083 \\
 Pixels per section & 2{,}071--4{,}524 & 3{,}243--4{,}761 & 972--3{,}564 \\
 Mask classes ($K$) & 2 & 3 & 3 \\
 Accession & ST002045 & MTBLS415 & Cardinal\-Workflows \\
@@ -225,8 +227,13 @@ chosen and not how many. For GBM and CAC, $K_{\text{bin}}$ is the tuned legacy
 msiPL peak count; for RCC it is the released S\textsuperscript{3}PL target,
 which approximately equals the number of bins correlating with the masks at
 $t=0.5$. Budgets of $0.5\times$ to $2\times K_{\text{bin}}$ were checked as a
-sensitivity analysis. \checkme{msiPL budget re-tune: one sentence on how msiPL
-was matched at $0.5$--$2\times$ and on RCC (item 2)}
+sensitivity analysis. For msiPL, its saved weights were re-thresholded over
+$\beta=-2.0$ to $2.5$ (step 0.01) and, at each budget, the list whose length was
+closest to the budget was taken; every ranking was then scored at that list's
+own length. On RCC the longest msiPL list (1{,}054--1{,}289 bins in six of the
+eight runs) was shorter than $K_{\text{bin}}$, so those points use the longest
+list and are flagged; on GBM, seven of the smallest budgets were below the
+shortest msiPL list and are flagged likewise.
 
 \textbf{Peak-level scoring (P1).} Neighbouring bins of one molecular peak would
 otherwise each count as a true positive. P1 therefore collapses bins within
@@ -280,7 +287,8 @@ seed are reported descriptively.
 \label{sec:compute}
 The pipeline was implemented in Python with PyTorch and
 scikit-learn~\citep{pedregosa2011scikit}. Training ran on the University's
-MSCluster under Slurm, on RTX 3060 and RTX 3090 GPUs, and ranking and scoring
+MSCluster under Slurm, on RTX 3060 and RTX 3090 GPUs (all timed training on RTX
+3090), and ranking and scoring
 ran on CPU nodes. The code, protocol, result summaries and figure scripts are
 available at \url{https://github.com/2653934/Spatial-msiPL}\checkme{release tag
 and commit}.
