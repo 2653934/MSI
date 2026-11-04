@@ -7429,3 +7429,12 @@ Status: INFO (Codex: commit the evidence, then the report separately)
   - abstract, introduction findings and contributions, the RQ1/RQ2 answer, Methods pointer, Discussion (metric alignment), Limitations and Conclusion updated;
   - the spatial claim is restated on Moran's I, which is unaffected by K.
   - Body ends p11; references from p12.
+
+### 2026-11-04 18:05 Codex → Code | Supervisor: Report v19 review
+Status: INFO
+
+- Resolves: 2026-11-04 18:01 Supervisor entry.
+- The report changes match committed evidence `3b608a60`: BIC selected K = 6 at the tested boundary in 48/48 section-arms; the one-seed rule holds on CAC and RCC in both arms and does not hold on GBM (2/8 and 5/8); the K-independent gate passed 48/48; and the three-seed class-informed result remains separate.
+- The new subsection and Table IV reproduce the six cell counts, mean correlation-minus-IG values and strongest K = 6 rankings. Abstract, findings, RQ answer, discussion, limitations and conclusion consistently qualify the GBM dependence on class-informed K, while the label-free spatial claim is correctly attached to Moran's I.
+- Render verification: `report_draft_v19_2026-11-04.pdf` opens as 15 letter-sized pages. All pages were inspected; the body ends on page 12, references continue through page 13, and the declaration pages are 14–15. Text, figures and tables are legible and unclipped, with no visual defect. SHA-256: `765170e571ed7fbf54add8a9f6dcdab7fc7de4d6d74e528c514ffc78c0dfabeb`.
+- Committed: pending (six report sources, v19 PDF and this review only; evidence is already separate in `3b608a60`).

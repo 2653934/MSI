@@ -15,6 +15,9 @@ Three explanations fit the ranking result.
         (baselines, path counts, signed attributions) remain untested.
   \item \textbf{Metric alignment.} A segmentation that resembles the masks
         produces posterior maps that a mask-based metric naturally rewards.
+        The label-free check supports this: with $K=6$ correlation lost most
+        of its advantage on GBM, where the segmentation no longer matched the
+        two tissue classes, but kept it on CAC and RCC.
 \end{enumerate}
 Correlation is therefore best read as an ablation finding about this pipeline:
 the unsupervised segmentation carries the useful signal, and gradient attribution
@@ -79,9 +82,10 @@ nonlinear encoder is never needed.
 Each collection has eight sections, drawn from four PDX lines (GBM), one tumour
 (CAC) and eight subjects (RCC), so the statistics describe these sections
 rather than a wider population, and effect sizes carry most of the weight. Two
-settings come from the annotations, the number of segments and the peak budget,
-so the pipeline is unsupervised in fitting and ranking but class-informed, and
-not yet autonomous.
+settings come from the annotations, the number of segments and the peak budget.
+Choosing the number of segments by BIC instead changed the GBM ranking result,
+and BIC chose the largest value tested, so a reliable label-free choice of $K$
+remains open.
 mSCF1 measures agreement with tissue masks rather than molecular identity,
 which favours methods that produce mask-like maps; the RCC masks include a large
 unannotated region, and the CAC masks are model predictions. Finally, we tested

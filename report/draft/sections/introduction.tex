@@ -62,11 +62,13 @@ The main findings are as follows.
   \item \textbf{Ranking.} With the segmentation held fixed, correlating each
         ion image with the GMM posterior maps outperformed IG in 140 of 144
         paired comparisons across three training seeds. The difference was
-        statistically supported for every dataset and both VAE arms.
+        statistically supported for every dataset and both VAE arms. With the
+        number of segments chosen by BIC instead of the class count, it held
+        on CAC and RCC but not on GBM.
   \item \textbf{Spatial information.} In these tests, neighbourhood input to
         the encoder gave no consistent, spatially specific gain, while
-        spatially aware ranking statistics were the strongest unsupervised
-        rankings on GBM and RCC and within 0.01 of the best on CAC.
+        Moran's~$I$, a label-free spatial statistic, was the strongest
+        label-free ranking on GBM and RCC and within 0.01 of the best on CAC.
   \item \textbf{Encoder.} A linear five-component PCA segmentation performed
         comparably to the VAE, so the nonlinear encoder was not shown to be
         necessary.
@@ -80,7 +82,8 @@ The contributions of this report are:
 \begin{enumerate}
   \item a ranking ablation showing that segment-then-correlate outperforms
         gradient attribution in this pipeline, with paired statistics over
-        three training seeds;
+        three training seeds, and a check of which part of that result depends
+        on a class-informed number of segments;
   \item evidence that a linear five-component PCA segmentation performs
         comparably to the VAE, so the nonlinear encoder was not shown to be
         necessary;

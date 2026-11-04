@@ -125,8 +125,11 @@ for IG instead of 12 raised its score by at most 0.024, far less than the gap.
 
 \textbf{Answer to RQ1 and RQ2.} The pipeline beats legacy msiPL, but the
 attribution method is not what carries that gain. Given the same segmentation,
-a direct correlation ranking is better than IG on all three collections. The
-useful signal is in the unsupervised segmentation, not in the gradients.
+a direct correlation ranking is better than IG on all three collections when
+$K$ matches the annotated classes, and on CAC and RCC also when $K$ is chosen
+without labels (\cref{sec:res-lfk}). The useful signal is in the segmentation,
+not in the gradients, and on GBM it depends on that segmentation matching the
+tissue classes.
 
 \subsection{Simple rankings and the metric}
 \label{sec:res-simple}
@@ -279,6 +282,49 @@ distribution.}
 close on RCC and CAC, with the published CAC value just outside our seed
 distribution, but its published GBM value remains unreproduced. Individual sections can
 switch between distinct solutions, making single-run comparisons unreliable.
+
+\subsection{Number of segments chosen without labels}
+\label{sec:res-lfk}
+Because the GMM's $K$ equals the number of annotated classes, we repeated the
+ranking comparison with $K$ chosen without labels. BIC selected $K=6$ in all 48
+section--arms, the largest value tested ($K\le6$), so this is BIC's choice at
+the boundary of the range rather than a clear optimum. Using the existing
+models (one seed), we refitted the GMM at $K=6$ and recomputed IG and posterior
+correlation; all IG runs passed the completeness check (one at 256 steps), and
+the rankings that do not depend on $K$ reproduced their earlier scores exactly.
+The predeclared rule asked whether correlation still beat IG in at least 7 of
+8 sections (\cref{tab:lfk}).
+
+\begin{table}[t]
+\caption{Correlation minus IG (mSCF1, bin level, one seed) with $K$ equal to
+the class count and with BIC's $K=6$, and the number of sections in which
+correlation was higher at $K=6$. Last column: the strongest ranking at $K=6$.}
+\label{tab:lfk}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & Class $K$ & $K=6$ & Corr.\ higher & Best at $K=6$ \\
+\midrule
+GBM centre & $+0.225$ & $-0.019$ & 2/8 & Moran's $I$ (0.684) \\
+GBM uniform & $+0.233$ & $+0.006$ & 5/8 & Moran's $I$ (0.684) \\
+CAC centre & $+0.078$ & $+0.045$ & 8/8 & mean int.\ (0.612) \\
+CAC uniform & $+0.047$ & $+0.025$ & 7/8 & mean int.\ (0.612) \\
+RCC centre & $+0.156$ & $+0.073$ & 8/8 & Moran's $I$ (0.631) \\
+RCC uniform & $+0.169$ & $+0.054$ & 7/8 & Moran's $I$ (0.631) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The result held on CAC and RCC in both arms but not on GBM, where correlation
+and IG became about equal. The change came almost entirely from correlation:
+with $K=6$ it fell by 0.25--0.28 on GBM, 0.06--0.10 on RCC and 0.02--0.03 on
+CAC, while IG changed by at most 0.04. On GBM the six-component segmentation
+splits two tissue classes into many regions (ARI 0.19 with the masks), so
+correlating with it no longer tracks the annotated regions. IG still beat legacy
+msiPL in all eight GBM and CAC sections at $K=6$. Moran's~$I$, which uses no
+labels at all, was the strongest ranking on GBM and RCC and within 0.01 of the
+best on CAC at either $K$.
 
 \subsection{RCC: held-out confirmation}
 \label{sec:res-rcc}
