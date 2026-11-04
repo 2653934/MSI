@@ -5,9 +5,10 @@ Mass spectrometry imaging (MSI) records a full mass spectrum at every pixel of
 a tissue section, so the spatial distribution of many molecules can be studied
 at once without choosing targets in
 advance~\citep{caprioli1997maldi,schwamborn2010molecular,buchberger2018mass}.
-The resulting data are large and high-dimensional. The collections used here
-contain between about a thousand and several thousand pixels per section, and
-between 1{,}481 and 85{,}062 mass-to-charge ($m/z$) bins per spectrum. Most
+The resulting data are large and high-dimensional. The three collections used
+here, glioblastoma (GBM), colorectal adenocarcinoma (CAC) and renal cell
+carcinoma (RCC), contain 972 to 4{,}761 pixels per section and between 1{,}481
+and 85{,}062 mass-to-charge ($m/z$) bins per spectrum. Most
 analyses therefore begin by selecting a small set of informative peaks.
 
 Classical \emph{peak picking} applies smoothing, normalisation and
@@ -26,22 +27,22 @@ neighbourhood, and reports large gains over msiPL~\citep{weigand2026spatial}.
 
 S\textsuperscript{3}PL changes the architecture, the objective, the normalisation and the
 selection rule at the same time, so it is not clear which ingredient produces
-its gain. This raises two questions. Can cheaper local context, such as the
-mean spectrum of a pixel's neighbours, give a lightweight VAE a similar
-benefit? And once a model has been fitted, which part of the pipeline actually
-determines peak quality: the representation, the segmentation built on it or
-the method used to rank peaks? We study these questions with
+its gain. It also leaves open whether cheaper local context, such as the
+mean spectrum of a pixel's neighbours, can give a lightweight VAE a similar
+benefit, and, once a model has been fitted, which part of the pipeline actually
+determines peak quality. We study this with
 \emph{Spatial-msiPL}, an msiPL-style VAE that can encode a spectrum together
 with its neighbourhood. Its latent space is segmented with a Gaussian mixture
 model (GMM), and peaks are ranked either by Integrated Gradients
 (IG)~\citep{sundararajan2017axiomatic} through the model or by correlating each
 ion image with the GMM posterior maps. Specifically, we ask:
 \begin{enumerate}[label=\textbf{RQ\arabic*}]
-  \item Does the VAE pipeline select better peaks than msiPL when both select
+  \item Does ranking peaks from a segmentation of the VAE latent space select
+        better peaks than legacy msiPL's weight-based selection when both select
         the same number of bins?
-  \item Which stage of the pipeline determines peak quality: the attribution
-        method or the segmentation, and does the segmentation need a nonlinear
-        encoder?
+  \item Which ranking mechanism on the segmentation determines peak quality,
+        gradient attribution or direct correlation, and does the segmentation
+        need a nonlinear encoder?
   \item Where does spatial information help: as input to the encoder, in the
         segmentation or in the ranking statistic?
 \end{enumerate}
@@ -54,17 +55,17 @@ The main ranking comparisons used matched bin counts per section and the same
 fair-scoring evaluator. Their decision rules were written down before the
 corresponding results existed, and the core model comparisons were repeated
 over three training seeds. The msiPL and S\textsuperscript{3}PL reproductions were
-first assessed under their respective native protocols and evaluators;
-S\textsuperscript{3}PL's in-job mSCF1 is distinct from the fair-scoring result.
+first assessed under their own protocols and evaluators, separately from the
+common scoring used for all other comparisons.
 The main findings are as follows.
 \begin{itemize}
   \item \textbf{Ranking.} With the segmentation held fixed, correlating each
         ion image with the GMM posterior maps outperformed IG in 140 of 144
         paired comparisons across three training seeds. The difference was
-        statistically supported for every dataset and model.
+        statistically supported for every dataset and both VAE arms.
   \item \textbf{Spatial information.} In these tests, neighbourhood input to
         the encoder gave no consistent, spatially specific gain, while
-        spatially aware ranking statistics were the strongest label-free
+        spatially aware ranking statistics were the strongest unsupervised
         rankings on GBM and RCC and within 0.01 of the best on CAC.
   \item \textbf{Encoder.} A linear five-component PCA segmentation performed
         comparably to the VAE, so the nonlinear encoder was not shown to be
@@ -80,6 +81,9 @@ The contributions of this report are:
   \item a ranking ablation showing that segment-then-correlate outperforms
         gradient attribution in this pipeline, with paired statistics over
         three training seeds;
+  \item evidence that a linear five-component PCA segmentation performs
+        comparably to the VAE, so the nonlinear encoder was not shown to be
+        necessary;
   \item controlled tests of spatial context at the encoder, segmentation and
         ranking stages, with dataset-specific ranking outcomes;
   \item a statistical account of the S\textsuperscript{3}PL reproduction gap and

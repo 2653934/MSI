@@ -85,9 +85,12 @@ serves as a held-out confirmation collection.
 \Cref{fig:pipeline} summarises the pipeline. For each section, a model is
 fitted to that section's spectra without labels, peaks are ranked from the
 fitted model, and the selected peaks are then scored against that section's
-expert masks. The design is therefore unsupervised and transductive. The masks
-never enter model fitting or ranking. They do, however, set two configuration
-values, the number of segments and the peak budget, both disclosed below.
+expert masks. The design is therefore unsupervised and transductive: the mask
+pixels are never used as training targets or ranking inputs. The annotations
+do, however, set two configuration values, the number of segments and the peak
+budget, both disclosed below. We therefore call the GMM-based rankings
+\emph{unsupervised but class-informed}, and reserve \emph{label-free} for the
+rankings that use neither.
 
 \begin{figure*}[t]
 \centering
@@ -99,7 +102,8 @@ values, the number of segments and the peak budget, both disclosed below.
 neighbourhood context; its latent means are segmented by a GMM; and $m/z$ bins
 are ranked either by Integrated Gradients through the encoder or by
 correlation of each ion image with the GMM posterior maps. Model-free rankings
-use the spectra directly. Expert masks are used only for scoring.}
+use the spectra directly. Mask pixels are used only for scoring; the
+annotations also set the number of GMM components and the peak budget.}
 \label{fig:pipeline}
 \end{figure*}
 
@@ -107,36 +111,45 @@ use the spectra directly. Expert masks are used only for scoring.}
 pixel $i$ over $D$ bins. Spectra are normalised by total ion current (TIC),
 $\mathbf{x}_i=\mathbf{s}_i/\sum_{d}s_{id}$. For the context arms, let
 $\mathcal{N}(i)$ be the measured pixels among the eight neighbours of $i$ in a
-$3\times3$ window. The uniform context is
+$3\times3$ window. The uniform context is the renormalised mean
 \begin{equation}
 \mathbf{c}_i=\frac{1}{|\mathcal{N}(i)|}\sum_{j\in\mathcal{N}(i)}\mathbf{x}_j ,
 \end{equation}
-and the encoder input is $\mathbf{u}_i=\mathbf{x}_i$ (centre-only) or
-$\mathbf{u}_i=[\mathbf{x}_i;\mathbf{c}_i]$ (uniform). Pixels at tissue edges
-use only their measured neighbours, so no unmeasured location is padded.
+rescaled to sum to one, and the encoder input is $\mathbf{u}_i=\mathbf{x}_i$
+(centre-only) or $\mathbf{u}_i=[\mathbf{x}_i;\mathbf{c}_i]$ (uniform). Pixels
+at tissue edges use only their measured neighbours, so no unmeasured location
+is padded; a pixel with no measured neighbour gets a zero context.
 
 \textbf{Model.} Following msiPL~\citep{abdelmoula2021peak}, the VAE has one
 hidden layer of 512 units with batch normalisation and a 5-dimensional latent
 space~\citep{kingma2014autoencoding}:
 \begin{align}
 \mathbf{h}_i &= \mathrm{ReLU}\big(\mathrm{BN}(W_e\mathbf{u}_i+\mathbf{b}_e)\big),\\
-\boldsymbol{\mu}_i &= W_\mu\mathbf{h}_i,\quad
-\log\boldsymbol{\sigma}^2_i = W_\sigma\mathbf{h}_i,\quad
-\mathbf{z}_i=\boldsymbol{\mu}_i+\boldsymbol{\sigma}_i\odot\boldsymbol{\epsilon},
+\boldsymbol{\mu}_i &= W_\mu\mathbf{h}_i+\mathbf{b}_\mu,\quad
+\log\boldsymbol{\sigma}^2_i = W_\sigma\mathbf{h}_i+\mathbf{b}_\sigma,\\
+\mathbf{z}_i&=\boldsymbol{\mu}_i+\boldsymbol{\sigma}_i\odot\boldsymbol{\epsilon},
 \end{align}
 with $\boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},I)$. The decoder mirrors
 the encoder and outputs $\hat{\mathbf{x}}_i=\mathrm{sigmoid}(W_o\,
-\mathrm{ReLU}(\mathrm{BN}(W_d\mathbf{z}_i)))$, a reconstruction of the centre
+\mathrm{ReLU}(\mathrm{BN}(W_d\mathbf{z}_i+\mathbf{b}_d))+\mathbf{b}_o)$, a reconstruction of the centre
 spectrum only. With $p_{id}=\hat{x}_{id}/\sum_{d'}\hat{x}_{id'}$, the loss is
 msiPL's categorical cross-entropy plus the Kullback--Leibler divergence to a
 standard normal prior:
 \begin{equation}
-\mathcal{L}_i=-D\sum_{d}x_{id}\log p_{id}
--\tfrac{1}{2}\sum_{l=1}^{5}\big(1+\log\sigma^2_{il}-\mu_{il}^2-\sigma^2_{il}\big).
+\begin{aligned}
+\mathcal{L}=\frac{1}{B}\sum_{i=1}^{B}\Big[&-D\sum_{d}x_{id}\log p_{id}\\
+&-\tfrac{1}{2}\sum_{l=1}^{5}\big(1+\log\sigma^2_{il}-\mu_{il}^2-\sigma^2_{il}\big)\Big]
+\end{aligned}
 \end{equation}
+over a mini-batch of $B$ spectra. The factor $D$ follows the msiPL
+implementation, which scales the cross-entropy by the number of bins so that
+it is on the scale of a per-bin sum; it is equivalent to weighting the KL term
+by $1/D$.
 Training uses Adam (learning rate $10^{-3}$, batch size 128) for 100 epochs.
-For GBM the centre-only and uniform models have 87.2M and 130.8M parameters,
-almost all in the first layer. Further variants replace the uniform mean with
+For GBM ($D=85{,}062$) the centre-only and uniform models have 87.2M and
+130.8M parameters. Almost all of them are in the input and output layers: the
+first layer has $43.6$M weights (centre-only) or $87.1$M (uniform), the output
+layer $43.6$M, and all other layers together fewer than 0.02M. Further variants replace the uniform mean with
 learned single-head attention over the neighbours~\citep{vaswani2017attention}
 (about 0.5\% more parameters), use $5\times5$, $7\times7$ or $9\times9$
 windows, replace the neighbours with zeros or with spectra shuffled from distant
@@ -145,8 +158,9 @@ neighbours become necessary. Each variant was compared with the uniform arm
 trained under the same seed.
 
 \textbf{Segmentation.} The latent means $\boldsymbol{\mu}_i$ are standardised
-and a Gaussian mixture model with full covariance is fitted to them. Its
-posterior
+per dimension to $\tilde{\boldsymbol{\mu}}_i$, and a Gaussian mixture model
+with mixing weights $\pi_k$, means $\mathbf{m}_k$ and full covariances
+$\Sigma_k$ is fitted to them (scikit-learn, 20 initialisations, fixed seed). Its posterior
 \begin{equation}
 \gamma_{ik}=\frac{\pi_k\,\mathcal{N}(\tilde{\boldsymbol{\mu}}_i\mid\mathbf{m}_k,\Sigma_k)}
 {\sum_{l=1}^{K}\pi_l\,\mathcal{N}(\tilde{\boldsymbol{\mu}}_i\mid\mathbf{m}_l,\Sigma_l)}
@@ -154,9 +168,8 @@ posterior
 gives, for each component $k$, a posterior map over the section. The number of
 components $K$ equals the number of annotated classes (\cref{tab:data}). This
 is a class-informed choice; the Bayesian information criterion
-(BIC)~\citep{schwarz1978estimating} did not support it
-(\cref{sec:res-encoder}). The pipeline is therefore label-free in fitting and
-ranking but not fully autonomous.
+(BIC)~\citep{schwarz1978estimating}, evaluated for $K=1$ to 6, did not support
+it (\cref{sec:res-encoder}).
 
 \textbf{Rankings.} Every ranking orders all $D$ bins, and the top
 $K_{\text{bin}}$ bins are scored. The two model-based rankings use the same
@@ -166,24 +179,35 @@ component contributes equally (``balanced'').
 \begin{itemize}
   \item \emph{Integrated Gradients} attributes component $k$'s posterior at
         pixel $i$ to each input bin along a straight path from a baseline
-        $\mathbf{u}'$, the section's mean input~\citep{sundararajan2017axiomatic}:
+        $\mathbf{u}'$, the section's mean input~\citep{sundararajan2017axiomatic},
+        differentiating through the encoder mean $\boldsymbol{\mu}$ (no
+        sampling of $\mathbf{z}$):
         \begin{equation}
-        \mathrm{IG}_{d}(\mathbf{u}_i)=(u_{id}-u'_d)\int_0^1
+        \mathrm{IG}_{d,k}(\mathbf{u}_i)=(u_{id}-u'_d)\int_0^1
         \frac{\partial\gamma_k\big(\mathbf{u}'+\alpha(\mathbf{u}_i-\mathbf{u}')\big)}
         {\partial u_{d}}\,\mathrm{d}\alpha ,
         \end{equation}
-        approximated with 64 trapezoidal steps for 12 sampled pixels assigned
-        to each component. Attributions to a bin's centre and context inputs
-        are combined, and bins are scored by mean absolute attribution.
-        Attributions must satisfy completeness,
-        $\sum_d\mathrm{IG}_d\approx\gamma_k(\mathbf{u}_i)-\gamma_k(\mathbf{u}')$.
+        approximated with 64 trapezoidal steps. For each component, 12 pixels
+        are drawn uniformly at random (fixed seed) from the pixels whose GMM
+        hard assignment is that component. IG is computed for every input
+        dimension; for the uniform arm each bin $d$ appears twice, once in the
+        centre spectrum and once in the context. For bin $d$, the absolute
+        attributions of its centre input and of its context input are added,
+        $|\mathrm{IG}^{\text{centre}}_{d,k}|+|\mathrm{IG}^{\text{context}}_{d,k}|$,
+        and bins are scored by the mean of this sum over the 12 pixels.
+        Completeness is checked on the \emph{signed} attributions summed over
+        all inputs, $\sum\mathrm{IG}_{\cdot,k}\approx
+        \gamma_k(\mathbf{u}_i)-\gamma_k(\mathbf{u}')$. A run passes if the
+        normalised residual (the absolute gap divided by the absolute output
+        change) has a median of at most 0.05 and a 95th percentile of at most
+        0.15 over its pixels.
         Where this check failed (4 of 144 runs), the run was recomputed from
         its saved model with 128 or 256 steps; in four control runs, doubling
         the steps changed mSCF1 by at most 0.0003.
   \item \emph{Posterior correlation} scores bin $d$ for component $k$ by
         $|\rho(I_d,\gamma_{\cdot k})|$, the absolute Pearson correlation over
         pixels between the bin's ion image $I_d$ and the component's posterior
-        map. It needs no gradients; this is the segment-then-correlate
+        map $\gamma_{\cdot k}$. It needs no gradients; this is the segment-then-correlate
         approach~\citep{alexandrov2011efficient}.
   \item \emph{Model-free rankings} use the spectra directly: mean intensity,
         variance and global Moran's~$I$~\citep{moran1950notes},
@@ -192,7 +216,8 @@ component contributes equally (``balanced'').
         \frac{\sum_{i,j}w_{ij}(x_{id}-\bar{x}_d)(x_{jd}-\bar{x}_d)}
         {\sum_i(x_{id}-\bar{x}_d)^2},
         \end{equation}
-        with $w_{ij}=1$ for measured Moore neighbours and 0 otherwise.
+        with $N$ the number of measured pixels and $w_{ij}=1$ for measured Moore
+        neighbours (the eight surrounding pixels) and 0 otherwise.
   \item \emph{References:} a random ranking, and a supervised oracle that ranks
         bins by correlation with the expert masks. The oracle is a ceiling only.
 \end{itemize}
@@ -216,16 +241,18 @@ were tested (\cref{sec:res-s3pl}).
 
 \subsection{Evaluation}
 \label{sec:evaluation}
-\textbf{mSCF1.} For each class mask and threshold $t\in\{0.3,0.4,0.5,0.6\}$, a
-reference set $R_t$ of bins is formed from the bins whose ion images correlate
-with the mask, using the threshold-derived rank cutoff of the released
-S\textsuperscript{3}PL evaluator~\citep{weigand2026spatial}. For a selected
-set $S$,
+\textbf{mSCF1.} For each class $c$ and threshold $t\in\{0.3,0.4,0.5,0.6\}$,
+the reference set $R^c_t$ is formed as in the released
+S\textsuperscript{3}PL evaluator~\citep{weigand2026spatial}: bins are sorted by
+their signed Pearson correlation with that class's mask, and $R^c_t$ contains
+the bins ranked above the one whose correlation is closest to $t$. This is
+close to, but not exactly, the set of bins with correlation of at least $t$. With $R_t=\bigcup_c R^c_t$ and a
+selected set $S$,
 \begin{equation}
 \mathrm{mSCF1}=\frac{1}{4}\sum_{t}\frac{2\,|S\cap R_t|}{|S|+|R_t|},
 \end{equation}
-with $R_t$ the union of the class reference sets. mSCF1 measures spatial
-agreement with expert annotation, not chemical identity.
+mSCF1 measures spatial agreement with expert annotation, not chemical
+identity.
 
 \textbf{Matched budgets.} All methods select the same number of bins,
 $K_{\text{bin}}$, per section, so that differences reflect which bins are
@@ -238,13 +265,21 @@ $\beta=-2.0$ to $2.5$ (step 0.01) and, at each budget, the list whose length was
 closest to the budget was taken; every ranking was then scored at that list's
 own length. On RCC the longest msiPL list (1{,}054--1{,}289 bins in six of the
 eight runs) was shorter than $K_{\text{bin}}$, so those points use the longest
-list and are flagged; on GBM, seven of the smallest budgets were below the
-shortest msiPL list and are flagged likewise.
+list and are flagged; on GBM, seven points at the smallest budgets were below
+the shortest msiPL list and are flagged likewise. $K_{\text{bin}}$ is a number
+of bins and is unrelated to the number of GMM components $K$.
 
 \textbf{Peak-level scoring (P1).} Neighbouring bins of one molecular peak would
-otherwise each count as a true positive. P1 therefore collapses bins within
-one basin of the section's mean spectrum into a single peak group, and
-partitions were audited and approved before any score was computed. On CAC and
+otherwise each count as a true positive. P1 therefore collapses the bins of
+one basin of the section's mean spectrum (between two local minima) into a
+single peak group. Groups are split at gaps above 50\,ppm, shallow basins
+(below 5\% depth) are merged only up to a 100\,ppm width, and a partition is
+rejected if any group spans 0.5\,Da or more. A group is a reference group if
+its apex (highest mean-intensity bin) is in the bin-level reference set, a
+ranking selects a group if it selects any of its bins, and each ranking is
+read down until it covers $K_{\text{peak}}$ distinct groups, the number of
+reference groups at $t=0.4$. Partitions were audited and approved before any
+score was computed. On CAC and
 RCC, P1 groups are singletons or near-singletons, so P1 acts there as a second
 budget check rather than independent evidence.
 
@@ -256,10 +291,12 @@ execution logs. The rules differ by comparison. In the context comparisons,
 a method \emph{helps} if its mean gain is at least $+0.02$ mSCF1 and it gains
 in at least 6 of 8 sections; methods are \emph{equivalent} if their mean
 difference lies within $\pm0.02$. Other complete outcomes are \emph{mixed}.
-The primary IG-versus-correlation rule instead asks whether IG is lower in at
-least 7 of 8 sections in every run; its predeclared labels and fall-through
-cases are reported as written. Missing arms remain incomplete, not mixed.
-The threshold of 0.02 was chosen as the smallest difference we would act on.
+The IG-versus-correlation replication rule instead asks whether IG is lower
+in at least 7 of 8 sections in every training run, at bin level and, on GBM
+and CAC, also at peak level; its predeclared labels and fall-through cases are
+reported as written. The threshold of 0.02 was chosen as the
+smallest difference we would act on; it is of the same order as the
+seed-to-seed SD of collection means (0.002--0.026).
 The two core arms were trained with
 three seeds on all 24 sections; the variants were screened against the uniform
 arm with one seed each. Seed results are reported as the mean $\pm$ SD across
@@ -287,7 +324,10 @@ intervals carry the main weight. A comparison is called \emph{statistically
 supported} only if its Holm-adjusted $p<0.05$ \emph{and} its outcome label
 points the same way. GBM is also summarised per PDX line ($n=4$), outside the
 Holm families. Mixed-effects models with random intercepts for section and
-seed are reported descriptively.
+seed are reported descriptively. Sections are not fully independent: CAC
+sections are serial sections of one tumour and GBM sections come in pairs from
+four PDX lines. The section-level p-values and intervals are therefore
+nominal, and the per-line GBM summary is the more conservative check.
 
 \subsection{Implementation and computation}
 \label{sec:compute}
@@ -298,10 +338,11 @@ MSCluster under Slurm, on RTX 3060 and RTX 3090 GPUs (all timed training on RTX
 ran on CPU nodes. The code, protocol, result summaries and figure scripts are
 available at \url{https://github.com/2653934/Spatial-msiPL} (release
 \texttt{v1.0}, commit
-\texttt{93596d8ed9b99f7d525be0ee96094dd6f64aa97e}).
+\texttt{93596d8}).
 
 \textbf{Caching.} The original data loader re-read each batch from HDF5 on
-shared storage, and a 100-epoch GBM run took 11.3\,h. Profiling showed that
+shared storage, and a 100-epoch run on GBM108\_positive (the smallest GBM
+section, uniform arm) took 11.3\,h. Profiling showed that
 preparing a batch took 24.6\,s, while the forward and backward passes took
 about 0.02\,s. Reading each section into host memory once (about 13\,s)
 reduced the run to 23\,min, a $30\times$ speed-up, with identical loss

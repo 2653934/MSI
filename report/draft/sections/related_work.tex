@@ -34,7 +34,7 @@ individual spectra, clusters the low-dimensional latent space and reads peaks
 from the network weights~\citep{abdelmoula2021peak}. Its companion work,
 massNet, provides the glioblastoma (GBM) dataset used
 here~\citep{abdelmoula2022massnet}. S\textsuperscript{3}PL learns a 3D convolution over a
-spectral patch around each pixel, applies an attention step to the centre
+spatial--spectral patch around each pixel, applies an attention step to the centre
 spectrum, reconstructs the full normalised patch and selects the bins that
 receive the most attention across pixels~\citep{weigand2026spatial}. S\textsuperscript{3}PL also
 introduced the mask-based spatial-correlation F1 score (mSCF1) used to judge
@@ -71,7 +71,8 @@ spatial-chaos measures have been used to judge the informativeness of MSI ion
 images~\citep{alexandrov2013testing,cassese2016spatial}. Spatially aware
 segmentation smooths features using neighbourhood weights before
 clustering~\citep{alexandrov2011efficient}. Graph-based models of spatial
-omics and MSI propagate information between neighbouring locations. These are
+omics, such as SpaGCN~\citep{hu2021spagcn} and STAGATE~\citep{dong2022stagate},
+propagate information between neighbouring locations. These are
 discussed as future work in \cref{sec:conclusion}. Our study places spatial
 information at three points (the encoder input, the segmentation and the
 ranking statistic) and tests each one under the same evaluation.

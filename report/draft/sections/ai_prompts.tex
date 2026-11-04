@@ -1,0 +1,118 @@
+\section*{AI declaration: how AI was used, and representative prompts}
+\small
+\textbf{Working system.} I ran the project as a supervised workflow with three
+AI roles and a written, append-only supervision log. An AI supervisor (ChatGPT
+at first, then Claude) helped me plan experiments, proposed
+predeclared decision rules and checked each reported result against the saved
+outputs. Claude Code implemented and ran the code and cluster jobs and reported
+back in the log. The log was the only channel between the roles: each
+implementation task ran in a fresh Claude Code session briefed from the log,
+which kept each session focused on one task and limited usage, and the
+supervisor read and checked each report before the next step. OpenAI Codex independently reviewed every code change and, once
+I approved it, committed it under my account with messages I set rules for. The
+goals were fixed by me: a fair, matched-budget comparison; decision rules
+written before results; and no claim without a saved result behind it. Every
+experiment, cluster job, rule change and commit needed my explicit approval.
+
+\textbf{Writing.} I had the assistant compile every verified result into an
+evidence dump organised by report section. I then chose what the report should
+contain, set its structure and framing, and had the assistant draft sections
+from that selection. I reviewed every draft, rejected or redirected large parts
+of it (for example the framing, the research questions, the figures and the
+statistical presentation) and approved the final text. The prompts below
+are a small selection from several hundred exchanges over the project, chosen
+to illustrate how methodological decisions and the writing were directed; they
+do not cover every use. They are quoted as written (typos corrected; [\ldots]
+marks omitted text), and the full logs are available on request.
+
+\subsection*{Questioning methods and results}
+\begin{itemize}
+  \item \emph{ChatGPT:} ``We only tested the neighbourhood's contribution to
+        reconstruction but how did we know it wouldn't end up being better for
+        the peak picking?''
+  \item \emph{ChatGPT:} ``Does this mean that there's a chance that our model
+        just doesn't perform better than a standard VAE?''
+  \item \emph{ChatGPT:} ``How else do we properly test that spatial has an
+        impact?''
+  \item \emph{ChatGPT:} ``What about S3PL runtime? Are we finally fully grabbing
+        that information to have proper and fair comparisons with our model?''
+  \item \emph{ChatGPT:} ``didn't we only use 1 seed [\ldots] do we need
+        to run the experiments more times to verify?''
+  \item \emph{ChatGPT:} ``I do not want to conclude that a neighbourhood
+        has no contribution especially since we have a very simple neighbourhood
+        that we are using [\ldots] what would [our ablation study] look like?''
+  \item \emph{Claude:} ``Why did we not end up using Mann--Whitney as a
+        statistical analysis method?''
+  \item \emph{Claude:} ``Why didn't we evaluate when the scores are no
+        longer increasing and choose that as our epochs?'' (I accepted the
+        advice that this would tune on the evaluation labels; training loss is
+        reported instead.)
+\end{itemize}
+
+\subsection*{Clarifying concepts}
+\begin{itemize}
+  \item \emph{ChatGPT:} ``Wait, S3PL is self-supervised while we are
+        unsupervised, right?''
+  \item \emph{ChatGPT:} ``What is first-layer L2? Is that S3PL?''
+\end{itemize}
+
+\subsection*{Reviewing my work and checking claims}
+\begin{itemize}
+  \item \emph{Claude and Codex:} ``check chat'' (my standing instruction: the
+        supervisor read the newest entries from the implementation sessions,
+        verified them against the saved results and ruled before anything
+        proceeded; Codex read them to review a change before committing it).
+  \item \emph{ChatGPT:} ``[\ldots] I have a progress.md with my thoughts and
+        understandings. Can you review it [\ldots] And also fact check it and let
+        me know where my understanding is lacking.''
+  \item \emph{Claude:} ``I tried to attempt to replicate the baseline msiPL VAE.
+        Is this sufficient, and can you help me with better evaluation similar to
+        that in msiPL so I can know if I am on the right track?''
+  \item \emph{Claude:} ``[\ldots] I also found the CAC dataset with the masks
+        [\ldots] and this is what I have so far.''
+  \item \emph{Claude:} ``[\ldots] I was wondering if you could review [my
+        repository] as it is right now because I do not think my current results
+        are good in comparison to what I want them to be.''
+  \item \emph{ChatGPT:} ``Quick, before I run the scripts: why are we using the
+        patch size 9 and not 3 when 3 is the paper?''
+  \item \emph{ChatGPT:} ``[\ldots] it seems like those masks came from a
+        model and not actually medically annotated so I do not know if I feel
+        comfortable using that as a ground truth [\ldots]''
+  \item \emph{ChatGPT:} ``Can you review the new supervisor review that
+        Claude has done for us. [\ldots] Let me know whether or not you agree
+        [\ldots] before moving forward.''
+  \item \emph{Claude:} ``Check the S3PL paper for the links to the
+        datasets and how we got them previously and add that to the dataset
+        documentation.''
+\end{itemize}
+
+\subsection*{Figures and diagrams}
+\begin{itemize}
+  \item \emph{ChatGPT:} ``Can you make me a diagram with how our model looks vs
+        msiPL vs our proposed one vs S3PL?''
+  \item \emph{ChatGPT:} ``[\ldots] in the architecture figure the centre-only /
+        uniform / attention part of the diagram is overlapping still [\ldots]''
+\end{itemize}
+
+\subsection*{Documentation}
+\begin{itemize}
+  \item \emph{ChatGPT:} ``Can you also help me start documenting what we are
+        doing in Obsidian, because as much as I like what we are doing I also
+        want to understand what we are doing and why.''
+  \item \emph{ChatGPT:} ``Can you go through everything we did beginning to end
+        and make me a bunch of md files? I want a main one to record the
+        results, then one for the processes and the whys and methodologies
+        [\ldots]''
+  \item \emph{Claude:} ``Make a note of everything [\ldots] update the
+        Notion.''
+\end{itemize}
+
+\subsection*{Directing the report}
+\begin{itemize}
+  \item \emph{Claude:} ``Remove the proposal to outcome table [\ldots]
+        Write it like any of the papers we read.''
+  \item \emph{Claude:} ``Is RQ4 important for our paper so much so that
+        it is a main question?''
+  \item \emph{Claude:} ``Can we better phrase the helps, equivalent
+        etc.? Maybe explain how we decide it and then use the terms after.''
+\end{itemize}

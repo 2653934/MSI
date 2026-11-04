@@ -11,10 +11,10 @@ given as mean $\pm$ SD over three training seeds, and the statistics of
 Each baseline was first run under its own protocol and evaluator. msiPL
 reproduced closely on all three collections: 0.414 against 0.403 published on
 GBM, 0.402 against 0.431 on CAC and 0.157 against 0.159 on RCC.
-For S\textsuperscript{3}PL's native in-job mSCF1, the CAC mean was 0.547
-$\pm$ 0.038 over ten seeds against 0.601 published. The published CAC value
-lies just outside our seed distribution, subject to published rounding, and
-the predeclared conclusion is ``not explained by seed selection alone''.
+With S\textsuperscript{3}PL's own evaluator, the CAC mean was 0.547
+$\pm$ 0.038 over ten seeds against 0.601 published. The published value lies
+just outside our seed distribution, and the predeclared conclusion is ``not
+explained by seed selection alone''.
 RCC reached 0.41--0.44 over three seeds against 0.47 published, while GBM
 reached 0.319 $\pm$ 0.042 against 0.496 (\cref{sec:res-s3pl}).
 
@@ -24,9 +24,9 @@ reached 0.319 $\pm$ 0.042 against 0.496 (\cref{sec:res-s3pl}).
 
 \textbf{Against legacy msiPL (RQ1).} Both VAE--IG arms beat reproduced msiPL in
 every GBM and CAC section: 0.518 and 0.514 against 0.414 on GBM, and 0.530 and
-0.553 against 0.402 on CAC (\cref{tab:main}). The difference is statistically
-supported in all four comparisons (HL $+0.10$ to $+0.15$, $r=1$, Holm
-$p=0.031$).
+0.553 against 0.402 on CAC (\cref{tab:main}). The predeclared tests, run on
+one seed, are statistically supported in all four comparisons, and the
+seed-averaged values agree (HL $+0.10$ to $+0.15$, $r=1$, Holm $p=0.031$).
 Repeating the comparison with msiPL re-tuned to $0.5\times$--$2\times
 K_{\text{bin}}$, IG stayed ahead in all eight GBM sections at every budget.
 On CAC it stayed ahead from $K_{\text{bin}}$ upwards, but at half the budget msiPL
@@ -43,20 +43,19 @@ ranking bins by their correlation with the posterior maps outperformed IG in
 140 of 144 comparisons (8 sections $\times$ 3 collections $\times$ 2 arms
 $\times$ 3 seeds; \cref{tab:seeds,fig:igcorr}). The four exceptions were small,
 at most $+0.017$. The predeclared rule asked whether IG was below correlation in
-at least 7 of 8 sections in every training run. It held in 17 of 18 runs and
-failed in one CAC run, where IG was below in 6 of 8 sections, so the rule's
-verdict is that the result ``does not hold overall''. The direction itself
+at least 7 of 8 sections in every training run, at each applicable scoring
+level. It held in 16 of 18 runs; it failed for one CAC training seed in both
+arms (IG below in 6 of 8 sections at peak level for the centre-only arm, and at
+both levels for the uniform arm), so the rule's verdict is that the result
+``does not hold overall''. The direction itself
 never reversed: all 30 collection means of IG minus correlation (18 at bin
 level and 12 at peak level) were negative.
 
 \begin{table*}[t]
 \caption{Collection mean mSCF1 at $K_{\text{bin}}$ (bin level). IG and posterior
 correlation use the same fitted GMM; model-free rankings use the spectra.
-Bold: best label-free ranking per row. The oracle uses the expert masks and is
-a ceiling. RCC uses class-informed GMM $K=3$; 45--78\% of its pixels are
-unannotated and treated as background by the Cardinal workflow, an
-interpretation not independently verified here.
-IG and posterior correlation: mean $\pm$ SD over three training seeds; the
+Bold: best unsupervised ranking per row. The oracle uses the expert masks and is
+a ceiling. IG and posterior correlation: mean $\pm$ SD over three training seeds; the
 other rankings do not depend on the seed.}
 \label{tab:main}
 \centering\small
@@ -109,26 +108,29 @@ segmentation outperforms IG on the same segmentation.}
 \label{fig:igcorr}
 \end{figure}
 
-\textbf{Statistics.} With seeds averaged within section, the difference is
-statistically supported in all six collection--arm comparisons at bin level
-(\cref{tab:seeds}). Correlation scored higher in every section (rank-biserial
+\textbf{Statistics.} Separately from that replication rule, with seeds
+averaged within section, the difference is statistically supported (Holm
+$p<0.05$ with the same direction as the outcome) in all six collection--arm
+comparisons at bin level (\cref{tab:seeds}). These p-values are nominal,
+because CAC sections share one tumour and GBM sections share PDX lines; the
+GBM result also holds in each of the four lines. Correlation scored higher in every section (rank-biserial
 $r=-1$), and every raw p-value is the smallest attainable for $n=8$, so this is
 as strong as eight sections can show. The seed changed the size of the gap
 only slightly: the three seed means of a collection differed by at most 0.05.
 At peak level (P1) the result is also supported, except for the CAC uniform arm
 ($-0.054$, 7/8, Holm $p=0.078$). The descriptive mixed models agree and assign
 almost no variance to the seed, and GBM is negative in every PDX line.
-Sampling 48 or 192 pixels per component for IG instead of 12 raised its score
-by at most 0.024, far less than the gap.
+On the two development sections, sampling 48 or 192 pixels per component
+for IG instead of 12 raised its score by at most 0.024, far less than the gap.
 
 \textbf{Answer to RQ1 and RQ2.} The pipeline beats legacy msiPL, but the
 attribution method is not what carries that gain. Given the same segmentation,
 a direct correlation ranking is better than IG on all three collections. The
-useful signal is in the label-free segmentation, not in the gradients.
+useful signal is in the unsupervised segmentation, not in the gradients.
 
 \subsection{Simple rankings and the metric}
 \label{sec:res-simple}
-Among the label-free rankings, the strongest differs by collection
+Among the unsupervised rankings, the strongest differs by collection
 (\cref{tab:main}): posterior correlation on GBM (0.762, with Moran's~$I$ at
 0.684), mean intensity on CAC (0.612, with correlation, Moran's~$I$ and
 variance all within 0.02) and Moran's~$I$ on RCC (0.631, above correlation at
@@ -136,7 +138,8 @@ variance all within 0.02) and Moran's~$I$ on RCC (0.631, above correlation at
 the oracle, converge near 0.41 at twice the budget, which limits how much CAC
 differences can reveal. On GBM and RCC, sections whose GMM agrees better with
 the masks have correlation scores closer to the oracle (Spearman $\rho=-0.90$
-and $-0.84$ against the gap to the oracle). mSCF1 rewards ion images that
+and $-0.84$ over sections between balanced accuracy and the gap to the
+oracle). mSCF1 rewards ion images that
 follow the expert regions, so a segmentation that resembles those regions
 scores well when correlated against; this alignment is part of why correlation
 does well (\cref{sec:discussion}).
@@ -156,21 +159,24 @@ does well (\cref{sec:discussion}).
         distant pixels. They tied (0.542 against 0.543). On GBM, zeroed
         context scored highest (0.459, against 0.446 for real).
   \item \textbf{Larger windows} did not help: $7\times7$ and $9\times9$ were
-        $0.035$ below $3\times3$ on GBM (mixed, 2/8) and equivalent on CAC
+        $0.035$ below $3\times3$ on GBM (mixed; higher in only 2/8 sections)
+        and equivalent on CAC
         (\cref{fig:variants}).
   \item \textbf{Learned attention} was equivalent to uniform averaging on both
         collections ($+0.011$ GBM, $-0.006$ CAC). With real neighbours its
-        weights stayed almost uniform (normalised entropy 0.98--0.999). With
+        weights stayed almost uniform (entropy divided by its maximum,
+        $\log$ of the number of neighbours: 0.98--0.999). With
         shuffled neighbours it learned selective weights, so the mechanism
         works; real neighbours are simply near-copies of the centre (median
-        cosine about 0.98). At tissue boundaries, where neighbours differ most,
+        cosine similarity between centre and neighbour spectra about 0.98). At tissue boundaries, where neighbours differ most,
         attention did depart further from uniform on the two development
-        sections (median 0.011--0.028 against 0.003--0.011 in the interior),
+        sections (median half-$L_1$ distance from equal weights 0.011--0.028
+        against 0.003--0.011 in the interior),
         but it favoured neighbours of the same tissue class in only 50--56\%
         of boundary pixels on CAC and 41--50\% on GBM, so it did not learn to
         follow tissue boundaries. Masking the centre during
         training did not make attention selective, and it lowered GBM scores
-        by $0.039$. On two outcome-known development sections, replacing
+        by $0.039$. On the two development sections, replacing
         learned attention weights with equal weights at inference slightly
         raised peak scores ($+0.0099$ and $+0.0038$); this same-checkpoint
         diagnostic did not retrain a uniform model.
@@ -205,26 +211,18 @@ peaks. Reconstruction did not separate the two either: PCA-5 had \emph{lower}
 reconstruction error than the VAE on all eight GBM sections, and slightly
 higher error on 7/8 CAC sections. The number of GMM components was not
 validated without labels: BIC selected the largest candidate ($K=6$) in every
-tested case, including all 16 RCC runs, with no interior minimum, and a finer
-segmentation lowered GBM scores by about 0.30.
+tested case ($K=1$ to 6), including all 16 RCC runs, with no interior minimum;
+on GBM108\_positive, the finer $K=6$ segmentation lowered the correlation score
+by about 0.30.
 
-Longer VAE training reduced the total loss but did not improve mSCF1
-monotonically. At 10, 25, 50 and 100 epochs, respectively, the GBM development
-section gave IG/posterior-correlation scores of
-$0.509/0.665$, $0.518/0.688$, $0.504/0.671$ and $0.508/0.692$ with centre-only
-input, while total loss fell from 593{,}007 through 575{,}894 and 572{,}345 to
-571{,}502. With uniform neighbourhood input, its scores were
-$0.532/0.700$, $0.571/0.704$, $0.564/0.705$ and $0.533/0.705$, with losses
-591{,}713, 575{,}574, 572{,}301 and 571{,}563. On the CAC development section,
-the centre-only scores were $0.671/0.726$, $0.675/0.727$, $0.661/0.725$ and
-$0.680/0.727$, with losses 5{,}813.821, 5{,}796.127, 5{,}786.919 and
-5{,}780.477; the uniform-input scores were $0.674/0.733$, $0.665/0.721$,
-$0.681/0.717$ and $0.683/0.745$, with losses 5{,}814.905, 5{,}798.533,
-5{,}788.563 and 5{,}781.457. Epoch 100 reproduced the production IG and
-posterior-correlation scores exactly in all four section--arm combinations and
-both ranking prefixes were identical. The loss decrease was largest by epoch
-25 and continued more gradually thereafter, but the scores provide no basis
-for selecting an epoch.
+\textbf{Training length.} On two development sections (GBM108\_positive and
+40TopL), both core arms were also scored after 10, 25, 50 and 100 epochs. The
+training loss fell mostly by epoch 25 and changed little afterwards (on GBM,
+from 593{,}007 to 575{,}894 and then to 571{,}502 at epoch 100). mSCF1 did not
+improve with longer training: across the four checkpoints IG varied by at most
+0.04 and posterior correlation by at most 0.03, with no consistent trend.
+Epoch 100 reproduced the production scores and rankings exactly, so the
+100-epoch setting is justified by the loss rather than chosen on the score.
 
 \begin{figure}[t]
 \centering
@@ -253,7 +251,7 @@ scores provide no label-free rule for selecting that checkpoint.
 (\cref{fig:s3plseeds}), the published GBM score of 0.496 lies above all ten
 seed means (maximum 0.374) and above every seed in 6/8 sections; even the best
 of ten seeds in every section reaches only 0.434. On CAC, the best of ten
-reaches 0.600, within the published rounding of 0.601. Replacing the released
+reaches 0.600, just below the published 0.601. Replacing the released
 spatial-maximum normalisation with the TIC normalisation described in the paper
 did not close the GBM gap (0.303 against 0.324). We therefore leave the GBM gap
 unexplained; untested candidates are section-specific data preparation and
@@ -261,8 +259,8 @@ hyperparameters tuned on the evaluation sections. The seed effect itself is
 specific: about half of the score variance lies between sections, almost none
 in a seed main effect and about 47\% in a section $\times$ seed interaction.
 Seeds switch particular sections between distinct solutions (GBM108\_positive
-between 0.02 and 0.46). Weight initialisation dominated in two of three
-selected sections (SD 0.222 against 0.001 from data order on
+between 0.02 and 0.46). On three sections that switched in this way, weight
+initialisation dominated in two (SD 0.222 against 0.001 from data order on
 GBM108\_positive), while data order also mattered on GBM108\_negative. The
 measured contribution of GPU nondeterminism was limited in the tested repeats.
 
@@ -272,26 +270,27 @@ measured contribution of GPU nondeterminism was limited in the tested repeats.
 \caption{S\textsuperscript{3}PL mSCF1 per section over ten released seeds
 (dots), seed mean (bar) and published value (diamond), using
 S\textsuperscript{3}PL's own evaluator. On GBM the published value is above
-every seed in 6/8 sections; on CAC it lies just outside, within the published
-rounding.}
+every seed in 6/8 sections; on CAC it lies just outside the seed
+distribution.}
 \label{fig:s3plseeds}
 \end{figure*}
 
-\textbf{Summary.} msiPL reproduced. S\textsuperscript{3}PL's native results
-were close on RCC and CAC, subject to the CAC seed-distribution verdict above,
-but its published GBM value remains unreproduced. Individual sections can
+\textbf{Summary.} msiPL reproduced. S\textsuperscript{3}PL's own results were
+close on RCC and CAC, with the published CAC value just outside our seed
+distribution, but its published GBM value remains unreproduced. Individual sections can
 switch between distinct solutions, making single-run comparisons unreliable.
 
 \subsection{RCC: held-out confirmation}
 \label{sec:res-rcc}
-On the held-out RCC collection, correlation outperformed IG in every run in both
-arms, and Moran's~$I$ was the strongest label-free ranking (0.63). The primary
+On the held-out RCC collection, correlation outperformed IG in 23 of 24
+centre-only and 24 of 24 uniform comparisons over three seeds, and Moran's~$I$ was the strongest unsupervised ranking (0.63). The primary
 GMM used class-informed $K=3$. The unannotated class covers 45--78\% of pixels;
-the Cardinal workflow treats it as background (\texttt{rcc\_nobg}), but we did
-not verify that interpretation independently. The documentation describes
+the Cardinal workflow treats it as background, but we did not verify that
+interpretation independently. The documentation describes
 heterogeneous tumour with large normal-looking areas in UH0505\_12 and
 UH9905\_18. When only cancer and normal
-pixels are scored the advantage shrinks: correlation beats IG in 5/8 runs for
+pixels are scored, which changes the question to separating cancer from
+normal tissue only, the advantage shrinks: correlation beats IG in 5/8 runs for
 the centre-only arm (and falls below mean intensity, variance and Moran's~$I$)
 and in 6/8 runs for the uniform arm. The three-class RCC result is therefore
 partly driven by separating annotated tissue from the unannotated region;
@@ -300,9 +299,12 @@ RCC is held-out confirmation of the ranking contrast under these qualifications.
 \subsection{Runtime}
 \label{sec:res-runtime}
 Once a segmentation exists, correlation takes about a second or less per
-section, while IG takes seconds to minutes
-(\cref{tab:runtime,fig:runtime}). Every timed
-ranking with a saved comparator reproduced its ranking exactly. Cached
+section, while IG takes seconds to minutes. The two timings differ in scope:
+correlation and Moran's~$I$ start from loaded spectra and, for correlation, a
+fitted GMM, whereas the IG time is the recorded attribution step, which also
+fits the GMM and runs faithfulness checks (uniform arm, one seed)
+(\cref{tab:runtime,fig:runtime}). Every timed ranking reproduced its saved
+ranking exactly. Cached
 100-epoch VAE training
 takes longer than S\textsuperscript{3}PL's 10-epoch protocol but remains
 practical. Over a complete workflow on CAC section 160TopL (training, selection

@@ -31,7 +31,7 @@
 \crefname{table}{table}{tables}
 \Crefname{table}{Table}{Tables}
 
-\newcommand{\reporttitle}{Spatial Aware Peak Ranking in Mass Spectrometry Imaging}
+\newcommand{\reporttitle}{Spatially Aware Peak Ranking in Mass Spectrometry Imaging}
 \newcommand{\authorname}{Zayd \textsc{Suliman}}
 \newcommand{\studentnumber}{2653934}
 \newcommand{\supervisorname}{Hairong Bau and Richard Klein}
@@ -61,15 +61,16 @@ selecting a few informative peaks. Learned methods such as msiPL rank peaks
 from an unsupervised model, and S\textsuperscript{3}PL adds spatial information through 3D
 convolution. We ask whether local neighbourhood context improves learned peak
 ranking and where in the pipeline it matters. Variational autoencoders with and
-without neighbourhood input were segmented with a Gaussian mixture model.
+without neighbourhood input were fitted, and their latent spaces were
+segmented with a Gaussian mixture model.
 Peaks were ranked either by Integrated Gradients (IG) through the model or by
 correlating each ion image with the segment posterior maps. On 24 sections
 from three public datasets, at matched peak budgets and under predeclared
 decision rules, correlation outperformed IG in 140 of 144 paired comparisons
 across three seeds, a difference that was statistically supported for every
-dataset and model. In these tests, neighbourhood input to the encoder gave no
+dataset and both model variants. In these tests, neighbourhood input to the encoder gave no
 consistent, spatially specific gain, while spatially aware ranking statistics
-were the strongest label-free rankings on two of the three datasets and within
+were the strongest unsupervised rankings on two of the three datasets and within
 0.01 of the best on the third.
 \end{abstract}
 
@@ -93,7 +94,7 @@ computing facility.
 
 \clearpage
 \onecolumn
-\IfFileExists{ai_declaration.pdf}{\includepdf[pages=1]{ai_declaration.pdf}}{%
+\IfFileExists{ai_declaration.pdf}{\includepdf[pages=1]{ai_declaration.pdf}\input{sections/ai_prompts}}{%
 \section*{AI declaration}
 \checkme{Completed Wits postgraduate AI declaration form (final page), with
 the tools used and the relevant prompts on additional pages.}}

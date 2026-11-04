@@ -17,7 +17,7 @@ Three explanations fit the ranking result.
         produces posterior maps that a mask-based metric naturally rewards.
 \end{enumerate}
 Correlation is therefore best read as an ablation finding about this pipeline:
-the label-free segmentation carries the useful signal, and gradient attribution
+the unsupervised segmentation carries the useful signal, and gradient attribution
 through a dense VAE does not add to it. We do not claim that IG is generally
 inferior, nor that segment-then-correlate, which is established
 practice~\citep{alexandrov2011efficient}, is a new method.
@@ -44,7 +44,7 @@ including intense ions unrelated to tissue classes, whereas peak quality here
 depends on how well a low-dimensional segmentation separates the classes. This
 agrees with \citet{mazarura2025autoencoder}.
 
-On two outcome-known sections, label-trained probes using within-section pixel
+On the two development sections, label-trained probes using within-section pixel
 folds recovered expert-class information from frozen latents even when the
 unsupervised GMM partitioned them differently; the probes are diagnostics,
 not label-free validation. On one section, a tied-covariance GMM agreed better
@@ -54,13 +54,14 @@ BIC, so selecting it for mask agreement would be label-guided.
 \subsection{S\textsuperscript{3}PL instability and the reproduction gap}
 The S\textsuperscript{3}PL seed analysis shows that comparisons with a single S\textsuperscript{3}PL run can be
 misleading. Specific sections switch between distinct solutions depending on
-the initial weights. The released preprocessing appears to create this
-instability, since TIC normalisation removes it while also removing the
-highest-scoring outcomes. Neither seeds nor normalisation explain the
+the initial weights. With TIC normalisation instead of the released
+spatial-maximum normalisation, this instability largely disappeared (per-section
+seed SD 0.011 against 0.061), along with the highest-scoring outcomes, so it is
+associated with the released preprocessing. Neither seeds nor normalisation explain the
 published GBM score. We therefore report the gap as unresolved, and we do not
 select favourable seeds or checkpoints for any baseline.
 
-\subsection{Label-free operation and cost}
+\subsection{Supervision and cost}
 The pipeline fits and ranks without labels, but two settings still come from
 annotation: the number of segments and the peak budget. BIC could not replace
 the first, so the configuration remains class-informed. On cost, the dense VAE
@@ -79,7 +80,8 @@ Each collection has eight sections, drawn from four PDX lines (GBM), one tumour
 (CAC) and eight subjects (RCC), so the statistics describe these sections
 rather than a wider population, and effect sizes carry most of the weight. Two
 settings come from the annotations, the number of segments and the peak budget,
-so the pipeline is label-free in fitting and ranking but not yet autonomous.
+so the pipeline is unsupervised in fitting and ranking but class-informed, and
+not yet autonomous.
 mSCF1 measures agreement with tissue masks rather than molecular identity,
 which favours methods that produce mask-like maps; the RCC masks include a large
 unannotated region, and the CAC masks are model predictions. Finally, we tested
