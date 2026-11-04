@@ -7285,3 +7285,147 @@ Status: INFO
 - Resolves: 2026-11-04 15:35 Codex review entry, commit step.
 - Committed: `e92aac94` (`Fix IG figure palette for larger K`). The pulled BIC, partial 81467 and job-81411 evidence remain uncommitted and were not mixed into the fix.
 - Next gate: upload and hash-check this commit, then run the cluster test job; `test_label_free_k` must pass 26/26 with the torch-dependent figure-render test not skipped before any IG resubmission.
+
+### 2026-11-04 15:38 Code → Zayd | Supervisor: fix uploaded (e92aac94), test job 81489 running, partial folders moved aside
+Status: INFO
+
+- Resolves: 2026-11-04 15:35 Codex commit-outcome entry (upload step).
+- **Upload, 15:37 SAST:** `-n` first, from clean HEAD `e0a169f8`: the 2 committed files plus the prefs timestamp; **sha256 14/14 match HEAD**.
+- **Cluster test job 81489** submitted 15:37:19 SAST (script defaults, `batch`). Gate: all modules pass; `test_label_free_k` 26/26 with none skipped (the K = 6/9 figure render must run).
+- **Move (echo first, `mv -n`):** the 15 partial 81467 folders → `results/experiments/label_free_k_20261104/superseded_81467_figure_crash/`; 90 files kept, 0 left in place, nothing deleted.
+- Logged in P18 §10. Next: check 81489 after about 15 min; if it passes, post the IG checklist with `--concurrency 10`.
+
+### 2026-11-04 15:53 Code → Zayd | Supervisor: Test 81489 passed; new IG checklist (48 GPU tasks, 64 steps, concurrency 10); waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the IG array)
+
+- Resolves: 2026-11-04 15:38 Code entry.
+- **81489 COMPLETED 0:0** in 12:09: main suite 350 OK, 4 usual skips; **`test_label_free_k` 26/26, none skipped**, including the K = 6/9 figure render; S3PL 25/25 and 4/4; empty `.err`. Logged in P18 §10.
+- **IG checklist (unchanged from 15:07 except the fixed IG script and concurrency 10):**
+  - Command (from `~/msi`): `bash slurm_jobs/submit_label_free_k.sh ig 64 0-47 --partition batch --concurrency 10`.
+  - All 48 tasks on `batch` (RTX 3060; `bigbatch` 0 idle, `batch` 67 idle at 15:53), passed on the command line; `--exclude` = the 16-node quarantine plus mscluster144 on the command line; no `--exclusive`; real CUDA warm-up.
+  - Per task 4 CPUs, 24G, 3 h; expected 10–40 min; about 2–3 h for all 48 at 10 concurrent.
+  - Code: HEAD `e0a169f8` (fix `e92aac94`), hashes verified on the cluster.
+  - Outputs: new `steps64` roots (none exist now; the 81467 partials are in `superseded_81467_figure_crash/`). Production folders and checkpoints read only; nothing written under /datasets.
+  - Exit codes: 4 needs more steps (escalation checklist); 6 component under 44 px (not done); 5 identity/K failure (stop and post); anything else: stop and post.
+  - Monitoring: an early check after about 5 min (the first tasks crashed at about 2 min last time), then after about 40 min, then at most every 2–5 min.
+
+### 2026-11-04 15:55 Code → Zayd | Supervisor: IG array resubmitted as 81493
+Status: INFO
+
+- Resolves: 2026-11-04 15:53 Code entry (Zayd's OK in the session).
+- `bash slurm_jobs/submit_label_free_k.sh ig 64 0-47 --partition batch --concurrency 10`: job **81493**, 48 tasks on `batch`, 15:55:19 SAST (13:55:19 UTC), same `--exclude` list as 81467.
+- Next: early check after about 5 min, then after about 40 min.
+
+### 2026-11-04 16:32 Code → Zayd | Supervisor: IG 81493 at 47/48; RCC_UH9905_18 central_only needs more steps; 128-step escalation checklist; waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the escalation)
+
+- Follows: 2026-11-04 15:55 Code entry.
+- **81493 at 16:31 SAST:** 46 COMPLETED 0:0 (IG `valid`, identity check passed, matched evaluation done); 1 RUNNING (task 45, GBM39_1 `uniform_mean`, 20:36); **1 exit 4: task 10, RCC_UH9905_18 `central_only`**, IG `needs_more_ig_steps` at 64 steps, not evaluated. No component under 44 px anywhere; no `.err` other than task 10's expected message.
+- **Escalation checklist (D27; P18 §6.10):**
+  - Command (from `~/msi`): `bash slurm_jobs/submit_label_free_k.sh ig 128 10 --partition batch --concurrency 1`.
+  - Same partition as the comparison (`batch`, D52), `--exclude` = the quarantine plus mscluster144 on the command line, no `--exclusive`, CUDA warm-up.
+  - What runs: the same checkpoint and IG call at 128 steps, with `--align-gmm-labels-to-production` the arm's own 64-step label-free folder, then identity check and gate v2 against that folder, then the matched evaluation if valid. The submitter and job both refuse unless the 64-step run is `needs_more_ig_steps` (it is).
+  - Expected time: about 3–6 min (the 64-step RCC tasks took 1.5–4 min; IG part doubles). 4 CPUs, 24G, 3 h.
+  - Output: new `RCC_UH9905_18_seed1/central_only/steps128/`; the 64-step folder is only read.
+  - If it fails at 128: one checklist for 256, then 512, 1024 (D37 as extended by D56).
+
+### 2026-11-04 16:34 Code → Zayd | Supervisor: 128-step escalation submitted as 81569
+Status: INFO
+
+- Resolves: 2026-11-04 16:32 Code entry (Zayd's OK in the session).
+- `bash slurm_jobs/submit_label_free_k.sh ig 128 10 --partition batch --concurrency 1`: job **81569** (RCC_UH9905_18 `central_only`, 128 steps), 16:34:06 SAST, same `--exclude` list.
+- Next: check after about 6 min (81569 and 81493 task 45); once all 48 are valid or not done, post the fair-scoring checklist.
+
+### 2026-11-04 16:40 Code → Zayd | Supervisor: 81569 fails completeness at 128 steps; 256-step escalation checklist; waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the 256-step escalation)
+
+- Resolves: 2026-11-04 16:34 Code entry.
+- **81569_10** (RCC_UH9905_18 `central_only`, 128 steps): exit 4 after 4:57 on mscluster156, IG `needs_more_ig_steps`; **identity check and gate v2 against the 64-step folder both passed** (same model, sample and targets). Not evaluated.
+- 81493 task 45 (GBM39_1 `uniform_mean`): still RUNNING at 29:27 on mscluster142 (slow node; limit 3 h).
+- **Checklist (D27; next step 256):** `bash slurm_jobs/submit_label_free_k.sh ig 256 10 --partition batch --concurrency 1`. Same partition, the same `--exclude` on the command line, no `--exclusive`, CUDA warm-up; aligned to and gate v2 against the 64-step folder; refuses unless 128 steps is `needs_more_ig_steps` (it is). Expected about 6–10 min; 4 CPUs, 24G, 3 h. Output: new `steps256/`. If it fails at 256: checklists for 512, then 1024 (D37 as extended by D56).
+
+### 2026-11-04 16:44 Code → Zayd | Supervisor: 256-step escalation submitted as 81575; 512/1024 pre-approved
+Status: INFO
+
+- Resolves: 2026-11-04 16:40 Code entry (Zayd's OK in the session).
+- `bash slurm_jobs/submit_label_free_k.sh ig 256 10 --partition batch --concurrency 1`: job **81575**, 16:43:55 SAST.
+- Zayd pre-approved 512, then 1024, for this task only, with the same command pattern and checks. Each is still logged here when submitted. Fair-scoring checklist follows once all 48 are valid.
+
+### 2026-11-04 16:47 Code → Zayd | Supervisor: 81493_45 stalled on mscluster142; cancelled, moved aside, rerun as 81578
+Status: INFO
+
+- 81493_45 (GBM39_1 `uniform_mean`, 64 steps) had produced nothing after 34 min on mscluster142: GPU 0 %, process in I/O wait (state D), 46 s CPU; the other GBM tasks took 5–16 min. Same node as both slow test jobs today.
+- With Zayd's OK: `scancel 81493_45` (16:46, CANCELLED at 35:03); partial `steps64` (4 files, no IG output) moved with `mv -n` (echo first) to `superseded_81493_45_slow_node/`; rerun **81578** at 16:46:36 SAST by direct `sbatch` with the submitter's arguments plus mscluster142 in `--exclude` (Zayd's choice; logged in the provenance job-ID file).
+- 81575 (task 10, 256 steps) running normally on mscluster156. Next check at about 16:55.
+
+### 2026-11-04 16:55 Code → Zayd | Supervisor: RCC_UH9905_18 central_only valid at 256 steps
+Status: INFO
+
+- **81575_10 COMPLETED 0:0** in 4:50: IG `valid` at 256 steps; identity check and gate v2 against the 64-step folder passed; matched evaluation complete. The 512/1024 pre-approval is not used.
+- 81578 (GBM39_1 `uniform_mean` rerun) running normally on mscluster159 (7:43). Fair-scoring checklist follows when it is valid.
+
+### 2026-11-04 16:59 Code → Zayd | Supervisor: all 48 IG runs valid; fair-scoring checklist (48 CPU tasks); waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit fair scoring; one decision below)
+
+- Resolves: 2026-11-04 16:55 Code entry.
+- **81578_45 COMPLETED 0:0** in 10:52 on mscluster159: GBM39_1 `uniform_mean` valid at 64 steps. **All 48 section-arms valid:** 47 at 64 steps, RCC_UH9905_18 `central_only` at 256. None not done; no component under 44 px.
+- **Fair-scoring checklist (P18 §6.10 step 5):**
+  - Command (from `~/msi`): `bash slurm_jobs/submit_label_free_k.sh fair 0-47 --partition batch --concurrency 10`.
+  - The unchanged fair evaluator, bin level only, all classes, at the production K_bin; GBM/CAC with legacy, RCC `--no-legacy` at the released target. The job picks the decisive step count mechanically (first valid), checking identity and, above 64, gate v2.
+  - CPU only on `batch`: 2 CPUs, 8G, 2 h per task; expected 2–5 min each (the production evaluator took about 1.5 min on GBM12_1; it peaked under 1 GB). About 15–25 min for all 48 at 10 concurrent; within the `batch` QOS (13 running).
+  - Outputs: new `results/diagnostics/fair_scoring_baselines/label_free_k_20261104/bin_level_only/<section>_seed1/<arm>/steps<N>/`; refuses existing outputs. Nothing else is written.
+- **Decision before any fair-scoring output (CPU model):** gate 4 needs the K-independent rankings to reproduce the production values within 1e-6. Exact reproduction is CPU-model specific (§6.8): the saved RCC fair scoring came from `bigbatch` (i9-10940X), and in §6.8 four RCC runs failed an exact prefix gate on `batch`. GBM/CAC production scoring (66097) ran on `batch`. **Proposal, fixed now:** run all 48 on `batch`; if gate 4 fails for an RCC run, rescore only that run on an i9-10940X node (`--nodelist` on the command line, as the §6.8 31 October amendment), with no change to the 1e-6 tolerance. Any other gate failure: stop and post.
+- After completion: one `sacct`, pull (`-n` first), `summarise_label_free_k.py` locally, post the labels against the rule.
+
+### 2026-11-04 17:01 Code → Zayd | Supervisor: fair scoring submitted as 81585; CPU-model rule recorded
+Status: INFO
+
+- Resolves: 2026-11-04 16:59 Code entry (Zayd's OK in the session).
+- CPU-model rule approved and written into P18 §6.10 before any fair-scoring output: score all on `batch`; only an RCC run failing gate 4 is rescored on an i9-10940X node (`--nodelist` on the command line), tolerance unchanged; any other gate failure stops.
+- `bash slurm_jobs/submit_label_free_k.sh fair 0-47 --partition batch --concurrency 10`: job **81585**, 48 tasks, 17:00:58 SAST. Next: check after about 15 min, then pull, summarise, post the labels.
+
+### 2026-11-04 17:40 Code → Zayd | Supervisor: fair scoring 47/48; task 39 stalled on mscluster142, rerun as 81639
+Status: INFO
+
+- 81585: 47/48 COMPLETED 0:0, all summaries complete (46 at 64 steps, RCC_UH9905_18 central_only at 256), empty `.err`.
+- 81585_39 (GBM12_2 `uniform_mean`) on mscluster142: state D, 4 s CPU after about 16 min. With Zayd's OK: cancelled at 17:39 (37:07); its folder (one empty log) moved with `mv -n` (echo first) to `superseded_81585_39_slow_node/`; rerun **81639** by direct `sbatch` with `--exclude=mscluster142` on the command line, 17:39:13 SAST.
+- mscluster142 recorded in `cluster_node_issues.txt` (slow /datasets I/O, three events today; not a CUDA fault, not quarantined).
+
+### 2026-11-04 17:51 Code → Zayd | Supervisor: Label-free K (P18 §6.10) results — IG < correlation does not hold on GBM; holds on CAC and RCC
+Status: OPEN (Supervisor: report wording; Codex: review and commit the evidence)
+
+- Resolves: 2026-11-04 17:40 Code entry. Fair scoring 48/48 complete (rerun 81639_39 1:34 on mscluster156); pulled 17:49 SAST (`-n` first; 1,328 new files, no committed file changed). Summary: `results/diagnostics/fair_scoring_baselines/label_free_k_20261104/decisions_20261104_local/` (`decisions.json`, `per_section.csv`). Seed 1; bin level, all classes, mSCF1 at K_bin.
+- **Label-free K:** K = 6 in 48/48, BIC's choice at the boundary of the tested range (K ≤ 6). All 48 IG runs valid (47 at 64 steps; RCC_UH9905_18 `central_only` at 256). None not done.
+- **Gates:** gate 4 passed 48/48 (mean intensity, variance, Moran's I, oracle and GBM/CAC legacy reproduce production exactly, max |Δ| 0.0); no RCC rescoring. Cross-check: posterior-|PCC| at K = 6 equals the October BIC-K sensitivity value in 20/20.
+- **Rule "IG < posterior correlation is label-independent" (correlation > IG in ≥ 7/8), with numbers beside (label-free K | production K, seed 1):**
+  - GBM `central_only`: **does not hold** (2/8; mean correlation − IG −0.019 | 8/8, +0.225).
+  - GBM `uniform_mean`: **does not hold** (5/8; +0.006 | 8/8, +0.233).
+  - CAC `central_only`: **holds** (8/8; +0.045 | 8/8, +0.078).
+  - CAC `uniform_mean`: **holds** (7/8; +0.025 | 8/8, +0.047).
+  - RCC `central_only`: **holds** (8/8; +0.073 | 8/8, +0.156).
+  - RCC `uniform_mean`: **holds** (7/8; +0.054 | 8/8, +0.169).
+  - Overall sentence not earned: "Not all cells hold: GBM central_only (2/8), GBM uniform_mean (5/8)."
+- **What moved (descriptive):** correlation falls with K = 6 (collection mean change vs production: GBM −0.281 / −0.247, CAC −0.030 / −0.024, RCC −0.061 / −0.097 for centre / uniform); IG barely changes (GBM −0.037 / −0.020, CAC +0.003 / −0.002, RCC +0.022 / +0.018). On GBM, correlation at K = 6 (0.461 / 0.497) drops to the level of IG (0.480 / 0.491).
+- **Collection means at K = 6 (centre / uniform) vs K-independent rankings:**
+  - GBM: IG 0.480 / 0.491, correlation 0.461 / 0.497; mean intensity 0.483, variance 0.497, **Moran's I 0.684**, legacy msiPL 0.414. Moran's I > correlation 8/8 in both arms.
+  - CAC: IG 0.532 / 0.557, correlation 0.577 / 0.582; **mean intensity 0.612**, variance 0.593, Moran's I 0.605, legacy 0.402. Mean intensity > correlation 8/8 and 6/8.
+  - RCC: IG 0.435 / 0.428, correlation 0.507 / 0.481; mean intensity 0.498, variance 0.508, **Moran's I 0.631**; legacy msiPL not rescored at the label-free K. Moran's I > correlation 8/8 in both arms.
+  - ARI / NMI of the K = 6 segmentation (mean): GBM 0.19 / 0.36, CAC 0.31–0.32 / 0.40, RCC 0.29–0.31 / 0.45–0.48.
+- **uniform − centre at K = 6 (descriptive, no label):** IG GBM +0.010 (6/8), CAC +0.026 (6/8), RCC −0.007 (5/8); correlation GBM +0.035 (7/8), CAC +0.006 (5/8), RCC −0.026 (3/8).
+- **Which of the paper's conclusions change (for the supervisor's paragraph):**
+  1. "Correlation outperformed IG on every dataset": **depends on the class-informed K on GBM.** With the label-free K it holds on CAC and RCC (both arms) but not on GBM, where correlation and IG are about equal (−0.019, +0.006). The margin shrinks on every collection.
+  2. "Spatially aware ranking statistics strongest on GBM and RCC, within 0.01 of the best on CAC": **unchanged** (Moran's I does not depend on K). At K = 6 the gap between Moran's I and correlation widens (GBM about 0.19–0.22, RCC 0.12–0.15), and on CAC correlation falls below mean intensity, variance and Moran's I.
+  3. "Neighbourhood input gave no consistent gain": not retested by a rule; the descriptive differences above are small and mixed in sign across collections.
+  4. IG vs legacy msiPL (GBM/CAC): IG > legacy in 8/8 sections in all four GBM/CAC cells at K = 6, as at production K. RCC legacy not rescored at the label-free K.
+  - Not rerun, so unaffected or untested: PCA (Test V), S3PL, training length, the three-seed and §6.6 statistics (all at production K).
+- No report edits. Evidence (pulled roots, decision table, P18 §10 entries, `cluster_node_issues.txt`) is uncommitted for Codex.
+
+### 2026-11-04 18:01 Supervisor → Codex | Code | Zayd: Label-free K results accepted; written into report v19
+Status: INFO (Codex: commit the evidence, then the report separately)
+- Resolves: the 17:51 Code entry.
+- **Accepted:** K = 6 in 48/48 (boundary); gate 4 passed 48/48; the rule holds on CAC and RCC (both arms) and does not hold on GBM (2/8, 5/8).
+- **Report v19** (`report/draft/report_draft_v19_2026-11-04.pdf`, uncommitted):
+  - new results subsection "Number of segments chosen without labels" (`sec:res-lfk`) with Table `tab:lfk`;
+  - abstract, introduction findings and contributions, the RQ1/RQ2 answer, Methods pointer, Discussion (metric alignment), Limitations and Conclusion updated;
+  - the spatial claim is restated on Moran's I, which is unaffected by K.
+  - Body ends p11; references from p12.
