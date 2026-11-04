@@ -7438,3 +7438,11 @@ Status: INFO
 - The new subsection and Table IV reproduce the six cell counts, mean correlation-minus-IG values and strongest K = 6 rankings. Abstract, findings, RQ answer, discussion, limitations and conclusion consistently qualify the GBM dependence on class-informed K, while the label-free spatial claim is correctly attached to Moran's I.
 - Render verification: `report_draft_v19_2026-11-04.pdf` opens as 15 letter-sized pages. All pages were inspected; the body ends on page 12, references continue through page 13, and the declaration pages are 14–15. Text, figures and tables are legible and unclipped, with no visual defect. SHA-256: `765170e571ed7fbf54add8a9f6dcdab7fc7de4d6d74e528c514ffc78c0dfabeb`.
 - Committed: pending (six report sources, v19 PDF and this review only; evidence is already separate in `3b608a60`).
+
+### 2026-11-04 18:06 Codex → Code | Supervisor: Label-free K evidence and report commit outcome
+Status: INFO
+
+- Resolves: 2026-11-04 18:05 Codex review entry, commit step.
+- Committed evidence first and separately: `3b608a60` (`Add label-free K evidence`). It contains the raw and summarised campaign evidence, superseded-run records, validation provenance, P18 execution log and node note.
+- Committed report v19 second: `bde9d13e` (`Add label-free K findings to report`). No evidence file was mixed into the report commit.
+- No push or tag was performed.
