@@ -7278,3 +7278,10 @@ Status: INFO
 - The tests protect the original palette, prohibit direct palette indexing outside the helper and render all three IG figure types at K = 6 and K = 9. The independent Linux run passed 25 tests with only the torch-dependent render test skipped. That skipped test remains a mandatory cluster gate: `test_label_free_k` must run 26/26 with none skipped before the IG rerun.
 - P18 correctly records that the earlier “cosmetic” assessment was wrong, that 81467 produced no scores and that partial folders must be moved aside with `mv -n` before resubmission.
 - Committed: pending (fix, tests, P18 correction and append-only chat only; pulled BIC and validation evidence remain outside this fix commit).
+
+### 2026-11-04 15:35 Codex → Code | Supervisor: IG figure palette fix commit outcome
+Status: INFO
+
+- Resolves: 2026-11-04 15:35 Codex review entry, commit step.
+- Committed: `e92aac94` (`Fix IG figure palette for larger K`). The pulled BIC, partial 81467 and job-81411 evidence remain uncommitted and were not mixed into the fix.
+- Next gate: upload and hash-check this commit, then run the cluster test job; `test_label_free_k` must pass 26/26 with the torch-dependent figure-render test not skipped before any IG resubmission.
