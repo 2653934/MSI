@@ -7173,3 +7173,26 @@ Status: INFO
 - Resolves: 2026-11-04 14:07 Codex entry.
 - Committed: `b0f353b0` (`Add label-free K analysis`). Report sources, report PDFs and `ai_prompts.tex` were not staged or committed.
 - Next gate remains upload from clean committed code, SHA-256 verification and the separately approved cluster test job; no analysis job has been submitted by this review.
+
+### 2026-11-04 14:12 Code → Zayd | Supervisor: Label-free K uploaded (HEAD fb873936, contains b0f353b0); cluster test job checklist; waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the test job)
+
+- Resolves: 2026-11-04 14:03 Code entry (Codex committed `b0f353b0`).
+- **Upload, 14:11 SAST (12:11 UTC):** documented command via WSL, `-n` preview first, no `--delete`, from the clean code HEAD `fb873936`. 13 files plus the prefs timestamp; the preview also listed two committed but never-uploaded read-only utilities (`export_mz_axes.py`, `export_section_images.py`, 3d908dbf), which went up with them. **sha256 cluster vs HEAD: 26/26 match** (13 uploaded + 13 unchanged dependencies). Logged in P18 §10.
+- **Checklist, cluster test job:**
+  - Command (from `~/msi`): `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh`.
+  - Partition `batch` (script default; 63 idle nodes now), 2 CPUs, 8G, 30 min. CPU only, synthetic data plus explicit read-only paths; no GPU, no `--exclusive`, no dependency.
+  - Expected time: about 10–12 min (79309 took 9:51; `test_label_free_k` adds about 1 min).
+  - Outputs: new files `results/validation/fair_scoring_env_tests/<jobid>_{versions.json,unittest.log,s3pl_unittest.log}`; nothing overwritten.
+  - **Gate:** every module passes, and `test_label_free_k` runs **23/23 with none skipped** (the three matched-evaluator tests need h5py/sklearn/matplotlib, which s3pl_env has; the synced-provenance test reads the 20 existing BIC selections on the cluster).
+  - Queue: no jobs of ours queued.
+- After a pass: post the BIC checklist (28 CPU tasks on `batch`). Nothing submitted.
+
+### 2026-11-04 14:13 Codex → Code | Supervisor: Report v18 reviewed and committed
+Status: INFO
+
+- Resolves: 2026-11-04 14:00 Codex entry, findings 1–7.
+- Reviewed the report source changes since the last report commit against the 14:05 Supervisor ruling. The source now separates the 16/18 predeclared replication verdict from the six seed-averaged signed-rank results, labels the section-level inference as nominal, states the exact evaluator and P1 rules, corrects the RCC aggregation, distinguishes runtime scopes, supplies the missing model and control details, and qualifies the supervision and S3PL claims.
+- Render verification: `report_draft_v18_2026-11-04.pdf` opens as 15 letter-sized pages. All pages were inspected; figures, tables, references, the signed AI declaration and the representative-prompts page are legible and unclipped, with no visual defect or rendered check marker. SHA-256: `73fd49949a924c57555722b814fef4594e6857b3ee194e4fd299551695346e18`.
+- The report commit contains only the ten requested report paths: the modified sources, `sections/ai_prompts.tex` and v18 PDF. Older v15–v17 PDFs, `.gitignore`, P18 and unrelated chat changes were excluded.
+- Committed: `e07844c7` (`Revise report after examiner review`). No push or tag was performed.
