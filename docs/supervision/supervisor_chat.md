@@ -7203,3 +7203,78 @@ Status: INFO
 - Resolves: 2026-11-04 14:12 Code entry (Zayd's OK in the session).
 - Submitted `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh` from `~/msi`: job **81411**, `batch`, at 14:20:34 SAST (12:20:34 UTC). Gate: all modules pass and `test_label_free_k` 23/23 with none skipped.
 - Next: one check after about 10 min (`sacct`), then the logs; no rapid polling.
+
+### 2026-11-04 14:43 Zayd → Code (recorded by Code): conditional resubmission of the test job
+Status: ANSWERED
+
+- 81411 was running slowly on mscluster142 (77 tests passed, none failed, at 10:23).
+- Zayd's OK: if 81411 times out, resubmit the same script with `--time=01:00:00 --exclude=mscluster142` on the command line. A timeout is not a failure; the gate is unchanged (every module passes, `test_label_free_k` 23/23, none skipped). If it passes, post the BIC checklist.
+
+### 2026-11-04 14:44 Code → Zayd | Supervisor: Test job 81411 passed; BIC checklist (28 CPU tasks); waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the BIC array)
+
+- Resolves: 2026-11-04 14:12 Code entry and the 14:3x conditional resubmission (not needed: no timeout).
+- **81411 COMPLETED 0:0** in 22:19 on mscluster142 (slow node). Main suite **347 OK, 4 skipped** (the usual local-artifact skips), **`test_label_free_k` 23/23, none skipped**; S3PL 25/25 and 4/4; empty `.err`. Gate passed. Logged in P18 §10.
+- **BIC checklist (P18 §6.10 step 2):**
+  - Command (from `~/msi`): `bash slurm_jobs/submit_label_free_k.sh bic 0-27 --concurrency 8` (submitter uses `sbatch --parsable`; no `--partition` option, so the script default `batch`).
+  - Tasks: the 28 section-arms without a BIC selection (7 GBM + 7 CAC sections × 2 arms); the unchanged `select_gmm_k_bic.py`, candidates 1–6, seed 1, n_init 20, production-K refit ARI ≥ 0.999 first. CPU only; no labels read; no GPU, no `--exclusive`, no dependency.
+  - Resources: 2 CPUs, 4G, 1 h per task. Expected 1.5–2.5 min per task (gate (d)/RCC BIC); GBM sections are larger, so allow up to about 10 min. With 8 at a time, the array should finish within about 30 min. Within the `batch` QOS (13 running per user); no other jobs of ours queued.
+  - Outputs: new root `results/diagnostics/gate_d_bic_label_free_k_20261104/<section>_seed1/<arm>/bic_selection.json`; the submitter creates the parent folders first and refuses any existing selection (exit 3). Production folders are only read.
+  - After completion: one `sacct`, then pull (`-n` first) and read only the `selected_k` values to post the label-free K table before the IG checklist.
+
+### 2026-11-04 14:45 Code → Zayd | Supervisor: BIC array submitted as 81416
+Status: INFO
+
+- Resolves: 2026-11-04 14:44 Code entry (Zayd's OK in the session).
+- `bash slurm_jobs/submit_label_free_k.sh bic 0-27 --concurrency 8`: job **81416**, 28 tasks on `batch`, at 14:45:41 SAST (12:45:41 UTC).
+- Next: one check after about 15 min, then every 2–5 min at most; after completion one `sacct`, pull (`-n` first), post the label-free K table.
+
+### 2026-11-04 15:07 Code → Zayd | Supervisor: BIC done (K = 6 in 48/48); IG checklist (48 GPU tasks, 64 steps); waiting for Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the IG array)
+
+- Resolves: 2026-11-04 14:45 Code entry.
+- **81416: 28/28 COMPLETED 0:0**, empty `.err`. Pulled at 15:04 SAST (`-n` first; 32 new files, no committed file changed). All 28 selections complete, refit ARI 1.0, all 6 candidates converged, no labels read.
+- **Label-free K = 6 in all 48 section-arms** (28 new + 20 earlier): BIC's choice at the boundary of the tested range (K ≤ 6). The job's own resolution check, run locally on all 48, confirms each selection was made on the production latent the IG job reads.
+- **IG checklist (P18 §6.10 step 3):**
+  - Command (from `~/msi`): `bash slurm_jobs/submit_label_free_k.sh ig 64 0-47 --partition batch --concurrency 6`.
+  - Partition: **`batch` (RTX 3060)** for all 48 tasks (D52: one partition for the whole comparison). `bigbatch` has 0 idle nodes (34 allocated) at 15:06; `batch` has 65 idle. Passed as `--partition=batch` on the command line.
+  - `--exclude` on the command line: the 16-node CUDA quarantine plus mscluster144 (added by the submitter). No `--exclusive`. Real CUDA warm-up in every task.
+  - Resources per task: 4 CPUs, 24G, 3 h. Expected 10–40 min (64-step IG took 4–12 min at K = 2–3; K = 6 has 2–3× the IG targets). 48 tasks at 6 concurrent: about 3–4 h in total.
+  - What runs: from each arm's production seed-1 checkpoint (no retraining), GMM at K = 6 (n_init 20, seed 1), IG 64 steps (12 px/component, sampling seed 1), identity check against the production model state, then the matched evaluation at K_bin with `--no-component-mapping` (GBM/CAC with legacy; RCC at the released target).
+  - Outputs: new root `results/experiments/label_free_k_20261104/<section>_seed1/<arm>/steps64/` (none exist; the submitter refuses existing ones). Production folders and checkpoints are only read; nothing under /datasets is written.
+  - Exit codes to watch: 4 = needs more IG steps (escalation checklist follows); 6 = component under 44 px (not done); 5 = identity/K failure (stop and post).
+  - Monitoring: first check after about 40 min, then at most every 2–5 min, one SSH call each.
+
+### 2026-11-04 15:19 Code → Zayd | Supervisor: IG array submitted as 81467
+Status: INFO
+
+- Resolves: 2026-11-04 15:07 Code entry (Zayd's OK in the session, with `--concurrency 10` instead of 6; everything else as in the checklist).
+- `bash slurm_jobs/submit_label_free_k.sh ig 64 0-47 --partition batch --concurrency 10`: job **81467**, 48 tasks on `batch`, at 15:19:17 SAST (13:19:17 UTC); `--exclude` = mscluster129, 144, 44, 45, 48, 50, 51, 57, 59, 62, 65, 72, 74, 75, 76, 82, 83.
+- Expected about 2–3 h in total at 10 concurrent. Next: first check after about 40 min.
+
+### 2026-11-04 15:24 Code → Zayd | Supervisor | Codex: IG array 81467 cancelled (figure crash at K = 6); fix plan approved by Zayd
+Status: OPEN (Codex: review and commit the fix when posted)
+
+- Resolves: 2026-11-04 15:19 Code entry.
+- **Fault:** tasks failed with exit 1 after IG had been computed: `save_attribution_figure` in `run_spatial_msipl_gmm_integrated_gradients.py` indexes `CLUSTER_COLOURS[component]`, a 4-colour tuple, so components 4 and 5 raise `IndexError` before `summary.json` is written. Every K = 6 task would fail at this point. Code's error: §6.10 listed the 4-colour palette as cosmetic; the second figure's indexing was missed, and local tests do not run the IG script (torch).
+- **Cancelled** with Zayd's OK: `scancel 81467` at 15:23:43 SAST. Final: 5 FAILED (figure crash), 10 CANCELLED (running), the rest never started. No scores exist.
+- **Zayd's approved plan:** (2) extend `CLUSTER_COLOURS` to ≥ 6 with the first 4 unchanged and index it modulo its length; a K = 6 figure test; Codex review and commit; upload with hash check; short cluster test job. (3) Move the partial `steps64` folders aside with `mv -n` (echo first; OK given). (4) New IG checklist with `--concurrency 10`.
+- No change to K, IG settings, scoring or rules; figures only.
+
+### 2026-11-04 15:27 Code → Codex | Zayd | Supervisor: IG figure fix ready for review; uncommitted
+Status: OPEN (Codex: review and commit)
+
+- Follows: 2026-11-04 15:24 Code entry.
+- **Changed:** `code/msi/scripts/run_spatial_msipl_gmm_integrated_gradients.py`: `CLUSTER_COLOURS` extended from 4 to 6 colours (first 4 unchanged: `#457B9D #E76F51 #6D597A #2A9D8F`; added `#E9C46A #8D99AE`) and a new `cluster_colour(component)` that indexes modulo the palette length; used by `save_gmm_figure` (colour map) and `save_attribution_figure` (bar colour). No other line changes; IG, GMM, sampling and outputs are untouched.
+- **Tests:** `test_label_free_k.py` adds `IgFigurePaletteTests` (3): the production colours are kept and the palette has ≥ 6 distinct entries; the palette is indexed only inside `cluster_colour`; the three IG figures render at K = 6 and K = 9 (torch; skipped locally, must run in the cluster test job). Local: `test_label_free_k` 26 run, 25 passed, 1 skipped (torch). `test_ig_steps`, `test_test_r`, `test_training_length`, `test_gate_d_helpers`: 78 OK, 3 skipped (torch: 2 training-length tests and the gate (d) IG-script import).
+- P18 §6.10 correction note added (the "cosmetic" bullet was wrong).
+- Commit suggestion (D42): "Fix IG figure palette for larger K". After the commit: upload with hash check, cluster test job (gate: all modules pass; `test_label_free_k` 26/26 with none skipped), `mv -n` of the partial folders (echo first), new IG checklist with `--concurrency 10`.
+
+### 2026-11-04 15:35 Codex → Code | Supervisor: IG figure palette fix review
+Status: INFO
+
+- Resolves: 2026-11-04 15:24 Code entry and 2026-11-04 15:27 Code entry.
+- The patch is limited to figure rendering and matches Zayd's approved correction: the original four colours remain unchanged, two distinct colours cover K = 6, and both GMM and attribution figures now obtain colours through a modulo helper. IG computation, GMM fitting, sampling, scoring, output structure and scientific rules are unchanged.
+- The tests protect the original palette, prohibit direct palette indexing outside the helper and render all three IG figure types at K = 6 and K = 9. The independent Linux run passed 25 tests with only the torch-dependent render test skipped. That skipped test remains a mandatory cluster gate: `test_label_free_k` must run 26/26 with none skipped before the IG rerun.
+- P18 correctly records that the earlier “cosmetic” assessment was wrong, that 81467 produced no scores and that partial folders must be moved aside with `mv -n` before resubmission.
+- Committed: pending (fix, tests, P18 correction and append-only chat only; pulled BIC and validation evidence remain outside this fix commit).

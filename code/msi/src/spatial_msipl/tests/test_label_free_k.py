@@ -20,6 +20,9 @@
    refusal of an existing output.
 5. Read-only provenance on synced results (skipped when absent): every existing BIC
    selection was made on the production latent the jobs start from.
+6. The IG script's figure palette (after 81467): the production colours are kept,
+   there are at least 6, the palette is indexed modulo its length only, and the three
+   IG figures render at K = 6 and K = 9 (torch; runs in the cluster test job).
 Bash and NumPy; part 3 also needs h5py, sklearn and matplotlib.
 """
 
@@ -554,6 +557,62 @@ class SummariserTests(unittest.TestCase):
         self.assertFalse((self.tmp / "out/decisions.json").exists())
         failure = json.loads((self.tmp / "out/gate_failure.json").read_text())
         self.assertEqual(failure[0]["section"], "GBM12_1")
+
+
+PRODUCTION_PALETTE = ("#457B9D", "#E76F51", "#6D597A", "#2A9D8F")
+IG_SCRIPT = SCRIPTS / "run_spatial_msipl_gmm_integrated_gradients.py"
+
+
+class IgFigurePaletteTests(unittest.TestCase):
+    """The IG figures at K = 6 (81467 crashed in save_attribution_figure; P18 Section 6.10)."""
+
+    def palette(self):
+        import ast
+        tree = ast.parse(IG_SCRIPT.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and any(
+                    getattr(target, "id", None) == "CLUSTER_COLOURS" for target in node.targets):
+                return ast.literal_eval(node.value)
+        raise AssertionError("CLUSTER_COLOURS not found")
+
+    def test_palette_keeps_production_colours_and_covers_k6(self):
+        palette = self.palette()
+        self.assertEqual(tuple(palette[:4]), PRODUCTION_PALETTE)
+        self.assertGreaterEqual(len(palette), 6)
+        self.assertEqual(len(set(palette)), len(palette))
+
+    def test_palette_is_never_indexed_directly(self):
+        text = IG_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("CLUSTER_COLOURS[int(component) % len(CLUSTER_COLOURS)]", text)
+        self.assertEqual(len(re.findall(r"CLUSTER_COLOURS\[", text)), 1)
+
+    def test_figures_render_at_k6_and_beyond(self):
+        try:
+            import torch  # noqa: F401
+            import run_spatial_msipl_gmm_integrated_gradients as ig
+        except ImportError as error:  # pragma: no cover - local machines without torch
+            self.skipTest(f"IG script not importable here: {error}")
+        rng = np.random.default_rng(0)
+        mz = np.linspace(100.0, 200.0, 60)
+        xs, ys = np.meshgrid(np.arange(1, 13), np.arange(1, 9))
+        x, y = xs.reshape(-1), ys.reshape(-1)
+        self.assertEqual([ig.cluster_colour(c) for c in range(4)], list(PRODUCTION_PALETTE))
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for k in (6, 9):
+                labels = np.arange(len(x)) % k
+                ig.save_gmm_figure(labels, rng.uniform(0.5, 1.0, len(x)), x, y, "uniform_mean",
+                                   tmp / f"gmm_{k}.png")
+                aggregate = {c: {"combined_absolute_mean": rng.random(len(mz))} for c in range(k)}
+                ig.save_attribution_figure(mz, aggregate, "central_only", tmp / f"ig_{k}.png")
+                records = [{"component": c, "removed_bins": b,
+                            "integrated_gradients_mean_posterior_drop": 0.1,
+                            "first_layer_l2_mean_posterior_drop": 0.05,
+                            "random_mean_posterior_drop": 0.0}
+                           for c in range(k) for b in (32, 128)]
+                ig.save_faithfulness_figure(records, tmp / f"faith_{k}.png")
+                for name in (f"gmm_{k}.png", f"ig_{k}.png", f"faith_{k}.png"):
+                    self.assertGreater((tmp / name).stat().st_size, 0, name)
 
 
 class SyncedProvenanceTests(unittest.TestCase):

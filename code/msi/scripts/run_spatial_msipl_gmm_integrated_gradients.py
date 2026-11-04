@@ -36,7 +36,14 @@ from spatial_msipl.model import CentralOnlyVAE, NeighbourhoodSpatialVAE
 from spatial_msipl.preprocessing import H5SpatialContextDataset, checkpoint_input_spec
 
 
-CLUSTER_COLOURS = ("#457B9D", "#E76F51", "#6D597A", "#2A9D8F")
+# The first four colours are the production palette; the rest were added for the
+# label-free K analysis (P18 Section 6.10), where K = 6. Colours are indexed modulo
+# the palette length, so no K can fail; figures only, no score uses them.
+CLUSTER_COLOURS = ("#457B9D", "#E76F51", "#6D597A", "#2A9D8F", "#E9C46A", "#8D99AE")
+
+
+def cluster_colour(component):
+    return CLUSTER_COLOURS[int(component) % len(CLUSTER_COLOURS)]
 
 
 def parse_arguments():
@@ -427,7 +434,8 @@ def spatial_image(values, x, y):
 
 def save_gmm_figure(labels, confidence, x, y, variant, output):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
-    cluster_cmap = matplotlib.colors.ListedColormap(CLUSTER_COLOURS[: len(np.unique(labels))])
+    cluster_cmap = matplotlib.colors.ListedColormap(
+        [cluster_colour(component) for component in range(len(np.unique(labels)))])
     cluster_cmap.set_bad("#ECECEC")
     confidence_cmap = matplotlib.colormaps["viridis"].copy()
     confidence_cmap.set_bad("#ECECEC")
@@ -474,7 +482,7 @@ def save_attribution_figure(mz, aggregate, variant, output, top_n=20):
         top = np.argsort(score)[-top_n:]
         order = top[np.argsort(score[top])]
         positions = np.arange(len(order))
-        axis.barh(positions, score[order], color=CLUSTER_COLOURS[component])
+        axis.barh(positions, score[order], color=cluster_colour(component))
         axis.set_yticks(positions, [f"{mz[index]:.4f}" for index in order])
         axis.set_xlabel("Mean absolute IG contribution")
         axis.set_ylabel("m/z")
