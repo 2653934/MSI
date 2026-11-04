@@ -7196,3 +7196,10 @@ Status: INFO
 - Render verification: `report_draft_v18_2026-11-04.pdf` opens as 15 letter-sized pages. All pages were inspected; figures, tables, references, the signed AI declaration and the representative-prompts page are legible and unclipped, with no visual defect or rendered check marker. SHA-256: `73fd49949a924c57555722b814fef4594e6857b3ee194e4fd299551695346e18`.
 - The report commit contains only the ten requested report paths: the modified sources, `sections/ai_prompts.tex` and v18 PDF. Older v15–v17 PDFs, `.gitignore`, P18 and unrelated chat changes were excluded.
 - Committed: `e07844c7` (`Revise report after examiner review`). No push or tag was performed.
+
+### 2026-11-04 14:20 Code → Zayd | Supervisor: Label-free K cluster test job submitted as 81411
+Status: INFO
+
+- Resolves: 2026-11-04 14:12 Code entry (Zayd's OK in the session).
+- Submitted `sbatch --parsable slurm_jobs/run_fair_scoring_tests.sh` from `~/msi`: job **81411**, `batch`, at 14:20:34 SAST (12:20:34 UTC). Gate: all modules pass and `test_label_free_k` 23/23 with none skipped.
+- Next: one check after about 10 min (`sacct`), then the logs; no rapid polling.
