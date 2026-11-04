@@ -56,6 +56,13 @@ def parse_arguments():
         action="store_true",
         help="opt-in (RCC): no legacy msiPL list is read or scored",
     )
+    parser.add_argument(
+        "--no-component-mapping",
+        action="store_true",
+        help="opt-in (label-free K, P18 Section 6.10): GMM K may differ from the "
+        "class count; no component-to-class mapping, accuracy or balanced accuracy, "
+        "only ARI and NMI, and no mapping figure",
+    )
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--matched-count", type=int, default=530)
     parser.add_argument("--peak-tolerance-ppm", type=float, default=10.0)
@@ -148,6 +155,29 @@ def score_indices(indices, correlations, total_features):
             for threshold, score in zip(THRESHOLDS, mixed_f1)
         },
         "mSCF1": float(np.mean(mixed_f1)),
+    }
+
+
+def component_agreement(components, expert_labels):
+    """ARI and NMI only, for a GMM whose K may differ from the class count."""
+    component_values = sorted(np.unique(components).tolist())
+    label_values = sorted(np.unique(expert_labels).tolist())
+    confusion = np.zeros((len(component_values), len(label_values)), dtype=np.int64)
+    for row, component in enumerate(component_values):
+        for column, label in enumerate(label_values):
+            confusion[row, column] = np.count_nonzero(
+                (components == component) & (expert_labels == label)
+            )
+    return {
+        "mapping": None,
+        "note": "no component-to-class mapping: GMM K may differ from the class count; ARI and NMI only",
+        "components": len(component_values),
+        "classes": len(label_values),
+        "confusion_rows_components_columns_labels": confusion.tolist(),
+        "adjusted_rand_index": float(adjusted_rand_score(expert_labels, components)),
+        "normalized_mutual_information": float(
+            normalized_mutual_info_score(expert_labels, components)
+        ),
     }
 
 
@@ -367,7 +397,10 @@ def main():
         raise ValueError("attribution coordinates do not match the HDF5 input")
     components = coordinate_gmm["component"].astype(np.int64)
     posterior = coordinate_gmm["assigned_posterior"]
-    mapping = best_component_mapping(components, expert)
+    if args.no_component_mapping:
+        mapping = component_agreement(components, expert)
+    else:
+        mapping = best_component_mapping(components, expert)
 
     component_values = sorted(np.unique(components).tolist())
     component_scores = {
@@ -477,15 +510,16 @@ def main():
     ion_indices = consolidated_indices[: args.ion_images]
     ion_sources = consolidated_sources[: args.ion_images]
     ion_values = read_feature_matrix(args.input, ion_indices, pixels_first)
-    save_cluster_mapping(
-        mapping,
-        expert,
-        components,
-        posterior,
-        x,
-        y,
-        args.output / "gmm_expert_mapping.png",
-    )
+    if not args.no_component_mapping:
+        save_cluster_mapping(
+            mapping,
+            expert,
+            components,
+            posterior,
+            x,
+            y,
+            args.output / "gmm_expert_mapping.png",
+        )
     save_mscf1_plot(
         methods,
         args.matched_count,
@@ -524,7 +558,7 @@ def main():
         "scope": "section attribution and matched-count peak evaluation",
         "pixels": int(len(x)),
         "spectral_bins": int(len(mz)),
-        "cluster_mapping": {
+        "cluster_mapping": mapping if args.no_component_mapping else {
             "component_to_analysis_label": {
                 str(key): int(value) for key, value in mapping["mapping"].items()
             },

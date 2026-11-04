@@ -812,6 +812,88 @@ This records the supervisor's confirmation of Code's reading posted at 21:06 (Co
 - **Roots (new):** `results/experiments/training_length_20261030/`; `/datasets/zsuliman/msi_checkpoints/spatial_msipl/training_length_20261030/` (checkpoints, written only by the campaign); `results/diagnostics/fair_scoring_baselines/training_length_20261030/bin_level_only/`.
 - **Cluster:** `bigbatch` (RTX 3090, as production), 4 CPUs, 48G, 8 h, no `--exclusive`, the CUDA quarantine as `--exclude` on the command line, real CUDA warm-up. Order: Codex commit → upload → cluster test job → campaign checklist → Zayd's OK for each `sbatch`.
 
+### 6.10 Label-free K: IG vs posterior correlation at the BIC-selected GMM K (supervisor's review point 12; Hairong's comment 12; Zayd's task 4 November; written 4 November about 13:35 SAST, before any code, job or output of this analysis exists)
+
+**Status: DRAFT, awaiting Zayd's OK and the supervisor's review. Nothing is run before both.** (Superseded by the approval note at the end of this section.)
+
+**Question.** Production GMM K equals the number of annotated classes (2 on GBM, 3 on CAC and RCC): label-free in training and ranking but class-informed in its component count. Which conclusions hold when K is chosen without labels? This is a **new, separately labelled analysis** ("label-free K"). It does not replace any production result, rule, family or table. It sets aside, for this analysis only, item (a) of the Section 6 BIC specification ("no GPU IG run at any BIC-selected or forced K"); the reason is the reviewer's comment (decision log D56).
+
+**What is already known before this predeclaration (disclosed, not hidden):**
+- BIC has been run on 20 of the 48 section-arms: GBM108_positive and 40TopL (`gate_d_bic/`, both arms) and all 8 RCC runs (`gate_d_bic_rcc/`, both arms; RCC_UH0505_12 `uniform_mean` in `gate_d_bic_rcc_ig_steps_20261030/`). It selected **K = 6, the largest candidate, in all 20**, with no interior minimum.
+- For those 20 section-arms, the descriptive "BIC-K segmentation sensitivity" already scored **posterior-|PCC| at K = 6** (Section 6, item b; seen in October). **IG has never been run at any K other than production.** The comparison this section tests (IG vs correlation at the label-free K) has not been seen for any section.
+- Component sizes at K = 6 in those 20 refits: smallest 68 px (RCC_MH0204_33 `uniform_mean`), so all clear the 44-px IG minimum. Read for feasibility only.
+
+**Label-free K (fixed rule):**
+- Per section and arm, K = the `selected_k` of the BIC selection on that arm's saved seed-1 production latent: `select_gmm_k_bic.py` (selection version 2) unchanged, candidates K ∈ {1, …, 6}, StandardScaler, full covariance, `n_init` 20, seed 1, smallest K within ΔBIC < 10 of the minimum among converged fits, production-K refit ARI ≥ 0.999 first.
+- The 20 existing selections are reused as they are. The **28 missing section-arms** (the 7 GBM sections other than GBM108_positive and the 7 CAC sections other than 40TopL, both arms) get the same script and settings into a new root, `results/diagnostics/gate_d_bic_label_free_k_20261104/<section>_seed1/<arm>/bic_selection.json`.
+- **K = 1:** the section-arm's label-free K is the recorded `best_k_at_least_2` (still label-free; flagged "K = 1 under BIC; best K ≥ 2 used").
+- **Boundary:** if BIC again selects the largest candidate, that is reported as such: "the label-free K is the largest predeclared candidate (K = 6); BIC has no minimum within K ≤ 6". The candidate range is **not** extended after this analysis has started.
+- The K is read by the job from the JSON (never typed by hand). The job refuses a selection whose recorded latent hash differs from the production latent it uses.
+
+**Runs (seed 1, both core arms, all 24 sections; 48 section-arms; no retraining):**
+- **Checkpoint:** the production seed-1 checkpoint recorded in each arm's saved production attribution `summary.json`, verified as in the Section 6.3 IG-steps job (100 epochs, arm, 3×3, measured context, unmasked), and `model_state_sha256` equal to the saved production value.
+- **GMM and IG:** `run_spatial_msipl_gmm_integrated_gradients.py` with the production call unchanged except `--gmm-components <label-free K>`: `n_init` 20, `--seed 1 --sampling-seed 1`, 12 attribution and 32 faithfulness px per component, internal batch 8, **64 IG steps**. No `--align-gmm-labels-to-production` at 64 steps (K differs from production, so there is nothing to align to).
+- **IG completeness (D27):** an arm whose 64-step run is `needs_more_ig_steps` is rerun from the same checkpoint at **128**, then **256** steps, with `--align-gmm-labels-to-production <its own 64-step label-free folder>` and **gate v2** (`check_ig_steps_gate.py`, D33) against that folder. The decision uses the first step count that passes. If 256 also fails, the section-arm is **"not done (IG completeness not reached at 256 steps)"**. The D37 extension to 512/1024 does **not** apply unless Zayd extends it before the 256-step result exists.
+- **44-px minimum:** a component under 44 px at the label-free K stops IG by design: "not done (component under 44 px at K = k)", with no fallback and no change of K.
+- **Matched evaluation:** `evaluate_spatial_msipl_attributed_peaks.py` at the production K_bin (GBM/CAC with the legacy list; RCC at the released target without legacy), as in Test R and Section 6.3. Its component-to-class mapping requires K = number of classes, so it gets an **opt-in** flag that skips the mapping and balanced accuracy and reports ARI and NMI only (as Section 6 already prescribes when K differs). The default path stays bit-identical, proved by a test.
+- **Fair scoring:** the unchanged fair evaluator, **bin level only, all classes**, at the same K_bin. GBM/CAC with the legacy list; RCC `--no-legacy --reference-budget` (released target). No P1, no class-subset sensitivity.
+
+**Gates before any score is used (all fixed now):**
+1. BIC provenance: latent hash match, production refit ARI ≥ 0.999 (the script's own check).
+2. Checkpoint and model-state identity with the production seed-1 run.
+3. IG status `valid` (after escalation), and gate v2 for any 128/256-step run.
+4. **K-independent rankings reproduce the saved production seed-1 fair-scoring values:** mean intensity, variance, Moran's I, the oracle and (GBM/CAC) legacy msiPL mSCF1 at K_bin within **1e-6** of the production bin-level summary the report uses. These rankings do not depend on K, so a difference means a pipeline fault: stop and post. (1e-6 rather than 1e-12 because exact reproduction is CPU-model specific; the exact difference is recorded.)
+5. Descriptive cross-check, not gating: posterior-|PCC| at K = 6 against the October "BIC-K segmentation sensitivity" value for the 20 section-arms where both exist (that value used the saved latent; this run uses the GPU-recomputed latent). Differences are reported.
+
+**Predeclared rule (per collection × arm: GBM, CAC, RCC × `central_only`, `uniform_mean`; 6 cells):**
+- Metric: bin-level mSCF1 at K_bin of **posterior-|PCC| (balanced, soft posterior; the report's "correlation")** and **IG**, both from the same label-free-K segmentation.
+- **"IG < posterior correlation is label-independent"** holds for a cell if correlation > IG in **≥ 7/8 sections**.
+- **Not-done sections** count as not supporting the rule. Labels: "holds" if ≥ 7 sections have correlation > IG; "does not hold" if (sections with correlation > IG) + (not-done sections) < 7; otherwise "incomplete; no verdict", with the per-section values and n.
+- Overall sentence, only if all 6 cells hold: "The IG < correlation result does not depend on the class-informed K." Otherwise the cells that fail are listed exactly.
+- Reported beside the label (no extra threshold): the mean difference (correlation − IG), the number positive, and per-section values, at the label-free K and, beside them, at production K (seed 1).
+- Development sections are included, as in every 8-section rule (Section 6.6 note); GBM's 8 sections are 4 patients and are not treated as independent patients.
+
+**Descriptive only (no verdict, no Holm family, outside Section 6.6):**
+- Per collection × arm, the collection means (and per-section values) at the label-free K of IG and posterior-|PCC| against the K-independent label-free rankings: **mean intensity, variance, Moran's I**, and **legacy msiPL** (GBM/CAC at K_bin, from the same fair-scoring run). Production-K seed-1 values beside them.
+- **RCC legacy msiPL:** not in the RCC fair evaluator (no list at K_bin). The descriptive RCC comparison uses the Section 6.8 count-matched cell only if Zayd approves the optional CPU step below; otherwise it is reported as "RCC legacy msiPL not rescored at the label-free K".
+- `uniform_mean` − `central_only` at the label-free K for IG and for correlation: mean and number positive, no label.
+- ARI and NMI of the label-free-K hard assignment against the annotation (descriptive).
+- A short "which conclusions change" table against the report's conclusion list: (1) correlation outperforms IG; (2) spatially aware ranking statistics (Moran's I) strongest on GBM and RCC and within 0.01 on CAC, i.e. how correlation at the label-free K compares with Moran's I; (3) neighbourhood input gives no consistent gain (descriptive difference above); (4) IG vs legacy msiPL. PCA (Test V), S3PL and the training-length results are not rerun and are listed as unaffected or untested.
+- Seed 1 only. The paper's three-seed values are not mixed into this table; production-K comparisons use the seed-1 values.
+
+**Optional step (needs a separate OK):** RCC count-matched legacy comparison at the label-free K with the unchanged `score_msipl_retune.py` against the new fair-scoring root (Section 6.8 answer 4), CPU on an i9-10940X node as in Section 6.8.
+
+**Roots (new; production, Test R, IG-steps and BIC roots are only read):**
+- BIC: `results/diagnostics/gate_d_bic_label_free_k_20261104/`.
+- IG and matched evaluation: `results/experiments/label_free_k_20261104/<section>_seed1/<arm>/steps<N>/` (`attribution/`, `peak_evaluation/` or `peak_evaluation_released_target/`, `gmm_gate_v2.json` for N > 64).
+- Fair scoring: `results/diagnostics/fair_scoring_baselines/label_free_k_20261104/bin_level_only/<section>_seed1/<arm>/steps<N>/`.
+- Decision table (local, after the pull): `.../label_free_k_20261104/decisions_<date>_local/` from a new `scripts/summarise_label_free_k.py`.
+
+**Code (to write; reviewed and committed by Codex before any upload):** `slurm_jobs/label_free_k_sections.sh` (task table, sourcing `test_r_sections.sh`), `run_label_free_k_bic.sh`, `run_label_free_k_ig.sh` (step count 64/128/256 as an argument; 128/256 refuse unless the previous step count's run exists and is `needs_more_ig_steps`), `run_label_free_k_fair_scoring.sh`, `submit_label_free_k.sh` (`--parsable`, creates parent folders first, refuses existing outputs, exit 3 never overwritten), the opt-in flag in the matched evaluator, `scripts/summarise_label_free_k.py`, and `src/spatial_msipl/tests/test_label_free_k.py` (default-path bit-identity of the matched evaluator, K read from the JSON, K = 1 handling, refusal of a mismatched latent hash, step-escalation guards, rule labels including the not-done cases, command text identical to the production IG call apart from `--gmm-components`). Changing the matched evaluator changes its code hash, so rerunning a saved matched evaluation will report STALE by design.
+
+**Cluster (each `sbatch` with Zayd's explicit OK on a posted checklist):**
+1. Upload (`-n`, then `sha256sum` against HEAD) → cluster test job (`run_fair_scoring_tests.sh`; `test_label_free_k` must run, not skip).
+2. BIC, 28 tasks, CPU, `batch`, 2 CPUs, 4G, 1 h (earlier BIC tasks took 1.5–2.5 min).
+3. IG + matched evaluation at 64 steps, 48 tasks, GPU, `batch` or `bigbatch` (all 48 on one partition, D52), `--exclude` on the command line = the CUDA quarantine plus mscluster144, no `--exclusive`, real CUDA warm-up, 24G, concurrency `%4`. Expected time per task: production 64-step IG took 4–12 min at K = 2–3; at K = 6 the IG part scales with the number of components (2–3×), so about 10–40 min; limit 3 h.
+4. Escalation tasks (128, then 256 steps), only for arms that need them, one checklist each.
+5. Fair scoring, 48 tasks, CPU, `batch`.
+6. Pull (`-n` first), summarise locally, post the labels against the rule. The report paragraph is the supervisor's.
+
+**Approval, 4 November 13:38 SAST (Zayd, in the session; decision log D56 ACTIVE), before any code or output of this analysis exists:**
+- §6.10 approved as written.
+- **IG escalation extended (D37):** a section-arm that still fails completeness at 256 steps continues to **512, then 1024** (cap), with the same IG call, gate v2 against its own 64-step label-free folder, and one checklist each. Only a failure at 1024 is "not done (IG completeness not reached at 1024 steps)", reported with its residual trajectory (median and p95 at each step count).
+- **Optional RCC count-matched legacy step: not run.** RCC legacy msiPL is reported as "not rescored at the label-free K".
+- **Wording in the summary:** K = 6 is described as "BIC's choice at the boundary of the tested range (K ≤ 6)".
+
+**Implementation notes (fixed with the code, 4 November, before any job or output; uncommitted for Codex review):**
+- **Files:** `slurm_jobs/label_free_k_sections.sh` (48 section-arms in the Test R order; BIC table of the 28 missing section-arms; paths), `run_label_free_k_bic.sh`, `run_label_free_k_ig.sh STEPS`, `run_label_free_k_fair_scoring.sh`, `submit_label_free_k.sh` (`bic` / `ig STEPS` / `fair`); `scripts/resolve_label_free_k.py` (K from the BIC JSON); `scripts/summarise_label_free_k.py`; tests `src/spatial_msipl/tests/test_label_free_k.py` (23), added to `run_fair_scoring_tests.sh`; frozen pre-change matched evaluator `tests/fixtures/pre_label_free_k/` (HEAD `8f6e4b42`).
+- **Matched evaluator flag:** `--no-component-mapping` records ARI, NMI and the component × class confusion, with no mapping, accuracy, balanced accuracy or mapping figure. Default path proved identical to the frozen copy (summary apart from runtime and code hash, every CSV, the file list).
+- **Checkpoint:** read from each arm's production attribution `summary.json` (CAC `central_only` checkpoints are under `cac/reconstruction/`, so no path pattern is used). Identity: after IG, `model_state_sha256` must equal the production value, and the recorded K and step count must be this run's (`identity_check.json`; exit 5 otherwise).
+- **Not done:** a component under 44 px writes `not_done.json` (exit 6). IG still `needs_more_ig_steps` at 1024 is "not done". The fair-scoring job scores mechanically the first valid step count and stops (exit 1) while an escalation is pending.
+- **Gate 4 placement:** the K-independent reproduction gate (1e-6, same K_bin) is applied by the summariser against the production seed-1 bin-level summaries in `results/diagnostics/ig_steps_20261030/composite_root/` (the composite the report's seed-1 tables use; RCC_UH0505_12 `uniform_mean` there is the 128-step rerun). Failure writes only `gate_failure.json` and exits 5 (stop and post).
+- **Cluster options:** `--exclude` (the CUDA quarantine plus mscluster144), `--partition` and `--dependency` are passed on the `sbatch` command line by the submitter; no `--exclusive`.
+- **Cosmetic, disclosed:** the IG script's GMM figure has a 4-colour palette, so at K = 6 two pairs of components share a colour in `gmm_cluster_target.png`. Figures only; no score uses it, and the IG script is not changed.
+
 ## 7. Decision thresholds
 
 Unchanged from the previous response: 0.02 mSCF1 practical signal, per collection, seed 1.

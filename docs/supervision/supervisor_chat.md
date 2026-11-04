@@ -7091,3 +7091,78 @@ Status: INFO
 - Resolves: 2026-10-31 18:14 Codex entry, final commit step.
 - Committed: `596917bbc15d1a232b685b0f28a6d805f7b05845` (`Resolve final punctuation review`), authored by Zayd. It contains both punctuation fixes, byte-identical corrected `report.pdf` and v14, and the OPEN/resolution review records.
 - No push or tag was performed, and the Hairong email remains unsent. Next: the corrected v14 is ready to send after Zayd's decision on the AI-prompts presentation.
+
+### 2026-11-03 20:47 Supervisor → Zayd | Codex: v15 changes (training-length paragraph condensed, short commit hash, prompts page restored per Hairong)
+Status: INFO
+- Hairong (email, 2 Nov): an extra page is fine; report the crucial prompts (methodological decisions and writing assistance); Option 1 (quoted prompts) preferred if they are recorded.
+- `sections/results.tex`: the training-length paragraph is condensed to ranges (loss mostly down by epoch 25; IG varied ≤ 0.04 and posterior ≤ 0.03 across epochs with no trend; epoch 100 reproduced exactly). Checked against the 31 Oct 14:27 values.
+- `sections/methodology.tex`: the release commit is shortened to `93596d8`.
+- `sections/ai_prompts.tex` (copy of `planning/ai_prompts_page.tex`): rewritten to focus on methodological and writing prompts (20 prompts), and included after the form in `report.tex`.
+- Built: `report/draft/report_draft_v15_2026-11-03.pdf` (14 pages; 0 overfull boxes; no red text). Not committed.
+
+### 2026-11-04 13:35 Code → Zayd | Supervisor: Label-free K (point 12) predeclared as P18 §6.10; plan; waiting for OK
+Status: OPEN (Zayd: OK to write code; Supervisor: review of §6.10)
+
+- Zayd assigned Code the builder role for this item (D55 otherwise unchanged; Codex reviews and commits). Predeclaration written into P18 as **§6.10 (DRAFT)** before any code, job or output; decision-log row **D56 (PENDING)**.
+- **Disclosed prior knowledge:** BIC exists for 20/48 section-arms (GBM108_positive, 40TopL, all RCC) and chose **K = 6, the largest candidate, in all 20**. Posterior-|PCC| at K = 6 was already scored for those 20 (October "BIC-K segmentation sensitivity"); **IG has never been run at a non-production K**, so the tested comparison is unseen. Smallest component at K = 6 in those refits: 68 px (all clear the 44-px IG minimum).
+- **Label-free K:** `selected_k` of `select_gmm_k_bic.py` (unchanged; K ∈ {1..6}, n_init 20, seed 1, ΔBIC < 10 tie rule). BIC is run for the **28** missing section-arms (7 GBM + 7 CAC sections × 2 arms) into a new root. K = 1 → recorded best K ≥ 2 (flagged). If BIC hits K = 6 again, it is reported as the boundary of the predeclared range; the range is not extended.
+- **Runs:** seed-1 production checkpoints (no retraining), production IG call with only `--gmm-components` changed, 64 steps; D27 escalation to 128/256 with gate v2 against the arm's own 64-step label-free run; fail at 256 → "not done" (D37's 512/1024 not applied unless Zayd extends it now). Matched evaluation at K_bin, then the unchanged fair evaluator, bin level, all classes.
+- **Rule (6 cells: GBM/CAC/RCC × two arms):** "IG < posterior correlation is label-independent" holds if correlation > IG in ≥ 7/8 sections. Not-done sections count against; "incomplete; no verdict" only when the not-done sections decide the outcome.
+- **Gate added:** the K-independent rankings (mean intensity, variance, Moran's I, oracle, GBM/CAC legacy) must reproduce the production seed-1 bin-level values within 1e-6, else stop and post.
+- **Descriptive:** collection means at the label-free K of IG and correlation vs mean intensity, variance, Moran's I and legacy msiPL (production-K seed-1 values beside them); uniform − centre at the label-free K; ARI/NMI; a "which conclusions change" table against the report's four conclusions.
+- **One code change to an existing script:** the matched evaluator's class mapping requires K = number of classes and raises otherwise. An opt-in flag skips it (ARI/NMI only); the default path is bit-identical with a test. Its code hash changes, so rerunning a saved matched evaluation will report STALE by design.
+- **Questions for Zayd:** (1) OK §6.10 as written? (2) Extend D37 (512/1024) to this analysis, or stop at 256 as written? (3) Include the optional RCC count-matched legacy step (Section 6.8 scorer, CPU, i9-10940X node), or report RCC legacy as "not rescored at the label-free K"?
+- **Order after OK:** code + tests → post diff → Codex commits → upload (-n, sha256) → cluster test job → BIC (28 CPU tasks, batch) → IG 64 steps (48 GPU tasks, one partition, `--exclude` = quarantine + mscluster144 on the command line, no `--exclusive`) → escalation if needed → fair scoring (48 CPU tasks, batch) → pull, summarise, post labels. A checklist and Zayd's OK before every `sbatch`. No report edits.
+- Committed: not committed.
+
+### 2026-11-04 13:38 Zayd → Code (recorded by Code): §6.10 approved with rulings
+Status: ANSWERED
+
+- Resolves: 2026-11-04 13:35 Code entry (Zayd's part; the supervisor's review remains welcome but is not blocking code).
+- (1) §6.10 approved as written; in the summary, K = 6 is described as BIC's choice at the boundary of the tested range. (2) D37 (512, then 1024) is extended to this analysis. (3) The optional RCC count-matched legacy step is skipped; RCC legacy is reported as "not rescored at the label-free K".
+- D56 marked ACTIVE; approval note appended to the end of P18 §6.10. Next: code and tests, then Codex review, then checklists. Target: results by Friday 6 November.
+
+### 2026-11-04 14:00 Codex → Code | Supervisor: Examiner review of report draft v17
+Status: OPEN
+
+- Finding 1: pp. 1, 6–8, 11 (Abstract, III-D/E, IV-B, VI). Separate the six seed-averaged signed-rank results from the predeclared Test R verdict. Restore the mean-gap and applicable-scale clauses, identify the CAC seed-2 failures, and reconcile the phrase “statistically supported” with the outcome-label requirement in P18 §6.6.
+- Finding 2: pp. 6–8, 11 (III-E, IV-B, V-F, VI). Pairing by section does not make serial CAC sections or sections within a PDX line independent. Treat those section-level p-values and intervals as nominal and foreground the four-line GBM result and single-specimen CAC scope.
+- Finding 3: p. 5 (III-C, Eq. 9). The scorer takes bins preceding the closest signed PCC after descending sort; the stated inclusive threshold defines a different set. P1 also needs its apex-reference, any-member prediction and group-budget rules.
+- Finding 4: pp. 8–9 (Tables II–III, IV-G). “Every run in both arms” conflicts with RCC centre 23/24; specify seed aggregation. Describe the changed RCC estimand in the cancer/normal sensitivity and qualify the causal interpretation.
+- Finding 5: pp. 9–10 (IV-H, Table IV, Fig. 7). Timed correlation reuses a saved GMM fit and preprocessed spectra; IG uses recorded attribution-pipeline time including fitting and diagnostics. Label each scope and identify the timed arms, seeds and stages.
+- Finding 6: pp. 5–9 (III-B–E, IV-B/D–F). Mark seed-1 legacy and PCA tests beside seed-averaged summaries, distinguish the neighbourhood control arms, and give the GMM settings, input-versus-bin indexing for IG, and the boundary-attention baseline.
+- Finding 7: pp. 3–5, 8–11 (III-A–C, IV-E/F, V-D, VI). Qualify the mask-use diagram, model-derived CAC reference, scope of the BIC and training-length checks, and causal wording about S3PL preprocessing.
+- Committed: not committed, waiting on findings above.
+
+### 2026-11-04 14:03 Code → Codex | Zayd | Supervisor: Label-free K (P18 §6.10) code ready for review; uncommitted
+Status: OPEN (Codex: review and commit)
+
+- **New files (code/msi):** `slurm_jobs/label_free_k_sections.sh`, `run_label_free_k_bic.sh`, `run_label_free_k_ig.sh`, `run_label_free_k_fair_scoring.sh`, `submit_label_free_k.sh`; `scripts/resolve_label_free_k.py`, `scripts/summarise_label_free_k.py`; `src/spatial_msipl/tests/test_label_free_k.py`; fixture `src/spatial_msipl/tests/fixtures/pre_label_free_k/evaluate_spatial_msipl_attributed_peaks.py` (HEAD `8f6e4b42` copy, sha256 `bf5e4e11…`).
+- **Changed:** `scripts/evaluate_spatial_msipl_attributed_peaks.py` (opt-in `--no-component-mapping`; default path unchanged), `slurm_jobs/run_fair_scoring_tests.sh` (adds `test_label_free_k`). Docs: P18 §6.10 approval and implementation notes, D56, this chat.
+- **Local tests (tmp/test-venv):** `test_label_free_k` **23/23 passed, none skipped** (job tables, call identity with the campaign/Test R calls, submitter options via a fake `sbatch`, refusals and escalation guards, K resolution, matched-evaluator default-path identity and K = 4 on 2 classes, the unchanged fair evaluator on that run, summariser labels/gate/pending, read-only check that all 20 existing BIC selections match the production latents). Neighbouring suites `test_rcc_pipeline`, `test_ig_steps`, `test_test_r`, `test_job_scripts`, `test_fair_scoring_pipeline`: **98/98 OK**. All new shell scripts pass `bash -n` and are LF.
+- **Review points:** (1) the matched-evaluator change and its code-hash consequence (rerunning a saved matched evaluation reports STALE by design); (2) checkpoint taken from the production summary rather than a path pattern (CAC `central_only` lives under `cac/reconstruction/`); (3) gate 4 is applied in the summariser, against `ig_steps_20261030/composite_root/`; (4) the fair job's mechanical choice of the decisive step count; (5) the 4-colour GMM figure at K = 6 (cosmetic, disclosed, IG script unchanged).
+- Commit message suggestion (D42): "Add label-free K analysis". Unrelated modified files (report sources, `.gitignore`, report PDFs) are not part of this change.
+- Next after the commit: upload (`-n`, then sha256 against HEAD), then a checklist for the cluster test job. Nothing has been submitted.
+
+### 2026-11-04 14:05 Supervisor → Codex | Code: Label-free K package: independent Linux run 23/23 OK; report v18 addresses the Codex v17 findings
+Status: INFO
+- Independent run (Linux VM, same working tree): `PYTHONPATH=src:scripts python3 -m unittest spatial_msipl.tests.test_label_free_k` → Ran 23 tests in 54.3 s, OK, none skipped.
+- **Report v18** (`report/draft/report_draft_v18_2026-11-04.pdf`, uncommitted) addresses the 14:00 Codex findings 1–7:
+  - the replication rule (both scales), 16/18 runs and the CAC seed-2 failures, kept separate from the seed-averaged tests;
+  - nominal p-values (serial CAC sections, GBM PDX lines);
+  - the exact evaluator cutoff and the P1 apex, any-member and K_peak rules;
+  - RCC 23/24 and 24/24, and the changed cancer/normal question;
+  - the runtime scope;
+  - the seed-1 predeclared F2 tests;
+  - GMM settings, IG input indexing and the half-L1 attention measure;
+  - pipeline caption (mask pixels for scoring only; annotations set K and the budget);
+  - S3PL preprocessing worded as an association.
+
+### 2026-11-04 14:07 Codex → Code | Supervisor: Label-free K package review
+Status: INFO
+
+- Resolves: 2026-11-04 14:03 Code entry. The label-free K implementation matches approved P18 §6.10 and active decision D56; no blocking defect found.
+- The matched evaluator's `--no-component-mapping` path omits only the invalid component-to-class mapping, accuracy and mapping figure when GMM K differs from the annotation count; it retains ARI/NMI and the default path remains protected by the frozen HEAD `8f6e4b42` fixture. The fixture SHA-256 is `bf5e4e11…` and its Git blob matches the pre-change evaluator exactly.
+- The job tables cover all 48 section-arms and exactly the 28 missing BIC selections. K is read from the BIC record with latent-hash validation; escalation is guarded 64→128→256→512→1024; all jobs use new roots and refuse existing outputs; the fair job chooses the first valid step; and the summariser applies the fixed 7/8 rule and 1e-6 K-independent stop gate.
+- Verification: the supervisor's independent Linux run passed `test_label_free_k` 23/23 with none skipped; Code's neighbouring suites passed 98/98; all five new shell scripts pass `bash -n`; the reviewed package introduces no report file.
+- Committed: pending (label-free K code, tests, jobs, P18 §6.10, D56 and this review only).
