@@ -1,0 +1,102 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Mass spectrometry imaging (MSI) records a full mass spectrum at every pixel of
+a tissue section, so the spatial distribution of many molecules can be studied
+at once without choosing targets in
+advance~\citep{caprioli1997maldi,schwamborn2010molecular,buchberger2018mass}.
+The resulting data are large and high-dimensional. The three collections used
+here, glioblastoma (GBM), colorectal adenocarcinoma (CAC) and renal cell
+carcinoma (RCC), contain 972 to 4{,}761 pixels per section and between 1{,}481
+and 85{,}062 mass-to-charge ($m/z$) bins per spectrum. Most
+analyses therefore begin by selecting a small set of informative peaks.
+
+Classical \emph{peak picking} applies smoothing, normalisation and
+signal-to-noise thresholds to each spectrum on its
+own~\citep{gibb2012maldiquant,deininger2011normalization}. It depends on
+manually set thresholds, can discard weak but informative
+ions~\citep{lieb2020sparse} and ignores \emph{where} in the tissue a signal
+occurs. \emph{Peak learning} instead treats selection as an unsupervised
+representation-learning problem: a model is fitted to the spectra of a section
+and $m/z$ bins are ranked by how the model uses
+them~\citep{abdelmoula2021peak}. msiPL trains a
+variational autoencoder (VAE) on individual spectra and reads peaks from its
+weights~\citep{abdelmoula2021peak}. S\textsuperscript{3}PL adds spatial information by convolving
+over small tissue patches and reconstructing the whole
+neighbourhood, and reports large gains over msiPL~\citep{weigand2026spatial}.
+
+S\textsuperscript{3}PL changes the architecture, the objective, the normalisation and the
+selection rule at the same time, so it is not clear which ingredient produces
+its gain. It also leaves open whether cheaper local context, such as the
+mean spectrum of a pixel's neighbours, can give a lightweight VAE a similar
+benefit, and, once a model has been fitted, which part of the pipeline actually
+determines peak quality. We study this with
+\emph{Spatial-msiPL}, an msiPL-style VAE that can encode a spectrum together
+with its neighbourhood. Its latent space is segmented with a Gaussian mixture
+model (GMM), and peaks are ranked either by Integrated Gradients
+(IG)~\citep{sundararajan2017axiomatic} through the model or by correlating each
+ion image with the GMM posterior maps. Specifically, we ask:
+\begin{enumerate}[label=\textbf{RQ\arabic*}]
+  \item Does ranking peaks from a segmentation of the VAE latent space select
+        better peaks than legacy msiPL's weight-based selection when both select
+        the same number of bins?
+  \item Which ranking mechanism on the segmentation determines peak quality,
+        gradient attribution or direct correlation, and does the segmentation
+        need a nonlinear encoder?
+  \item Where does spatial information help: as input to the encoder, in the
+        segmentation or in the ranking statistic?
+\end{enumerate}
+RQ1 checks that the pipeline is worth studying; RQ2 and RQ3 locate the source
+of any gain, which a single headline score against a baseline cannot do. To
+make these comparisons trustworthy, we also reproduce both baselines and
+analyse how sensitive S\textsuperscript{3}PL is to the training seed.
+
+The main ranking comparisons used matched bin counts per section and the same
+evaluator. Their decision rules were written down before the
+corresponding results existed, and the core model comparisons were repeated
+over three training seeds. The msiPL and S\textsuperscript{3}PL reproductions were
+first assessed under their own protocols and evaluators, separately from the
+common scoring used for all other comparisons.
+The main findings are as follows.
+\begin{itemize}
+  \item \textbf{Ranking.} With the segmentation held fixed, correlating each
+        ion image with the GMM posterior maps outperformed IG in 140 of 144
+        paired comparisons across three training seeds. The difference was
+        statistically supported at bin level (nominally) for every dataset and
+        both VAE arms. With the
+        number of segments chosen by the Bayesian information criterion (BIC) instead of the class count, it held
+        on CAC and RCC but not on GBM.
+  \item \textbf{Spatial information.} In these tests, neighbourhood input to
+        the encoder gave no consistent, spatially specific gain, while
+        Moran's~$I$, a spatial statistic that uses no labels, was the strongest
+        label-free ranking on GBM and RCC and within 0.01 of the best on CAC.
+  \item \textbf{Encoder.} A linear five-component principal component analysis (PCA)
+        segmentation was not reliably worse than the VAE, so the nonlinear encoder
+        was not shown to be necessary.
+  \item \textbf{Reproducibility.} msiPL reproduced. The published S\textsuperscript{3}PL
+        glioblastoma score lay outside the distribution of ten reproduced
+        seeds, and weight initialisation dominated the seed effect in two of
+        three tested sections; data order also mattered in one GBM section.
+\end{itemize}
+
+The contributions of this report are:
+\begin{enumerate}
+  \item a ranking ablation showing that segment-then-correlate outperforms
+        gradient attribution in this pipeline, with paired statistics over
+        three training seeds, together with a check of which part of that result depends
+        on a class-informed number of segments;
+  \item evidence that a linear five-component PCA segmentation performs
+        comparably to the VAE, so the nonlinear encoder was not shown to be
+        necessary;
+  \item controlled tests of spatial context at the encoder, segmentation and
+        ranking stages, with dataset-specific ranking outcomes;
+  \item a statistical account of the S\textsuperscript{3}PL reproduction gap and
+        its seed sensitivity;
+  \item a matched-budget evaluation protocol with reproduced baselines and
+        model-free references, released with the code.
+\end{enumerate}
+\Cref{sec:background} reviews MSI peak selection and the methods compared.
+\Cref{sec:methodology} describes the data, models, evaluation, statistics and
+computation. \Cref{sec:results} presents the results, \cref{sec:discussion}
+interprets them and discusses limitations, and \cref{sec:conclusion}
+concludes.

@@ -1,0 +1,101 @@
+% Active research-report draft. The untouched supplied template is preserved
+% in official_template.tex; the previous six-page attempt is in previous_version/.
+\documentclass[journal,10pt,twoside]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{balance}
+\usepackage{microtype}
+\usepackage{dblfloatfix}
+\usepackage{url}
+\usepackage{pdfpages}
+\usepackage[bookmarks=true,bookmarksopen=true]{hyperref}
+\usepackage{cleveref}
+\graphicspath{{images/}}
+\usepackage{natbib}\input{natbib-add}
+\bibliographystyle{apalike}
+\bibpunct{[}{]}{;}{a}{}{}
+
+\setlist[itemize]{noitemsep,nolistsep,leftmargin=*}
+\setlist[enumerate]{noitemsep,nolistsep,leftmargin=*}
+\hypersetup{colorlinks=true,urlcolor=blue,linkcolor=blue,citecolor=blue}
+\crefname{figure}{figure}{figures}
+\Crefname{figure}{Figure}{Figures}
+\crefname{table}{table}{tables}
+\Crefname{table}{Table}{Tables}
+
+\newcommand{\reporttitle}{Spatially Aware Peak Ranking in Mass Spectrometry Imaging}
+\newcommand{\authorname}{Zayd \textsc{Suliman}}
+\newcommand{\studentnumber}{2653934}
+\newcommand{\supervisorname}{Hairong Bau and Richard Klein}
+\newcommand{\academicyear}{2026}
+
+\begin{document}
+
+\title{%
+  \vspace{4pt}
+  \includegraphics[width=0.12\textwidth]{images/witslogonew.png}\\[6pt]
+  \Large\textbf{\reporttitle}%
+}
+
+\author{%
+  \authorname,~Student~No.~\studentnumber\\
+  \small School of Computer Science and Applied Mathematics,
+         Faculty of Science, University of the Witwatersrand\\
+  \small Supervisors:~\supervisorname \qquad \academicyear
+}
+
+\maketitle
+
+\begin{abstract}
+Mass spectrometry imaging (MSI) records thousands of mass-to-charge ($m/z$)
+channels at every pixel of a tissue section, so analysis usually begins by
+selecting a few informative peaks. Learned methods such as msiPL rank peaks
+from an unsupervised model, and S\textsuperscript{3}PL adds spatial information through 3D
+convolution. We ask whether local neighbourhood context improves learned peak
+ranking and where in the pipeline it matters. Variational autoencoders with and
+without neighbourhood input were fitted, and their latent spaces were
+segmented with a Gaussian mixture model.
+Peaks were ranked either by Integrated Gradients (IG) through the model or by
+correlating each ion image with the segment posterior maps. On 24 sections
+from three public datasets, at matched peak budgets and under predeclared
+decision rules, correlation outperformed IG in 140 of 144 paired comparisons
+across three seeds, a difference that was statistically supported at bin level (nominally, as
+sections are not independent) for every dataset and both model variants. When the number of segments was chosen without
+labels, this still held on two of the three datasets. Neighbourhood input to
+the encoder gave no consistent, spatially specific gain, whereas Moran's~$I$, a
+spatial statistic, was the strongest label-free ranking on two datasets and
+within 0.01 of the best on the third.
+\end{abstract}
+
+\begin{IEEEkeywords}
+mass spectrometry imaging, peak selection, variational autoencoder, spatial context, Integrated Gradients, reproducibility
+\end{IEEEkeywords}
+
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\section*{Acknowledgements}
+The author thanks Hairong Bau and Richard Klein for their supervision and
+guidance, and the University of the Witwatersrand for access to the MSCluster
+computing facility.
+
+{\footnotesize\setlength{\bibsep}{1pt}
+\bibliography{references}}
+
+\clearpage
+\onecolumn
+\includepdf[pages=1]{ai_declaration.pdf}
+\input{sections/ai_prompts}
+\end{document}
+

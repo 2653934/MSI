@@ -1,0 +1,42 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This report tested whether local spatial context helps a lightweight VAE
+select informative MSI peaks and which part of a learned pipeline determines
+peak quality. Under matched budgets and predeclared rules, on three public
+collections, we reached the following conclusions.
+\begin{itemize}
+  \item Ranking peaks by correlation with an unsupervised GMM segmentation
+        outperformed gradient attribution through the VAE on every dataset when
+        the number of segments matched the tissue classes; this was
+        statistically supported (nominally) and in the same direction for every
+        training seed. With the
+        number of segments chosen without labels, it held on CAC and RCC but not
+        on GBM.
+  \item Neighbourhood input to the encoder and smoothing of the segmentation
+        gave no consistent, spatially specific gain. Moran's~$I$, which uses no
+        labels, was the strongest label-free ranking on GBM and RCC and within
+        0.01 of the best on CAC.
+  \item A linear PCA segmentation was not reliably worse than the VAE, and
+        reconstruction error did not track peak quality.
+  \item msiPL reproduced. S\textsuperscript{3}PL's published GBM score did not.
+        Weight initialisation dominated seed sensitivity in two of three
+        selected sections, while data order also mattered in one.
+\end{itemize}
+
+The contribution is a controlled evaluation, not a new peak picker. It shows
+that, in a learned MSI pipeline, the useful spatial signal lies in how peaks are
+ranked against a segmentation rather than in neighbourhood input to the encoder,
+and how strongly such conclusions depend on matched budgets, model-free
+references and seed replication.
+
+Future work should first:
+\begin{itemize}
+  \item validate a label-free choice of the number of segments, which BIC
+        could not provide;
+  \item test a predeclared combination of segmentation correlation and
+        Moran's~$I$ on new data;
+  \item evaluate spatial models that operate on graphs or whole ion images
+        rather than fixed windows;
+  \item test whether a model fitted on one section transfers to another.
+\end{itemize}
