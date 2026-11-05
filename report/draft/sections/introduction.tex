@@ -19,7 +19,7 @@ ions~\citep{lieb2020sparse} and ignores \emph{where} in the tissue a signal
 occurs. \emph{Peak learning} instead treats selection as an unsupervised
 representation-learning problem: a model is fitted to the spectra of a section
 and $m/z$ bins are ranked by how the model uses
-them~\citep{li2022machinelearningpeakpicking,abdelmoula2021peak}. msiPL trains a
+them~\citep{abdelmoula2021peak}. msiPL trains a
 variational autoencoder (VAE) on individual spectra and reads peaks from its
 weights~\citep{abdelmoula2021peak}. S\textsuperscript{3}PL adds spatial information by convolving
 over small tissue patches and reconstructing the whole
@@ -52,7 +52,7 @@ make these comparisons trustworthy, we also reproduce both baselines and
 analyse how sensitive S\textsuperscript{3}PL is to the training seed.
 
 The main ranking comparisons used matched bin counts per section and the same
-fair-scoring evaluator. Their decision rules were written down before the
+evaluator. Their decision rules were written down before the
 corresponding results existed, and the core model comparisons were repeated
 over three training seeds. The msiPL and S\textsuperscript{3}PL reproductions were
 first assessed under their own protocols and evaluators, separately from the
@@ -62,16 +62,17 @@ The main findings are as follows.
   \item \textbf{Ranking.} With the segmentation held fixed, correlating each
         ion image with the GMM posterior maps outperformed IG in 140 of 144
         paired comparisons across three training seeds. The difference was
-        statistically supported for every dataset and both VAE arms. With the
-        number of segments chosen by BIC instead of the class count, it held
+        statistically supported at bin level (nominally) for every dataset and
+        both VAE arms. With the
+        number of segments chosen by the Bayesian information criterion (BIC) instead of the class count, it held
         on CAC and RCC but not on GBM.
   \item \textbf{Spatial information.} In these tests, neighbourhood input to
         the encoder gave no consistent, spatially specific gain, while
-        Moran's~$I$, a label-free spatial statistic, was the strongest
+        Moran's~$I$, a spatial statistic that uses no labels, was the strongest
         label-free ranking on GBM and RCC and within 0.01 of the best on CAC.
-  \item \textbf{Encoder.} A linear five-component PCA segmentation performed
-        comparably to the VAE, so the nonlinear encoder was not shown to be
-        necessary.
+  \item \textbf{Encoder.} A linear five-component principal component analysis (PCA)
+        segmentation was not reliably worse than the VAE, so the nonlinear encoder
+        was not shown to be necessary.
   \item \textbf{Reproducibility.} msiPL reproduced. The published S\textsuperscript{3}PL
         glioblastoma score lay outside the distribution of ten reproduced
         seeds, and weight initialisation dominated the seed effect in two of
@@ -82,7 +83,7 @@ The contributions of this report are:
 \begin{enumerate}
   \item a ranking ablation showing that segment-then-correlate outperforms
         gradient attribution in this pipeline, with paired statistics over
-        three training seeds, and a check of which part of that result depends
+        three training seeds, together with a check of which part of that result depends
         on a class-informed number of segments;
   \item evidence that a linear five-component PCA segmentation performs
         comparably to the VAE, so the nonlinear encoder was not shown to be

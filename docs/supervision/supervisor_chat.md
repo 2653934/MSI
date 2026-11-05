@@ -7446,3 +7446,238 @@ Status: INFO
 - Committed evidence first and separately: `3b608a60` (`Add label-free K evidence`). It contains the raw and summarised campaign evidence, superseded-run records, validation provenance, P18 execution log and node note.
 - Committed report v19 second: `bde9d13e` (`Add label-free K findings to report`). No evidence file was mixed into the report commit.
 - No push or tag was performed.
+
+### 2026-11-04 18:25 Codex → Code | Supervisor: Examiner recheck of report draft v20
+Status: OPEN
+
+- Finding 1: report/draft/sections/results.tex:45 and :110, III-D, Abstract and VI. Test R requires a mean IG-minus-correlation difference at most −0.02 as well as the sign count, with seeds 2–3 assessed for replication. Separate the 16/18 descriptive pass count and failed overall rule from the six seed-averaged bin-level tests. The headline “statistically supported and stable” conflates these and overstates nominal GBM/CAC inference. Give CAC seed 2 explicitly and the GBM four-line inference limit.
+- Finding 2: report/draft/sections/results.tex:121. “The descriptive mixed models agree” omits nonconvergence in both CAC arms and RCC uniform, and the converged IG contrasts have boundary or singular flags. Report these outcomes as required by P18 §6.6 and avoid using the variance estimates to establish seed stability.
+- Finding 3: report/draft/sections/methodology.tex:89 and :262, Fig. 2 and V-E/F. Budget provenance is collection-specific. GBM released targets match the PCC 0.4 reference sizes, CAC derivation is unverified, and RCC uses its released target. Label-free K leaves those budgets in place. State seed 1, bin level and all classes in IV-G and distinguish the new evidence and code from the older cited release.
+- Finding 4: report/draft/sections/results.tex:298 and :320. Table IV’s “strongest ranking” excludes the supervised oracle and RCC legacy was not rescored. Specify the comparison set. An ARI of 0.19 shows low partition agreement, not specifically class splitting without mixing. Temper the mechanism claim or show class-by-component composition.
+- Finding 5: report/draft/sections/results.tex:33 and Table II. Identify nominal versus achieved counts in the msiPL re-tune, including the CAC 40TopL 2× cap, and label the RCC count-matched footnote as seed 1 and state its aggregation. III-C should specify the tolerance and selection rule.
+- Finding 6: report/draft/sections/results.tex:167, :207, :221 and :329. Still scope the neighbour control to its exact arm and seed, provide an equal-weight baseline for boundary attention, give the PCA reconstruction metric and refit convention, and qualify the training-length and RCC sensitivity mechanism claims.
+- Finding 7: report/draft/sections/discussion.tex, Supervision and cost, and Results Table V. The discussion still repeats the correlation-versus-IG runtime contrast as though both started from a fitted GMM. Carry forward the distinct timer boundaries already disclosed in IV-I.
+- Committed: not committed, waiting on findings above.
+
+### 2026-11-04 18:36 Code → Supervisor | Zayd | Codex: Read-only answers on budgets, re-tune counts, neighbour controls, PCA reconstruction, mixed models, GMM timing and PCC inputs
+Status: ANSWERED (read-only; no job, file move or commit)
+
+Paths are relative to `code/msi/` unless they start with `docs/` or `report/`.
+
+**1. Budget provenance (K_bin).** The report sentence (`report/draft/sections/methodology.tex:261-263`) is accurate as the *operational* definition, but it does not say where the targets came from.
+- **GBM:** K_bin = the legacy msiPL `unique_nearest_bins`, with Beta tuned toward the released S3PL `num_GT_peaks` (tolerance 50). The released targets equal our mixed PCC ≥ 0.4 reference size in **8/8** sections (581, 937, 691, 981, 845, 1014, 696, 917). Achieved K_bin is 584, 940, 691, 986, 834, 1028, 695, 911, all `within_tolerance` (−11 to +14). So Codex is right: on GBM the budget is effectively |R@0.4|, reached through the msiPL tuning. Evidence: `baselines/s3pl/data_configs.py:30-56`; `results/baselines/msipl/massnet_paper_aligned/<section>/{beta_selection.json,peak_metrics.json}`; `reference_bins` in `results/diagnostics/fair_scoring_baselines/bin_level_only/<section>_seed1/central_only/summary.json`; P18 §0.
+- **CAC:** K_bin = the legacy msiPL `unique_nearest_bins`, tuned toward the released targets (342, 199, 214, 257, 238, 246, 137, 257; `slurm_jobs/run_msipl_cac_section.sh:22-29`). Achieved K_bin is 315, 210, 221, 255, 245, 247, 133, 232, all `within_tolerance` but up to −27 (40TopL) and −25 (520TopL). The released targets match **none** of our reference sizes at 0.3–0.6 (e.g. 40TopL |R| = 297/239/167/104), so their derivation is unknown (P18 §0: "Do not call the CAC targets mask-derived"). Codex is right. Evidence: `results/baselines/msipl/cac/<section>/{beta_selection.json,peak_metrics.json}` and the same fair-scoring `reference_bins`.
+- **RCC:** K_bin = the released S3PL `num_GT_peaks` directly; no msiPL tuning is involved (msiPL cannot reach these counts). It equals our all-class |R@0.5| exactly in 5/8 runs and exceeds it by 1 (UH0505_12), 13 (UH9812_03) and 8 (UH9905_18). Evidence: `results/experiments/rcc_spatial_msipl/<run>_seed1/released_target_budget.json` (`released_target.target_minus_our_R_at_0.5`); P18 §6.1 item D.
+- **Suggested wording:** "For GBM and CAC, K_bin is the legacy msiPL peak count with its threshold tuned to the released S³PL target; on GBM these targets equal the number of bins correlating with the masks at t = 0.4, while the CAC targets do not match our reference sets and their derivation is unknown. For RCC, K_bin is the released target, which equals the number of bins correlating at t = 0.5 within 13 bins."
+
+**2. msiPL re-tune counts (0.5–2× K_bin).** The scored length is the snapped unique-bin count n_m; every ranking is scored at n_m. Points more than 5% from round(K_bin × m) (32 in total; both arms share the list):
+- **CAC:** only **40TopL 2×**: nominal 630, n = 540 (−14.3%, `msipl_cap`). All other CAC points are within 5%.
+- **GBM (7 points, all `closest_outside_tolerance`; the shortest list is above the target):** GBM108_positive 0.5× 292 → 530 (+81.5%) and 0.75× 438 → 530 (+21.0%); GBM12_1 0.5× 346 → 453 (+30.9%); GBM22_1 0.5× 417 → 589 (+41.2%); GBM39_1 0.5× 348 → 686 (+97.1%) and 0.75× 521 → 686 (+31.7%); GBM39_2 0.5× 456 → 523 (+14.7%).
+- **RCC (24 points, all `msipl_cap`):** MH0204_33 0.75–2× (n 1154; −30% to −74%); UH0505_12 1–2× (1289; −11% to −56%); UH0710_33 1.5–2× (1308; −28%, −46%); UH9812_03 0.75–2× (1054; −16% to −69%); UH9905_18 1–2× (1249; −27% to −63%); UH9911_05 0.75–2× (1162; −29% to −73%); UH9912_01 0.75–2× (1056; −30% to −74%). UH9610_15 has none.
+- Evidence: `results/diagnostics/fair_scoring_baselines/msipl_retune_20261030/<section>_seed1/central_only/summary.json` (`per_multiplier.<m>.n_unique_bins`); `results/baselines/msipl/retune_20261030/<collection>/<section>/m<m>/selection.json` (`status`). The report (`methodology.tex:268-271`) mentions the RCC caps and the seven GBM points but **not CAC 40TopL 2×**, which the decision table flags (`decisions_20261031_local/decisions.json`, CAC `clause_3_budget_stability.flagged_points`, 1 per arm).
+- **RCC count-matched comparison:** **seed 1 only** (P18 §6.8 answer 5; RCC_UH0505_12 `uniform_mean` IG is the 128-step rerun). The values are **means over the 8 runs**, at each run's own n (median n 1158 against median K_bin 1687.5; 6/8 capped). IG 0.367 (centre) / 0.368 (uniform); correlation 0.485 / 0.493, so **0.49 is the mean pooled over both arms** (0.489); msiPL 0.157 (one list per run, the same in both arms). Medians would be 0.380 / 0.379, 0.482 / 0.509 and 0.158. Evidence: `results/diagnostics/fair_scoring_baselines/msipl_retune_20261030/decisions_20261031_local/rcc_count_matched.csv` (16 rows) and `decisions.json` → `rcc_count_matched`. Suggest the report says "mean over 8 runs, one training seed" and either gives the per-arm correlation values or says "pooled over both arms".
+
+**3. Neighbour-control scope** (`report/draft/sections/results.tex:160-166`).
+- **0.542 vs 0.543 (CAC real vs shuffled):** real 3×3 `uniform_mean` (0.5419) vs the `shuffled_p3` model (trained and attributed with seeded nonlocal shuffled 3×3 context; 0.5425). **IG ranking**, seed 1, mean of the **7 CAC confirmation sections** (40TopL excluded), scored with the **matched evaluation** (`evaluate_spatial_msipl_attributed_peaks.py`, bin level at K_bin), not the fair evaluator. Evidence: `docs/research/01 Results Record.md` (window controls, table near line 452); `docs/research/investigations/14 Primary Results Claim-Evidence Ledger.md:12`; per section `results/experiments/spatial_msipl_window_pilot/<section>_seed1/shuffled_p3/peak_evaluation/summary.json` and `results/experiments/spatial_msipl_cac_attributed_peak_evaluation/`.
+- **0.459 vs 0.446 (GBM zeroed vs real):** `zero_p3` (0.4594) vs real 3×3 `uniform_mean` (0.4460), same scope: **IG**, seed 1, **7 GBM confirmation sections** (GBM108_positive excluded), matched evaluation at bin level. Shuffled was 0.4430. Same evidence, `zero_p3/` and `results/experiments/spatial_msipl_attributed_peak_evaluation/`.
+- **−0.035 (7×7/9×9 vs 3×3, GBM):** `uniform_p7` − `uniform_mean` = −0.0351 and `uniform_p9` − `uniform_mean` = −0.0348, **IG**, seed 1, **all 8 GBM sections**, **fair evaluator, bin level at K_bin**; 2/8 positive at both; label "mixed (does not meet the 'helps' rule)". P1: −0.032 / −0.034. Evidence: `results/diagnostics/fair_scoring_baselines/extra_arms/decisions_20261016_local/decisions.json` → `e_windows_vs_real_3x3.<uniform_p7|uniform_p9>.GBM.all_8`.
+- **Wording risk:** the report presents the first two as full-collection results. They are 7-section, single-seed means from the older matched evaluation; no fair-scoring run exists for `shuffled_p3`/`zero_p3`. Suggest: "(IG, one training seed, seven confirmation sections)".
+
+**4. PCA reconstruction.**
+- **Metric:** MSE (also MAE and cosine) averaged over all pixel × bin entries, on **TIC-normalised spectra in the original m/z space** (the VAE input space). PCA input: raw `Data` as float32 → `tic_normalize` (the VAE's centre input), measured pixels only. **Primary:** the raw `inverse_transform`. **Secondary:** clipped at 0 and re-TIC-normalised, to match the VAE convention "calculated after decoder TIC normalization". Both agree (GBM centre-only: PCA-5 MSE higher in 0/8, median PCA-5/VAE ratio 0.63; CAC: 7/8, ratio 1.06 primary and 1.09 secondary). Fixed wording: "Reconstruction error does not separate PCA-5 from the VAE." Evidence: P18 §6.4 addendum; `results/diagnostics/pca_reconstruction_V/summary_local/summary.json`; per section `results/diagnostics/pca_reconstruction_V/<collection>/<section>_seed1/summary.json`; VAE values from `results/experiments/spatial_msipl_reconstruction/<section>_seed1/evaluation/comparison.json` (GBM) and `results/experiments/spatial_msipl_cac_reconstruction/` (CAC).
+- **Refitting:** PCA is fitted **once per section** on all its pixels (`PCA(n_components=5, svd_solver="randomized", random_state=1)`; explained variance reproduces Test V within 1e-6). It has **no training-seed dimension**. The VAE comparator is the **seed-1** reconstruction-campaign model only; no seed-2/3 reconstruction was computed. RCC has no VAE reconstruction (PCA values only). 360TopL was rerun on an i9-10940X node after a cross-CPU gate (`summary.json` → `reruns`).
+
+**5. Mixed models** (IG vs posterior-|PCC|, `score ~ method + (1|section) + (1|seed)`, statsmodels MixedLM; the current §6.6 set after the IG-steps regeneration).
+- **Not converged (no estimate reported):** CAC `central_only`, CAC `uniform_mean`, RCC `uniform_mean` (gradient optimisation failed; retries with other optimisers also failed).
+- **Converged with boundary/singular warnings:** GBM `central_only` (boundary; seed variance 2.9e-12), GBM `uniform_mean` (singular random-effects covariance and boundary; seed variance 4.2e-11), RCC `central_only` (boundary).
+- So **no IG-vs-correlation mixed model converged cleanly**; every estimate that exists sits on the boundary because the seed variance is essentially zero. (Of the VAE-vs-PCA models, GBM converged at the boundary; CAC and RCC converged without warnings.)
+- Evidence: `results/diagnostics/statistics_6_6_ig_steps_20261030/mixed_models.csv` (`status`, `singular_or_boundary`, `warnings`); logic in `scripts/compute_statistics_6_6.py:348-378`. The superseded `results/diagnostics/statistics_6_6/mixed_models.csv` should not be cited.
+
+**6. GMM fit time.** **Not measured by any saved artifact.**
+- The IG runs record only a total `runtime_seconds` (encoding, GMM fit, IG, faithfulness and figures together; `scripts/run_spatial_msipl_gmm_integrated_gradients.py:535,852`).
+- The ranking-stage timing (`results/diagnostics/ranking_stage_runtime*/<section>_seed1/<arm>/summary.json`) times `gmm_posterior`, which evaluates an already fitted GMM (about 1–8 ms on 160TopL); it does not fit one.
+- The only bound available: each label-free-K BIC task (7 GMM fits on the saved latent with `n_init` 20, K = 1–6 plus the production refit, including Python start-up) took 4–9 s for most of the 28 tasks and up to 47 s in the first wave (job 81416, `sacct`; P18 §10, 4 November). So one fit takes seconds at most.
+- Separating GMM from IG time in the report would need a new predeclared timing run (CPU only, small). I have not proposed one.
+
+**7. PCC ion images.**
+- **Posterior correlation uses TIC-normalised intensity:** each pixel's spectrum is divided by its TIC (one chunked pass), then Pearson's r is computed between each bin's TIC-normalised ion image and each component's soft posterior map over all measured pixels (`scripts/evaluate_fair_scoring_baselines.py:206-235`, `tic_statistics`; `src/spatial_msipl/simple_baselines.py:96-114`, `pearson_features_vs_maps`). Each fair-scoring summary records `representation_for_label_free_baselines: "TIC-normalised spectra"`.
+- **The scoring reference is different:** raw-intensity PCC with the expert class masks (`evaluation_reference: "raw-intensity PCC, existing nearest-threshold rule"`). Worth stating explicitly in the methods.
+- **Constant ion images:** the PCC is set to **0** when either the ion image or the map has zero variance (`np.divide(..., where=denominator != 0)`), matching the scorer's `pearson_by_feature`. Such bins rank at the bottom, ties broken by lower bin index (`rank_descending`, `np.lexsort`, `simple_baselines.py:22-30`). Pixels with zero TIC would get a zero spectrum (`where=tic > 0`), but there are **0** such pixels in all 24 sections (`zero_tic_pixels` in the composite-root summaries under `results/diagnostics/ig_steps_20261030/composite_root/`).
+
+### 2026-11-04 18:39 Supervisor → Codex | Code | Zayd: Examiner recheck resolved in report v21
+Status: INFO
+
+- Resolves: 2026-11-04 18:25 Codex entry, using Code's 18:36 read-only answers.
+- F1: conclusion now "statistically supported (nominally) and in the same direction for every training seed". Seed numbers stay out of the paper (standing rule); 16/18 and the failed overall rule were already reported separately.
+- F2: mixed-model sentence removed from Results; Methods now says none converged cleanly for IG against correlation, so they are not used.
+- F3: K_bin provenance rewritten per Code answer 1 (GBM = |R@0.4| via msiPL tuning; CAC targets of unknown derivation; RCC released target within 13 bins of |R@0.5|). The release-versus-new-evidence point is left to Zayd (public repo still at v1.0).
+- F4: Table IV and text say "strongest unsupervised ranking"; ARI sentence tempered to "agrees poorly with the masks".
+- F5: CAC 40TopL 2x cap added; RCC footnote states means over eight runs, one training seed.
+- F6: neighbour controls scoped (IG, one seed, seven confirmation sections); PCA reconstruction states MSE on TIC-normalised spectra, PCA fitted once per section, one-seed VAE; training-length and RCC mechanism wording softened. Boundary-attention baseline not added: interior pixels are the comparison.
+- F7: Discussion runtime sentence now says the IG step also fits the GMM and checks completeness.
+- Methods also state that posterior correlation uses TIC-normalised ion images and constant images score zero (Code answer 7).
+- Build: report_draft_v21_2026-11-04.pdf, 15 pages, body ends on page 12, no overfull boxes. Not committed.
+
+### 2026-11-04 19:50 Code → Zayd | Supervisor: Qualitative figure: section selected; one read-only CPU export needs Zayd's OK
+Status: OPEN (Zayd: explicit OK needed to submit the export)
+
+- Task: the planned figure (`report/draft/planning/qualitative_figure_plan.md`). Only new files: `report/draft/figures/qualitative_example.py` (written); no `.tex` edit, no commit.
+- **Selection (rule applied before rendering anything):** GBM, `uniform_mean`, training seed 1 (the only seed with K = 6 models; `label_free_k` = 6 in all 8). IG − posterior correlation mSCF1 at class K (K = 2), bin level at K_bin, from the current production summaries (`ig_steps_20261030/composite_root/.../bin_level_only/<section>_seed1/uniform_mean/summary.json`, equal to `production_ig`/`production_correlation` in the label-free K `per_section.csv`). Ascending:
+  1. GBM12_1 −0.3505; 2. GBM39_1 −0.3076; 3. GBM22_1 −0.2697; **4. GBM39_2 −0.2294**; 5. GBM12_2 −0.2281; 6. GBM108_positive −0.1724; 7. GBM108_negative −0.1591; 8. GBM22_2 −0.1492. No ties.
+- **Chosen section: GBM39_2.** Fixed; it will not be swapped.
+- **Why a cluster job:** the mask (`dataset_contact_20261031`), both segmentations (production K = 2 and label-free K = 6 `coordinates_and_gmm.npz`) and the rankings are local; the two ion images need the raw HDF5, which is only on the cluster.
+- **Checklist (CPU, read-only, no new code):**
+  - Script: the committed `scripts/export_rcc_ion_images.py` unchanged (generic `--input/--attribution-dir/--fair-scoring-dir`). Cluster copies of it, `evaluate_spatial_msipl_attributed_peaks.py` and `provenance.py` match HEAD by `sha256sum`; so do the cluster `coordinates_and_gmm.npz` and `rankings_prefix.npz` for this run (checked 19:45 SAST).
+  - Command (from `~/msi`): `sbatch --parsable --partition=batch --job-name=qual-ion-export --cpus-per-task=2 --mem=4G --time=00:30:00 --output=logs/qual-ion-export-%j.out --error=logs/qual-ion-export-%j.err --wrap 'export PYTHONPATH=$HOME/msi/src:$HOME/msi/scripts OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 MPLBACKEND=Agg; $HOME/miniconda3/envs/s3pl_env/bin/python -u scripts/export_rcc_ion_images.py --input /datasets/zsuliman/msi_data/gbm_massnet/GBM39_2.h5 --attribution-dir results/experiments/spatial_msipl_gmm_integrated_gradients/GBM39_2_seed1/uniform_mean --fair-scoring-dir results/diagnostics/fair_scoring_baselines/bin_level_only/GBM39_2_seed1/uniform_mean --output results/visualisations/qualitative_example/GBM39_2_seed1_uniform_mean_ion_images.npz'`.
+  - What it does: reads the HDF5 (read-only), computes the per-class raw PCC of every bin, writes the top 6 bins' ion images, m/z and per-class PCC under IG, posterior-|PCC| (balanced) and the oracle from the saved `rankings_prefix.npz`; nothing is re-ranked. Refuses to overwrite (exit 3).
+  - Partition `batch` (up; 0 jobs of mine queued). Expected time: a few minutes (one pass over a 1.6 GB file; the GBM fair-scoring evaluation of the same file took 47 s). 2 CPUs, 4G, 30 min.
+  - Output: new folder `results/visualisations/qualitative_example/` (does not exist on the cluster); `.npz` + `.json`, a few MB. Nothing written to `/datasets`; nothing moved or deleted.
+  - Then: pull that folder only (`-n` first), run the figure script locally, post the values.
+- Panels 4–5 use the class-K (K = 2) rankings, the ones the selection rule uses; K = 6 appears only as the panel 3 segmentation.
+
+### 2026-11-04 20:05 Code → Supervisor | Zayd: Fact-check of report v24 complete (read-only)
+Status: OPEN (Supervisor: decide wording fixes; nothing in the report has been changed)
+
+- Ledger: `report/draft/planning/fact_check_ledger.md`. It covers the abstract, sections I–VII, all tables, figures and captions, and the cited `references.bib` entries. Each number was traced to its local primary artifact and recomputed where cheap (140/144, SDs, HL/Holm, Spearman, medians, runtimes, S³PL epochs). Published values were checked against arXiv:2603.10487 (Table 3, Secs 2–3) and the dataset pages. No edits, jobs, file moves or commits; nothing was read on the cluster.
+- **Counts (239 claim rows): VERIFIED 204, MISMATCH 12, OVERSCOPED 17, UNSUPPORTED 0, CITATION-WRONG 6.** These come down to 27 distinct issues.
+- Most severe:
+  1. `results.tex:314-316`: Moran's I is called "the strongest unsupervised ranking on GBM … at either K". At class K, posterior correlation is stronger on GBM (0.762 vs 0.684). It should say "label-free".
+  2. The segment-then-correlate citation (`methodology.tex:214`, `discussion.tex:26`) points to Alexandrov & Kobarg 2011, which has no ion-image–segment correlation. The right citation is Alexandrov et al. 2010.
+  3. Li et al. 2022 (NMR, supervised) is cited for unsupervised MSI peak learning (`introduction.tex:22`).
+  4. Two bib errors: Schwamborn 2010 is in Nature Reviews Cancer, not J Proteomics; Abdelmoula 2021 lists 3 of 9 authors and lacks the article number 5544.
+  5. The abstract and introduction drop "nominally" and "bin level" from "statistically supported" (CAC uniform at P1: Holm 0.078).
+  6. Two results are seed-1 only but not marked: the RCC cancer/normal sensitivity, and the Spearman −0.90/−0.84 (over 16 section-arms; all seeds give −0.89/−0.76).
+  7. The v1.0 release (31 Oct) predates the label-free K evidence.
+  8. Fig. 4's caption says "relative to uniform 3×3", but the figure shows absolute means for IG and correlation.
+- Small numeric mismatches:
+  - S³PL CAC at 100 epochs is 0.336, not 0.335.
+  - CAC correlation runtime is 0.027 s, not 0.028 s.
+  - Mean-intensity timing reaches 0.14 s, not "at most 0.10 s".
+  - The 0.98 cosine is a mean, not a median.
+  - "Collections on which S³PL was published": the paper used four datasets.
+  - CAC budget: the paper states t = 0.3, so its derivation is not "unknown", only not reproduced.
+- Each item in the ledger's summary has suggested replacement wording.
+
+### 2026-11-04 20:08 Code → Supervisor | Zayd: Qualitative figure built (GBM39_2); values and preview
+Status: OPEN (Supervisor: review the figure; placement and caption are yours, no `.tex` edited)
+
+- Resolves: 2026-11-04 19:50 Code entry (Zayd's OK in the session, with the condition below).
+- **Zayd's condition (checked before submitting):** the composite production summary for GBM39_2 seed 1 `uniform_mean` (`ig_steps_20261030/composite_root/...`) is a byte-identical copy of the `--fair-scoring-dir` summary: sha256 `1a5108b6…`, manifest role "saved (unchanged)"; the IG-steps rerun of this arm was a control that reproduced it exactly. The composite holds only `summary.json`, so its rankings are the `rankings_prefix.npz` beside that summary (sha256 `b696576e…`, same on the cluster and locally). Both summaries record the same full-ranking hashes (IG `76934372…`, correlation `90477476…`). The `--attribution-dir` files match the composite provenance (`attributions.npz` `a3496384…`, `coordinates_and_gmm.npz` `7cbad07c…`). The `rankings_prefix.npz` is read from `--fair-scoring-dir`, not `--attribution-dir`. Command unchanged.
+- **Jobs:** 81747 (20:04 SAST) FAILED 2:0 in 3 s, before running anything: Windows line endings in the piped submit broke `cd ~/msi`, so it started in `$HOME` and found no script. It wrote nothing except its two logs, which went to the existing `~/logs/` (left in place). **81748** (18:05 UTC / 20:05 SAST, same command plus `--chdir=$HOME/msi`): COMPLETED 0:0, 1:12, mscluster128, `.err` empty.
+- **Sync (20:07 SAST, cluster → local):** `results/visualisations/qualitative_example/` only, 2 new files (`.npz` 335,745 B, `.json`); the `-n` preview listed only those; no local `results/` edits. Not yet logged in P18 §10 (Zayd asked for new files only; to add when P18 is next edited).
+- **Selection** (unchanged from 19:50): 1. GBM12_1 −0.3505; 2. GBM39_1 −0.3076; 3. GBM22_1 −0.2697; **4. GBM39_2 −0.2294**; 5. GBM12_2 −0.2281; 6. GBM108_positive −0.1724; 7. GBM108_negative −0.1591; 8. GBM22_2 −0.1492. **Chosen: GBM39_2.**
+- **Values shown** (class-K rankings, bin level; |PCC| with the tumour mask on the TIC-normalised ion image, equal to the exported reference PCC within 1e-4; GBM TIC = 1 to 1e-15):
+  - Expert mask: 1,848 normal, 558 tumour pixels.
+  - GMM K = 2: **ARI 0.35** (0.3527).
+  - GMM K = 6 (label-free K): **ARI 0.21** (0.2114; equals `ari` in the label-free K `per_section.csv`).
+  - Posterior correlation, rank 1: bin 76730, **m/z 356.73, |PCC| 0.76** (0.7556).
+  - IG, rank 1: bin 82486, **m/z 706.54, |PCC| 0.88** (0.8837; equals the saved IG list's `pcc_class_2`).
+- **Checks the script runs:** the selection order is recomputed and matches the decision table; the K = 2 GMM file hash matches the provenance; the saved rankings match the composite; the IG bin is rank 1 of `ig_matched_911_bins.csv`; the exported bins equal the saved prefixes; coordinates are equal across all sources.
+- **Outputs (new, uncommitted):** `report/draft/figures/qualitative_example.py`; `report/draft/images/qualitative_example.pdf` (sha256 `7d1f9368…`); preview `report/draft/planning/tmp_rt/qualitative_example.png`. Size 3.4 × 1.2 in; no seed numbers on the figure.
+- **What it shows:** on GBM39_2, the top posterior-correlation bin is low inside the tumour region and high around it, while the top IG bin is high inside the tumour region; the K = 6 segmentation divides the normal tissue into several components and agrees less with the mask than K = 2.
+- Caption notes for the supervisor: state the selection rule; ion images are each clipped at their own 99th percentile; the two top bins come from the class-K (K = 2) rankings.
+
+### 2026-11-04 20:12 Supervisor → Codex | Code | Zayd: Fact-check and qualitative figure applied in report v25
+Status: INFO (ready for Codex review and commit)
+
+- Resolves: 20:05 Code fact-check entry and 20:08 Code figure entry.
+- Fact-check: all 27 summary items applied as suggested, with these choices: item 9 uses the "added after this release" wording (change it if Zayd tags a new release); item 18 shows "Classes scored" with an RCC footnote in the Table I caption; item 23 adds the 7x7 peak-level pattern only. Also defined BN, ReLU, KL and CI.
+- Figure: ion-image panels dropped by Zayd's decision. The rank-1 bins are not what mSCF1 scores, and on GBM39_2 IG's rank-1 bin has the higher |PCC| (0.88 vs 0.76) although correlation's full list scores higher. Those values stay printed by the script and are recorded here. The figure now shows mask, K = 2 (ARI 0.35) and K = 6 (ARI 0.21), placed in V-H with the selection rule in the caption. The script was edited to draw three panels (all checks kept).
+- Earlier tonight: Fig. 6 (S3PL seeds) removed; the runtime figure redrawn as the stacked workflow only (script updated); runtime table folded into text; references at footnote size.
+- Build: report_draft_v25_2026-11-04.pdf, 12 pages including references, plus form and prompts (14). No overfull boxes or undefined references. Not committed.
+
+### 2026-11-04 20:53 Code → Supervisor | Zayd | Codex: Spatial-msiPL v1.1 prepared (label-free K, two report figures); regeneration 17/17; scan clean; uncommitted
+Status: OPEN (Codex: review and commit the release tree; Zayd: push and tag `v1.1`; Supervisor: the two decisions at the end)
+
+- Task: Zayd's request to bring the public release up to report v25. Same process as v1.0 (30–31 Oct entries): traced back from the report, copied (never moved) from the private repo, cleaned the copies only, sanitised provenance paths with the v1.0 placeholders, ran the regeneration and the scans. Nothing deleted in either repo; nothing committed, tagged or pushed; no cluster or `/datasets` access. The private repo is unchanged (only a gitignored scratch venv `tmp/mpl3109-venv`, see figures below). Release still at `93596d8` / `v1.0`.
+- **Changed (11):** `README.md` (label-free K section, new figure rows, step 12, regeneration text 12 → 17 checks, placeholder list, citation `v1.1`); `CITATION.cff` (version 1.1); `docs/whitelist.tsv` (+332 rows, 10 rows updated; tree and whitelist both 749 files, no differences, no duplicates); `scripts/evaluate_spatial_msipl_attributed_peaks.py` (`b0f353b0` hunk: opt-in `--no-component-mapping`); `scripts/run_spatial_msipl_gmm_integrated_gradients.py` (`e92aac94` palette fix); `slurm_jobs/run_fair_scoring_tests.sh` (+`test_label_free_k`); `src/spatial_msipl/tests/test_release_paths.py` (+`qualitative_example.py` in the figure-path test); `tools/check_regeneration.py`; `tools/expected_figures.json` (new runtime digest, + qualitative); `report_figures/runtime_figure.py` (now the report's whole-workflow figure, replacing the v1.0 ranking-time/cache panels); `report_figures/runtime_figure.tex` (regenerated; identical text to `report/draft/figures/runtime_figure.tex`).
+- **Added code (10):** `scripts/summarise_label_free_k.py`, `scripts/resolve_label_free_k.py` (both verbatim); `slurm_jobs/label_free_k_sections.sh`, `run_label_free_k_bic.sh`, `run_label_free_k_ig.sh`, `run_label_free_k_fair_scoring.sh`, `submit_label_free_k.sh` (v1.0 conventions: `paths.sh` first, `$PROJECT_ROOT`, `$SPATIAL_MSIPL_PYTHON`, `gpu_exclude.txt` instead of the quarantine list plus a named node, person and "post" wording removed); `src/spatial_msipl/tests/test_label_free_k.py` (node names → a test `gpu_exclude.txt`; private commit and job references removed); `src/spatial_msipl/tests/fixtures/pre_label_free_k/evaluate_spatial_msipl_attributed_peaks.py` (the v1.0 release copy; its SHA-256 equals the private fixture's, `bf5e4e11…`); `report_figures/qualitative_example.py` (release roots via `SPATIAL_MSIPL_RESULTS`/`SPATIAL_MSIPL_FIGURE_OUTPUT`, no preview PNG, unused colour-map constant dropped; all checks kept).
+- **Added evidence (322 files, 31 MB; release now 67 MB):** exactly the files `summarise_label_free_k.py` and the two figure scripts open, traced from the saved `decisions.json`. v1.0 already ships per-run summaries for the msiPL re-tune and Test R, so the per-run label-free K summaries are included on the same basis.
+  - Label-free K: per section-arm `label_free_k.json`, `attribution/summary.json` at every step up to the decisive one, `identity_check.json`, `gmm_gate_v2.json` (RCC_UH9905_18 centre, 256 steps), the matched-evaluation `summary.json`, the fair-scoring `summary.json` (48); the 48 seed-1 production summaries under `ig_steps_20261030/composite_root/…/{bin_level_only,rcc/bin_level_only}/`; the 20 `gate_d_bic*/…/bic_k_sensitivity/summary.json` the cross-check reads; `decisions_20261104_local/{decisions.json,per_section.csv}`.
+  - Qualitative figure: `dataset_contact_20261031/GBM39_2.npz`, both `coordinates_and_gmm.npz` (K = 2, K = 6), `fair_scoring_baselines/bin_level_only/GBM39_2_seed1/uniform_mean/{summary.json,rankings_prefix.npz}`, `ig_matched_911_bins.csv`, the ion export `.npz/.json`.
+  - Runtime figure: `comparisons/s3pl_gbm_stability_runtime/runtime_repeats.csv`.
+  - Not copied: checkpoints, latents, attributions, node records, PNGs, superseded runs, logs.
+  - **Sanitising:** 217 text files had `/home-mscluster/<user>/msi` → `<project-root>`, the data root → `<data-root>`, the checkpoint root → `<checkpoint-root>` (new; v1.0 had no checkpoint paths) and 2 node names → `<compute-node>`. Numbers untouched. In the release `decisions.json` only the Windows path separators of 116 path strings (48 + 48 + 20) were normalised to `/`; `per_section.csv` is byte-identical.
+  - **For Codex:** the qualitative export (`code/msi/results/visualisations/qualitative_example/`) is still **untracked in the private repo**. It should be committed there too, so the release copy maps to a committed source.
+- **Regeneration (`py tools/check_regeneration.py`, local, matplotlib 3.11.2, MiKTeX pdfTeX 1.40.29): 17/17 PASS.** The 12 v1.0 checks plus:
+  - `tab:lfk + Sec. V-H`: `summarise_label_free_k.py` rerun on the copied files reproduces `decisions.json` and `per_section.csv` (numbers to 1e-12, strings exactly after `\`→`/`; `production_reference_sha256` excluded because it hashes the unsanitised private summary; documented in the script and README).
+  - `tab:lfk` values as printed: all 24 Table IV cells match (GBM +0.225/−0.019/2/8/Moran 0.684; +0.233/+0.006/5/8/0.684; CAC +0.078/+0.045/8/8/mean int. 0.612; +0.047/+0.025/7/8/0.612; RCC +0.156/+0.073/8/8/Moran 0.631; +0.169/+0.054/7/8/0.631), K = 6 in 48/48, plus the V-H text: correlation drop 0.25–0.28 / 0.06–0.10 / 0.02–0.03, IG change ≤ 0.04, GBM mean ARI 0.19, IG > legacy 8/8 in all four GBM/CAC cells.
+  - `fig:qual` values: the rule places GBM39_2 4th (same order as 19:50); **ARI 0.35 (0.3527) and 0.21 (0.2114)**; the not-drawn checks also pass (correlation rank 1 bin 76730 m/z 356.73 |PCC| 0.76; IG bin 82486 m/z 706.54 |PCC| 0.88).
+  - `fig:runtime` values: **workflow 122–135 s against S³PL 151–174 s** (per repeat 135/122/122 and 151/174/174).
+  - `qualitative_example.pdf` and `runtime_figure.pdf` digests.
+- **Figures vs the report PDFs (decision 1 below).** In v1.0 the report's PDFs were built locally, and the release digests equal them. Report v25's two new PDFs were built elsewhere: `qualitative_example.pdf` with matplotlib **3.10.9**, `runtime_figure.pdf` with **TeX Live 2022 (pdfTeX 1.40.22)**. So their bytes cannot match the declared release environment (3.11.2, MiKTeX). Evidence that the content is the same:
+  - (a) the release's generated `runtime_figure.tex` is identical to the report's;
+  - (b) the release qualitative script run under matplotlib 3.10.9 (scratch venv) gives a PDF whose 42 decompressed streams all equal the report PDF's; only the zlib bytes, offsets and date differ.
+  - The release digests are therefore pinned to the release environment, as v1.0's were. The README says so.
+- **Tests (release, local, Python 3.14, NumPy 2.5.4, sklearn 1.9.1, matplotlib 3.11.2):**
+  - `test_label_free_k` + `test_release_paths`: 34 run, 32 pass, 2 skipped (torch: the K = 6/9 figure render, covered by the cluster test job; the private synced BIC/latents are not in the release).
+  - Bit-identity of the evaluator's default path against the v1.0 copy passes.
+  - `compileall` OK; `bash -n` OK on 67 job scripts.
+  - Full discovery: 342 run, 15 skipped, 7 import errors (modules that import torch at load: `test_attention_scaling`, `test_attribution`, `test_attribution_analytic_reference`, `test_centre_masking`, `test_model`, `test_neighbourhood`, `test_windows`; local-only) and **1 failure that is pre-existing in v1.0** (reproduced on a clean `git archive` of `93596d8`): see pre-existing items.
+- **Scan (whole release tree, binary-inclusive, case-insensitive):** `Claude`, `Codex`, `ChatGPT`, `OpenAI`, `Anthropic`, `supervisor`, `chat`, cluster username, `mscluster`, `/home-mscluster`, `/datasets/`, the login IP, `ms.wits.ac.za`, `C:\Users`, `/c/Users`, `/mnt/c`, `AppData`: **0 hits in any tracked or committable file** (`git ls-files -co --exclude-standard`). Case-sensitive word `Code`: 5 hits, all ordinary English (README "Code:" links ×4, S3PL LICENSE "Source Code", v1.0 `run_training_length.sh` "Code and tests"). The release hygiene test passes.
+  - Hits exist only in **gitignored `__pycache__/*.pyc` files in the release working tree dated 31 Oct 12:13**, compiled before the v1.0 clean-up. They were never committed and `.gitignore` keeps them out. I did not delete them (no-deletion rule); Zayd may remove the `__pycache__` folders locally before tagging.
+- **Licences:** still hold.
+  - No new or changed file contains or imports S3PL or msiPL code; all imports are our own package and scripts.
+  - `baselines/`, `LICENSE` and the AGPL/Slicer Part B files are untouched.
+  - New code sits outside `baselines/`, so it is MIT.
+  - One point for the licence reading: the qualitative export holds raw-intensity ion images of 18 bins of one GBM section (ST002045). This is derived data like v1.0's base-peak images, not the dataset itself.
+- **Pre-existing v1.0 issues found (not fixed; outside this update):**
+  1. `src/spatial_msipl/tests/fixtures/pre_rcc/evaluate_fair_scoring_baselines.py`: v1.0's wording clean-up edited this frozen fixture ("reviewer-approved" → "a explicitly approved"), so `test_rcc_pipeline.test_fixtures_are_the_pre_change_scripts` fails on its pinned hash.
+  2. `slurm_jobs/run_fair_scoring_tests.sh` lists `test_spatial_segmentation`, `test_pca_reconstruction_v` and `test_s3pl_shuffle_control`, which are not in the release.
+- **Suggested commit message** (no AI names, no dates):
+
+  ```
+  Add label-free K analysis and report figures (v1.1)
+
+  - Label-free K: BIC-selected GMM K, resolver, summariser, job scripts and
+    tests; opt-in --no-component-mapping in the matched evaluator (default path
+    unchanged, tested against the v1.0 copy); IG figure palette for K = 6.
+  - Evidence: the label-free K decision table and the per-run summaries it is
+    built from, with provenance paths replaced by placeholders.
+  - Figures: qualitative segmentation example and whole-workflow runtime figure,
+    with their inputs.
+  - Regeneration: Table IV, Section V-H values and both figures checked (17/17).
+  - README, whitelist and citation updated for v1.1.
+  ```
+
+Decisions:
+1. Report figure bytes: rebuild report v25's `qualitative_example.pdf` and `runtime_figure.pdf` in the release environment (matplotlib 3.11.2, MiKTeX), so the report PDFs match the v1.1 digests as in v1.0? Or accept content identity, shown by (a) and (b)? I recommend the rebuild (one local run of each private script, no data change), but it touches the report, so it is your call and Zayd's.
+2. The report's release wording ("added after this release", fact-check item 9) can now say `v1.1` once Zayd tags it.
+
+### 2026-11-05 09:26 Code → Supervisor | Zayd | Codex: Spatial-msiPL v1.1 pre-commit fixes done; report figures rebuilt and match v1.1; regeneration 17/17; suite and scan clean; uncommitted
+Status: OPEN (Codex: review and commit the release tree and the two rebuilt report PDFs; Zayd: push and tag `v1.1`)
+
+- Resolves: 2026-11-04 20:53 Code entry, decision 1 (rebuild) and the two pre-existing v1.0 issues, per Zayd's instruction. Nothing committed, tagged or pushed; no cluster access.
+- **Report figures rebuilt** with the private scripts (`report/draft/figures/qualitative_example.py`, `runtime_figure.py`) in the release environment: `tmp/test-venv` (matplotlib 3.11.2) and MiKTeX pdfTeX 1.40.29 (MiKTeX 26.2).
+  - The printed values are unchanged: GBM39_2 4th, ARI 0.3527 / 0.2114; workflow 135/122/122 s against S³PL 151/174/174 s.
+  - `report/draft/images/qualitative_example.pdf`: normalised digest `8ade1262…` = v1.1 `expected_figures.json` (before rebuild `6942d60c…`, matplotlib 3.10.9). File SHA-256 `7485fac2…`.
+  - `report/draft/images/runtime_figure.pdf`: normalised digest `5d5e7dd8…` = v1.1 (before rebuild `936e5038…`, TeX Live). File SHA-256 `b1f5fd83…`.
+  - `report/draft/figures/runtime_figure.tex`: the script rewrote it with CRLF endings and identical text, so I put back the original LF bytes. Its content equals the release `report_figures/runtime_figure.tex`.
+  - The previous PDFs and TeX are kept in my scratch folder (not in either repo).
+  - **Copy into the release:** none needed. v1.0 and v1.1 ship no figure PDFs; the check regenerates them into the gitignored `report_figures/output/` and compares digests.
+  - **Not done:** the compiled report (`report_draft_v25_2026-11-04.pdf`) still embeds the old images. The next report build picks up the rebuilt PDFs.
+- **Fixture restored:** release `src/spatial_msipl/tests/fixtures/pre_rcc/evaluate_fair_scoring_baselines.py` is now the private fixture's exact bytes (SHA-256 `cd88bd02…` = the pinned value = private HEAD). The only difference from the v1.0 copy is three "reviewer-approved/-written" wordings.
+  - Scan of the restored file: no AI names, chat or supervisor terms, user names, hosts or private paths ("reviewer" is ordinary English).
+  - The other `pre_rcc` fixture is byte-identical to the private one.
+  - Whitelist row updated to "verbatim (v1.1 restores the frozen bytes)".
+- **Test job:** `slurm_jobs/run_fair_scoring_tests.sh` no longer lists `test_spatial_segmentation`, `test_pca_reconstruction_v` or `test_s3pl_shuffle_control`. Every module it lists now exists in the release (`spatial_msipl` 20, S3PL 4). `bash -n` passes. Whitelist row updated.
+- **Regeneration (`py tools/check_regeneration.py`): 17/17 PASS** (the same 17 checks as in the 20:53 entry, including Table IV, the V-H values, ARI 0.35/0.21, 122–135 s vs 151–174 s and both new digests).
+- **Tests (release, local):**
+  - `compileall` OK; `bash -n` OK on 67 job scripts.
+  - Full discovery: 342 run, 15 skipped, **0 failures**, 7 errors. All 7 are `No module named 'torch'` at import (`test_attention_scaling`, `test_attribution`, `test_attribution_analytic_reference`, `test_centre_masking`, `test_model`, `test_neighbourhood`, `test_windows`); they run in the cluster test job.
+  - `test_rcc_pipeline` (fixture hash) and `test_release_paths` (hygiene) pass.
+- **Scan (whole release tree, binary-inclusive, case-insensitive; same terms as 20:53):** 0 hits in committable files and 0 hits in any file outside `__pycache__`.
+  - Case-sensitive `Code`: the same 5 ordinary-English hits.
+  - Hits remain in 64 gitignored `.pyc` files: 57 stale from 31 Oct; 7 compiled during these runs, which embed this machine's source path in the bytecode, or, for `test_release_paths`, the patterns it searches for.
+  - Whitelist and tree: 749 files each, 0 differences.
+- **Licences:** unchanged since 20:53 and still hold. The two edits are a test fixture and a test-job list; no S3PL or msiPL content.
+- **Suggested commit message** (release; no AI names, no dates): unchanged from 20:53. Optionally add the line "- Restore a frozen test fixture and list only shipped test modules in the cluster test job."
+
+### 2026-11-05 09:27 Supervisor → Codex | Code | Zayd: v1.1 pre-commit fixes accepted; report rebuilt as v27 with the rebuilt figures
+Status: INFO (Codex: two commits; Zayd: push and tag v1.1)
+
+- Resolves: 2026-11-05 09:26 Code entry. Accepted: figure digests match v1.1, fixture restored to frozen bytes, test list trimmed, 17/17 regeneration, 0 test failures (7 torch import errors are local-only), scan clean in committable files.
+- Report rebuilt with the rebuilt figure PDFs: report_draft_v27_2026-11-05.pdf (12 pages including references, 14 with form and prompts; no overfull boxes). v26 changes are included: runtime Table V restored, the VAE-PCA figure removed, Discussion V-E renamed "Label dependence and cost".
+- Codex, release commit: use Code's 20:53 message plus the optional line about the fixture and test job.
+- Codex, MSI commit: report sources, references.bib, both figure scripts and PDFs, figures/runtime_figure.tex, the qualitative export under code/msi/results/visualisations/qualitative_example/, and report_draft_v19 (already staged) and v27 only. Do not commit v20 to v26. The planning folder stays ignored.
+- After Zayd tags v1.1, the Methods release line changes to v1.1 with its commit, and the "added after this release" clause is removed.

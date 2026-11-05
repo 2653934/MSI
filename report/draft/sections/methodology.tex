@@ -3,9 +3,9 @@
 
 \subsection{Data}
 \label{sec:data}
-Three public MSI collections were used (\cref{tab:data,fig:data}). They are the
-collections on which S\textsuperscript{3}PL was
-published~\citep{weigand2026spatial}, so both baselines could be reproduced
+Three public MSI collections were used (\cref{tab:data,fig:data}). They are the three
+collections on which S\textsuperscript{3}PL was quantitatively
+evaluated~\citep{weigand2026spatial}, so both baselines could be reproduced
 under their own protocols and then compared with our methods under a common
 one.
 
@@ -13,7 +13,7 @@ one.
 \caption{Datasets. Sections are the units of analysis; the independent units
 behind them differ by collection. CAC sections have slightly different $m/z$
 axes; the range shown is for 40TopL. GBM bins are not evenly spaced (median
-0.0004\,Da).}
+0.0004\,Da). $^{*}$RCC: cancer, normal and the unannotated region.}
 \label{tab:data}
 \centering\footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -29,20 +29,21 @@ $m/z$ bins & 85{,}062 & 1{,}481 & 10{,}200 \\
 $m/z$ range & 102--1000 & 198--1061 & 150--1000 \\
 Mean bin width (Da) & 0.011 & 0.58 & 0.083 \\
 Pixels per section & 2{,}071--4{,}524 & 3{,}243--4{,}761 & 972--3{,}564 \\
-Mask classes ($K$) & 2 & 3 & 3 \\
+Classes scored & 2 & 3 & 3$^{*}$ \\
 Accession & ST002045 & MTBLS415 & Cardinal\-Workflows \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{GBM} is the massNet patient-derived xenograft (PDX) glioblastoma
-collection, acquired by MALDI on a 9.4\,T FT-ICR
+collection, acquired by matrix-assisted laser desorption/ionisation (MALDI) on a
+9.4\,T Fourier-transform ion cyclotron resonance (FT-ICR)
 instrument~\citep{abdelmoula2022massnet}. It is available from the
 Metabolomics Workbench (project PR001292, study ST002045,
 doi:10.21228/M8Q70T). It contains eight sections from four PDX lines, two per
 line, with pathologist annotations of tumour and normal tissue. Sections from
 the same line are not independent, so GBM results are also summarised per
-line. \textbf{CAC} is a DESI collection of 52 serial sections from one human
+line. \textbf{CAC} is a desorption electrospray ionisation (DESI) collection of 52 serial sections from one human
 colorectal adenocarcinoma~\citep{inglese2017deep}, available from MetaboLights
 (MTBLS415). We used the eight sections and three-class masks released with
 S\textsuperscript{3}PL~\citep{weigand2026spatial}, so CAC comparisons are
@@ -121,7 +122,8 @@ at tissue edges use only their measured neighbours, so no unmeasured location
 is padded; a pixel with no measured neighbour gets a zero context.
 
 \textbf{Model.} Following msiPL~\citep{abdelmoula2021peak}, the VAE has one
-hidden layer of 512 units with batch normalisation and a 5-dimensional latent
+hidden layer of 512 units with batch normalisation (BN) and rectified linear
+units (ReLU) and a 5-dimensional latent
 space~\citep{kingma2014autoencoding}:
 \begin{align}
 \mathbf{h}_i &= \mathrm{ReLU}\big(\mathrm{BN}(W_e\mathbf{u}_i+\mathbf{b}_e)\big),\\
@@ -133,7 +135,7 @@ with $\boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},I)$. The decoder mirrors
 the encoder and outputs $\hat{\mathbf{x}}_i=\mathrm{sigmoid}(W_o\,
 \mathrm{ReLU}(\mathrm{BN}(W_d\mathbf{z}_i+\mathbf{b}_d))+\mathbf{b}_o)$, a reconstruction of the centre
 spectrum only. With $p_{id}=\hat{x}_{id}/\sum_{d'}\hat{x}_{id'}$, the loss is
-msiPL's categorical cross-entropy plus the Kullback--Leibler divergence to a
+msiPL's categorical cross-entropy plus the Kullback--Leibler (KL) divergence to a
 standard normal prior:
 \begin{equation}
 \begin{aligned}
@@ -168,8 +170,8 @@ $\Sigma_k$ is fitted to them (scikit-learn, 20 initialisations, fixed seed). Its
 gives, for each component $k$, a posterior map over the section. The number of
 components $K$ equals the number of annotated classes (\cref{tab:data}). This
 is a class-informed choice; the Bayesian information criterion
-(BIC)~\citep{schwarz1978estimating}, evaluated for $K=1$ to 6, did not support
-it (\cref{sec:res-encoder}), so the main ranking comparison was repeated with
+(BIC)~\citep{schwarz1978estimating}, evaluated for $K=1$ to 6, selected the largest value
+tested, so the main ranking comparison was repeated with
 BIC's choice of $K$ (\cref{sec:res-lfk}).
 
 \textbf{Rankings.} Every ranking orders all $D$ bins, and the top
@@ -208,8 +210,9 @@ component contributes equally (``balanced'').
   \item \emph{Posterior correlation} scores bin $d$ for component $k$ by
         $|\rho(I_d,\gamma_{\cdot k})|$, the absolute Pearson correlation over
         pixels between the bin's ion image $I_d$ and the component's posterior
-        map $\gamma_{\cdot k}$. It needs no gradients; this is the segment-then-correlate
-        approach~\citep{alexandrov2011efficient}.
+        map $\gamma_{\cdot k}$, using TIC-normalised ion images; constant images
+        score zero. It needs no gradients; this is the segment-then-correlate
+        approach~\citep{alexandrov2010spatial}.
   \item \emph{Model-free rankings} use the spectra directly: mean intensity,
         variance and global Moran's~$I$~\citep{moran1950notes},
         \begin{equation}
@@ -219,7 +222,7 @@ component contributes equally (``balanced'').
         \end{equation}
         with $N$ the number of measured pixels and $w_{ij}=1$ for measured Moore
         neighbours (the eight surrounding pixels) and 0 otherwise.
-  \item \emph{References:} a random ranking, and a supervised oracle that ranks
+  \item \emph{References:} a random ranking and a supervised oracle that ranks
         bins by correlation with the expert masks. The oracle is a ceiling only.
 \end{itemize}
 
@@ -257,17 +260,21 @@ identity.
 
 \textbf{Matched budgets.} All methods select the same number of bins,
 $K_{\text{bin}}$, per section, so that differences reflect which bins are
-chosen and not how many. For GBM and CAC, $K_{\text{bin}}$ is the tuned legacy
-msiPL peak count; for RCC it is the released S\textsuperscript{3}PL target,
-which approximately equals the number of bins correlating with the masks at
-$t=0.5$. Budgets of $0.5\times$ to $2\times K_{\text{bin}}$ were checked as a
+chosen and not how many. For GBM and CAC, $K_{\text{bin}}$ is the legacy msiPL peak count with its
+threshold tuned to the released S\textsuperscript{3}PL target. On GBM these
+targets equal the number of bins correlating with the masks at $t=0.4$; the
+paper derives the CAC targets at $t=0.3$, but they match none of our reference
+sets at $t=0.3$--$0.6$, so their exact derivation could not be reproduced.
+For RCC, $K_{\text{bin}}$ is the released target, which equals the number of
+bins correlating at $t=0.5$ to within 13 bins. Budgets of $0.5\times$ to $2\times K_{\text{bin}}$ were checked as a
 sensitivity analysis. For msiPL, its saved weights were re-thresholded over
 $\beta=-2.0$ to $2.5$ (step 0.01) and, at each budget, the list whose length was
 closest to the budget was taken; every ranking was then scored at that list's
 own length. On RCC the longest msiPL list (1{,}054--1{,}289 bins in six of the
 eight runs) was shorter than $K_{\text{bin}}$, so those points use the longest
 list and are flagged; on GBM, seven points at the smallest budgets were below
-the shortest msiPL list and are flagged likewise. $K_{\text{bin}}$ is a number
+the shortest msiPL list and are flagged likewise, as is CAC 40TopL at $2\times$, where the longest
+list was 14\% short. $K_{\text{bin}}$ is a number
 of bins and is unrelated to the number of GMM components $K$.
 
 \textbf{Peak-level scoring (P1).} Neighbouring bins of one molecular peak would
@@ -293,11 +300,12 @@ a method \emph{helps} if its mean gain is at least $+0.02$ mSCF1 and it gains
 in at least 6 of 8 sections; methods are \emph{equivalent} if their mean
 difference lies within $\pm0.02$. Other complete outcomes are \emph{mixed}.
 The IG-versus-correlation replication rule instead asks whether IG is lower
-in at least 7 of 8 sections in every training run, at bin level and, on GBM
+in at least 7 of 8 sections, with a mean difference of at most $-0.02$, in
+every training run, at bin level and, on GBM
 and CAC, also at peak level; its predeclared labels and fall-through cases are
 reported as written. The threshold of 0.02 was chosen as the
 smallest difference we would act on; it is of the same order as the
-seed-to-seed SD of collection means (0.002--0.026).
+seed-to-seed standard deviation (SD) of collection means (0.002--0.026).
 The two core arms were trained with
 three seeds on all 24 sections; the variants were screened against the uniform
 arm with one seed each. Seed results are reported as the mean $\pm$ SD across
@@ -308,7 +316,7 @@ seeds of the collection means.
 The outcome labels are accompanied by paired non-parametric statistics over
 sections: the exact two-sided Wilcoxon signed-rank
 test~\citep{wilcoxon1945individual}, the Hodges--Lehmann (HL) median paired
-difference with its exact 95\% confidence interval~\citep{hodges1963estimates},
+difference with its exact 95\% confidence interval (CI)~\citep{hodges1963estimates},
 the matched-pairs rank-biserial correlation $r$ and the sign count. Every pair
 of methods is scored on the same sections, so the data are paired and the
 signed-rank test is used rather than the unpaired Mann--Whitney test, which
@@ -325,7 +333,8 @@ intervals carry the main weight. A comparison is called \emph{statistically
 supported} only if its Holm-adjusted $p<0.05$ \emph{and} its outcome label
 points the same way. GBM is also summarised per PDX line ($n=4$), outside the
 Holm families. Mixed-effects models with random intercepts for section and
-seed are reported descriptively. Sections are not fully independent: CAC
+seed were also fitted, but for IG against correlation none converged
+cleanly, so they are not used. Sections are not fully independent: CAC
 sections are serial sections of one tumour and GBM sections come in pairs from
 four PDX lines. The section-level p-values and intervals are therefore
 nominal, and the per-line GBM summary is the more conservative check.
@@ -339,12 +348,13 @@ MSCluster under Slurm, on RTX 3060 and RTX 3090 GPUs (all timed training on RTX
 ran on CPU nodes. The code, protocol, result summaries and figure scripts are
 available at \url{https://github.com/2653934/Spatial-msiPL} (release
 \texttt{v1.0}, commit
-\texttt{93596d8}).
+\texttt{93596d8}; the label-free $K$ analysis of \cref{sec:res-lfk} was added
+after this release).
 
-\textbf{Caching.} The original data loader re-read each batch from HDF5 on
+\textbf{Caching.} The original data loader re-read each batch from the HDF5 data file on
 shared storage, and a 100-epoch run on GBM108\_positive (the smallest GBM
 section, uniform arm) took 11.3\,h. Profiling showed that
-preparing a batch took 24.6\,s, while the forward and backward passes took
+preparing a batch took about 24.5\,s, while the forward and backward passes took
 about 0.02\,s. Reading each section into host memory once (about 13\,s)
 reduced the run to 23\,min, a $30\times$ speed-up, with identical loss
 histories and final weights. The cache costs one float32 copy of the section,

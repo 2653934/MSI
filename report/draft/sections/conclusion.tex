@@ -2,21 +2,22 @@
 \label{sec:conclusion}
 
 This report tested whether local spatial context helps a lightweight VAE
-select informative MSI peaks, and which part of a learned pipeline determines
+select informative MSI peaks and which part of a learned pipeline determines
 peak quality. Under matched budgets and predeclared rules, on three public
 collections, we reached the following conclusions.
 \begin{itemize}
   \item Ranking peaks by correlation with an unsupervised GMM segmentation
         outperformed gradient attribution through the VAE on every dataset when
         the number of segments matched the tissue classes; this was
-        statistically supported and stable across training seeds. With the
+        statistically supported (nominally) and in the same direction for every
+        training seed. With the
         number of segments chosen without labels, it held on CAC and RCC but not
         on GBM.
   \item Neighbourhood input to the encoder and smoothing of the segmentation
         gave no consistent, spatially specific gain. Moran's~$I$, which uses no
         labels, was the strongest label-free ranking on GBM and RCC and within
         0.01 of the best on CAC.
-  \item A linear PCA segmentation performed comparably to the VAE, and
+  \item A linear PCA segmentation was not reliably worse than the VAE, and
         reconstruction error did not track peak quality.
   \item msiPL reproduced. S\textsuperscript{3}PL's published GBM score did not.
         Weight initialisation dominated seed sensitivity in two of three

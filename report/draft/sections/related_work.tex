@@ -21,7 +21,8 @@ masquerade as differences in method.
 \subsection{Peak selection}
 Classical pipelines such as MALDIquant detect local maxima above a noise
 threshold in each spectrum~\citep{gibb2012maldiquant}. Machine-learning peak
-pickers learn what a peak looks like from annotated
+pickers, so far mainly for nuclear magnetic resonance spectra, learn what a
+peak looks like from annotated or simulated
 spectra~\citep{li2022machinelearningpeakpicking}. Both operate spectrum by
 spectrum and do not use the spatial arrangement of the tissue. Learned
 representation methods instead rank $m/z$ bins by how a model trained on the
@@ -49,7 +50,7 @@ normalisation and selector all differ from msiPL, so it is not clear which
 ingredient produces the gain, or whether a much smaller amount of spatial
 context would suffice. A related caution concerns how representations are judged:
 \citet{mazarura2025autoencoder} found that reconstruction error, cluster
-quality and downstream classification ranked autoencoders, PCA and NMF
+quality and downstream classification ranked autoencoders, PCA and non-negative matrix factorisation (NMF)
 differently on MSI data, so a better reconstruction need not mean better peaks.
 
 \subsection{Attribution and segment-then-correlate}
