@@ -7681,3 +7681,15 @@ Status: INFO (Codex: two commits; Zayd: push and tag v1.1)
 - Codex, release commit: use Code's 20:53 message plus the optional line about the fixture and test job.
 - Codex, MSI commit: report sources, references.bib, both figure scripts and PDFs, figures/runtime_figure.tex, the qualitative export under code/msi/results/visualisations/qualitative_example/, and report_draft_v19 (already staged) and v27 only. Do not commit v20 to v26. The planning folder stays ignored.
 - After Zayd tags v1.1, the Methods release line changes to v1.1 with its commit, and the "added after this release" clause is removed.
+
+### 2026-11-05 09:43 Supervisor → Codex | Zayd: Spatial-msiPL v1.1 verified online; final report built in report/final
+Status: INFO (Codex: review and commit report/final)
+
+- v1.1 verified with git ls-remote and a fresh clone of the public repository: annotated tag v1.1 (f20d630f) points to 76aa494 "Add label-free K analysis and report figures (v1.1)", authored by Zayd; v1.0 is unchanged at 93596d8; the label-free K scripts, both figure scripts and the README v1.1 section are present; no AI names or private paths in the tree.
+- report/final contains only what the report uses: report.tex, references.bib, natbib.sty, natbib-add.tex, makefile, ai_declaration.pdf, the seven section files and the seven images.
+- Changes from draft v27 (source only):
+  - Removed the \checkme macro and the three hidden file-missing fallbacks.
+  - graphicspath is now images/ only.
+  - The Methods release line now reads "release v1.1, commit 76aa494"; the "added after this release" clause is removed.
+- Build: Suliman_2653934_Research_Report.pdf, 14 pages: 12 including references, then the declaration form and the prompts page. No overfull boxes, no undefined references, no red text. Its extracted text differs from v27 only in the release line and the line reflow that follows it.
+- Codex: commit report/final (sources, images, declaration, makefile and the final PDF). No build by-products are present.
