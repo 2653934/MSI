@@ -55,7 +55,7 @@ level and 12 at peak level) were negative.
 \caption{Collection mean mSCF1 at $K_{\text{bin}}$ (bin level). IG and posterior
 correlation use the same fitted GMM; model-free rankings use the spectra.
 Bold: best unsupervised ranking per row. The oracle uses the expert masks and is
-a ceiling. IG and posterior correlation: mean $\pm$ SD over three training seeds; the
+a supervised reference. IG and posterior correlation: mean $\pm$ SD over three training seeds; the
 other rankings do not depend on the seed.}
 \label{tab:main}
 \centering\small
@@ -210,7 +210,7 @@ Replacing the VAE latent space with a 5-component PCA, while keeping the GMM and
 correlation ranking, gave VAE $-$ PCA-5 differences, averaged over three seeds,
 of $+0.042$ on GBM (higher in 5/8 sections), $-0.012$ on CAC and $-0.010$ on
 RCC. The predeclared outcomes were mixed on GBM and CAC
-and equivalent on RCC, and seed averaging did not change them. VAE segmentations matched the masks slightly
+(on CAC because the peak-level difference was $-0.028$) and equivalent on RCC, and seed averaging did not change them. VAE segmentations matched the masks slightly
 better (balanced accuracy 0.868 against 0.839 on GBM) without reliably better
 peaks. Reconstruction did not separate the two either: PCA-5, fitted once per
 section, had \emph{lower} reconstruction error (mean squared error on
